@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v4.4 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v4.5 (`prototype/index.html`)
+- v4.5: Bohrtürme haben ein eigenes Lager (300 E, sichtbarer Silo mit Füllstand, Andockplatz) statt einer Leitung. Fahrzeuge holen dort ab, wenn sie nichts zu reinigen haben oder ein Lager 70 % voll ist, und bringen es zur Entladestation. Sichtbares Bohren: Bohrgestänge dreht und hebt sich, Funken und Staub am Bohrloch, Leuchte grün/gelb/rot nach Füllstand.
 - v4.4: **Tiefenabbau** auf komplett sauberen Planeten: Bohrtürme auf sauberen Parzellen (2 + 2 × Basisstufe pro Planet) fördern dauerhaft den Rohstoff der Parzelle (Vorkommen mager/gut/reich ×0,6–1,6) und pumpen ihn ins Rohstofflager; brauchen Strom, stehen bei vollem Lager (Ampel). Upgrade „Diamantbohrköpfe“, zwei neue Erfolge. Laternen jetzt paarweise symmetrisch an der Seite zur Basismitte, mehr Abstand zu Bändern.
 - v4.3: Straßenlaternen in der Basis (1–2 je Gebäude, bis zu 27 pro Planet), die nachts leuchten und die Gebäude anstrahlen. Layout-Test prüft sie auf allen 10 Planeten.
 - v4.2: Arbeitslicht beim Wischen (Lampe + weicher Lichtfleck um den Saugkopf, ab Dämmerung). Verlässt der Finger beim Wischen die Parzelle, pausiert der Saugkopf (roter Ring), das Bild bleibt stehen; nur ein kurzer Wisch ohne Ertrag wird noch zur Kamerabewegung. Randscrollen erst nach 0,45 s am Rand und nur über der eigenen Parzelle.

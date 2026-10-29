@@ -914,10 +914,18 @@ function vehStep(pid,sp,v,dt,f,live){
   switch(v.mode){
     case 'seek':{
       if(tank>=cap*.98||battLow(v)){v.mode='toUnload';break;}
+      {const rg=pickRig(pid,sp,v,false);if(rg){rg.claim=v.id;v.rig=rg.cell;v.mode='toRig';break;}}
       const c=chooseCell(pid,sp,v);
-      if(c<0){if(tank>.5){v.mode='toUnload';break;}v.status=v.fix!=null?'Kein verfügbarer Arbeitsbereich':'Kein Auftrag';
+      if(c<0){const rg=pickRig(pid,sp,v,true);if(rg){rg.claim=v.id;v.rig=rg.cell;v.mode='toRig';break;}if(tank>.5){v.mode='toUnload';break;}v.status=v.fix!=null?'Kein verfügbarer Arbeitsbereich':'Kein Auftrag';
         const pp=parkPos(sp,v);if(!navMove(pid,v,basePlanDir(pd,pp[0],pp[1]),spd*.7*dt,R))v.busy=true;break;}
       if(!ensureAct(pid,c)){v.fix=null;break;}v.cell=c;v.ti=-1;if(requestLift(pid,sp,v,c))break;v.mode='drive';break;}
+    case 'toRig':{const r=(sp.rigs||[]).find(x=>x.cell===v.rig);if(!r||r.claim!==v.id){v.rig=null;v.mode='seek';break;}
+      v.busy=true;battUse(v,dt);v.status='Fährt zum Bohrturm';if(navMove(pid,v,rigDock(pid,r),spd*dt,R))v.mode='rigload';break;}
+    case 'rigload':{const r=(sp.rigs||[]).find(x=>x.cell===v.rig);if(!r){v.rig=null;v.mode='seek';break;}
+      const b=sumObj(r.buf),amt=Math.min(RIG.load*uv('urate')*dt,cap-tank,b);v.status='Lädt am Bohrturm';
+      if(amt>0){const k=amt/b;for(const m in r.buf){const x=r.buf[m]*k;r.buf[m]-=x;if(r.buf[m]<1e-6)delete r.buf[m];v.tank[m]=(v.tank[m]||0)+x;}v.coll=(v.coll||0)+amt;}
+      if(cap-sumObj(v.tank)<.5||sumObj(r.buf)<.05){r.claim=null;v.rig=null;v.mode=sumObj(v.tank)>.5?'toUnload':'seek';}
+      break;}
     case 'liftwait':{if(v.lift==null||!sp.lifters.some(l=>l.id===v.lift&&l.veh===v.id)){v.lift=null;v.mode='drive';break;}v.status='Wartet auf Lastdrohne';break;}
     case 'lifted':{if(v.lift==null||!sp.lifters.some(l=>l.id===v.lift&&l.veh===v.id)){v.lift=null;v.mode='drive';break;}v.status='Wird eingeflogen';break;}
     case 'drive':case 'clean':{
@@ -1015,7 +1023,7 @@ function outpostWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).
   if(sp.outposts.some(o=>o.cell===id||cl.nb.includes(o.cell)))return 'Zu nah an einem anderen Außenlager';return '';}
 /* ---- Tiefenabbau: once a planet is completely clean, drilling rigs on clean parcels mine raw material forever and pump it to the base.
    Their flow is what makes belts, machines, storage, night power and selling worth expanding on finished planets. ---- */
-const RIG={buf:150,pipe:6,energy:1.5,base:.8};
+const RIG={buf:300,load:16,energy:1.5,base:.8};
 const rigRich=(pid,id)=>{let h=(id*2654435761+(PORDER.indexOf(pid)+1)*40503)>>>0;h^=h>>>15;h=Math.imul(h,2246822519)>>>0;h^=h>>>13;return .6+(h%1000)/1000;};
 const rigMax=sp=>2+2*sp.stage;
 const rigCost=pid=>Math.round(3000*PLANETS[pid].diff*Math.pow(1.45,(S.planets[pid].rigs||[]).length));
@@ -1037,15 +1045,19 @@ function buildRig(id){const pid=S.planet,sp=SP();if(id==null||id<0){id=bestRigCe
   toast('Bohrturm auf '+cellName(id)+' fördert '+MATS[rigMat(pid,id)].name+' ('+richTxt(rigRich(pid,id))+'es Vorkommen)','good');save();}
 function rigStep(pid,sp,r,dt,f){const m=rigMat(pid,r.cell),b=sumObj(r.buf);
   if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt);r.buf[m]=(r.buf[m]||0)+x;r.mined=(r.mined||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
-  const fr=rohCap()-rohSum(sp),bb=sumObj(r.buf);
-  if(bb>.001&&fr>.01){const amt=Math.min(bb,fr,RIG.pipe*uv('bspeed')*Math.max(.25,f)*dt),k=amt/bb;for(const mm in r.buf){const y=r.buf[mm]*k;r.buf[mm]-=y;sp.roh[mm]=(sp.roh[mm]||0)+y;}}
-  r.status=sumObj(r.buf)>=RIG.buf-.5?(fr<=.01?'Steht – Rohstofflager voll':'Puffer voll – Leitung zu langsam'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt';}
+  if(r.claim!=null&&!sp.veh.some(v=>v.id===r.claim&&v.rig===r.cell&&(v.mode==='toRig'||v.mode==='rigload')))r.claim=null;
+  r.status=sumObj(r.buf)>=RIG.buf-.5?(sp.veh.length?'Lager voll – wartet auf Abholung':'Lager voll – kein Fahrzeug holt ab'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt'+(r.claim!=null?' · Fahrzeug holt ab':'');}
+const rigDock=(pid,r)=>toDir(planetData(pid).cells[r.cell],2.7,0,planetData(pid).R);
+/* vehicles pick up from rigs: whenever they have nothing to clean, or when a rig store is 70 % full */
+function pickRig(pid,sp,v,idle){if(v.fix!=null||!(sp.rigs||[]).length)return null;const cap=tankCap(v)-sumObj(v.tank);if(cap<5)return null;let best=null,bs=1e9;
+  for(const r of sp.rigs){if(r.claim!=null)continue;const b=sumObj(r.buf);if(b<(idle?Math.min(15,RIG.buf*.05):RIG.buf*.7))continue;const d=arcDist(v.d,rigDock(pid,r),planetData(pid).R)-b*.05;if(d<bs){bs=d;best=r;}}
+  return best;}
 function rigSec(pid,id){const sp=S.planets[pid],r=(sp.rigs||[]).find(x=>x.cell===id),m=rigMat(pid,id),rich=rigRich(pid,id);
-  if(r)return '<section class="sec"><h3>Bohrturm</h3><p class="note">Fördert '+MATS[m].name+' aus der Tiefe und pumpt es durch eine unterirdische Leitung ins Rohstofflager. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+RIG.buf)+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+upgRow('rigrate')+'</section>';
+  if(r)return '<section class="sec"><h3>Bohrturm</h3><p class="note">Fördert '+MATS[m].name+' aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Lager</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+RIG.buf+' E')+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+upgRow('rigrate')+'</section>';
   if(!S.done[pid])return '';const why=rigWhy(pid,id);
-  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+(why?why+'.':'Tiefenvorkommen: <b>'+richTxt(rich)+'</b> (×'+dec(rich,2)+') '+MATS[m].name+'. Ein Bohrturm fördert hier dauerhaft und pumpt alles in die Basis.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildrig" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigCost(pid))+'">Bohrturm bauen · '+cr(rigCost(pid))+'</button>')+'</section>';}
+  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+(why?why+'.':'Tiefenvorkommen: <b>'+richTxt(rich)+'</b> (×'+dec(rich,2)+') '+MATS[m].name+'. Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildrig" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigCost(pid))+'">Bohrturm bauen · '+cr(rigCost(pid))+'</button>')+'</section>';}
 function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const rs=sp.rigs||[],n=rs.length,mx=rigMax(sp);
-  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+PLANETS[pid].name+' ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe und pumpen sie in die Basis. Je mehr sie liefern, desto mehr lohnen schnellere Bänder, Maschinen, Lager, Strom für die Nacht und Verkaufskapazität. Jede Basisstufe erlaubt 2 Bohrtürme mehr.</p>'+
+  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+PLANETS[pid].name+' ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe in ihr eigenes kleines Lager, deine Fahrzeuge holen sie dort ab. Je mehr sie liefern, desto mehr lohnen Fahrzeuge, Bänder, Maschinen, Lager, Strom für die Nacht und Verkaufskapazität. Jede Basisstufe erlaubt 2 Bohrtürme mehr.</p>'+
     '<dl class="kv"><dt>Bohrtürme</dt><dd>'+n+' / '+mx+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec((SP().rigs||[]).reduce((a,r)=>a+rigRate(S.planet,r),0)*60,0)+' E pro Minute')+'"></dd></dl>'+
     (n<mx?'<button class="buy wide" data-act="buildrig" data-id="-1" data-en="'+bind(()=>S.credits>=rigCost(S.planet))+'">Bohrturm auf dem besten Vorkommen · '+cr(rigCost(pid))+'</button><p class="note">Oder tippe eine saubere Parzelle an und baue dort.</p>':sp.stage<5?'<p class="note">Alle Plätze belegt – baue die Basis aus, um 2 weitere Bohrtürme zu bekommen.</p>':'')+
     upgRow('rigrate')+'</section>';}
@@ -1053,7 +1065,9 @@ function rigModel(L){const g=new THREE.Group(),v={g};add(Box(3.6,.3,3.6),L.pad,0
   for(const[x,z]of[[-.75,-.75],[.75,-.75],[-.75,.75],[.75,.75]])add(Box(.16,6.2,.16),legM,x,3.3,z,g);
   for(const y of[1.6,3.2,4.8])for(const[x,z,w,d]of[[0,-.75,1.5,.1],[0,.75,1.5,.1],[-.75,0,.1,1.5],[.75,0,.1,1.5]])add(Box(w,.1,d),legM,x,y,z,g);
   add(Box(1.1,.45,1.1),L.metal,0,6.55,0,g);v.drill=add(Cyl(.13,.13,6,8),L.metal,0,3.3,0,g);add(Box(.5,.25,.5),L.dark,0,5.2,0,g).position.y=5.2;
-  add(Box(1.3,1.1,1.2),L.white,1.55,.85,.6,g);add(Cyl(.5,.5,1.6,12),L.glass,-1.4,1.1,.8,g,false);v.fill=add(Cyl(.44,.44,1,12),mat(0xa49c8e,{roughness:.9}),-1.4,.5,.8,g);
+  add(Box(1.2,1,1.1),L.white,-1.2,.8,-1.15,g);add(Cyl(.75,.75,2.6,16),L.glass,-1.15,1.6,.95,g,false);v.fill=add(Cyl(.68,.68,1,16),mat(0xa49c8e,{roughness:.9}),-1.15,.5,.95,g);add(Cyl(.85,.85,.18,16),L.metal,-1.15,2.95,.95,g);
+  add(Box(1.7,.06,1.7),L.dark,2.7,.05,0,g,false);v.dockM=L.mint.clone();v.dockM.emissiveIntensity=.15;add(Box(1.8,.05,.12),v.dockM,2.7,.1,.9,g,false);add(Box(1.8,.05,.12),v.dockM,2.7,.1,-.9,g,false);
+  v.spark=new THREE.MeshStandardMaterial({color:0xffd08a,emissive:0xffb04d,emissiveIntensity:0});add(Sph(.32,10,8),v.spark,0,.42,0,g,false);
   v.beacon=new THREE.MeshStandardMaterial({color:0xff6b5b,emissive:0xff6b5b,emissiveIntensity:1});add(Sph(.15,8,6),v.beacon,0,6.95,0,g,false);
   const h=new THREE.Sprite(LAMP.halo);h.position.set(0,6.95,0);h.scale.set(2.4,2.4,1);h.renderOrder=6;g.add(h);
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return v;}
@@ -2101,7 +2115,9 @@ const LCOL=[0x3fe58a,0xffd23f,0xff4d3d];
 function flowReport(pid){const sp=S.planets[pid],out=[];const o=CUR;CUR=pid;try{
   const add=(id,name,lvl,why,fix)=>out.push({id,name,lvl,why,fix:fix||[]});const rf=rohSum(sp)/rohCap(),pf=prodSum(sp)/prodCap();
   if(sp.ef<.99&&(sp.veh.length||sp.bld.presse||(sp.rigs||[]).length)){const night=!dayInfo(pid,sp).day;add(sp.bld.energy?'energy':'hq','Energie',2,night?'Nacht und der Speicher ist leer – mehr Akkupark, Radioisotopen-Generator oder Kernreaktor.':'Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.',night?['ecap','energy']:['energy','ecap']);}
-  {const rs=sp.rigs||[],stop=rs.filter(r=>r.status&&r.status.startsWith('Steht')).length,slow=rs.filter(r=>r.status&&r.status.startsWith('Puffer')).length;if(stop)add('roh','Bohrtürme',2,stop+' Bohrturm'+(stop>1?'türme':'')+' steht – das Rohstofflager ist voll. Mehr Lager, schnellere Bänder oder mehr Verkauf.',['rohcap','bspeed','sellcap']);else if(slow)add('roh','Bohrtürme',1,'Die Leitungen der Bohrtürme sind zu langsam – schnellere Bänder helfen.',['bspeed']);}
+  {const rs=sp.rigs||[],full=rs.filter(r=>sumObj(r.buf)>=RIG.buf-.5).length,high=rs.filter(r=>sumObj(r.buf)>=RIG.buf*.7).length;
+    if(full)add('roh','Bohrtürme',2,full+(full>1?' Bohrtürme sind':' Bohrturm ist')+' voll – '+(sp.veh.length?'die Fahrzeuge holen nicht schnell genug ab. Mehr Fahrzeuge, größere Tanks oder schnelleres Fahrwerk.':'kauf Fahrzeuge, die abholen.'),['vtank','vspeed','urate']);
+    else if(high)add('roh','Bohrtürme',1,'Die Lager der Bohrtürme füllen sich – die Abholung wird knapp.',['vtank','vspeed']);}
   for(const s of STATIONS)if(sp.bld[s]){const f=sumObj(sp.st[s].buf)/stBuf(s),full=rf>.97,cause=full?'das Rohstofflager voll ist':'das Förderband zu langsam abtransportiert';
     if(f>.97)add(s,BLD[s].name,2,'Puffer voll – Fahrzeuge warten, weil '+cause+'.',full?['rohcap','sellcap']:['bspeed','bcap','ubuf']);
     else if(f>.7)add(s,BLD[s].name,1,'Puffer füllt sich – '+(full?'das Rohstofflager ist voll':'das Förderband kommt nicht ganz hinterher')+'.',full?['rohcap','sellcap']:['bspeed','bcap']);
@@ -2379,7 +2395,10 @@ function updateVisuals(dt,t){
   if(bvv0().rtg&&bvv0().rtg.glow)bvv0().rtg.glow.emissiveIntensity=.8+.4*Math.sin(t*2.2);
   if(bvv0().reactor&&bvv0().reactor.core)bvv0().reactor.core.emissiveIntensity=1+.5*Math.sin(t*3.1);
   for(const id of['geo','reactor'])if(bvv0()[id]&&bvv0()[id].steam&&!mapMode&&Math.random()<dt*8)emit3(basePlanDir(pd,BLD[id].pos[0]-(id==='reactor'?1:.7),BLD[id].pos[1]),R+(id==='reactor'?4.8:4),0xdfe6ef,1,.25,1.2);
-  for(const r of sp.rigs||[]){const rv=buildViews['r'+r.cell];if(!rv)continue;if(r.busy)rv.drill.rotation.y+=dt*7;const f=Math.min(1,sumObj(r.buf)/RIG.buf),hh=Math.max(.02,f*1.5);rv.fill.scale.y=hh;rv.fill.position.y=.3+hh/2;rv.beacon.emissiveIntensity=Math.sin(t*3+r.cell)>.6?1.6:.25;}
+  for(const r of sp.rigs||[]){const rv=buildViews['r'+r.cell];if(!rv)continue;const cl=pd.cells[r.cell];
+    if(r.busy){rv.drill.rotation.y+=dt*9;rv.drill.position.y=3.3-.35*(.5+.5*Math.sin(t*2.2+r.cell));rv.spark.emissiveIntensity=1.2+Math.sin(t*23+r.cell)*.6;if(!mapMode&&Math.random()<dt*14)emit3(cl.c,R+.4,DIRT[cl.type].light,1,1.6,1.6);}else rv.spark.emissiveIntensity=0;
+    const f=Math.min(1,sumObj(r.buf)/RIG.buf),hh=Math.max(.02,f*2.4);rv.fill.scale.y=hh;rv.fill.position.y=.3+hh/2;rv.dockM.emissiveIntensity=r.claim!=null?.9:.15;
+    rv.beacon.color.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissive.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissiveIntensity=Math.sin(t*3+r.cell)>.4?1.6:.35;}
   for(const o of sp.outposts){const ov=buildViews[o.key];if(!ov||!ov.fill)continue;const f=Math.min(1,sumObj(o.buf)/stBuf(o.key)),hh=Math.max(.02,f*2.9);ov.fill.scale.y=hh;ov.fill.position.y=.55+hh/2;
     ov.docks.forEach((m,k)=>{m.emissiveIntensity=k>=stDocks(o.key)?0:o.docks[k]?.9+.3*Math.sin(t*8):.15;});}
   if(bvv0().hangar&&bvv0().hangar.pads){const dn=sp.drones.filter(d=>d.mode==='idle'&&!d.busy).length;bvv0().hangar.pads.forEach((m,k)=>{m.emissiveIntensity=k<dn?.9:.2;});}

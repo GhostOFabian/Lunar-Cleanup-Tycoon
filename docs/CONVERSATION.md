@@ -37,6 +37,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 21. Beim manuellen Reinigen nachts eine **Lichtquelle**; das **Bild verschiebt sich störend**, wenn man beim Halten außerhalb der Fläche wischt. → v4.2.
 22. **Bessere Beleuchtung der Basis**: Laternen, die nachts auch die Gebäude anstrahlen. → v4.3.
 23. Laternen **besser positionieren**; **Mond 100 % sauber – was jetzt?** Fertige Planeten brauchen einen Grund, die Basis weiter auszubauen. → v4.4: Tiefenabbau mit Bohrtürmen, Laternen paarweise.
+24. Man sieht nicht, dass die Bohrtürme bohren; besser ein **kleines Lager am Bohrturm, das die Fahrzeuge anfahren und abholen**. → v4.5.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

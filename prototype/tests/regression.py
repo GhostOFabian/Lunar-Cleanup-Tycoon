@@ -71,8 +71,8 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;const why0=t.rigWhy('moon',pd.cells.find(c=>c.kind!=='base'&&c.ring===3).id);
       for(const c of pd.cells)if(c.kind!=='base'){w.clean[c.id]=1;w.act.delete(c.id);}t.S.done.moon=1;t.S.credits+=1e7;const n0=(sp.rigs||[]).length;for(let i=0;i<20;i++)t.buildRig(-1);
       const n=sp.rigs.length,max=t.rigMax(sp);for(const k in sp.roh)sp.roh[k]=0;sp.energy=1e4;for(let i=0;i<60;i++)t.simStep('moon',1,false);
-      const mined=sp.rigs.reduce((a,r)=>a+r.mined,0);return {why0,n,max,mined,roh:t.rohSum(sp),status:sp.rigs.map(r=>r.status).slice(0,3),cells:new Set(sp.rigs.map(r=>r.cell)).size}}""")
-    show('deep drilling', r); check(r['n'] == r['max'] and r['cells'] == r['n'] and r['mined'] > r['n'] * 20 and r['roh'] > 0, 'deep drilling rigs')
+      const mined=sp.rigs.reduce((a,r)=>a+r.mined,0);const modes=new Set();let picked=0;for(let i=0;i<600;i++){t.simStep('moon',.5,false);for(const v of sp.veh){modes.add(v.mode);}}picked=sp.rigs.reduce((a,r)=>a+r.mined-t.sumObj(r.buf),0);return {veh:sp.veh.length,rigModes:[...modes].filter(m=>m.includes('ig')),picked,why0,n,max,mined,roh:t.rohSum(sp),status:sp.rigs.map(r=>r.status).slice(0,3),cells:new Set(sp.rigs.map(r=>r.cell)).size}}""")
+    show('deep drilling', r); check(r['n'] == r['max'] and r['cells'] == r['n'] and r['mined'] > r['n'] * 20 and r['picked'] > 100 and len(r['rigModes']) == 2, 'deep drilling rigs')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -86,7 +86,7 @@ with game() as (pg, errs):
       return {e0,e1:t.energyProd(sp),geo:!!sp.bld.geo,cap:t.energyCap(sp),locked:t.vehLocked('eisfraese')}}""")
     show('energy + vehicle lock', r); check(r['e1'] >= r['e0'] + 159 and not r['geo'] and r['locked'], 'energy buildings / vehicle lock')
 
-    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.research.done.airlift=true;t.buildBuilding('lifter');t.buyLifter();
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.research.done.airlift=true;sp.rigs=[];t.buildBuilding('lifter');t.buyLifter();
       for(const c of pd.cells)if(c.kind!=='base'&&c.ring<=6){w.clean[c.id]=1;}w.nClean=pd.cells.filter(c=>c.kind!=='base'&&w.clean[c.id]).length;for(const c of pd.cells)if(c.ring>6)w.clean[c.id]=0;for(const[id,a]of[...w.act])w.act.delete(id);t.calcFront('moon');
       sp.veh=[];t.buyVehicle('truck');const v=sp.veh[0];v.d=t.basePlanDir(pd,2.5,13);v.mode='seek';const seen=new Set();for(let i=0;i<800;i++){t.simStep('moon',.25,false);seen.add(v.mode);}
       return {modes:[...seen],lifter:sp.lifters[0].mode}}""")

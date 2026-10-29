@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.4)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.5)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -154,8 +154,8 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 
 ## 9d. Tiefenabbau (ab v4.4)
 - Freigeschaltet pro Planet, sobald er komplett sauber ist (`S.done[pid]`). Bohrtürme auf sauberen Parzellen ab Ring 2, nicht auf Außenlagern, eine pro Parzelle, max. `2 + 2 × Basisstufe`.
-- Kosten `3 000 × diff × 1,45^n`. Förderung `0,8 E/s × Vorkommen × Diamantbohrköpfe (1 + 0,3·Stufe, lokal)`, Vorkommen fest pro Parzelle (Hash) 0,6–1,6, Material = ursprünglicher Schmutz der Parzelle. Puffer 150 E, unterirdische Leitung (unsichtbar) `6 E/s × Bandtempo` ins Rohstofflager, nur bei freiem Platz. Strom 1,5/s × Maschinen-Effizienz, solange gebohrt wird.
-- Basis-Fenster „Tiefenabbau“: Übersicht + „Bohrturm auf dem besten Vorkommen“ (Vorkommen / (1 + 0,05 × Ring)); Parzellenfenster zeigt Vorkommen und baut gezielt. Fahrzeuge umfahren Bohrtürme wie Außenlager. Ampel: Bohrtürme stehen (Lager voll) rot, Leitung zu langsam gelb.
+- Kosten `3 000 × diff × 1,45^n`. Förderung `0,8 E/s × Vorkommen × Diamantbohrköpfe (1 + 0,3·Stufe, lokal)`, Vorkommen fest pro Parzelle (Hash) 0,6–1,6, Material = ursprünglicher Schmutz der Parzelle. Eigenes Lager 300 E (Silo + Andockplatz bei lokal x = 2,7 m). Fahrzeuge (`toRig → rigload → toUnload`) holen ab: sofort, wenn ein Lager ≥ 70 % voll ist, sonst wenn sie nichts zu reinigen haben (ab 15 E); ein Fahrzeug pro Bohrturm, Laden 16 E/s × Schnellentladung. Strom 1,5/s × Maschinen-Effizienz, solange gebohrt wird.
+- Basis-Fenster „Tiefenabbau“: Übersicht + „Bohrturm auf dem besten Vorkommen“ (Vorkommen / (1 + 0,05 × Ring)); Parzellenfenster zeigt Vorkommen und baut gezielt. Fahrzeuge umfahren Bohrtürme wie Außenlager. Ampel: Bohrturm-Lager voll rot, ≥ 70 % gelb (Abhilfe: mehr/größere/schnellere Fahrzeuge).
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

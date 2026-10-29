@@ -86,3 +86,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Feste Vorkommen pro Parzelle (mager/gut/reich) – eine kleine Standortentscheidung, ohne Zufall beim Neuladen.
 - Laternen als Paar an der Front jedes Gebäudes – vorher wirkte die Verteilung zufällig.
 - Bohrtürme liefern über unterirdische Leitungen (keine Röhren) – zwölf sichtbare Röhren über der Basis waren zu unruhig.
+
+## v4.5
+- Bohrtürme mit eigenem Lager, das die vorhandene Flotte abholt (statt unsichtbarer Leitung) – Wunsch des Spielers; man sieht so, dass gebohrt wird, und die Fahrzeuge haben auf fertigen Planeten wieder Arbeit.
+- Abholen hat Vorrang, sobald ein Lager 70 % voll ist; sonst nur, wenn es nichts zu reinigen gibt – Meteoritenstaub bleibt so weiter Aufgabe der Flotte.
