@@ -1061,11 +1061,13 @@ function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const
     '<dl class="kv"><dt>Bohrtürme</dt><dd>'+n+' / '+mx+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec((SP().rigs||[]).reduce((a,r)=>a+rigRate(S.planet,r),0)*60,0)+' E pro Minute')+'"></dd></dl>'+
     (n<mx?'<button class="buy wide" data-act="buildrig" data-id="-1" data-en="'+bind(()=>S.credits>=rigCost(S.planet))+'">Bohrturm auf dem besten Vorkommen · '+cr(rigCost(pid))+'</button><p class="note">Oder tippe eine saubere Parzelle an und baue dort.</p>':sp.stage<5?'<p class="note">Alle Plätze belegt – baue die Basis aus, um 2 weitere Bohrtürme zu bekommen.</p>':'')+
     upgRow('rigrate')+'</section>';}
-function rigModel(L){const g=new THREE.Group(),v={g};add(Box(3.6,.3,3.6),L.pad,0,.15,0,g,false);const legM=mat(0xffbf4d,{metalness:.4,roughness:.5});
+function rigModel(L){const g=new THREE.Group(),v={g};add(Box(4.6,.3,4.4),L.pad,0,.15,0,g,false);const legM=mat(0xffbf4d,{metalness:.4,roughness:.5});
   for(const[x,z]of[[-.75,-.75],[.75,-.75],[-.75,.75],[.75,.75]])add(Box(.16,6.2,.16),legM,x,3.3,z,g);
   for(const y of[1.6,3.2,4.8])for(const[x,z,w,d]of[[0,-.75,1.5,.1],[0,.75,1.5,.1],[-.75,0,.1,1.5],[.75,0,.1,1.5]])add(Box(w,.1,d),legM,x,y,z,g);
   add(Box(1.1,.45,1.1),L.metal,0,6.55,0,g);v.drill=add(Cyl(.13,.13,6,8),L.metal,0,3.3,0,g);add(Box(.5,.25,.5),L.dark,0,5.2,0,g).position.y=5.2;
-  add(Box(1.2,1,1.1),L.white,-1.2,.8,-1.15,g);add(Cyl(.75,.75,2.6,16),L.glass,-1.15,1.6,.95,g,false);v.fill=add(Cyl(.68,.68,1,16),mat(0xa49c8e,{roughness:.9}),-1.15,.5,.95,g);add(Cyl(.85,.85,.18,16),L.metal,-1.15,2.95,.95,g);
+  add(Box(.9,.85,.8),L.white,-1.65,.72,-1.35,g);add(Box(.5,.3,.1),L.dark,-1.65,.8,-.94,g);
+  add(Cyl(.6,.6,2.6,16),L.glass,-1.65,1.6,.9,g,false);v.fill=add(Cyl(.54,.54,1,16),mat(0xa49c8e,{roughness:.9}),-1.65,.5,.9,g);add(Cyl(.68,.68,.16,16),L.metal,-1.65,2.95,.9,g);add(Cyl(.68,.68,.16,16),L.metal,-1.65,.38,.9,g);
+  {const ch=add(Box(.95,.08,.12),L.metal,-1.15,2.7,.9,g);}
   add(Box(1.7,.06,1.7),L.dark,2.7,.05,0,g,false);v.dockM=L.mint.clone();v.dockM.emissiveIntensity=.15;add(Box(1.8,.05,.12),v.dockM,2.7,.1,.9,g,false);add(Box(1.8,.05,.12),v.dockM,2.7,.1,-.9,g,false);
   v.spark=new THREE.MeshStandardMaterial({color:0xffd08a,emissive:0xffb04d,emissiveIntensity:0});add(Sph(.32,10,8),v.spark,0,.42,0,g,false);
   v.beacon=new THREE.MeshStandardMaterial({color:0xff6b5b,emissive:0xff6b5b,emissiveIntensity:1});add(Sph(.15,8,6),v.beacon,0,6.95,0,g,false);
@@ -1557,8 +1559,8 @@ function vehicleModel(type,L){
 }
 function syncVehicleViews(){
   const sp=SP(),seen=new Set();
-  for(const v of sp.veh){seen.add(v.id);if(!vehViews.has(v.id)){const vw=vehicleModel(v.type,bv.VL);vw.g.traverse(o=>{o.userData.pick={type:'vehicle',id:v.id};});vw.g.visible=!mapMode;world.add(vw.g);pickables.push(vw.g);vw.prev=v.d.slice();vw.fwd=vnorm(vcross(v.d,[0,1,0]));vehViews.set(v.id,vw);}}
-  for(const[id,vw]of vehViews)if(!seen.has(id)){world.remove(vw.g);const k=pickables.indexOf(vw.g);if(k>=0)pickables.splice(k,1);vehViews.delete(id);}
+  for(const v of sp.veh){seen.add(v.id);if(!vehViews.has(v.id)){const vw=vehicleModel(v.type,bv.VL);vw.g.traverse(o=>{o.userData.pick={type:'vehicle',id:v.id};});vw.g.visible=!mapMode;world.add(vw.g);pickables.push(vw.g);vw.prev=v.d.slice();vw.fwd=vnorm(vcross(v.d,[0,1,0]));vw.blip=new THREE.Sprite(BLIP);vw.blip.renderOrder=7;vw.blip.visible=false;world.add(vw.blip);vehViews.set(v.id,vw);}}
+  for(const[id,vw]of vehViews)if(!seen.has(id)){world.remove(vw.g);if(vw.blip)world.remove(vw.blip);const k=pickables.indexOf(vw.g);if(k>=0)pickables.splice(k,1);vehViews.delete(id);}
 }
 function buildWorld(pid){
   clearMeteors();
@@ -1677,6 +1679,7 @@ const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=12
 const LAMP={headM:new THREE.MeshStandardMaterial({color:0xfff1d6,emissive:0xffd08a,emissiveIntensity:.1}),poleM:new THREE.MeshStandardMaterial({color:0x39404c,metalness:.6,roughness:.4}),
   halo:new THREE.SpriteMaterial({map:glowTex,color:0xffd9a0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}),
   pool:new THREE.MeshBasicMaterial({map:glowTex,color:0xffd9a0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})};
+const BLIP=new THREE.SpriteMaterial({map:glowTex,color:0xff8a1f,transparent:true,opacity:0,depthWrite:false});
 const LAMPL=[];for(let i=0;i<6;i++){const l=new THREE.PointLight(0xffd59a,0,16,1.3);l.userData.on=0;scene.add(l);LAMPL.push(l);}
 let lampPos=[],lampT=1;
 function lampSpots(pid){const sp=S.planets[pid],blds=BORDER.filter(k=>sp.bld[k]),belts=BELTS.filter(b=>beltLive(sp,b)),out=[],ng=navGrid(pid).g,pd=planetData(pid);
@@ -2363,7 +2366,10 @@ function updateVisuals(dt,t){
   lockAcc+=dt;if(lockAcc>.4){lockAcc=0;updLocks();}
   syncVehicleViews();
   const mpos=mapMarkers.geometry.attributes.position.array,mcol=mapMarkers.geometry.attributes.color.array;let mi=0;
-  for(const v of sp.veh){const vw=vehViews.get(v.id);if(!vw)continue;
+  /* zoomed out: every vehicle blinks orange, so you see at a glance where the fleet is */
+  const blipK=smooth(17,30,cam.alt),blipA=cam.alt*.085,placeBlip=(b,d)=>{b.visible=blipK>.01;if(b.visible){const p=vsc(d,R+1.3);b.position.set(p[0],p[1],p[2]);b.scale.set(blipA,blipA,1);}};
+  BLIP.opacity=blipK*(.4+.6*Math.pow(.5+.5*Math.sin(t*6.5),2));
+  for(const v of sp.veh){const vw=vehViews.get(v.id);if(!vw)continue;if(vw.blip)placeBlip(vw.blip,v.d);
     const mv=arcDist(vw.prev,v.d,R);if(mv>.002){const f=vnorm(vsub(v.d,vw.prev));vw.fwd=vnorm(vadd(vsc(vw.fwd,.75),vsc(f,.25)));}vw.prev=v.d.slice();
     {const lv=v.mode==='lifted'&&v.lift!=null?liftViews.get(v.lift):null;vw.air=lerp(vw.air||0,lv?Math.max(0,lv.alt-2.8):0,1-Math.exp(-4*dt));}
     orient(vw.g,v.d,vw.fwd,R,.02+(vw.air||0)+Math.sin(t*7+v.id)*.015);
@@ -2374,7 +2380,7 @@ function updateVisuals(dt,t){
     if(!mapMode&&v.mode==='unload'&&Math.random()<dt*20&&v.sid)emit3(stDir(pid,v.sid,'c'),R+2.4,0xa49c8e,1,.6,.6);
     if(mi<64){const p=vsc(v.d,R+.6);mpos[mi*3]=p[0];mpos[mi*3+1]=p[1];mpos[mi*3+2]=p[2];tmpC.setHex(c);mcol[mi*3]=tmpC.r;mcol[mi*3+1]=tmpC.g;mcol[mi*3+2]=tmpC.b;mi++;}}
   {const c=sp.cart;if(c&&!cartView){cartView=cartModel(bv.VL);cartView.prev=c.d.slice();cartView.fwd=vnorm(vcross(c.d,[0,1,0]));cartView.g.traverse(o=>{o.userData.pick={type:'cart'};});world.add(cartView.g);pickables.push(cartView.g);}
-    if(c&&cartView){const vw=cartView;vw.g.visible=!mapMode;const mv=arcDist(vw.prev,c.d,R);if(mv>.002){const f2=vnorm(vsub(c.d,vw.prev));vw.fwd=vnorm(vadd(vsc(vw.fwd,.75),vsc(f2,.25)));}vw.prev=c.d.slice();
+    if(c&&cartView){const vw=cartView;vw.g.visible=!mapMode;if(!vw.blip){vw.blip=new THREE.Sprite(BLIP);vw.blip.renderOrder=7;world.add(vw.blip);}placeBlip(vw.blip,c.d);const mv=arcDist(vw.prev,c.d,R);if(mv>.002){const f2=vnorm(vsub(c.d,vw.prev));vw.fwd=vnorm(vadd(vsc(vw.fwd,.75),vsc(f2,.25)));}vw.prev=c.d.slice();
       orient(vw.g,c.d,vw.fwd,R,.02);for(const wh of vw.wheels)wh.rotation.x+=mv*3.5;const ff=Math.max(.02,clamp(sumObj(c.tank)/cartCap(),0,1));vw.tank.scale.y=ff;vw.tank.position.y=vw.tankY-vw.tankH*(1-ff)/2;
       const col=c.mode==='wait'?0x6ff2d2:c.mode==='park'?0xeef2fb:0xffbf4d;vw.light.color.setHex(col);vw.light.emissive.setHex(col);vw.flag.emissiveIntensity=c.mode==='wait'?.6+.5*Math.sin(t*6):.4;}}
   {const seen=new Set();for(const dr of sp.bld.hangar?sp.drones:[]){seen.add(dr.id);let dw=droneViews.get(dr.id);

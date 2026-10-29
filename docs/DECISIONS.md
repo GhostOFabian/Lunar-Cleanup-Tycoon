@@ -90,3 +90,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v4.5
 - Bohrtürme mit eigenem Lager, das die vorhandene Flotte abholt (statt unsichtbarer Leitung) – Wunsch des Spielers; man sieht so, dass gebohrt wird, und die Fahrzeuge haben auf fertigen Planeten wieder Arbeit.
 - Abholen hat Vorrang, sobald ein Lager 70 % voll ist; sonst nur, wenn es nichts zu reinigen gibt – Meteoritenstaub bleibt so weiter Aufgabe der Flotte.
+
+## v4.6
+- Orange Blinkpunkte als ein gemeinsames Sprite-Material (alle blinken gleichzeitig) – billig und auch auf der Planetenkarte sichtbar.

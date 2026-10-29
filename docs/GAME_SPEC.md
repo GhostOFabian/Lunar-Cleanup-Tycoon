@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.5)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.6)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -221,6 +221,7 @@ Effiziente Motoren 2 000/60 s · Langzeitbetrieb I (12 h offline) 4 000/120 s ·
 - Unity: `Application.persistentDataPath`, gleiche Struktur als DTOs mit `saveVersion` und Migrationspfad; Cloud-Sync und Code-Export beibehalten.
 
 ## 17. Mobile UI
+- Herausgezoomt (Kamerahöhe 17 → 30 eingeblendet) trägt jedes Fahrzeug und der Sammelwagen einen orange blinkenden Leuchtpunkt (Größe mitskaliert), damit man die Flotte schnell findet.
 - HUD oben: Credits + Rate, Planet-Chip (Fortschritt, Stufe), Aufträge-Knopf mit Badge, Einstellungen; Energie/Roh/Prod-Balken; Materialliste; Ziel-Chip; Sturm-Chip; Produktions-Ampel; Warn-Chip.
 - Navigation unten: Reinigen/Kamera, Fahrzeuge, Produktion, Basis, Upgrades, Planeten. Menüs als Bottom-Sheet.
 - Planetenkarte beim Herauszoomen mit **einklappbarem** Infofenster (Zustand gespeichert).
