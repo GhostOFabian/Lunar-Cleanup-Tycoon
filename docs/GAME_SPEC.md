@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.6)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.7)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -45,9 +45,10 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Arbeitslicht: ab Dämmerung Punktlicht 3,2 m über dem Saugkopf und weicher Lichtfleck (4,2 × Radius).
 
 ## 4. Meteoritenstaub (Neuverschmutzung)
-- Selten, aber heftig. Ab 3 sauberen Parzellen. Intervall `max(40 s, 900 s / sqrt(saubere Parzellen)) / Staubfaktor` (Planet- und Sturmfaktor).
-- Ein Schauer trifft eine saubere Parzelle mit 8–11 Einschlägen (Radius 2,8–4,2 m, Stärke 0,85–0,97) → 50–90 % bedeckt. Übersprungen, wenn die Parzelle schon > 50 % bedeckt ist.
-- Staub-Parzellen bleiben „sauber“ (Fortschritt zählt), geben 50 % des Starttyp-Ertrags und werden von Fahrzeugen mitgereinigt (Malus +20/+60 m im Zielscore, max. 2 Fahrzeuge).
+- Ab 3 sauberen Parzellen (Staubfaktor = Planet- und Sturmfaktor, Intervall siehe unten).
+- Ein Schauer (ab v4.7) trifft ein ganzes Feld: die Zielparzelle plus Nachbarn, 2–4 Parzellen (auf komplett sauberen Planeten 4–7). Je Parzelle 11–15 Einschläge (Radius 3,4–5,2 m, Stärke 0,90–0,98) → meist 80–95 % bedeckt; höchstens 8 Einschläge je Parzelle sind sichtbare Meteore. Parzellen, die schon > 50 % bedeckt sind, werden übersprungen.
+- Abstand `max(45 s, 1000/√saubere) / Gefahrfaktor`, auf komplett sauberen Planeten `max(25 s, 520/√saubere)`. Staubmenge je voll bedeckter Parzelle 0,8 × Startschmutz (×1,6 auf fertigen Planeten).
+- Staub-Parzellen bleiben „sauber“ (Fortschritt zählt), geben 80 % des Starttyp-Ertrags (auf fertigen Planeten 128 %) und werden von Fahrzeugen mitgereinigt (Malus +20/+60 m im Zielscore, max. 2 Fahrzeuge).
 
 ## 5. Wirtschaft
 - Materialwert = `Basiswert × Händler-Upgrade × (Qualität bei Produkten) × (Raumhafen 1,2) × Planet-Ertragsfaktor × (1 + 0,1·komplette Planeten) × (1 + 0,05·Sternenstaub) × (1 + 0,02·Artefakte)`.

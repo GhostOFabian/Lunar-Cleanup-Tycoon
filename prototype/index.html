@@ -629,7 +629,7 @@ function activate(pid,id,saved,dust){
   const grid=new Float32Array(CELLS);if(!dust)for(let k=0;k<CELLS;k++)grid[k]=cl.inside[k];
   const canvas=mkCanvas(MASK),ctx=canvas.getContext('2d');if(!dust||saved)ctx.drawImage(pat,0,0);
   const a={id,cl,grid,sum:dust?0:cl.nIn,canvas,ctx,pat,tex:null,mesh:null,texDirty:true,saveDirty:true,maskStale:false,kind:dust?KINDS.normal:KINDS[cl.kind],D:DIRT[type],dust,hold:0,
-    amt:dust?DIRT[type].amt*DUST_YIELD:parcelYield(cl),thr:dust?.004:DONE};
+    amt:dust?DIRT[type].amt*DUST_YIELD*(S.done[pid]?1.6:1):parcelYield(cl),thr:dust?.004:DONE};
   if(saved){try{if(saved.g)decGrid(saved.g,grid,cl.inside);if(saved.m)applyMask(a,saved.m);else if(saved.g)a.maskStale=true;a.saveDirty=false;}catch(e){}}
   let s=0;for(let k=0;k<CELLS;k++)s+=grid[k];a.sum=s;
   w.act.set(id,a);return a;
@@ -650,7 +650,7 @@ function updDiscovered(pid){const w=W[pid],pd=planetData(pid);w.disc.fill(0);con
   for(let i=0;i<pd.N;i++)if(dist[i]<=3)w.disc[i]=1;}
 const adjacentOwned=(pid,id)=>planetData(pid).cells[id].nb.some(b=>W[pid].owned[b]);
 const ownedCount=pid=>{let n=0;const o=W[pid].owned;for(let i=0;i<o.length;i++)n+=o[i];return n;};
-const DUST_YIELD=.5;
+const DUST_YIELD=.8; // material per fully dusted parcel, relative to the start dirt (×1.6 on finished planets)
 /* Frontier: every dirty parcel next to a clean one (or the base) can be cleaned right away – by hand or by vehicles. No unlocking. */
 function frontWhy(pid,id){const w=W[pid],cl=planetData(pid).cells[id];
   if(cl.kind==='base')return 'Basisgelände';if(w.clean[id])return 'Schon sauber';
@@ -1118,16 +1118,20 @@ function dirtyAt(a,x,y,r,s){
   dctx.globalCompositeOperation='destination-in';dctx.drawImage(BRUSH,0,0,R2,R2);dctx.globalCompositeOperation='source-over';
   a.ctx.globalAlpha=s;a.ctx.drawImage(dtmp,0,0,R2,R2,sx,sy,R2,R2);a.ctx.globalAlpha=1;a.texDirty=true;a.saveDirty=true;
 }
+/* A shower hits a whole patch: the target parcel plus neighbours (2–4 parcels, 4–7 on a finished planet), each almost fully covered. */
 function meteor(pid,live){
-  const pd=planetData(pid),w=W[pid],c=[];for(let i=0;i<pd.N;i++)if(w.clean[i]&&pd.cells[i].kind!=='base')c.push(i);if(!c.length)return;
-  const id=c[Math.random()*c.length|0];let a=w.act.get(id);
-  if(a&&a.sum>a.cl.nIn*.5)return;
-  if(!a){a=activate(pid,id,null,true);if(pid===S.planet&&world&&!TRACK){buildActiveMesh(pid,a);paintCell(pid,id);}}
-  const vis=live&&!TRACK&&pid===S.planet&&world,n=8+(Math.random()*4|0);
-  for(let k=0;k<n;k++){let gi=0;for(let t=0;t<30;t++){gi=Math.random()*CELLS|0;if(a.cl.inside[gi])break;}
-    const x=-a.cl.H+((gi%GRID)+.5)*a.cl.cs,y=-a.cl.H+((gi/GRID|0)+.5)*a.cl.cs,r=2.8+Math.random()*1.4,s=.85+Math.random()*.12;
-    if(vis)spawnMeteor(a,x,y,r,s,k*.14);else dirtyAt(a,x,y,r,s);}
-  if(TRACK)TRACK.p[pid].hits=(TRACK.p[pid].hits||0)+1;else if(vis&&arcDist(a.cl.c,cam.d,planetData(pid).R)<cam.alt*2)toast('Meteoritenschauer auf '+cellName(id)+' – die Fahrzeuge räumen auf');
+  const pd=planetData(pid),w=W[pid],c=[],ok=i=>w.clean[i]&&pd.cells[i].kind!=='base'&&!(w.act.get(i)&&w.act.get(i).sum>pd.cells[i].nIn*.5);
+  for(let i=0;i<pd.N;i++)if(ok(i))c.push(i);if(!c.length)return;
+  const id=c[Math.random()*c.length|0],done=!!S.done[pid],want=done?4+(Math.random()*4|0):2+(Math.random()*3|0),patch=[id];
+  for(let g=0;g<want*3&&patch.length<want;g++){const from=patch[Math.random()*patch.length|0],nb=pd.cells[from].nb.filter(j=>ok(j)&&!patch.includes(j));if(nb.length)patch.push(nb[Math.random()*nb.length|0]);}
+  const vis=live&&!TRACK&&pid===S.planet&&world;
+  patch.forEach((cid,pi)=>{let a=w.act.get(cid);if(!a){a=activate(pid,cid,null,true);if(pid===S.planet&&world&&!TRACK){buildActiveMesh(pid,a);paintCell(pid,cid);}}
+    const n=11+(Math.random()*5|0);
+    for(let k=0;k<n;k++){let gi=0;for(let t=0;t<30;t++){gi=Math.random()*CELLS|0;if(a.cl.inside[gi])break;}
+      const x=-a.cl.H+((gi%GRID)+.5)*a.cl.cs,y=-a.cl.H+((gi/GRID|0)+.5)*a.cl.cs,r=3.4+Math.random()*1.8,s=.9+Math.random()*.08;
+      if(vis&&k<8)spawnMeteor(a,x,y,r,s,pi*.35+k*.12);else dirtyAt(a,x,y,r,s);}});
+  if(TRACK)TRACK.p[pid].hits=(TRACK.p[pid].hits||0)+patch.length;
+  else if(vis&&arcDist(pd.cells[id].c,cam.d,pd.R)<cam.alt*2.5)toast((patch.length>=4?'Großer ':'')+'Meteoritenschauer: '+patch.length+' Parzellen rund um '+cellName(id)+' – die Fahrzeuge räumen auf');
 }
 /* Rocket cargo: every flight carries a freight order for one raw material (+60 % on it) and a mixed-cargo bonus
    (+8 % per further kind of goods, max +40 %) – a steady trickle from the raw storage always pays, not just overflow. */
@@ -1149,7 +1153,7 @@ function dumpStore(pid,raw,live){const sp=S.planets[pid],store=raw?sp.roh:sp.pro
   for(const m of raw?RAW:PRODS){let u=store[m];if(!raw)u=Math.floor(u+1e-9);if(u<=0)continue;store[m]-=u;countSold(m,u);const c=u*matValue(m,pid);tot+=c;}
   if(tot<=0)return;earn(tot,true);sp.stats.sold+=tot;S.stats.sold+=tot;sp.rocketDue=(sp.rocketDue||0)+tot;
   if(TRACK){TRACK.p[pid].sold+=tot;TRACK.p[pid].dumps=(TRACK.p[pid].dumps||0)+1;}else if(live&&pid===S.planet)toast('Verkaufsautomat: '+(raw?'Rohstofflager':'Produktlager')+' verkauft · +'+fmt(tot)+' Cr','good');}
-const meteorEvery=pid=>{const sp=S.planets[pid];return Math.max(40,900/Math.sqrt(Math.max(1,W[pid].nClean)))/(sp.dm||1);};
+const meteorEvery=pid=>{const sp=S.planets[pid];return (S.done[pid]?Math.max(25,520/Math.sqrt(Math.max(1,W[pid].nClean))):Math.max(45,1000/Math.sqrt(Math.max(1,W[pid].nClean))))/(sp.dm||1);};
 function simStep(pid,dt,live){const o=CUR;CUR=pid;try{simStep0(pid,dt,live);}finally{CUR=o;}}
 function simStep0(pid,dt,live){
   const sp=S.planets[pid],w=W[pid];if(!sp||!w)return;
@@ -1615,7 +1619,7 @@ function spawnMeteor(a,x,y,r,s,delay){const pd=planetData(S.planet),d=toDir(a.cl
 function updMeteors(dt){const R=planetData(S.planet).R;
   for(let i=meteors.length-1;i>=0;i--){const M=meteors[i];M.t+=dt/1.1;if(M.t<0)continue;const t=Math.min(1,M.t),to=vsc(M.d,R),p=[lerp(M.from[0],to[0],t),lerp(M.from[1],to[1],t),lerp(M.from[2],to[2],t)];
     M.m.position.set(p[0],p[1],p[2]);M.m.visible=!mapMode;if(!mapMode){const l=Math.hypot(p[0],p[1],p[2]);emit3(vsc(p,1/l),l,0xffa640,1,.3,.2);}
-    if(M.t>=1){scene.remove(M.m);meteors.splice(i,1);M.a.hold=Math.max(0,M.a.hold-1);dirtyAt(M.a,M.x,M.y,M.r,M.s);emit3(M.d,R+.2,PLANETS[S.planet].theme.dust,26,3,2.4);paintCell(S.planet,M.a.id);}}}
+    if(M.t>=1){scene.remove(M.m);meteors.splice(i,1);M.a.hold=Math.max(0,M.a.hold-1);dirtyAt(M.a,M.x,M.y,M.r,M.s);emit3(M.d,R+.2,PLANETS[S.planet].theme.dust,16,3.4,2.6);paintCell(S.planet,M.a.id);}}}
 function clearMeteors(){for(const M of meteors){scene.remove(M.m);M.a.hold=0;}meteors=[];}
 const ftLayer=$('#ft'),fts=[],pv=new THREE.Vector3();
 function floatText3(d,lift,text,cls){if(mapMode)return;const el=document.createElement('div');el.className='ft '+(cls||'');el.textContent=text;ftLayer.appendChild(el);fts.push({el,d,lift,t:0,dur:cls==='big'?2:1.4});if(fts.length>40){const o=fts.shift();o.el.remove();}}

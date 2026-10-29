@@ -39,6 +39,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 23. Laternen **besser positionieren**; **Mond 100 % sauber – was jetzt?** Fertige Planeten brauchen einen Grund, die Basis weiter auszubauen. → v4.4: Tiefenabbau mit Bohrtürmen, Laternen paarweise.
 24. Man sieht nicht, dass die Bohrtürme bohren; besser ein **kleines Lager am Bohrturm, das die Fahrzeuge anfahren und abholen**. → v4.5.
 25. Silo und Klotz am Bohrturm clippen in die Turmstreben; **Fahrzeuge sollen beim Herauszoomen orange blinken**. → v4.6.
+26. **Meteoriten sollen viel größere Flächen und viel mehr verschmutzen**, gern öfter, vor allem auf 100 % sauberen Planeten. → v4.7.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

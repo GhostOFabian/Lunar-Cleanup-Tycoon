@@ -14,7 +14,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## Reinigung
 - Keine Freischaltung und keine Kosten für Parzellen; reinigbar ist nur, was an Sauberes grenzt – Wunsch des Spielers, ermöglicht volle Automatik.
 - Abschluss bei < 3 % Restschmutz – sonst hängen Parzellen bei 97 %.
-- Meteoritenstaub selten, aber 8–11 Einschläge mit 50–90 % Bedeckung – „seltener, aber dann richtig“.
+- Meteoritenstaub selten, aber 8–11 Einschläge mit 50–90 % Bedeckung – „seltener, aber dann richtig“. (ersetzt in v4.7)
 - Ein Wisch reinigt nur die Parzelle, auf der er begonnen hat – Wunsch: nie zwei gleichzeitig.
 - Handgerät ohne Leistungsdeckel – ausdrücklicher Wunsch; stattdessen Fahrzeuge ×2,6 und weit ausbaubare Fahrzeug-Upgrades.
 
@@ -93,3 +93,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 
 ## v4.6
 - Orange Blinkpunkte als ein gemeinsames Sprite-Material (alle blinken gleichzeitig) – billig und auch auf der Planetenkarte sichtbar.
+
+## v4.7
+- Meteoritenschauer als Feld aus Nachbarparzellen statt einer Parzelle; auf fertigen Planeten größer, häufiger und ergiebiger – Wunsch des Spielers, gibt der Flotte dort neben den Bohrtürmen dauerhaft Arbeit. Ersetzt „selten, 8–11 Einschläge“.

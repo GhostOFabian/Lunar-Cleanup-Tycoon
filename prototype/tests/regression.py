@@ -36,7 +36,7 @@ with game() as (pg, errs):
     show('battery + teamwork', r); check(r['charged'] > 0 and r['low'] > 0, 'battery charging cycle')
     r = E("""()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');for(const c of pd.cells)if(c.ring>=3&&c.ring<=4){w.clean[c.id]=1;w.nClean++;}t.calcFront('moon');const out=[];
       for(let i=0;i<5;i++){const b=new Set(w.act.keys());t.meteor('moon',false);for(const[id,a]of w.act)if(a.dust&&!b.has(id))out.push(a.sum/a.cl.nIn);}return out}""")
-    show('meteor coverage', r); check(r and min(r) > .35, 'meteor showers too weak')
+    show('meteor coverage', r); check(r and len(r) >= 10 and min(r) > .5 and sum(r)/len(r) > .7, 'meteor showers too weak')
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.credits=1e8;t.buyStage();t.buyStage();
       for(const id of ['research','werkstatt','u2','u3','schmelze'])t.buildBuilding(id);t.S.research.done.drones=true;t.S.research.done.outpost=true;t.buyStage();t.buildBuilding('hangar');t.buyDrone();t.buyDrone();
