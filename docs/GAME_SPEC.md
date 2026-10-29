@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.7)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.8)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -157,6 +157,14 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Freigeschaltet pro Planet, sobald er komplett sauber ist (`S.done[pid]`). Bohrtürme auf sauberen Parzellen ab Ring 2, nicht auf Außenlagern, eine pro Parzelle, max. `2 + 2 × Basisstufe`.
 - Kosten `3 000 × diff × 1,45^n`. Förderung `0,8 E/s × Vorkommen × Diamantbohrköpfe (1 + 0,3·Stufe, lokal)`, Vorkommen fest pro Parzelle (Hash) 0,6–1,6, Material = ursprünglicher Schmutz der Parzelle. Eigenes Lager 300 E (Silo + Andockplatz bei lokal x = 2,7 m). Fahrzeuge (`toRig → rigload → toUnload`) holen ab: sofort, wenn ein Lager ≥ 70 % voll ist, sonst wenn sie nichts zu reinigen haben (ab 15 E); ein Fahrzeug pro Bohrturm, Laden 16 E/s × Schnellentladung. Strom 1,5/s × Maschinen-Effizienz, solange gebohrt wird.
 - Basis-Fenster „Tiefenabbau“: Übersicht + „Bohrturm auf dem besten Vorkommen“ (Vorkommen / (1 + 0,05 × Ring)); Parzellenfenster zeigt Vorkommen und baut gezielt. Fahrzeuge umfahren Bohrtürme wie Außenlager. Ampel: Bohrturm-Lager voll rot, ≥ 70 % gelb (Abhilfe: mehr/größere/schnellere Fahrzeuge).
+
+## 9e. Ausbaustufen (ab v4.8)
+- Ab Basisstufe 5 und 100 % sauber: Ausbaustufe n+1 (`sp.exp`), unbegrenzt. Kosten `400 000 × diff × 2,2^n` Cr und `4 000 × 2,2^n` E Tiefenförderung auf diesem Planeten seit der letzten Stufe (`sp.deep`, wird beim Ausbau auf 0 gesetzt).
+- Wirkung je Stufe: +2 Bohrtürme, Bohrleistung × (1 + 0,25 n), Roh- und Produktlager × (1 + 0,3 n), +1 Fahrzeugplatz, Maximalstufe aller lokalen Anlagen-Upgrades + 2 n.
+- Anzeige im Basis-Fenster an Stelle von „Höchste Stufe erreicht“ mit Fortschrittsbalken.
+
+## 9f. Reisen (ab v4.8)
+- Nahtlos ohne Ladebild: Phase 1 (0,9 s) Kamera blendet in eine Gesamtansicht (3,4 R, Blick auf die Mitte), der Planet gleitet seitlich weg; Wechsel; Phase 2 (1,1 s) neuer Planet gleitet herein, Kamera blendet in die normale Ansicht (Höhe für 30 m). Eingaben sind währenddessen gesperrt.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

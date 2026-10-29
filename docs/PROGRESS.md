@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v4.7 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v4.8 (`prototype/index.html`)
+- v4.8: **Ausbaustufen ohne Ende** pro Planet (nach Basisstufe 5 und 100 %): je Stufe +2 Bohrtürme, +25 % Bohrleistung, +30 % Roh- und Produktlager, +1 Fahrzeugplatz, alle Anlagen-Upgrades des Planeten 2 Stufen höher; Kosten 400 k × Planetfaktor × 2,2^n plus Fördermenge aus der Tiefe (4 000 × 2,2^n E). **Nahtloses Reisen** ohne Schwarzblende: Kamera fährt zurück, der Planet gleitet weg, der neue gleitet herein, Kamera fährt herunter (2 s).
 - v4.7: Meteoritenschauer treffen ganze Felder (2–4 Parzellen, auf fertigen Planeten 4–7), bedecken sie fast vollständig, bringen mehr Staub (0,8 statt 0,5 × Startschmutz, ×1,6 auf fertigen Planeten) und kommen auf fertigen Planeten fast doppelt so oft.
 - v4.6: Bohrturm-Modell aufgeräumt (größere Platte, Silo und Pumpenhaus stehen außerhalb der Turmstreben). Beim Herauszoomen blinken alle Fahrzeuge und der Sammelwagen orange (ab Kamerahöhe 17, voll ab 30, auch auf der Planetenkarte).
 - v4.5: Bohrtürme haben ein eigenes Lager (300 E, sichtbarer Silo mit Füllstand, Andockplatz) statt einer Leitung. Fahrzeuge holen dort ab, wenn sie nichts zu reinigen haben oder ein Lager 70 % voll ist, und bringen es zur Entladestation. Sichtbares Bohren: Bohrgestänge dreht und hebt sich, Funken und Staub am Bohrloch, Leuchte grün/gelb/rot nach Füllstand.

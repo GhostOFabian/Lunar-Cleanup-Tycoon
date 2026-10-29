@@ -96,3 +96,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 
 ## v4.7
 - Meteoritenschauer als Feld aus Nachbarparzellen statt einer Parzelle; auf fertigen Planeten größer, häufiger und ergiebiger – Wunsch des Spielers, gibt der Flotte dort neben den Bohrtürmen dauerhaft Arbeit. Ersetzt „selten, 8–11 Einschläge“.
+
+## v4.8
+- Endloser Ausbau pro Planet über Ausbaustufen, die Credits und Tiefenförderung auf genau diesem Planeten verlangen – jeder Planet bleibt so dauerhaft ausbaufähig, auch wenn Reinigung immer schneller wird.
+- Ausbaustufen heben die Maximalstufe der lokalen Anlagen-Upgrades an statt neue Gebäude zu bringen – auf der Basis ist kein Platz mehr, und die vorhandenen Systeme skalieren weiter.
+- Reisen als Kamerafahrt (Pose-Blend + seitliches Gleiten) statt Schwarzblende; der Welt-Neuaufbau passiert in dem Moment, in dem kein Planet im Bild ist.

@@ -73,6 +73,9 @@ with game() as (pg, errs):
       const n=sp.rigs.length,max=t.rigMax(sp);for(const k in sp.roh)sp.roh[k]=0;sp.energy=1e4;for(let i=0;i<60;i++)t.simStep('moon',1,false);
       const mined=sp.rigs.reduce((a,r)=>a+r.mined,0);const modes=new Set();let picked=0;for(let i=0;i<600;i++){t.simStep('moon',.5,false);for(const v of sp.veh){modes.add(v.mode);}}picked=sp.rigs.reduce((a,r)=>a+r.mined-t.sumObj(r.buf),0);return {veh:sp.veh.length,rigModes:[...modes].filter(m=>m.includes('ig')),picked,why0,n,max,mined,roh:t.rohSum(sp),status:sp.rigs.map(r=>r.status).slice(0,3),cells:new Set(sp.rigs.map(r=>r.cell)).size}}""")
     show('deep drilling', r); check(r['n'] == r['max'] and r['cells'] == r['n'] and r['mined'] > r['n'] * 20 and r['picked'] > 100 and len(r['rigModes']) == 2, 'deep drilling rigs')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.done.moon=1;sp.stage=5;t.S.credits+=1e9;sp.deep=0;const why=t.expWhy('moon');sp.deep=t.expNeed('moon');
+      const m0=t.rigMax(sp),c0=t.rohCap(),u0=t.upMax('rohcap'),s0=t.vehSlots('moon');t.buyExp();return {why,exp:sp.exp,dm:t.rigMax(sp)-m0,cap:t.rohCap()/c0,du:t.upMax('rohcap')-u0,ds:t.vehSlots('moon')-s0,deep:sp.deep}}""")
+    show('expansion level', r); check(r['why'] != '' and r['exp'] == 1 and r['dm'] == 2 and abs(r['cap'] - 1.3) < .01 and r['du'] == 2 and r['ds'] == 1 and r['deep'] == 0, 'expansion levels')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -101,6 +104,11 @@ with game() as (pg, errs):
     show('labels', r); check(r['closed'] == [] and r['open'] in ([], ['roh']) and r['after'] == [], 'building labels')  # with the three.js mock traverse() is a no-op, so 'open' stays empty; verified with real three.js
 
     s1 = E("()=>{__t.save();return {n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
+    E("""()=>{const t=__t;if(!t.S.planets.mars){t.S.planets.mars=t.freshPlanet('mars');t.initRuntime('mars');}t.travelTo('mars');}""")
+    pg.wait_for_timeout(2600)
+    r = E("()=>({p:__t.S.planet,fx:!!__t.travelFx})")
+    show('seamless travel', r); check(r['p'] == 'mars' and not r['fx'], 'seamless travel')
+    E("()=>{__t.travelTo('moon')}"); pg.wait_for_timeout(2600)
     pg.reload(); pg.wait_for_timeout(1200)
     s2 = E("()=>({n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
     show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'], 'save/load roundtrip')

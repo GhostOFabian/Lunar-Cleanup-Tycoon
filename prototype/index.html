@@ -558,7 +558,21 @@ const uv=id=>UP[id].val(lvl(id));
 const ucost=id=>Math.round(UP[id].base*Math.pow(UP[id].grow,lvl(id))*(UP[id].loc?PLANETS[S.planet].diff:1));
 const SP=()=>S.planets[S.planet];
 const offlineCap=()=>S.research.done.off24?86400:S.research.done.off12?43200:28800;
-const rohCap=()=>uv('rohcap'),prodCap=()=>uv('prodcap');
+/* Ausbaustufen: endless per-planet growth after stage 5 + 100 % clean. Each level: +2 rigs, +25 % drilling, +30 % storage,
+   +1 vehicle slot, and every local facility upgrade may go 2 levels higher. Needs credits and deep-mined material on that planet. */
+const expN=pid=>{const sp=S.planets[pid||CUR||S.planet];return(sp&&sp.exp)||0;};
+const expF=pid=>1+.3*expN(pid);
+const upMax=id=>UP[id].max+(UP[id].loc?2*expN():0);
+const expCost=pid=>Math.round(400000*PLANETS[pid].diff*Math.pow(2.2,expN(pid)));
+const expNeed=pid=>Math.round(4000*Math.pow(2.2,expN(pid)));
+function expWhy(pid){const sp=S.planets[pid];if(sp.stage<5)return 'Erst Basisstufe 5';if(!S.done[pid])return 'Erst '+PLANETS[pid].name+' komplett reinigen';if((sp.deep||0)<expNeed(pid))return 'Noch '+fmt(expNeed(pid)-(sp.deep||0))+' E aus der Tiefe fördern';return '';}
+function buyExp(){const pid=S.planet,sp=SP(),why=expWhy(pid);if(why)return fail(why);const c=expCost(pid);if(S.credits<c)return fail(lacks(c));
+  S.credits-=c;sp.exp=(sp.exp||0)+1;sp.deep=0;SFX.unlock();toast(PLANETS[pid].name+': Ausbaustufe '+sp.exp+' – +2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, Anlagen-Upgrades +2 Stufen','good');rebuildBase();updateHUD();save();}
+function expCard(pid){const sp=S.planets[pid],n=expN(pid),why=expWhy(pid);
+  return '<div class="row-d">'+(n?'Ausbaustufe '+n+' · ':'')+'Höchste Basisstufe erreicht.</div><div class="row-t" style="margin-top:8px">Ausbaustufe '+(n+1)+'</div><div class="row-d">+2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, alle Anlagen-Upgrades dieses Planeten 2 Stufen höher. Es gibt kein Ende – jede Stufe kostet mehr.</div>'+
+    (S.done[pid]&&sp.stage>=5?'<div class="bar"><i data-w="'+bind(()=>Math.min(1,(SP().deep||0)/expNeed(S.planet))*100)+'"></i></div><div class="row-d" data-b="'+bind(()=>fmt(Math.min(SP().deep||0,expNeed(S.planet)))+' / '+fmt(expNeed(S.planet))+' E aus der Tiefe')+'"></div>':'<div class="row-d"><b>'+why+'</b></div>')+
+    '<button class="buy wide" data-act="buyexp" data-en="'+bind(()=>!expWhy(S.planet)&&S.credits>=expCost(S.planet))+'">Ausbauen · '+cr(expCost(pid))+'</button>';}
+const rohCap=()=>uv('rohcap')*expF(),prodCap=()=>uv('prodcap')*expF();
 const rohSum=sp=>RAW.reduce((a,k)=>a+sp.roh[k],0);
 const prodSum=sp=>PRODS.reduce((a,k)=>a+sp.prod[k],0);
 const anyPort=()=>{for(const k in S.planets)if(S.planets[k].bld.port)return true;return false;};
@@ -597,7 +611,7 @@ function freshPlanet(pid){
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
   return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
-    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
+    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
 function freshSave(){return{v:2,layout:3,qv:3,ach:{},maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
 
@@ -777,7 +791,7 @@ const stName=s=>isOut(s)?'Außenlager '+cellName(+s.slice(1)):BLD[s].name;
 function stDir(pid,s,kind,k){const pd=planetData(pid);
   if(isOut(s)){const p=kind==='a'?[6,0]:kind==='d'?[2.9,-(k-(OUTPOST.docks-1)/2)*2]:[0,0];return toDir(pd.cells[+s.slice(1)],p[0],p[1],pd.R);}
   const p=kind==='a'?approachPos(s):kind==='d'?dockPos(s,k):BLD[s].pos;return basePlanDir(pd,p[0],p[1]);}
-const vehSlots=pid=>{const sp=S.planets[pid];return(gs(sp)>=2?4:0)+(sp.bld.werkstatt?4:0)+(sp.stage>=4?4:0)+(sp.stage>=5?6:0)+uv('slots')+doneCount();};
+const vehSlots=pid=>{const sp=S.planets[pid];return(gs(sp)>=2?4:0)+(sp.bld.werkstatt?4:0)+(sp.stage>=4?4:0)+(sp.stage>=5?6:0)+uv('slots')+doneCount()+(sp.exp||0);};
 const packet=()=>8*uv('bcap');
 const beltSpeed=()=>2.4*uv('bspeed');
 const BSP=1.25,DONE=.03;
@@ -1025,10 +1039,10 @@ function outpostWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).
    Their flow is what makes belts, machines, storage, night power and selling worth expanding on finished planets. ---- */
 const RIG={buf:300,load:16,energy:1.5,base:.8};
 const rigRich=(pid,id)=>{let h=(id*2654435761+(PORDER.indexOf(pid)+1)*40503)>>>0;h^=h>>>15;h=Math.imul(h,2246822519)>>>0;h^=h>>>13;return .6+(h%1000)/1000;};
-const rigMax=sp=>2+2*sp.stage;
+const rigMax=sp=>2+2*sp.stage+2*(sp.exp||0);
 const rigCost=pid=>Math.round(3000*PLANETS[pid].diff*Math.pow(1.45,(S.planets[pid].rigs||[]).length));
 const rigMat=(pid,id)=>DIRT[planetData(pid).cells[id].type].mat;
-const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate');
+const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate')*(1+.25*expN(pid));
 const richTxt=x=>x>=1.3?'reich':x>=.95?'gut':'mager';
 function rigWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).cells[id],rs=sp.rigs||[];
   if(!S.done[pid])return 'Erst wenn '+PLANETS[pid].name+' komplett sauber ist';
@@ -1044,7 +1058,7 @@ function buildRig(id){const pid=S.planet,sp=SP();if(id==null||id<0){id=bestRigCe
   S.credits-=c;sp.rigs=sp.rigs||[];sp.rigs.push({cell:id,buf:{},status:'Bohrt',busy:false,mined:0});rebuildBase();SFX.unlock();sparkleCell(pid,id,40);
   toast('Bohrturm auf '+cellName(id)+' fördert '+MATS[rigMat(pid,id)].name+' ('+richTxt(rigRich(pid,id))+'es Vorkommen)','good');save();}
 function rigStep(pid,sp,r,dt,f){const m=rigMat(pid,r.cell),b=sumObj(r.buf);
-  if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt);r.buf[m]=(r.buf[m]||0)+x;r.mined=(r.mined||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
+  if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt);r.buf[m]=(r.buf[m]||0)+x;r.mined=(r.mined||0)+x;sp.deep=(sp.deep||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
   if(r.claim!=null&&!sp.veh.some(v=>v.id===r.claim&&v.rig===r.cell&&(v.mode==='toRig'||v.mode==='rigload')))r.claim=null;
   r.status=sumObj(r.buf)>=RIG.buf-.5?(sp.veh.length?'Lager voll – wartet auf Abholung':'Lager voll – kein Fahrzeug holt ab'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt'+(r.claim!=null?' · Fahrzeug holt ab':'');}
 const rigDock=(pid,r)=>toDir(planetData(pid).cells[r.cell],2.7,0,planetData(pid).R);
@@ -1057,9 +1071,9 @@ function rigSec(pid,id){const sp=S.planets[pid],r=(sp.rigs||[]).find(x=>x.cell==
   if(!S.done[pid])return '';const why=rigWhy(pid,id);
   return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+(why?why+'.':'Tiefenvorkommen: <b>'+richTxt(rich)+'</b> (×'+dec(rich,2)+') '+MATS[m].name+'. Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildrig" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigCost(pid))+'">Bohrturm bauen · '+cr(rigCost(pid))+'</button>')+'</section>';}
 function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const rs=sp.rigs||[],n=rs.length,mx=rigMax(sp);
-  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+PLANETS[pid].name+' ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe in ihr eigenes kleines Lager, deine Fahrzeuge holen sie dort ab. Je mehr sie liefern, desto mehr lohnen Fahrzeuge, Bänder, Maschinen, Lager, Strom für die Nacht und Verkaufskapazität. Jede Basisstufe erlaubt 2 Bohrtürme mehr.</p>'+
+  return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+PLANETS[pid].name+' ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe in ihr eigenes kleines Lager, deine Fahrzeuge holen sie dort ab. Je mehr sie liefern, desto mehr lohnen Fahrzeuge, Bänder, Maschinen, Lager, Strom für die Nacht und Verkaufskapazität. Jede Basisstufe und jede Ausbaustufe erlaubt 2 Bohrtürme mehr.</p>'+
     '<dl class="kv"><dt>Bohrtürme</dt><dd>'+n+' / '+mx+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec((SP().rigs||[]).reduce((a,r)=>a+rigRate(S.planet,r),0)*60,0)+' E pro Minute')+'"></dd></dl>'+
-    (n<mx?'<button class="buy wide" data-act="buildrig" data-id="-1" data-en="'+bind(()=>S.credits>=rigCost(S.planet))+'">Bohrturm auf dem besten Vorkommen · '+cr(rigCost(pid))+'</button><p class="note">Oder tippe eine saubere Parzelle an und baue dort.</p>':sp.stage<5?'<p class="note">Alle Plätze belegt – baue die Basis aus, um 2 weitere Bohrtürme zu bekommen.</p>':'')+
+    (n<mx?'<button class="buy wide" data-act="buildrig" data-id="-1" data-en="'+bind(()=>S.credits>=rigCost(S.planet))+'">Bohrturm auf dem besten Vorkommen · '+cr(rigCost(pid))+'</button><p class="note">Oder tippe eine saubere Parzelle an und baue dort.</p>':'<p class="note">Alle Plätze belegt – '+(sp.stage<5?'baue die Basis aus':'die nächste Ausbaustufe (oben) bringt')+' 2 weitere Bohrtürme.</p>')+
     upgRow('rigrate')+'</section>';}
 function rigModel(L){const g=new THREE.Group(),v={g};add(Box(4.6,.3,4.4),L.pad,0,.15,0,g,false);const legM=mat(0xffbf4d,{metalness:.4,roughness:.5});
   for(const[x,z]of[[-.75,-.75],[.75,-.75],[-.75,.75],[.75,.75]])add(Box(.16,6.2,.16),legM,x,3.3,z,g);
@@ -1742,7 +1756,7 @@ function stampManual(d){
 function endStroke(){brushRing.material.color.setHex(0x6ff2d2);brushRing.material.opacity=.8;if(stroke&&stroke.acc>=1&&stroke.ld)floatText3(stroke.ld,1.2,'+'+fmt(stroke.acc)+' '+MATS[stroke.mat||'staub'].name,'mat');stroke=null;brushRing.visible=false;}
 function beginDrag(){if(canClean(G.hit)){G.mode='clean';startStroke(G.lx,G.ly);}else G.mode='pan';}
 cvs.addEventListener('pointerdown',e=>{
-  audioInit();try{cvs.setPointerCapture(e.pointerId);}catch(_){}
+  if(travelFx)return;audioInit();try{cvs.setPointerCapture(e.pointerId);}catch(_){}
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(e.pointerType==='mouse'&&e.button===2){G={mode:'rotate',lx:e.clientX,ly:e.clientY};return;}
   if(e.pointerType==='mouse'&&e.button===1){G={mode:'pan',lx:e.clientX,ly:e.clientY};return;}
@@ -1913,9 +1927,22 @@ function unlockPlanet(pid){const P=PLANETS[pid];if(S.planets[pid])return;const p
   if(prev&&cleanPct(prev)<PLANET_GATE)return fail('Erst '+Math.round(PLANET_GATE*100)+' % von '+PLANETS[prev].name+' reinigen (jetzt '+Math.floor(cleanPct(prev)*100)+' %)');if(S.credits<P.unlockCost)return fail(lacks(P.unlockCost));
   S.credits-=P.unlockCost;S.planets[pid]=freshPlanet(pid);grantAuto(S.planets[pid]);initRuntime(pid);travelTo(pid);
   if(!powOK(pid))setTimeout(()=>toast('Deine Fahrzeuge sind hier zu schwach: Doppelbürsten Stufe '+powReq(pid)+' nötig','bad'),2600);}
-function travelTo(pid){if(pid===S.planet||!S.planets[pid])return;closeSheet();const f=$('#fade');f.textContent='Reise zum '+PLANETS[pid].name+' …';f.classList.add('on');SFX.planet();
-  setTimeout(()=>{save();S.planet=pid;lastCell=-1;mapMode=false;buildWorld(pid);startCam();cam.alt=planetData(pid).R*2.6;focusDir(cam.d,fitAlt(30));setMapMode(cam.alt>MAP_ALT());
-    f.classList.remove('on');toast('Willkommen auf dem '+PLANETS[pid].name,'good');updateHUD();save();},700);}
+/* Seamless travel: the camera pulls back, the planet flies off to the side, the next one flies in from the other side and the camera comes down. */
+let travelFx=null;
+function travelTo(pid){if(pid===S.planet||!S.planets[pid]||travelFx)return;closeSheet();SFX.planet();save();if(stroke)endStroke();G=null;if(mapMode)setMapMode(false);
+  travelFx={pid,ph:0,t:0};}
+const TRV=[.9,1.1];
+function stepTravel(dt){const F=travelFx;if(!F||!world)return;F.t+=Math.min(dt,.05);cam.gd=null;
+  if(F.ph===0&&F.t>=TRV[0]){S.planet=F.pid;lastCell=-1;mapMode=false;buildWorld(F.pid);startCam();cam.alt=fitAlt(30);cam.gd=null;setMapMode(false);F.ph=1;F.t=0;updateHUD();}
+  else if(F.ph===1&&F.t>=TRV[1]){world.position.set(0,0,0);travelFx=null;toast('Willkommen auf dem '+PLANETS[F.pid].name,'good');updateHUD();save();}}
+/* runs after camUpdate: blends the normal camera into a view of the whole planet from afar, slides the planets, and back */
+function travelCam(){const F=travelFx;if(!F||!world)return;const R=planetData(S.planet).R,k=Math.min(1,F.t/TRV[F.ph]);
+  let far,b,slide;if(F.ph===0){far=smooth(0,.55,k);b=smooth(0,.3,k);slide=-smooth(.5,1,k);}else{far=1-smooth(.45,1,k);b=1-smooth(.7,1,k);slide=1-smooth(0,.5,k);}
+  const np=camera.position.clone(),nq=camera.quaternion.clone(),dir=new THREE.Vector3(cam.d[0],cam.d[1],cam.d[2]).normalize();
+  const dist=lerp(R+cam.alt,R*3.4,far),pos=dir.clone().multiplyScalar(dist),tgt=dir.clone().multiplyScalar(R*(1-far));
+  camera.position.copy(pos);camera.up.set(cam.N[0],cam.N[1],cam.N[2]);camera.lookAt(tgt);const oq=camera.quaternion.clone();
+  camera.position.copy(np.lerp(pos,b));camera.quaternion.copy(nq.slerp(oq,b));camera.updateMatrixWorld();
+  const right=new THREE.Vector3(1,0,0).applyQuaternion(oq);world.position.copy(right).multiplyScalar(slide*R*1.9);}
 function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in W)delete W[k];S=freshSave();initRuntime('moon');mapMode=false;buildWorld('moon');startCam();setMapMode(false);closeSheet();showWelcome();updateHUD();save();try{cloudPush(serialize(),true);}catch(e){}}
 
 /* ===================== 11. UI sheets ===================== */
@@ -1928,8 +1955,8 @@ function updLabels(){const st=sheetState,sel=st&&st.kind==='building'?st.arg:st&
 function openSheet(kind,arg){sheetState={kind,arg};setTimeout(updLabels,0);renderSheet();sheet.hidden=false;requestAnimationFrame(()=>sheet.classList.add('open'));
   document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.nav!=='clean')b.classList.toggle('on',b.dataset.nav===kind);});}
 function closeSheet(){sheetState=null;setTimeout(updLabels,0);sheet.classList.remove('open');selectCell(null);setTimeout(()=>{if(!sheetState)sheet.hidden=true;},230);document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.nav!=='clean')b.classList.remove('on');});}
-function upgRow(id){const u=UP[id],l=lvl(id),max=l>=u.max;
-  return '<div class="row"><div class="row-main"><div class="row-t">'+u.name+'<span class="lvl">Stufe '+l+'/'+u.max+(u.loc?' · nur '+PLANETS[S.planet].name:'')+'</span></div><div class="row-d">'+u.label+': '+u.show(u.val(l))+(max?'':' → <b>'+u.show(u.val(l+1))+'</b>')+'</div></div>'+
+function upgRow(id){const u=UP[id],l=lvl(id),max=l>=upMax(id);
+  return '<div class="row"><div class="row-main"><div class="row-t">'+u.name+'<span class="lvl">Stufe '+l+'/'+upMax(id)+(u.loc?' · nur '+PLANETS[S.planet].name:'')+'</span></div><div class="row-d">'+u.label+': '+u.show(u.val(l))+(max?'':' → <b>'+u.show(u.val(l+1))+'</b>')+'</div></div>'+
     (max?'<button class="buy" disabled>Max</button>':'<button class="buy" data-act="upg" data-id="'+id+'" data-en="'+bind(()=>S.credits>=ucost(id))+'">'+cr(ucost(id))+'</button>')+'</div>';}
 const matList=o=>Object.keys(o).filter(k=>o[k]>=.05).map(k=>MATS[k].name+' '+fmt(o[k])).join(' · ')||'leer';
 function vehRow(v){const T=VT[v.type];return '<div class="row"><div class="row-main"><div class="row-t">'+T.name+' #'+v.id+'</div><div class="row-d" data-b="'+bind(()=>v.status+(v.cell>=0&&(v.mode==='clean'||v.mode==='drive')?' · '+cellName(v.cell):''))+'"></div><div class="bar"><i data-w="'+bind(()=>sumObj(v.tank)/tankCap(v)*100)+'"></i></div></div><button class="buy alt" data-act="vehsheet" data-id="'+v.id+'">Details</button></div>';}
@@ -2010,7 +2037,7 @@ function renderSheet(){
     if(!nb)h+='<p class="note">Bänder entstehen automatisch, sobald zwei verbundene Gebäude stehen – zum Beispiel Entladestation und Rohstofflager.</p>';
     h+=(gs(sp)>=2?upgRow('bspeed')+upgRow('bcap')+upgRow('beff'):'')+'</section>';}
   else if(kind==='base'){k=PLANETS[pid].name;t='Basis';const next=STAGES[sp.stage];
-    h+='<div class="stage"><div class="row-d">Basisstufe '+sp.stage+' von '+STAGES.length+'</div><div class="row-t">'+STAGES[sp.stage-1].name+'</div>'+(next?'<div class="row-d">Nächste Stufe: <b>'+next.name+'</b><br>'+next.txt+'</div><button class="buy wide" data-act="stage" data-en="'+bind(()=>S.credits>=stageCost(SP()))+'">Ausbauen · '+cr(stageCost(sp))+'</button>':'<div class="row-d">Höchste Stufe erreicht.</div>')+'</div>';
+    h+='<div class="stage"><div class="row-d">Basisstufe '+sp.stage+' von '+STAGES.length+'</div><div class="row-t">'+STAGES[sp.stage-1].name+'</div>'+(next?'<div class="row-d">Nächste Stufe: <b>'+next.name+'</b><br>'+next.txt+'</div><button class="buy wide" data-act="stage" data-en="'+bind(()=>S.credits>=stageCost(SP()))+'">Ausbauen · '+cr(stageCost(sp))+'</button>':expCard(pid))+'</div>';
     h+=rigBaseSec(pid);
     h+='<section class="sec"><h3>Erschließung</h3><p class="note">Parzellen musst du nicht freischalten: Jede verschmutzte Parzelle direkt neben einer sauberen ist sofort reinigbar – von dir und von deinen Fahrzeugen. Die Flotte arbeitet sich so selbstständig von der Basis nach außen, auch offline. Gerade reinigbar: <b>'+W[pid].front.size+'</b> Parzellen.</p></section>';
     h+='<section class="sec"><h3>Gebäude</h3>'+BORDER.map(buildRow).join('')+'</section>';}
@@ -2067,7 +2094,7 @@ function refreshSheet(){if(!sheetState)return;
   sheetBody.querySelectorAll('[data-en]').forEach(el=>{const f=B[el.dataset.en];if(f)el.disabled=!f();});
   sheetBody.querySelectorAll('[data-w]').forEach(el=>{const f=B[el.dataset.w];if(f)el.style.width=clamp(f(),0,100).toFixed(1)+'%';});}
 const ACT={
-  upg(d){const id=d.id,c=ucost(id);if(lvl(id)>=UP[id].max)return;if(S.credits<c)return fail(lacks(c));S.credits-=c;setLvl(id,lvl(id)+1);SFX.buy();toast(UP[id].name+': Stufe '+lvl(id),'good');},
+  upg(d){const id=d.id,c=ucost(id);if(lvl(id)>=upMax(id))return;if(S.credits<c)return fail(lacks(c));S.credits-=c;setLvl(id,lvl(id)+1);SFX.buy();toast(UP[id].name+': Stufe '+lvl(id),'good');},
   veh(d){buyVehicle(d.id);},vehsheet(d){openSheet('vehicle',+d.id);return 'keep';},vehauto(d){const v=SP().veh.find(x=>x.id===+d.id);if(v){v.fix=null;if(v.mode!=='unload'&&v.mode!=='queue'&&v.mode!=='toUnload')v.mode='seek';}},
   follow(d){const v=SP().veh.find(x=>x.id===+d.id);if(v){focusDir(v.d,fitAlt(14));closeSheet();}return 'keep';},
   tounload(d){const v=SP().veh.find(x=>x.id===+d.id);if(v&&sumObj(v.tank)>0&&(v.mode==='clean'||v.mode==='drive'||v.mode==='seek')){v.mode='toUnload';toast('Fährt zur Entladestation');}},
@@ -2077,7 +2104,7 @@ const ACT={
   research(d){startResearch(d.id);},travel(d){travelTo(d.id);return 'keep';},unlock(d){unlockPlanet(d.id);return 'keep';},
 flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);return 'keep';},
   sound(){S.sound=!S.sound;if(!S.sound)scrub(0);},
-  buydrone(){buyDrone();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
+  buydrone(){buyDrone();},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autoorder(){const sp=SP();sp.autoOrder=sp.autoOrder===false;toast(sp.autoOrder!==false?'Frachtauftrag wird automatisch bedient':'Frachtauftrag nicht mehr automatisch');},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
@@ -2253,6 +2280,7 @@ const ACH=[
   {id:'stage',name:'Baumeister',unit:'höchste Basisstufe',v:()=>S.maxStage||1,t:[2,3,4,5]},
   {id:'rigs',name:'Bohrmeister',unit:'Bohrtürme gebaut',v:()=>Object.values(S.planets).reduce((a,sp)=>a+(sp.rigs||[]).length,0),t:[1,5,15,40]},
   {id:'deep',name:'Tiefenförderung',unit:'E aus der Tiefe',v:()=>S.ctr.deep||0,t:[1e3,1e4,1e5,1e6,1e7]},
+  {id:'exp',name:'Ausbaumeister',unit:'höchste Ausbaustufe',v:()=>Math.max(0,...Object.values(S.planets).map(sp=>sp.exp||0)),t:[1,3,5,10,20]},
   {id:'star',name:'Sternensammler',unit:'Sternenstaub',v:()=>S.star||0,t:[1,10,50,200]},
 ];
 const achRew=i=>Math.round(250*Math.pow(5,i));
@@ -2358,6 +2386,7 @@ function updDayNight(dt){const pid=S.planet,sp=SP(),th=PLANETS[pid].theme,sd=sun
   if(on){const p=brushRing.position,n=vnorm([p.x,p.y,p.z]),r=uv('radius');brushLight.position.set(p.x+n[0]*3.2,p.y+n[1]*3.2,p.z+n[2]*3.2);brushLight.intensity=1.8*nf;
     brushPool.position.copy(p);brushPool.quaternion.copy(brushRing.quaternion);brushPool.scale.setScalar(r*4.2);brushPool.material.opacity=.42*nf;}else brushLight.intensity=0;}
 function updateVisuals(dt,t){
+  stepTravel(dt);
   updDayNight(dt);
   const pid=S.planet,sp=SP(),pd=planetData(pid),R=pd.R,w=W[pid];
   const mt=MAP_ALT();if(!mapMode&&cam.alt>mt*1.05)setMapMode(true);else if(mapMode&&cam.alt<mt*.95)setMapMode(false);
@@ -2453,7 +2482,7 @@ function frame(now){
   simStep(S.planet,dt,true);
   bgAcc+=dt;if(bgAcc>=1){for(const pid in S.planets)if(pid!==S.planet&&W[pid])simStep(pid,bgAcc,false);bgAcc=0;}
   researchTick(dt);
-  updateVisuals(dt,T0);camUpdate(dt);
+  updateVisuals(dt,T0);camUpdate(dt);travelCam();
   renderer.render(scene,camera);
   scrubLvl=lerp(scrubLvl,Math.min(1,strokeRem*25),1-Math.exp(-14*dt));strokeRem=0;scrub(stroke?scrubLvl:0,stroke&&stroke.sfx);
   if(stroke&&stroke.acc>=1&&T0-stroke.ft>.5&&stroke.ld){stroke.ft=T0;floatText3(stroke.ld,1.2,'+'+fmt(stroke.acc)+' '+MATS[stroke.mat||'staub'].name,'mat');stroke.acc-=Math.floor(stroke.acc);}
