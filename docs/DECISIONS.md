@@ -75,3 +75,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Wisch außerhalb der Parzelle pausiert statt die Kamera zu bewegen (Spieler fand das Verschieben störend); nur wenn ein Wisch in den ersten 0,3 s ohne Ertrag die Parzelle verlässt, wird er zur Kamerabewegung – so klebt der Finger trotzdem nicht. Ersetzt die Regel aus v3.6.1.
 - Randscrollen nur, wenn der Finger 0,45 s am Rand über der eigenen Parzelle bleibt, 200 px/s.
 - Arbeitslicht als ein dauerhaftes Punktlicht (Intensität 0 bei Tag) + Lichtfleck-Textur – keine Shader-Neukompilierung beim Ein-/Ausschalten.
+
+## v4.3
+- Laternen stehen im Sperr-Ring direkt um jedes Gebäude – dort fährt nie ein Fahrzeug, die Wegfindung bleibt unverändert.
+- Nur 6 echte Punktlichter, die den Laternen nahe der Kamera folgen; alle übrigen leuchten nur optisch – konstante Lichterzahl, keine Shader-Neukompilierung, auf Handys bezahlbar.

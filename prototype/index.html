@@ -1410,6 +1410,7 @@ function buildBase(pid){
       g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(g,pd,B.pos[0],B.pos[1],0);world.add(g);pickables.push(g);buildViews[id]={g,site:1};}}
   buildBelts(pid);
   {const fl=new THREE.PointLight(0xffd9a0,0,70,1.6);const fg=new THREE.Group();fg.add(fl);placeOnPlan(fg,pd,0,0,9);world.add(fg);buildViews.flood={g:fg,light:fl};}
+  buildLamps(pid);
   {const dm=new THREE.Mesh(new THREE.SphereGeometry(34,40,16,0,TAU,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0x7fb4ff,transparent:true,opacity:.13,side:THREE.DoubleSide,depthWrite:false}));const dg=new THREE.Group();dg.add(dm);placeOnPlan(dg,pd,0,0,-1);dg.visible=false;world.add(dg);buildViews.dome={g:dg};}
   for(const o of sp.outposts){const cl=pd.cells[o.cell],v=outpostModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:o.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
     const lb=makeLabel('Außenlager');lb.position.set(0,4.8,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews[o.key]=v;
@@ -1608,6 +1609,36 @@ const brushRing=new THREE.Mesh(new THREE.RingGeometry(.86,1,40),new THREE.MeshBa
 /* hand work light: a lamp over the brush and a soft light pool on the ground, switched on at dusk and at night */
 const brushLight=new THREE.PointLight(0xfff0d0,0,16,1.4);scene.add(brushLight);
 const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.45,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+/* ---- street lamps around the base: placed in the blocked ring right next to each building (vehicles never drive there),
+   away from docks, belts and park spots. Only the 6 lamps nearest to the view carry a real light; all glow. ---- */
+const LAMP={headM:new THREE.MeshStandardMaterial({color:0xfff1d6,emissive:0xffd08a,emissiveIntensity:.1}),poleM:new THREE.MeshStandardMaterial({color:0x39404c,metalness:.6,roughness:.4}),
+  halo:new THREE.SpriteMaterial({map:glowTex,color:0xffd9a0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}),
+  pool:new THREE.MeshBasicMaterial({map:glowTex,color:0xffd9a0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})};
+const LAMPL=[];for(let i=0;i<6;i++){const l=new THREE.PointLight(0xffd59a,0,16,1.3);l.userData.on=0;scene.add(l);LAMPL.push(l);}
+let lampPos=[],lampT=1;
+function lampSpots(pid){const sp=S.planets[pid],blds=BORDER.filter(k=>sp.bld[k]),belts=BELTS.filter(b=>beltLive(sp,b)),out=[],ng=navGrid(pid).g,pd=planetData(pid);
+  const keep=[[2.5,13],[13,-16.2],[BLD.roh.pos[0]-2.6,BLD.roh.pos[1]+1.6]];
+  for(const k of blds){const B=BLD[k],r=B.fp+.35,want=B.fp>=3?2:1;let n=0;const cands=[];
+    for(const rr of[r,r-.2])for(let i=0;i<16;i++){const a=i*TAU/16+.2;cands.push([B.pos[0]+Math.cos(a)*rr,B.pos[1]+Math.sin(a)*rr,a]);}
+    cands.sort((p,q)=>Math.hypot(p[0],p[1])-Math.hypot(q[0],q[1]));
+    for(const p of cands){if(n>=want)break;
+      if(B.st&&Math.cos(p[2])>.25)continue;
+      if(pd.cells[cellOf(pd,basePlanDir(pd,p[0],p[1]),pd.base)].kind!=='base')continue;
+      if([[0,0],[.45,0],[-.45,0],[0,.45],[0,-.45]].some(o=>!ng[navIdx(p[0]+o[0],p[1]+o[1])]))continue;
+      if(blds.some(o=>o!==k&&Math.hypot(p[0]-BLD[o].pos[0],p[1]-BLD[o].pos[1])<BLD[o].fp+.7))continue;
+      if(belts.some(b=>{const P=b.rp;for(let j=0;j<P.length-1;j++)if(segD(p,P[j],P[j+1])<1.5)return true;return false;}))continue;
+      if(keep.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<2.2))continue;
+      if(out.some(o=>Math.hypot(o[0]-p[0],o[1]-p[1])<4))continue;
+      out.push([p[0],p[1],k]);n++;}}
+  return out;}
+function lampModel(){const g=new THREE.Group();add(Cyl(.22,.28,.2,10),LAMP.poleM,0,.1,0,g);add(Cyl(.06,.08,3.1,8),LAMP.poleM,0,1.65,0,g);
+  add(Cyl(.24,.17,.5,8),LAMP.headM,0,3.45,0,g,false);add(new THREE.ConeGeometry(.36,.28,8),LAMP.poleM,0,3.84,0,g);add(Sph(.07,6,4),LAMP.poleM,0,4.02,0,g);
+  const h=new THREE.Sprite(LAMP.halo);h.position.set(0,3.45,0);h.scale.set(1.9,1.9,1);h.renderOrder=6;g.add(h);
+  const p=new THREE.Mesh(new THREE.CircleGeometry(4.2,24),LAMP.pool);p.rotation.x=-Math.PI/2;p.position.y=.07;p.renderOrder=4;g.add(p);
+  g.traverse(o=>{if(o.isMesh&&o.material===LAMP.poleM)o.castShadow=true;});return g;}
+function buildLamps(pid){const pd=planetData(pid),lg=new THREE.Group();lampPos=[];lampT=1;
+  for(const p of lampSpots(pid)){const g=lampModel();placeOnPlan(g,pd,p[0],p[1],0);lg.add(g);lampPos.push(vsc(basePlanDir(pd,p[0],p[1]),pd.R+3.4));}
+  world.add(lg);buildViews.lamps={g:lg};}
 const brushPool=new THREE.Mesh(new THREE.CircleGeometry(1,32),new THREE.MeshBasicMaterial({map:glowTex,color:0xffe6b0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));brushPool.renderOrder=4;brushPool.visible=false;scene.add(brushPool);
 const canClean=hit=>cleanMode&&!mapMode&&hit&&hit.type==='cell'&&workable(S.planet,hit.id);
 function startStroke(x,y){const d=sphereHit(x,y);stroke={last:d,acc:0,ft:0,ld:d,t0:performance.now(),out:false,et:0};if(d)stampManual(d);}
@@ -2240,7 +2271,11 @@ let nightVis=0;
 function updDayNight(dt){const pid=S.planet,sp=SP(),th=PLANETS[pid].theme,sd=sunDir(pid,sp),lv=smooth(-.14,.3,vdot(sd,cam.d));
   sun.intensity=th.sun[1]*lv;hemi.intensity=th.hemi[2]*(.34+.66*lv);amb.intensity=.08+.08*lv;nightVis=lerp(nightVis,1-lv,1-Math.exp(-3*dt));
   const nf=clamp((nightVis-.2)/.6,0,1);for(const vw of cartView?[...vehViews.values(),cartView]:vehViews.values())if(vw.lights){vw.lights.beamM.opacity=.22*nf;vw.lights.poolM.opacity=.5*nf;vw.lights.lampM.emissiveIntensity=.2+1.6*nf;}
-  if(buildViews.flood)buildViews.flood.light.intensity=1.4*nf;
+  if(buildViews.flood)buildViews.flood.light.intensity=.7*nf;
+  LAMP.headM.emissiveIntensity=.1+2*nf;LAMP.halo.opacity=.6*nf;LAMP.pool.opacity=.28*nf;
+  lampT+=dt;if(lampT>.5){lampT=0;const f=vsc(cam.d,planetData(S.planet).R),ord=lampPos.map((p,i)=>[i,(p[0]-f[0])**2+(p[1]-f[1])**2+(p[2]-f[2])**2]).sort((a,b)=>a[1]-b[1]);
+    LAMPL.forEach((l,k)=>{const o=ord[k];l.userData.on=o?1:0;if(o){const p=lampPos[o[0]];l.position.set(p[0],p[1],p[2]);}});}
+  for(const l of LAMPL)l.intensity=l.userData.on&&!mapMode?1.25*nf:0;
   const on=brushRing.visible&&!mapMode&&nf>.01;brushPool.visible=on;
   if(on){const p=brushRing.position,n=vnorm([p.x,p.y,p.z]),r=uv('radius');brushLight.position.set(p.x+n[0]*3.2,p.y+n[1]*3.2,p.z+n[2]*3.2);brushLight.intensity=1.8*nf;
     brushPool.position.copy(p);brushPool.quaternion.copy(brushRing.quaternion);brushPool.scale.setScalar(r*4.2);brushPool.material.opacity=.42*nf;}else brushLight.intensity=0;}

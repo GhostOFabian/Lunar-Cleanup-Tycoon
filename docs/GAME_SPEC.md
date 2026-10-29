@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.2)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.3)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -150,7 +150,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Jeder Planet hat eine eigene Tageslänge in Sekunden (`DAYLEN`): Mond 480, Mars 420, Europa 540, Titan 600, Io 360, Venus 720, Ganymed 540, Enceladus 420, Triton 600, Pluto 720. Uhr `sp.dayT` pro Planet, läuft in `simStep` (also auch offline); neue Planeten starten am Vormittag (8 % der Tageslänge).
 - Sonnenwinkel θ = 2π · Phase, Tagesfaktor `clamp((sin θ + 0,08) / 1,08, 0, 1)^0,8` – erste Hälfte Tag, zweite Hälfte Nacht. Spitze Solar = 2,6 × alter Wert, Tagesmittel ≈ 0,92 × alter Wert.
 - Nachts: Solar 0. Strom kommt aus dem Speicher (Akkupark), Radioisotopen-Generator, Geothermie und Kernreaktor; Akku-Fahrzeuge fahren aus dem Akku. Die Ampel nennt bei Strommangel in der Nacht die Nacht als Ursache und schlägt Akkupark vor.
-- Optik: Sonne kommt aus der echten Richtung über der Basis, Licht wird nachts gedimmt (Hemisphäre 34 %, kein Sonnenlicht). Fahrzeuge schalten Scheinwerfer, Lichtkegel und Lichtfleck am Boden ein; die Basis hat ein warmes Flutlicht. HUD-Balken heißt „Tag“/„Nacht“, das Energiefenster zeigt die Zeit bis Sonnenunter-/-aufgang.
+- Optik: Sonne kommt aus der echten Richtung über der Basis, Licht wird nachts gedimmt (Hemisphäre 34 %, kein Sonnenlicht). Fahrzeuge schalten Scheinwerfer, Lichtkegel und Lichtfleck am Boden ein; die Basis hat ein warmes Flutlicht. Straßenlaternen (`lampSpots`): je Gebäude 1 (fp < 3) bzw. 2 Laternen im Abstand fp + 0,15–0,35 m – im für Fahrzeuge gesperrten Ring, nicht auf der Andockseite (Osten) der Entladestationen, ≥ 1,5 m von Bändern, ≥ 2,2 m von Parkplätzen und Pipeline-Anschluss, ≥ 4 m zueinander, nur auf Basiszellen. Alle glühen (Kopf, Lichthof, Lichtfleck); die 6 Laternen nächst der Kamera tragen ein echtes Punktlicht (Reichweite 16 m). HUD-Balken heißt „Tag“/„Nacht“, das Energiefenster zeigt die Zeit bis Sonnenunter-/-aufgang.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.
