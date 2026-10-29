@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v4.1 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v4.2 (`prototype/index.html`)
+- v4.2: Arbeitslicht beim Wischen (Lampe + weicher Lichtfleck um den Saugkopf, ab Dämmerung). Verlässt der Finger beim Wischen die Parzelle, pausiert der Saugkopf (roter Ring), das Bild bleibt stehen; nur ein kurzer Wisch ohne Ertrag wird noch zur Kamerabewegung. Randscrollen erst nach 0,45 s am Rand und nur über der eigenen Parzelle.
 - v4.1: Sammelwagen ab dem Start (120 Cr × Planetfaktor^0,85, kein Fahrzeugplatz): fährt bei vollem Sammelbehälter zur Stelle, an der du wischst, du leerst den Behälter mit einem Tipp hinein, er bringt die Ladung zur Entladestation mit dem meisten Platz (sonst Rohstofflager) und parkt wieder. Upgrade „Schneller Sammelwagen“, neues Hauptziel 7.
 - v4.0: Tag und Nacht auf jedem Planeten (eigene Tageslänge, Solar nur bei Tag, nachts Speicher, Akkus, RTG, Geothermie, Kernkraft), Scheinwerfer mit Lichtkegel an allen Fahrzeugen, Flutlicht an der Basis. 23 neue Hauptziele (jetzt 43, bis Pluto und Neustart), 17 Erfolge mit Stufen und Belohnungen, Ziel-Übersicht über den Ziel-Chip.
 - v3.9: Frachtraum zeigt den Wert der Ladung (auch auf „Jetzt starten“), Inhalt, Frachtauftrag und Mischfracht-Bonus. Jede Rakete hat einen Frachtauftrag für eine Rohware des Planeten (+60 %), gemischte Ladung bringt +8 % je weitere Warensorte (max. +40 %). Das Band Rohstofflager → Verkauf bedient den Auftrag laufend (abschaltbar) und lässt 8 % Vorrat für Presse/Raffinerie.

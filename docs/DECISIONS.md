@@ -40,7 +40,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Rolling Backup (`…-bak`, alle 5 min), unlesbare Stände werden als `…-broken-<Zeit>` aufgehoben, Export/Import-Code (gzip + Base64, Präfix `LCT1:`).
 
 ## Steuerung
-- Ein Wisch, der die gesperrte Parzelle (Rand + 0,6 × Saugradius) oder den Planeten verlässt, wird ohne Absetzen zur Kamerabewegung – sonst „klebt“ der Finger.
+- Ein Wisch, der die gesperrte Parzelle (Rand + 0,6 × Saugradius) oder den Planeten verlässt, wird ohne Absetzen zur Kamerabewegung – sonst „klebt“ der Finger. (ersetzt in v4.2)
 - Wischen in den äußeren 14 % (max. 70 px) des Bildschirms scrollt den Planeten mit bis 260 px/s.
 
 ## v3.7
@@ -70,3 +70,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Sammelwagen als eigenes Objekt (`sp.cart`) statt Fahrzeugtyp – er reinigt nicht, braucht keinen Platz und keinen Strom und darf von Anfang an da sein.
 - Der Spieler leert den Behälter selbst per Tipp in den wartenden Wagen (Wunsch: „bei dem ich meinen Behälter leeren kann“); der Wagen fährt nur los, wenn der Behälter fast voll ist oder gerufen wird.
 - Neues Hauptziel 7 „Sammelwagen kaufen“; alte Stände werden per `qv` 3 verschoben.
+
+## v4.2
+- Wisch außerhalb der Parzelle pausiert statt die Kamera zu bewegen (Spieler fand das Verschieben störend); nur wenn ein Wisch in den ersten 0,3 s ohne Ertrag die Parzelle verlässt, wird er zur Kamerabewegung – so klebt der Finger trotzdem nicht. Ersetzt die Regel aus v3.6.1.
+- Randscrollen nur, wenn der Finger 0,45 s am Rand über der eigenen Parzelle bleibt, 200 px/s.
+- Arbeitslicht als ein dauerhaftes Punktlicht (Intensität 0 bei Tag) + Lichtfleck-Textur – keine Shader-Neukompilierung beim Ein-/Ausschalten.

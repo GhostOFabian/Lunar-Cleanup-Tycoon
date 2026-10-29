@@ -1605,14 +1605,23 @@ function unloadHand(to){const sp=SP(),tot=sumObj(sp.hand);if(tot<.05)return fail
   const B0=BLD[t.id];floatText3(basePlanDir(planetData(S.planet),B0.pos[0],B0.pos[1]),3.5,'+'+fmt(amt)+' entladen','mat');toast(fmt(amt)+' E in '+t.name+(amt<tot-.05?' · Rest bleibt im Behälter':''),'good');updateHUD();save();}
 const ptrs=new Map();
 const brushRing=new THREE.Mesh(new THREE.RingGeometry(.86,1,40),new THREE.MeshBasicMaterial({color:0x6ff2d2,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide}));brushRing.visible=false;brushRing.renderOrder=5;scene.add(brushRing);
+/* hand work light: a lamp over the brush and a soft light pool on the ground, switched on at dusk and at night */
+const brushLight=new THREE.PointLight(0xfff0d0,0,16,1.4);scene.add(brushLight);
+const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.45,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+const brushPool=new THREE.Mesh(new THREE.CircleGeometry(1,32),new THREE.MeshBasicMaterial({map:glowTex,color:0xffe6b0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));brushPool.renderOrder=4;brushPool.visible=false;scene.add(brushPool);
 const canClean=hit=>cleanMode&&!mapMode&&hit&&hit.type==='cell'&&workable(S.planet,hit.id);
-function startStroke(x,y){const d=sphereHit(x,y);stroke={last:d,acc:0,ft:0,ld:d};if(d)stampManual(d);}
+function startStroke(x,y){const d=sphereHit(x,y);stroke={last:d,acc:0,ft:0,ld:d,t0:performance.now(),out:false,et:0};if(d)stampManual(d);}
 /* While wiping: leaving the parcel (or the planet) hands the gesture over to camera panning, so the finger never "sticks". */
 function strokeLeaves(d){if(!d)return true;const pid=S.planet,pd=planetData(pid),c=cellOf(pd,d,lastCell);lastCell=c;
   const lock=stroke&&stroke.cell!=null&&workable(pid,stroke.cell)?stroke.cell:null;
   if(lock==null)return !workable(pid,c);if(c===lock)return false;const cl=pd.cells[lock],l=toLocal(cl,d,pd.R);return Math.hypot(l[0],l[1])>cl.H+uv('radius')*.6;}
 function strokeToPan(){endStroke();if(G)G.mode='pan';}
-function strokeTo(x,y){const d=sphereHit(x,y);if(!stroke)return;if(strokeLeaves(d)){strokeToPan();return;}if(!stroke.last){stroke.last=d;return;}
+/* Leaving the parcel while wiping pauses the brush (the view stays put); only a quick flick that has not cleaned anything yet becomes a camera pan. */
+function strokeTo(x,y){const d=sphereHit(x,y);if(!stroke)return;
+  if(strokeLeaves(d)){if(performance.now()-stroke.t0<300&&stroke.acc<.5){strokeToPan();return;}
+    stroke.out=true;stroke.last=null;if(d){const R=planetData(S.planet).R;orient(brushRing,d,cam.N,R,.07);brushRing.rotateX(-Math.PI/2);brushRing.material.color.setHex(0xff6b5b);brushRing.material.opacity=.45;brushRing.visible=true;stroke.ld=d;}else brushRing.visible=false;return;}
+  if(stroke.out){stroke.out=false;brushRing.material.color.setHex(0x6ff2d2);brushRing.material.opacity=.8;}
+  if(!stroke.last){stroke.last=d;stampManual(d);return;}
   const R=planetData(S.planet).R,r=uv('radius'),step=r*.3,a=stroke.last,dist=arcDist(a,d,R);if(dist<step)return;
   const n=Math.min(80,Math.floor(dist/step));let cur=a;for(let i=1;i<=n;i++){const t=i*step/dist;cur=vnorm([lerp(a[0],d[0],t),lerp(a[1],d[1],t),lerp(a[2],d[2],t)]);stampManual(cur);}stroke.last=cur;}
 function stampManual(d){
@@ -1627,7 +1636,7 @@ function stampManual(d){
     if(got>0){const amt=Math.min(got/a.cl.nIn*a.amt,handCap()-sumObj(sp.hand));sp.hand[a.D.mat]=(sp.hand[a.D.mat]||0)+amt;stroke.acc+=amt;S.handAcc=(S.handAcc||0)+amt;if(S.handAcc>=30){S.handAcc-=30;if(Math.random()<.12)rollFind(pid,a.cl,'hand',true,d);}sp.stats.value+=amt*MATS[a.D.mat].v*pvM();sp.stats.cleanedM2+=got/a.cl.nIn*cellArea(a.cl);S.ctr.handM2=(S.ctr.handM2||0)+got/a.cl.nIn*cellArea(a.cl);rem+=got;lastA=a;}}
   if(rem>.003&&lastA){emit3(d,R+.15,DIRT[lastA.cl.type].light,2+Math.min(4,rem*12|0),2.2,2);strokeRem+=rem;stroke.sfx=lastA.D.sfx;stroke.mat=lastA.D.mat;}
 }
-function endStroke(){if(stroke&&stroke.acc>=1&&stroke.ld)floatText3(stroke.ld,1.2,'+'+fmt(stroke.acc)+' '+MATS[stroke.mat||'staub'].name,'mat');stroke=null;brushRing.visible=false;}
+function endStroke(){brushRing.material.color.setHex(0x6ff2d2);brushRing.material.opacity=.8;if(stroke&&stroke.acc>=1&&stroke.ld)floatText3(stroke.ld,1.2,'+'+fmt(stroke.acc)+' '+MATS[stroke.mat||'staub'].name,'mat');stroke=null;brushRing.visible=false;}
 function beginDrag(){if(canClean(G.hit)){G.mode='clean';startStroke(G.lx,G.ly);}else G.mode='pan';}
 cvs.addEventListener('pointerdown',e=>{
   audioInit();try{cvs.setPointerCapture(e.pointerId);}catch(_){}
@@ -1664,10 +1673,10 @@ cvs.addEventListener('wheel',e=>{e.preventDefault();cam.alt=clamp(cam.alt*(1+e.d
 function holdCheck(now){if(G&&G.mode==='pending'&&now-G.t>170&&canClean(G.hit)){G.mode='clean';startStroke(G.lx,G.ly);}}
 /* Wiping near the screen edge scrolls the planet along, so you can keep cleaning beyond the visible area. */
 let edgeT=0;
-function edgePan(dt){if(!G||G.mode!=='clean'||!stroke)return;const r=cvs.getBoundingClientRect(),m=Math.min(70,r.width*.14);
+function edgePan(dt){if(!G||G.mode!=='clean'||!stroke||stroke.out)return;const r=cvs.getBoundingClientRect(),m=Math.min(70,r.width*.14);
   const nt=$('#nav').getBoundingClientRect().top,top=r.top,bot=nt>r.top&&nt<r.bottom?nt:r.bottom;
   const x=G.lx,y=G.ly;let ex=0,ey=0;if(x<r.left+m)ex=(r.left+m-x)/m;else if(x>r.right-m)ex=-(x-(r.right-m))/m;if(y<top+m*.6)ey=(top+m*.6-y)/m;else if(y>bot-m*.6)ey=-(y-(bot-m*.6))/m;
-  if(!ex&&!ey)return;const sp=260*dt;panBy(clamp(ex,-1,1)*sp,clamp(ey,-1,1)*sp);cam.gd=null;strokeTo(x,y);}
+  if(!ex&&!ey){stroke.et=0;return;}stroke.et=(stroke.et||0)+dt;if(stroke.et<.45)return;const sp=200*dt;panBy(clamp(ex,-1,1)*sp,clamp(ey,-1,1)*sp);cam.gd=null;strokeTo(x,y);}
 function tap(hit){
   if(!hit){if(sheetState)closeSheet();return;}
   if(hit.type==='cell')openSheet('cell',hit.id);
@@ -2231,7 +2240,10 @@ let nightVis=0;
 function updDayNight(dt){const pid=S.planet,sp=SP(),th=PLANETS[pid].theme,sd=sunDir(pid,sp),lv=smooth(-.14,.3,vdot(sd,cam.d));
   sun.intensity=th.sun[1]*lv;hemi.intensity=th.hemi[2]*(.34+.66*lv);amb.intensity=.08+.08*lv;nightVis=lerp(nightVis,1-lv,1-Math.exp(-3*dt));
   const nf=clamp((nightVis-.2)/.6,0,1);for(const vw of cartView?[...vehViews.values(),cartView]:vehViews.values())if(vw.lights){vw.lights.beamM.opacity=.22*nf;vw.lights.poolM.opacity=.5*nf;vw.lights.lampM.emissiveIntensity=.2+1.6*nf;}
-  if(buildViews.flood)buildViews.flood.light.intensity=1.4*nf;}
+  if(buildViews.flood)buildViews.flood.light.intensity=1.4*nf;
+  const on=brushRing.visible&&!mapMode&&nf>.01;brushPool.visible=on;
+  if(on){const p=brushRing.position,n=vnorm([p.x,p.y,p.z]),r=uv('radius');brushLight.position.set(p.x+n[0]*3.2,p.y+n[1]*3.2,p.z+n[2]*3.2);brushLight.intensity=1.8*nf;
+    brushPool.position.copy(p);brushPool.quaternion.copy(brushRing.quaternion);brushPool.scale.setScalar(r*4.2);brushPool.material.opacity=.42*nf;}else brushLight.intensity=0;}
 function updateVisuals(dt,t){
   updDayNight(dt);
   const pid=S.planet,sp=SP(),pd=planetData(pid),R=pd.R,w=W[pid];

@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.1)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.2)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -41,6 +41,8 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Kein Leistungsdeckel für das Handgerät (ausdrücklicher Wunsch). Stärke: Radius `0,95 m × (1 + 0,15·Stufe)`, Kraft `1 + 0,3·Stufe`, pro Stempel `k = 1 − exp(−0,35·Kraft·Sternenstaubbonus / Härte)`.
 - Material geht in den **Sammelbehälter** des Spielers (60 E × 1,5^Stufe, Upgrade „Größerer Sammelbehälter“, max. 12). Ist er voll, stoppt das Wischen mit Hinweis. Entladen per Knopf unten links (Trichter mit dem meisten Platz, sonst Rohstofflager) oder gezielt im Fenster einer Entladestation bzw. des Rohstofflagers.
 - Je 30 Einheiten per Hand: 12 % Chance auf einen Fund (Abschnitt 11).
+- Verlässt der Finger die gesperrte Parzelle (Rand + 0,6 × Radius), pausiert der Saugkopf (roter Ring), die Kamera bleibt stehen. Nur in den ersten 0,3 s ohne Ertrag wird der Wisch zur Kamerabewegung. Randscrollen 200 px/s erst nach 0,45 s am Rand (äußere 14 %, max. 70 px) und nur über der eigenen Parzelle.
+- Arbeitslicht: ab Dämmerung Punktlicht 3,2 m über dem Saugkopf und weicher Lichtfleck (4,2 × Radius).
 
 ## 4. Meteoritenstaub (Neuverschmutzung)
 - Selten, aber heftig. Ab 3 sauberen Parzellen. Intervall `max(40 s, 900 s / sqrt(saubere Parzellen)) / Staubfaktor` (Planet- und Sturmfaktor).
