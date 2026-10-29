@@ -22,7 +22,8 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 6. **Sichtbarkeit:** Parzellenränder grün/gelb/rot (auch bei Neuverschmutzung), grünes Aufleuchten bei Abschluss, Planetenkarte einklappbar. **Nie zwei Parzellen gleichzeitig** mit dem Finger reinigen. Fahrzeuge sollen später immer besser sein als die Hand, am Anfang hilft die Hand.
 7. **Handgerät nicht limitieren**, keine Limit-Meldung – lieber Fahrzeuge weiter upgraden können. → Deckel entfernt, Fahrzeug-Upgrades erweitert.
 8. **Fahrzeuge dürfen nicht durch Gebäude oder Bänder fahren** (richtige Wege). **Band-Verbindung zur Verkaufsstation**, upgradebar; die Rakete fliegt erst los, wenn ihr Lager voll ist. **Produktionsstau vermeiden**, Bänder und Produktion im Gleichgewicht; bei Stau beschreiben warum, damit man passende Upgrades kaufen kann; kleine **Ampel**.
-9. Repository `GhostOFabian/Lunar-Cleanup-Tycon` angelegt; Unterhaltung in Claude Code überführt (dieses Dokument).
+9. Repository angelegt (heute `GhostOFabian/Lunar-Cleanup-Tycoon`, anfangs mit Tippfehler „Tycon“); Unterhaltung in Claude Code überführt (dieses Dokument). Projekt-Webseite mit echten Screenshots.
+10. **Spielstand wurde nach Updates zweimal zurückgesetzt.** Alte Spielstände ließen sich im Test immer laden – wahrscheinliche Ursache: Speicher pro Ansicht (Claude-App, Browser, Vorschau, Webseiten-Kopie haben getrennte Speicher) oder ein stillschweigend fehlgeschlagenes Speichern. → v3.6: Cloud-Spielstand im Claude-Konto, Sicherungskopie, Export/Import-Code, schlanker Speicherstand, sichtbare Fehlermeldung.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

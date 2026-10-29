@@ -79,6 +79,7 @@ button:focus-visible{outline:2px solid var(--clean);outline-offset:2px}
 #mapPanel{align-self:flex-start;width:min(360px,100%);padding:12px 14px;border-radius:14px}
 #mapPanel h4{margin:0 0 6px;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
 #mapPanel .kv{margin:0}
+.codebox{width:100%;min-height:74px;margin:8px 0;padding:10px;border-radius:12px;border:1px solid rgba(160,182,232,.2);background:rgba(5,9,18,.6);color:var(--ink);font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:vertical;-webkit-user-select:text;user-select:text}
 #mapPanel h4{display:flex;align-items:center;gap:8px}#mapPanel .mm{margin-left:auto;font:600 11px var(--f-display);letter-spacing:.08em;color:var(--ink-2);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:6px 10px;min-height:32px;cursor:pointer}
 #mapPanel.min{padding:6px 8px 6px 14px}#mapPanel.min h4{margin:0}
 .legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11px;color:var(--ink-2)}
@@ -582,10 +583,10 @@ function activate(pid,id,saved,dust){
   const w=W[pid],cl=planetData(pid).cells[id];dust=!!(dust||(saved&&saved.r));
   const type=dust?PLANETS[pid].start:cl.type,pat=patternFor(pid,type);
   const grid=new Float32Array(CELLS);if(!dust)for(let k=0;k<CELLS;k++)grid[k]=cl.inside[k];
-  const canvas=mkCanvas(MASK),ctx=canvas.getContext('2d');if(!dust||(saved&&saved.m))ctx.drawImage(pat,0,0);
+  const canvas=mkCanvas(MASK),ctx=canvas.getContext('2d');if(!dust||saved)ctx.drawImage(pat,0,0);
   const a={id,cl,grid,sum:dust?0:cl.nIn,canvas,ctx,pat,tex:null,mesh:null,texDirty:true,saveDirty:true,maskStale:false,kind:dust?KINDS.normal:KINDS[cl.kind],D:DIRT[type],dust,hold:0,
     amt:dust?DIRT[type].amt*DUST_YIELD:parcelYield(cl),thr:dust?.004:DONE};
-  if(saved){try{if(saved.g)decGrid(saved.g,grid,cl.inside);if(saved.m)applyMask(a,saved.m);a.saveDirty=false;}catch(e){}}
+  if(saved){try{if(saved.g)decGrid(saved.g,grid,cl.inside);if(saved.m)applyMask(a,saved.m);else if(saved.g)a.maskStale=true;a.saveDirty=false;}catch(e){}}
   let s=0;for(let k=0;k<CELLS;k++)s+=grid[k];a.sum=s;
   w.act.set(id,a);return a;
 }
@@ -656,27 +657,68 @@ function applyMask(a,str){const u=b64d(str),img=mctx.createImageData(MS,MS);for(
   mctx.putImageData(img,0,0);a.ctx.globalCompositeOperation='destination-in';a.ctx.drawImage(mtmp,0,0,MASK,MASK);a.ctx.globalCompositeOperation='source-over';}
 
 const KEY='lunar-cleanup-tycoon-v2';
+/* Saving: lean JSON (cell grids only, masks are rebuilt from them), a rolling backup slot, a copy of anything unreadable,
+   optional cloud save (Claude artifact db, private per player) and export/import codes. A save is never silently replaced by a fresh game. */
+let saveFailT=0,lastBak=0,bootFresh=false,bootLocalT=0;
+function serialize(){
+  S.lastActive=Date.now();
+  for(const pid in W){const sp=S.planets[pid],w=W[pid];if(!sp)continue;
+    sp.owned=[];for(let i=0;i<w.owned.length;i++)if(w.owned[i])sp.owned.push(i);
+    sp.clean=b64e(w.clean);sp.paid=b64e(w.paid);
+    const act={};for(const[id,a]of w.act){const old=sp.act[id];if(!a.saveDirty&&old&&old.g){act[id]={g:old.g,r:old.r||0};continue;}act[id]={g:encGrid(a.grid),r:a.dust?1:0};a.saveDirty=false;}
+    sp.act=act;}
+  return JSON.stringify(S);}
 function save(){
-  if(!S)return;
-  try{
-    S.lastActive=Date.now();
-    for(const pid in W){const sp=S.planets[pid],w=W[pid];if(!sp)continue;
-      sp.owned=[];for(let i=0;i<w.owned.length;i++)if(w.owned[i])sp.owned.push(i);
-      sp.clean=b64e(w.clean);sp.paid=b64e(w.paid);
-      const act={};for(const[id,a]of w.act){const old=sp.act[id];if(!a.saveDirty&&old){act[id]=old;continue;}if(a.maskStale)syncMask(a);act[id]={g:encGrid(a.grid),m:encMask(a),r:a.dust?1:0};a.saveDirty=false;}
-      sp.act=act;}
-    localStorage.setItem(KEY,JSON.stringify(S));
-  }catch(e){}
+  if(!S)return;let json;
+  try{json=serialize();}catch(e){return;}
+  try{localStorage.setItem(KEY,json);if(Date.now()-lastBak>300000){lastBak=Date.now();localStorage.setItem(KEY+'-bak',json);}}
+  catch(e){if(Date.now()-saveFailT>60000){saveFailT=Date.now();try{toast(CLOUD.ok?'Lokales Speichern fehlgeschlagen – der Cloud-Spielstand läuft weiter':'Speichern fehlgeschlagen. Sichere deinen Stand unter Einstellungen → Spielstand exportieren','bad');}catch(_){}}}
+  cloudPush(json,false);
 }
+function normalizeSave(o){
+  if(!o||o.v!==2||!o.planets||!o.planets.moon)return null;
+  const b=freshSave();Object.assign(b,o);b.locMig=o.locMig?1:0;b.life=Object.assign({earned:o.stats&&o.stats.earned||0},o.life||{});b.ctr=Object.assign({sold:{},cells:0},o.ctr||{});b.upg=o.upg||{};b.research=Object.assign({done:{},active:null},o.research||{});b.stats=Object.assign(freshSave().stats,o.stats||{});
+  for(const pid in b.planets){if(!PLANETS[pid]){delete b.planets[pid];continue;}const sp=b.planets[pid],f=freshPlanet(pid);for(const k in f)if(sp[k]===undefined||sp[k]===null)sp[k]=f[k];
+    for(const k in f.st)if(!sp.st[k])sp.st[k]=f.st[k];for(const k in f.mach)if(!sp.mach[k])sp.mach[k]=f.mach[k];for(const k in f.belts)if(!sp.belts[k])sp.belts[k]=[];
+    RAW.forEach(k=>{if(sp.roh[k]==null)sp.roh[k]=0;});PRODS.forEach(k=>{if(sp.prod[k]==null)sp.prod[k]=0;});}
+  if(!b.planets[b.planet])b.planet='moon';
+  return b;}
 function load(){
-  try{const t=localStorage.getItem(KEY);if(!t)return null;const o=JSON.parse(t);if(!o||o.v!==2||!o.planets||!o.planets.moon)return null;
-    const b=freshSave();Object.assign(b,o);b.locMig=o.locMig?1:0;b.life=Object.assign({earned:o.stats&&o.stats.earned||0},o.life||{});b.ctr=Object.assign({sold:{},cells:0},o.ctr||{});b.upg=o.upg||{};b.research=Object.assign({done:{},active:null},o.research||{});b.stats=Object.assign(freshSave().stats,o.stats||{});
-    for(const pid in b.planets){const sp=b.planets[pid],f=freshPlanet(pid);for(const k in f)if(sp[k]===undefined)sp[k]=f[k];
-      for(const k in f.st)if(!sp.st[k])sp.st[k]=f.st[k];for(const k in f.mach)if(!sp.mach[k])sp.mach[k]=f.mach[k];for(const k in f.belts)if(!sp.belts[k])sp.belts[k]=[];
-      RAW.forEach(k=>{if(sp.roh[k]==null)sp.roh[k]=0;});PRODS.forEach(k=>{if(sp.prod[k]==null)sp.prod[k]=0;});}
-    if(!b.planets[b.planet])b.planet='moon';
-    return b;}catch(e){return null;}
-}
+  let t=null;try{t=localStorage.getItem(KEY);}catch(e){return null;}
+  let b=null;if(t){try{b=normalizeSave(JSON.parse(t));}catch(e){b=null;}}
+  if(!b){let k=null;try{k=localStorage.getItem(KEY+'-bak');}catch(e){}if(k){try{b=normalizeSave(JSON.parse(k));}catch(e){b=null;}}
+    if(t&&!b){try{localStorage.setItem(KEY+'-broken-'+Date.now(),t);}catch(e){}}}
+  return b;}
+/* ---- cloud save (only inside the Claude viewer; private per player) ---- */
+const CLOUD={ok:false,busy:false,last:0,status:'Wird geprüft …',slot:0,pending:null};
+const CHUNK=180000;
+async function cloudRead(){const db=CLOUD.db,base='data/users/'+CLOUD.uid+'/';const m=await db.doc(base+'save').get();if(!m.exists)return null;const d=m.data();if(!d||!d.n)return null;
+  let s='';for(let i=0;i<d.n;i++){const c=await db.doc(base+'save_'+d.slot+'_'+i).get();if(!c.exists)return null;s+=c.data().s;}if(s.length!==d.len)return null;CLOUD.slot=d.slot;return{json:s,t:d.t};}
+async function cloudPush(json,force){if(!CLOUD.ok)return;if(CLOUD.busy){CLOUD.pending=json;return;}if(!force&&Date.now()-CLOUD.last<45000)return;
+  CLOUD.busy=true;try{const db=CLOUD.db,base='data/users/'+CLOUD.uid+'/',slot=CLOUD.slot?0:1,n=Math.ceil(json.length/CHUNK);
+    for(let i=0;i<n;i++)await db.doc(base+'save_'+slot+'_'+i).set({s:json.slice(i*CHUNK,(i+1)*CHUNK)});
+    await db.doc(base+'save').set({slot,n,len:json.length,t:S.lastActive||Date.now(),credits:Math.round(S.credits),planet:S.planet});
+    CLOUD.slot=slot;CLOUD.last=Date.now();CLOUD.status='Verbunden · gesichert '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}
+  catch(e){CLOUD.status='Fehler beim Sichern ('+(e&&e.code||'unbekannt')+') – versucht es gleich erneut';}
+  finally{CLOUD.busy=false;if(CLOUD.pending){const p=CLOUD.pending;CLOUD.pending=null;setTimeout(()=>cloudPush(p,true),2000);}}}
+async function cloudInit(){
+  try{if(!window.claude||typeof window.claude.use!=='function'){CLOUD.status='Nicht verfügbar – nur dieses Gerät';return;}
+    const db=await window.claude.use('db'),user=await window.claude.use('user');if(!db||!user){CLOUD.status='Nicht verfügbar – nur dieses Gerät';return;}
+    const uid=await user.id();if(!uid){CLOUD.status='Nicht angemeldet – nur dieses Gerät';return;}
+    CLOUD.db=db;CLOUD.uid=uid;let remote=null;try{remote=await cloudRead();}catch(e){CLOUD.status='Cloud gerade nicht erreichbar';return;}
+    CLOUD.ok=true;CLOUD.status='Verbunden';
+    if(remote){let b=null;try{b=normalizeSave(JSON.parse(remote.json));}catch(e){}
+      if(b&&(bootFresh||remote.t>bootLocalT+2000)){adoptSave(b,'Cloud-Spielstand geladen');return;}}
+    save();cloudPush(serialize(),true);}
+  catch(e){CLOUD.status='Nicht verfügbar – nur dieses Gerät';}}
+/* ---- export / import ---- */
+async function exportCode(){const json=serialize();
+  if(window.CompressionStream){const cs=new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));const buf=new Uint8Array(await new Response(cs).arrayBuffer());return 'LCT1:'+b64e(buf);}
+  return 'LCT0:'+b64e(new TextEncoder().encode(json));}
+async function importCode(code){code=(code||'').trim().replace(/\s+/g,'');let json;
+  if(code.startsWith('LCT1:')){if(!window.DecompressionStream)throw new Error('Dieser Browser kann den Code nicht entpacken');const ds=new Blob([b64d(code.slice(5))]).stream().pipeThrough(new DecompressionStream('gzip'));json=await new Response(ds).text();}
+  else if(code.startsWith('LCT0:'))json=new TextDecoder().decode(b64d(code.slice(5)));else throw new Error('Das ist kein Spielstand-Code');
+  const b=normalizeSave(JSON.parse(json));if(!b)throw new Error('Code beschädigt oder unvollständig');return b;}
 
 /* ===================== 4. Simulation (one code path for live and offline) ===================== */
 let saleAcc=0;
@@ -1556,7 +1598,7 @@ function unlockPlanet(pid){const P=PLANETS[pid];if(S.planets[pid])return;const p
 function travelTo(pid){if(pid===S.planet||!S.planets[pid])return;closeSheet();const f=$('#fade');f.textContent='Reise zum '+PLANETS[pid].name+' …';f.classList.add('on');SFX.planet();
   setTimeout(()=>{save();S.planet=pid;lastCell=-1;mapMode=false;buildWorld(pid);startCam();cam.alt=planetData(pid).R*2.6;focusDir(cam.d,fitAlt(30));setMapMode(cam.alt>MAP_ALT());
     f.classList.remove('on');toast('Willkommen auf dem '+PLANETS[pid].name,'good');updateHUD();save();},700);}
-function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in W)delete W[k];S=freshSave();initRuntime('moon');mapMode=false;buildWorld('moon');startCam();setMapMode(false);closeSheet();showWelcome();updateHUD();}
+function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in W)delete W[k];S=freshSave();initRuntime('moon');mapMode=false;buildWorld('moon');startCam();setMapMode(false);closeSheet();showWelcome();updateHUD();save();try{cloudPush(serialize(),true);}catch(e){}}
 
 /* ===================== 11. UI sheets ===================== */
 const sheet=$('#sheet'),sheetBody=$('#sheetBody');let sheetState=null,B={},bid=0;
@@ -1678,7 +1720,10 @@ function renderSheet(){
     h+='<section class="sec"><h3>Ton</h3><div class="row"><div class="row-main"><div class="row-t">Soundeffekte</div></div><button class="buy alt" data-act="sound">'+(S.sound?'An':'Aus')+'</button></div></section>'+
       '<section class="sec"><h3>Idle-Test</h3><p class="note">Tut so, als wäre das Spiel geschlossen gewesen. Fahrzeuge, Bänder, Maschinen, Autoverkauf und Forschung arbeiten bis zu '+(offlineCap()/3600)+' Stunden weiter.</p><div class="btns"><button class="buy alt" data-act="off" data-h="1">+1 Stunde</button><button class="buy alt" data-act="off" data-h="8">+8 Stunden</button></div></section>'+
       '<section class="sec"><h3>Steuerung</h3><dl class="kv"><dt>Wischen auf reinigbarer Parzelle</dt><dd>Reinigen</dd><dt>Ein Finger daneben</dt><dd>Planet drehen</dd><dt>Zwei Finger</dt><dd>Zoomen, drehen</dd><dt>Tippen</dt><dd>Parzelle, Fahrzeug, Gebäude, Band</dd><dt>Weit herauszoomen</dt><dd>Planetenkarte</dd></dl></section>'+
-      '<section class="sec"><h3>Spielstand</h3><p class="note">Wird automatisch in diesem Browser gespeichert. Version 2 nutzt einen eigenen, neuen Spielstand.</p><button class="buy danger" data-act="reset">Spielstand löschen</button></section>';}
+      '<section class="sec"><h3>Spielstand</h3><dl class="kv"><dt>Auf diesem Gerät</dt><dd>alle 12 s gespeichert</dd><dt>Cloud (dein Claude-Konto)</dt><dd data-b="'+bind(()=>CLOUD.status)+'"></dd></dl><p class="note">Mit der Cloud hast du denselben Stand in der Claude-App und im Browser. Updates des Spiels behalten den Spielstand. Zum Übertragen auf ein anderes Gerät oder die Webseite-Version: Code exportieren und dort importieren.</p>'+
+      '<div class="btns"><button class="buy alt" data-act="exp">Code exportieren</button><button class="buy alt" data-act="copyexp" id="copyExp" hidden>Kopieren</button></div><textarea id="expBox" class="codebox" readonly hidden aria-label="Spielstand-Code"></textarea>'+
+      '<textarea id="impBox" class="codebox" placeholder="Spielstand-Code hier einfügen" aria-label="Spielstand-Code einfügen"></textarea><div class="btns"><button class="buy alt" data-act="imp">Code importieren</button></div><p class="note" id="impMsg"></p>'+
+      '<button class="buy danger" data-act="reset">Spielstand löschen</button></section>';}
   $('#sheetKicker').textContent=k;$('#sheetTitle').textContent=t;sheetBody.innerHTML=h;refreshSheet();
 }
 function refreshSheet(){if(!sheetState)return;
@@ -1700,6 +1745,10 @@ flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);ret
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
   off(d){closeSheet();const rep=runOffline(+d.h*3600);if(rep)afterOffline(rep);else toast('Nichts zu simulieren');return 'keep';},
+  exp(){exportCode().then(c=>{const b=$('#expBox');if(!b)return;b.value=c;b.hidden=false;$('#copyExp').hidden=false;b.focus();b.select();}).catch(()=>fail('Export fehlgeschlagen'));return 'keep';},
+  copyexp(){const b=$('#expBox');if(!b)return 'keep';const done=()=>toast('Code kopiert','good');try{navigator.clipboard.writeText(b.value).then(done,()=>{b.select();toast('Markiert – jetzt kopieren');});}catch(e){b.select();toast('Markiert – jetzt kopieren');}return 'keep';},
+  imp(d,el){const v=($('#impBox')||{}).value;const msg=$('#impMsg');if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Aktuellen Stand ersetzen? Nochmal tippen';return 'keep';}
+    importCode(v).then(b=>{adoptSave(b,'Spielstand importiert');}).catch(e=>{el.dataset.arm='';el.textContent='Code importieren';if(msg)msg.textContent=e.message||'Import fehlgeschlagen';SFX.error();});return 'keep';},
   reset(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich löschen? Nochmal tippen';return 'keep';}resetGame();return 'keep';},
 };
 sheetBody.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;audioInit();const r=ACT[b.dataset.act](b.dataset,b);if(r!=='keep'&&sheetState)renderSheet();updateHUD();});
@@ -1973,18 +2022,24 @@ function frame(now){
   rateAcc+=dt;if(rateAcc>=2){rateEMA=lerp(rateEMA,saleAcc/rateAcc,.35);const v=SP().stats.value;prodRate=lerp(prodRate,Math.max(0,v-lastValue)/rateAcc,.35);lastValue=v;saleAcc=0;rateAcc=0;}
   saveAcc+=dt;if(saveAcc>12){saveAcc=0;save();}
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){save();try{cloudPush(serialize(),true);}catch(e){}}});
 window.addEventListener('pagehide',save);
 function startCam(){const pd=planetData(S.planet),st=pd.cells[pd.start];cam.d=vnorm(vadd(vsc(st.c,.7),vsc(pd.cells[pd.base].c,.3)));cam.N=pd.cells[pd.base].e2.slice();camReproject();cam.alt=fitAlt(18);cam.gd=null;}
-function boot(){
-  resize();
-  const loaded=load();S=loaded||freshSave();
+function migrate(){
   if(S.layout!==3){for(const pid in S.planets){const pd=planetData(pid),sp=S.planets[pid];if(!sp.owned.includes(pd.start))sp.owned.push(pd.start);
       for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload')v.mode='toUnload';v.sid=null;v.d=basePlanDir(pd,2.5,13);}for(const st of STATIONS)sp.st[st].docks=[];}
     S.layout=3;}
   if(!S.locMig){for(const pid in S.planets){const sp=S.planets[pid];sp.upg=sp.upg||{};for(const u of UPG)if(u.loc&&S.upg[u.id])sp.upg[u.id]=S.upg[u.id];}S.locMig=1;}
   if(!S.maxStage){S.maxStage=1;for(const pid in S.planets)S.maxStage=Math.max(S.maxStage,S.planets[pid].stage);}
-  for(const pid in S.planets)grantAuto(S.planets[pid]);
+  for(const pid in S.planets)grantAuto(S.planets[pid]);}
+function adoptSave(b,msg){for(const k in W)delete W[k];S=b;migrate();for(const pid in S.planets)initRuntime(pid);
+  const rep=runOffline((Date.now()-(S.lastActive||Date.now()))/1000);mapMode=false;buildWorld(S.planet);startCam();
+  if(SP().stage>=2){cam.d=basePlanDir(planetData(S.planet),0,0);camReproject();cam.alt=fitAlt(36);}camApply();setMapMode(false);closeSheet();hideModal();updateHUD();
+  lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;if(rep)afterOffline(rep);else save();toast(msg,'good');}
+function boot(){
+  resize();
+  const loaded=load();S=loaded||freshSave();bootFresh=!loaded;bootLocalT=loaded?(loaded.lastActive||0):0;
+  migrate();
   for(const pid in S.planets)initRuntime(pid);
   let rep=null;if(loaded)rep=runOffline((Date.now()-(S.lastActive||Date.now()))/1000);
   buildWorld(S.planet);startCam();
@@ -1994,6 +2049,8 @@ function boot(){
   if(!loaded)showWelcome();else if(rep)afterOffline(rep);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{for(const L of lockPool)L.key='';});
   lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;requestAnimationFrame(frame);
+  if(!loaded)save();
+  cloudInit();
 }
 try{boot();}catch(e){console.error(e);const l=$('#loading');if(l)l.textContent='Fehler beim Start: '+e.message;}
 })();

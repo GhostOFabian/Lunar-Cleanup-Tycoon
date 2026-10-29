@@ -32,3 +32,9 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Leistungsanforderung (Doppelbürsten-Stufe) pro Planet, sonst 30 % – „man muss alte Maschinen upgraden, um auf neuen Planeten zurechtzukommen“.
 - Nächster Planet ab 80 % des vorherigen statt Forschung – Wunsch des Spielers.
 - Prestige ab Mars, Formel `√(Verdienst/200 k) + 3 × komplette Planeten` – eventuell zu großzügig, beobachten.
+
+## Speichern
+- Spielstand speichert nur noch die 32×32-Raster der aktiven Parzellen, Masken werden daraus neu erzeugt – ca. 95 % kleiner, kein Überlaufen des Browser-Speichers.
+- Zusätzlich Cloud-Spielstand über die Claude-Artefakt-Datenbank (`data/users/<id>/save`, privat pro Spieler, in Stücken ≤ 180 000 Zeichen, zwei Slots im Wechsel) – getrennte Speicher je Ansicht waren die wahrscheinlichste Ursache der Resets.
+- Ein lokaler Stand ohne Spielstand wird nie über einen vorhandenen Cloud-Stand gelegt; ein neuerer Cloud-Stand wird beim Start übernommen.
+- Rolling Backup (`…-bak`, alle 5 min), unlesbare Stände werden als `…-broken-<Zeit>` aufgehoben, Export/Import-Code (gzip + Base64, Präfix `LCT1:`).

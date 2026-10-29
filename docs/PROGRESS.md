@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v3.5 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v3.6 (`prototype/index.html`)
+- v3.6: Cloud-Spielstand (Claude-Konto), Sicherungskopie, Export/Import-Code, schlanker Speicherstand, Meldung bei Speicherfehler.
 - 10 Planeten als Goldberg-Polyeder (252 bis 3 242 Parzellen), eigene Optik, Gefahren und Stürme.
 - Handreinigung (eine Parzelle pro Wisch), Frontier-System ohne Freischaltung, farbige Parzellenränder, grünes Aufleuchten.
 - Meteoritenstaub (selten, heftig), 4 Fahrzeugtypen, 3 Entladestationen, Wegfindung um Gebäude und Bänder.

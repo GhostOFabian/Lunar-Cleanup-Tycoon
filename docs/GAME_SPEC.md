@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.5)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.6)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -173,7 +173,8 @@ Effiziente Motoren 2 000/60 s · Langzeitbetrieb I (12 h offline) 4 000/120 s ·
 
 ## 16. Speichern
 - JSON (Prototyp: localStorage `lunar-cleanup-tycoon-v2`, `S.v=2`, `S.layout=3`, Migrationsflags `locMig`). Pro Planet: saubere/bezahlte Zellen als Base64-Bytes, aktive Zellen als Raster (Base64) + 128²-Masken-Alpha + Staubflag, Fahrzeuge, Drohnen, Außenlager, Stationen, Maschinen, Bänder, Lager, lokale Upgrades.
-- Unity: `Application.persistentDataPath`, gleiche Struktur als DTOs mit `saveVersion` und Migrationspfad.
+- Seit v3.6 werden nur Raster gespeichert (Masken werden aus dem Raster rekonstruiert), dazu `…-bak` alle 5 min, Kopie unlesbarer Stände, Cloud-Stand im Claude-Konto (neuerer Stand gewinnt, ein frischer Stand überschreibt nie einen vorhandenen) und Export/Import-Code `LCT1:` (gzip + Base64).
+- Unity: `Application.persistentDataPath`, gleiche Struktur als DTOs mit `saveVersion` und Migrationspfad; Cloud-Sync und Code-Export beibehalten.
 
 ## 17. Mobile UI
 - HUD oben: Credits + Rate, Planet-Chip (Fortschritt, Stufe), Aufträge-Knopf mit Badge, Einstellungen; Energie/Roh/Prod-Balken; Materialliste; Ziel-Chip; Sturm-Chip; Produktions-Ampel; Warn-Chip.
