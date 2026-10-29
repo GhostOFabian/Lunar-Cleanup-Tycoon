@@ -143,6 +143,10 @@ with game() as (pg, errs):
       const m1=t.matsLib('moon'),m2=t.matsLib('mars');
       return {why0,f0,f1,c0,c1,ps,lv:r.lv,bag:r.bag,rate:rate1/rate0,swept:s0-(w.act.get(nb)?w.act.get(nb).sum:0),s0,col:[m1.acc[0],m2.acc[0]]}}""")
     show('press/building level/bagger/colours', r); check(r['why0'] != '' and r['f1'] > r['f0'] and r['c1'] > r['c0'] and r['ps'] > 1 and r['lv'] == 5 and r['bag'] == 1 and abs(r['rate'] - 2.5) < .01 and r['swept'] > r['s0'] * .5 and r['col'][0] != r['col'][1], 'press upgrade / building levels / Erzbagger / planet colours')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,M=sp.mach.presse;const run=l=>{sp.upg.pvol=l;M.in={staub:1e3};M.out={staubBrick:0,metallBrick:0};M.cur=-1;M.prog=0;sp.energy=1e4;let made=0;
+        for(let i=0;i<120;i++){const b0=M.out.staubBrick;t.machStep(sp,'presse',.25,1);made+=Math.max(0,M.out.staubBrick-b0);M.out.staubBrick=0;M.out.metallBrick=0;M.in.staub=1e3;}return made;};
+      const a=run(0),b=run(4);sp.upg.pvol=0;return {a,b}}""")
+    show('press volume', r); check(r['b'] >= r['a'] * 4, 'press volume upgrade')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

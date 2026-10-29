@@ -455,6 +455,7 @@ const UPG=[
   {id:'bspeed',loc:1,cat:'Förderbänder',name:'Schnellere Bänder',base:120,grow:1.7,max:10,val:l=>1+0.25*l,show:v=>'×'+dec(v,2),label:'Tempo',stage:2},
   {id:'bcap',loc:1,cat:'Förderbänder',name:'Größere Paletten',base:180,grow:1.8,max:8,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Kapazität pro Paket',stage:2},
   {id:'beff',loc:1,cat:'Förderbänder',name:'Leichtlaufrollen',base:150,grow:1.7,max:6,val:l=>Math.pow(.85,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
+  {id:'pvol',loc:1,cat:'Maschinen',name:'Größere Presskammer',base:500,grow:1.8,max:7,val:l=>1+l,show:v=>v+' Bricks pro Hub',label:'Volumen der Staubpresse',stage:2},
   {id:'pspeed',loc:1,cat:'Maschinen',name:'Hochdruckpresse',base:400,grow:1.75,max:10,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Tempo der Staubpresse',stage:2},
   {id:'mspeed',loc:1,cat:'Maschinen',name:'Hydraulik-Tuning',base:300,grow:1.85,max:10,val:l=>1+0.2*l,show:v=>'×'+dec(v,1),label:'Verarbeitungstempo',stage:2},
   {id:'mcap',loc:1,cat:'Maschinen',name:'Größere Puffer',base:250,grow:1.8,max:8,val:l=>1+0.4*l,show:v=>'×'+dec(v,1),label:'Ein-/Ausgangskapazität',stage:2},
@@ -808,7 +809,7 @@ const pressable=(sp,m)=>(m==='staub'&&sp.plan.pressStaub)||(m==='metall'&&sp.pla
 const smeltOn=sp=>!!(sp.plan.smelt&&sp.bld.schmelze);
 const machIn=M=>sumObj(M.in),machOut=M=>sumObj(M.out);
 /* Gebäudestufen: once a building's own upgrades are maxed it can grow another level (bigger, faster, more room) */
-const BLV_REQ={presse:['mspeed','pspeed'],schmelze:['mspeed','mcap'],raff:['mspeed','mcap'],u1:['urate','ubuf'],u2:['urate','ubuf'],u3:['urate','ubuf'],roh:['rohcap'],prod:['prodcap'],sell:['sellcap'],energy:['energy','ecap']};
+const BLV_REQ={presse:['mspeed','pspeed','pvol'],schmelze:['mspeed','mcap'],raff:['mspeed','mcap'],u1:['urate','ubuf'],u2:['urate','ubuf'],u3:['urate','ubuf'],roh:['rohcap'],prod:['prodcap'],sell:['sellcap'],energy:['energy','ecap']};
 const blvl=(id,pid)=>{const sp=S.planets[pid||CUR||S.planet];return(sp&&sp.blvl&&sp.blvl[id])||0;};
 const blMax=()=>3+expN();
 const blF=id=>1+(MACH[id]?.5:id==='energy'?.3:.4)*blvl(id);
@@ -820,7 +821,9 @@ function buyBl(id){const why=blWhy(id);if(why)return fail(why);const c=blCost(id
 function blSec(id){const l=blvl(id),why=blWhy(id),eff=MACH[id]?'Verarbeitungstempo und Puffer':STATIONS.includes(id)?'Entladetempo und Trichter':id==='energy'?'Solarleistung':'Kapazität';
   return '<section class="sec"><h3>Gebäudestufe '+l+' / '+blMax()+'</h3><p class="note">Sind alle Upgrades dieses Gebäudes ausgereizt, kann es eine Stufe wachsen: Es wird sichtbar größer und bekommt +'+(MACH[id]?50:id==='energy'?30:40)+' % '+eff+' je Stufe.'+(l?' Jetzt: ×'+dec(blF(id),1)+'.':'')+'</p>'+
     (why?'<p class="note"><b>'+why+'</b></p>':'<button class="buy wide" data-act="buybl" data-id="'+id+'" data-en="'+bind(()=>S.credits>=blCost(id))+'">Auf Stufe '+(l+1)+' ausbauen · '+cr(blCost(id))+'</button>')+'</section>';}
-const machInCap=id=>MACH[id].inCap*uv('mcap')*blF(id),machOutCap=id=>MACH[id].outCap*uv('mcap')*blF(id);
+/* the press can press several batches per stroke (Größere Presskammer); its buffers grow with it */
+const machBatch=id=>id==='presse'?uv('pvol'):1;
+const machInCap=id=>MACH[id].inCap*uv('mcap')*blF(id)*machBatch(id),machOutCap=id=>MACH[id].outCap*uv('mcap')*blF(id)*machBatch(id);
 
 const sellCap=()=>uv('sellcap')*blF('sell'),rocketTime=()=>12/uv('rspeed');
 function destFree(sp,b){if(b.to==='roh')return rohCap()-rohSum(sp);if(b.to==='prod')return prodCap()-prodSum(sp);if(b.to==='sell')return sellCap()-sumObj(sp.sellBuf);if(MACH[b.to])return machInCap(b.to)-machIn(sp.mach[b.to]);return 0;}
@@ -857,14 +860,14 @@ function beltStep(sp,b,dt,f){
 }
 function machStep(sp,id,dt,f){
   const D=MACH[id],M=sp.mach[id];if(!sp.bld[id]){M.status='Nicht gebaut';return;}
-  if(M.cur<0){for(let r=0;r<D.rec.length;r++){const rc=D.rec[r];if(rc.plan&&!sp.plan[rc.plan])continue;if((M.in[rc.in]||0)>=rc.n-1e-6&&machOut(M)+rc.k<=machOutCap(id)){M.cur=r;M.prog=0;break;}}
+  if(M.cur<0){for(let r=0;r<D.rec.length;r++){const rc=D.rec[r];if(rc.plan&&!sp.plan[rc.plan])continue;if((M.in[rc.in]||0)>=rc.n-1e-6&&machOut(M)+rc.k<=machOutCap(id)){M.cur=r;M.prog=0;M.bat=Math.max(1,Math.min(machBatch(id),Math.floor((M.in[rc.in]+1e-6)/rc.n),Math.floor((machOutCap(id)-machOut(M)+1e-6)/rc.k)));break;}}
     if(M.cur<0){M.status=machOut(M)+1>machOutCap(id)?'Ausgang voll':D.rec.every(rc=>rc.plan&&!sp.plan[rc.plan])?'Pausiert (Plan aus)':'Wartet auf Material';return;}}
   const rc=D.rec[M.cur];
   if(f<.05){M.status='Keine Energie';return;}
   M.prog+=dt*uv('mspeed')*(id==='presse'?uv('pspeed'):1)*blF(id)*f*(sp.mm||1);M.status='Arbeitet';
-  if(M.prog>=rc.t){M.in[rc.in]-=rc.n;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k;M.cur=-1;M.prog=0;M.flash=1;
-    sp.stats.value+=Math.max(0,MATS[rc.out].v*rc.k-MATS[rc.in].v*rc.n)*(sp.pv||1);
-    if(rc.out==='barren')S.stats.barren+=rc.k;if(rc.out.endsWith('Brick'))S.stats.bricks+=rc.k;}
+  if(M.prog>=rc.t){const bt=Math.max(1,Math.min(M.bat||1,Math.floor((M.in[rc.in]+1e-6)/rc.n)));M.in[rc.in]-=rc.n*bt;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k*bt;M.cur=-1;M.prog=0;M.flash=1;M.bat=1;
+    sp.stats.value+=Math.max(0,MATS[rc.out].v*rc.k-MATS[rc.in].v*rc.n)*bt*(sp.pv||1);
+    if(rc.out==='barren')S.stats.barren+=rc.k*bt;if(rc.out.endsWith('Brick'))S.stats.bricks+=rc.k*bt;}
 }
 
 const VEH_BUFF=2.6;
@@ -2080,7 +2083,7 @@ const SEC={
 function machSec(id){const D=MACH[id],B0=BLD[id];
   return '<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+D.rec.map(rc=>rc.n+' '+MATS[rc.in].name+' → '+rc.k+' '+MATS[rc.out].name+' ('+dec(rc.t,1)+' s · Wert '+fmt(MATS[rc.in].v*rc.n*pvM())+' → '+fmt(MATS[rc.out].v*rc.k*pvM())+' Cr)').join('<br>')+'<br>Energie: '+dec(D.energy,1)+'/s während der Arbeit.</p>'+
   '<dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>SP().mach[id].status||'–')+'"></dd><dt>Eingang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].in)+' / '+fmt(machInCap(id)))+'"></dd><dt>Ausgang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].out)+' / '+fmt(machOutCap(id)))+'"></dd></dl>'+
-  '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+(id==='presse'?upgRow('pspeed'):'')+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
+  '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+(id==='presse'?upgRow('pvol')+upgRow('pspeed'):'')+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
 function handRow(id){return '<div class="row"><div class="row-main"><div class="row-t">Sammelbehälter hier entladen</div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().hand))+' / '+fmt(handCap())+' E im Behälter')+'"></div></div><button class="buy" data-act="unhand" data-id="'+id+'" data-en="'+bind(()=>sumObj(SP().hand)>=.05)+'">Entladen</button></div>';}
 function stationSec(id){const B0=BLD[id];
   return handRow(id)+'<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+B0.desc+' Fahrzeuge laden hier ihren Tank ab, das Material läuft über das Förderband weiter.</p><dl class="kv"><dt>Andockplätze</dt><dd data-b="'+bind(()=>SP().st[id].docks.filter(x=>x).length+' belegt von '+stDocks(id))+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(SP().st[id].buf))+' / '+fmt(stBuf(id)))+'"></dd><dt>Entladetempo</dt><dd>'+dec(B0.st.rate*uv('urate'),1)+' E/s</dd><dt>Passend für</dt><dd>'+Object.keys(VT).filter(t=>B0.st.acc.includes(VT[t].size)).map(t=>VT[t].name).join(', ')+'</dd><dt>In der Warteschlange</dt><dd data-b="'+bind(()=>String(SP().veh.filter(v=>v.sid===id&&v.status==='Wartet auf Andockplatz').length))+'"></dd></dl>'+upgRow('urate')+upgRow('ubuf')+(SP().stage>=3?upgRow('udock'):'')+'</section>';}

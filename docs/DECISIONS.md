@@ -132,3 +132,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Gebäudestufen erst nach ausgereizten Upgrades („vollständig abgegrast“), mit sichtbarer Größe und Ringen; Obergrenze steigt mit der Ausbaustufe, damit es endlos weitergeht.
 - Erzbagger als Endstufe der Bohrtürme (Wunsch des Spielers), räumt zusätzlich Meteoritenstaub – passt zu „holt alles raus, was da rumliegt“.
 - Farben pro Planet über die Materialbibliothek, nicht pro Modell – ein Ort für alle Gebäude und Fahrzeuge.
+
+## v5.5
+- Presse-Volumen als Chargen pro Hub (ganzzahlig, damit Bricks Stückware bleiben) statt kontinuierlicher Menge; Puffer wachsen mit, sonst passt eine große Charge nicht hinein.
