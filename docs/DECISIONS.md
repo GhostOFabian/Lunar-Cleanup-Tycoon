@@ -121,3 +121,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Fertige Planeten liefern sonst fast nur Startschmutz (Staub) – darum gemischter Meteoritenstaub, Nebenprodukte der Bohrtürme und Materialausgleich bei der Bohrturm-Platzierung; so laufen Presse, Schmelze und Raffinerie dauerhaft.
 - Stationswahl mit Lastausgleich (Pufferfüllung × 40 m + 14 m je überzähligem Fahrzeug) statt reiner Nähe – damit alle Entladestationen und ihre Bänder arbeiten.
 - Das Band Rohstofflager → Verkauf bleibt bewusst meist leer, wenn alles veredelt wird (Regel aus v5.0).
+
+## v5.3
+- Wege, deren gerade Linie die Basiszone schneidet, laufen auf einem Kreis knapp außerhalb (Radius 33–37 m) um die Basis – vorher fuhren Fahrzeuge zwischen zwei Außenpunkten quer durch die Gebäude.
+- Schmutz unter Gebäudeflächen (fp + 0,6 m) zählt als sauber, damit kein Fahrzeug hineinfahren muss, um eine Randparzelle fertig zu machen.
+- Drohnen geben an Entladestationen ab (Wunsch des Spielers) – deren Bänder bekommen so auch Arbeit; Flughöhe 12 m über allen Gebäuden.

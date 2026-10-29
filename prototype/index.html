@@ -646,9 +646,15 @@ function activate(pid,id,saved,dust,dtype){
   const a={id,cl,grid,sum:dust?0:cl.nIn,canvas,ctx,pat,tex:null,mesh:null,texDirty:true,saveDirty:true,maskStale:false,kind:dust?KINDS.normal:KINDS[cl.kind],D:DIRT[type],dust,hold:0,
     dustType:dust?type:null,amt:dust?DIRT[type].amt*DUST_YIELD*(S.done[pid]?1.6:1):parcelYield(cl),thr:dust?.004:DONE};
   if(saved){try{if(saved.g)decGrid(saved.g,grid,cl.inside);if(saved.m)applyMask(a,saved.m);else if(saved.g)a.maskStale=true;a.saveDirty=false;}catch(e){}}
+  clearUnderBuildings(pid,a);
   let s=0;for(let k=0;k<CELLS;k++)s+=grid[k];a.sum=s;
   w.act.set(id,a);return a;
 }
+/* parcel area covered by a building counts as clean – nobody can (or should) drive in there */
+function clearUnderBuildings(pid,a){const cl=a.cl;if(cl.ring>4)return 0;const sp=S.planets[pid];if(!sp)return 0;const pd=planetData(pid),R=pd.R,L=[];
+  for(const k of BORDER)if(sp.bld[k]){const B=BLD[k],l=toLocal(cl,basePlanDir(pd,B.pos[0],B.pos[1]),R);if(Math.hypot(l[0],l[1])<cl.H*1.6+B.fp)L.push([l[0],l[1],B.fp+.6]);}
+  if(!L.length)return 0;let cut=0;for(let k=0;k<CELLS;k++){if(!a.grid[k])continue;const x=-cl.H+((k%GRID)+.5)*cl.cs,y=-cl.H+((k/GRID|0)+.5)*cl.cs;for(const q of L)if(Math.hypot(x-q[0],y-q[1])<q[2]){cut+=a.grid[k];a.grid[k]=0;break;}}
+  if(cut){a.sum=Math.max(0,a.sum-cut);a.saveDirty=true;}return cut;}
 function initRuntime(pid){
   const sp=S.planets[pid],pd=planetData(pid);
   const w=W[pid]={owned:new Uint8Array(pd.N),clean:new Uint8Array(pd.N),paid:new Uint8Array(pd.N),disc:new Uint8Array(pd.N),act:new Map()};
@@ -886,13 +892,17 @@ function avoidOutposts(pid,sp,v,t,R){const pd=planetData(pid);for(const o of sp.
     const a=toLocal(cl,v.d,R),b=toLocal(cl,t,R);if(segD([0,0],a,b)>3.4)continue;const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;let px=-dy/l,py=dx/l;if(px*a[0]+py*a[1]<0){px=-px;py=-py;}
     return toDir(cl,px*4.6,py*4.6,R);}return null;}
 function navMove(pid,v,t,step,R){const sp=S.planets[pid],pd=planetData(pid),bc=pd.cells[pd.base],Z=NAV.zone;const a=toLocal(bc,v.d,R),b=toLocal(bc,t,R),ra=Math.hypot(a[0],a[1]),rb=Math.hypot(b[0],b[1]);
-  if(ra>=Z&&rb>=Z){v.nav=null;const det=sp.outposts.length?avoidOutposts(pid,sp,v,t,R):null;if(det){moveDir(v,det,step,R);return false;}return moveDir(v,t,step,R);}
+  if(ra>=Z&&rb>=Z){v.nav=null;
+    if(ra<1e3&&rb<1e3&&segD([0,0],a,b)<Z-.5){/* the straight line would cross the base: go around it on a circle just outside the zone */
+      const aa=Math.atan2(a[1],a[0]);let da=Math.atan2(b[1],b[0])-aa;while(da>Math.PI)da-=TAU;while(da<-Math.PI)da+=TAU;const ang=aa+Math.sign(da)*Math.min(Math.abs(da),.5),rr=Math.max(Z+2,Math.min(ra,Z+6));
+      moveDir(v,basePlanDir(pd,Math.cos(ang)*rr,Math.sin(ang)*rr),step,R);return false;}
+    const det=(sp.outposts.length||(sp.rigs||[]).length)?avoidOutposts(pid,sp,v,t,R):null;if(det){moveDir(v,det,step,R);return false;}return moveDir(v,t,step,R);}
   const nv=navGrid(pid),tk=Math.round(b[0]*2)+','+Math.round(b[1]*2);
   if(!v.nav||v.nav.tk!==tk||v.nav.nk!==nv.key){const sa=ra<Z?a:[a[0]/ra*(Z-1),a[1]/ra*(Z-1)],sb=rb<Z?b:[b[0]/rb*(Z-1),b[1]/rb*(Z-1)];
     const p=navPath(pid,sa,sb)||[];const wp=p.slice(1);if(ra>=Z)wp.unshift(sa);if(rb>=Z)wp.push(sb);v.nav={tk,nk:nv.key,wp,i:0};}
   const Nv=v.nav;let rem=step;
   while(rem>1e-4&&Nv.i<Nv.wp.length){const p=Nv.wp[Nv.i],d=basePlanDir(pd,p[0],p[1]),dist=arcDist(v.d,d,R);if(dist<=rem+.05){v.d=d;rem-=dist;Nv.i++;}else{moveDir(v,d,rem,R);return false;}}
-  if(rem<=1e-4)return false;return moveDir(v,t,rem,R);}
+  if(rem<=1e-4)return false;if(rb<Z&&nv.g[navIdx(b[0],b[1])])return true;return moveDir(v,t,rem,R);}
 const vehicleCanUse=(v,stId)=>stDef(stId).acc.includes(VT[v.type].size);
 function moveDir(v,t,step,R){const c=clamp(vdot(v.d,t),-1,1),ang=Math.acos(c);if(ang*R<=step){v.d=t.slice();return true;}
   const w=vnorm(vsub(t,vsc(v.d,c))),a=step/R;v.d=vnorm(vadd(vsc(v.d,Math.cos(a)),vsc(w,Math.sin(a))));return ang*R-step<.35;}
@@ -949,7 +959,7 @@ function vehStep(pid,sp,v,dt,f,live){
       if(tank>=cap||battLow(v)){v.mode='toUnload';break;}
       const team=teamOf(sp,v.cell);
       if(v.ti<0||a.grid[v.ti]<.05){v.ti=pickGridTarget(a,v,R,team);if(v.ti<0){v.mode='seek';break;}}
-      const gdir=gridDir(a,v.ti,R),arrived=v.mode==='drive'?navMove(pid,v,gdir,spd*dt,R):moveDir(v,gdir,spd*dt*.6,R);v.busy=true;battUse(v,dt);
+      const gdir=gridDir(a,v.ti,R),arrived=v.mode==='drive'?navMove(pid,v,gdir,spd*dt,R):a.cl.ring<=4?navMove(pid,v,gdir,spd*dt*.6,R):moveDir(v,gdir,spd*dt*.6,R);v.busy=true;battUse(v,dt);
       if(v.mode==='drive'){v.status='Fährt zum Einsatz';const dl=toLocal(a.cl,v.d,R);if(arrived||Math.hypot(dl[0],dl[1])<a.cl.H*.9)v.mode='clean';break;}
       const tn=Math.min(4,team.filter(o=>o.mode==='clean').length);v.status=tn>1?'Reinigt im Team ('+tn+')':'Reinigt';v.ph=(v.ph||0)+dt*4;
       const loc=toLocal(a.cl,v.d,R),wg=arrived?.4:0;
@@ -1009,6 +1019,8 @@ function buyLifter(){const pid=S.planet,sp=SP();if(!sp.bld.lifter)return fail('E
 const droneCap=()=>DRONE.cap*uv('dcap'),droneSpeed=()=>DRONE.speed*uv('dspeed');
 const hangarDir=pid=>basePlanDir(planetData(pid),BLD.hangar.pos[0],BLD.hangar.pos[1]);
 const droneCost=pid=>Math.round(2500*PLANETS[pid].diff*Math.pow(1.35,S.planets[pid].drones.length));
+/* drones hand their load to the unload station with the most free room (its belt then carries it on); hangar → raw store only if all are full */
+function droneStation(pid,sp,dr,not){let best=null,bf=10;for(const s of STATIONS){if(!sp.bld[s]||s===not)continue;const fr=stBuf(s)-sumObj(sp.st[s].buf);if(fr>bf){bf=fr;best=s;}}return best;}
 function droneStep(pid,sp,dr,dt,f){
   const pd=planetData(pid),R=pd.R,hd=hangarDir(pid),spd=droneSpeed()*Math.max(.25,f)*(sp.vm||1),cap=droneCap(),load=sumObj(dr.tank);dr.busy=false;
   const tgt=()=>{const v=sp.veh.find(x=>x.id===dr.tgt);return v&&v.drone===dr.id?v:null;};
@@ -1021,8 +1033,13 @@ function droneStep(pid,sp,dr,dt,f){
     case 'out':{const v=tgt();if(!v){dr.mode='back';dr.tgt=null;break;}dr.busy=true;dr.status='Fliegt zu '+VT[v.type].name+' #'+v.id;if(moveDir(dr,v.d,spd*dt,R))dr.mode='load';break;}
     case 'load':{const v=tgt();if(!v){dr.mode='back';dr.tgt=null;break;}dr.d=v.d.slice();dr.busy=true;dr.status='Übernimmt Ladung';
       const tk=sumObj(v.tank),amt=Math.min(tk,cap-load,DRONE.rate*dt);if(amt>0&&tk>0){const k=amt/tk;for(const m in v.tank){const x=v.tank[m]*k;v.tank[m]-=x;dr.tank[m]=(dr.tank[m]||0)+x;}}
-      if(sumObj(v.tank)<.05||cap-sumObj(dr.tank)<.05){if(sumObj(v.tank)<.05)v.tank={};v.drone=null;dr.tgt=null;dr.mode='back';S.ctr.lifts=(S.ctr.lifts||0)+1;if(TRACK)TRACK.p[pid].lifts=(TRACK.p[pid].lifts||0)+1;}break;}
-    case 'back':{dr.busy=true;dr.status='Fliegt zurück';if(moveDir(dr,hd,spd*dt,R))dr.mode='drop';break;}
+      if(sumObj(v.tank)<.05||cap-sumObj(dr.tank)<.05){if(sumObj(v.tank)<.05)v.tank={};v.drone=null;dr.tgt=null;dr.sid=droneStation(pid,sp,dr);dr.mode=dr.sid?'toSt':'back';S.ctr.lifts=(S.ctr.lifts||0)+1;if(TRACK)TRACK.p[pid].lifts=(TRACK.p[pid].lifts||0)+1;}break;}
+    case 'toSt':{const s=dr.sid;if(!s||!sp.bld[s]){dr.sid=null;dr.mode='back';break;}dr.busy=true;dr.status='Bringt die Ladung zur '+BLD[s].name;if(moveDir(dr,stDir(pid,s,'c'),spd*dt,R)){dr.mode='stdrop';dr.wt=0;}break;}
+    case 'stdrop':{const s=dr.sid,st=s&&sp.bld[s]?sp.st[s]:null;if(!st){dr.mode='back';break;}dr.busy=true;
+      const free=stBuf(s)-sumObj(st.buf);if(load<.05){dr.tank={};dr.sid=null;dr.mode='back';break;}
+      if(free<=.01){dr.wt=(dr.wt||0)+dt;dr.status=BLD[s].name+' ist voll – wartet';if(dr.wt>3){const alt=droneStation(pid,sp,dr,s);dr.sid=alt;dr.mode=alt?'toSt':'back';}break;}
+      const amt=Math.min(load,free,DRONE.rate*dt),k=amt/load;for(const m in dr.tank){const x=dr.tank[m]*k;dr.tank[m]-=x;st.buf[m]=(st.buf[m]||0)+x;}dr.status='Entlädt in die '+BLD[s].name;break;}
+    case 'back':{dr.busy=true;dr.status=load>.05?'Fliegt zum Hangar (Stationen voll)':'Fliegt zurück';if(moveDir(dr,hd,spd*dt,R))dr.mode='drop';break;}
     case 'drop':{if(load<.05){dr.tank={};dr.mode='idle';break;}const fr=rohCap()-rohSum(sp);if(fr<=.01){dr.status='Rohstofflager voll – wartet';break;}
       const amt=Math.min(load,fr,DRONE.rate*dt),k=amt/load;for(const m in dr.tank){const x=dr.tank[m]*k;dr.tank[m]-=x;sp.roh[m]=(sp.roh[m]||0)+x;}dr.status='Lädt ins Rohstofflager';break;}
     default:dr.mode='idle';}
@@ -1857,7 +1874,7 @@ function buyStage(){const sp=SP(),next=STAGES[sp.stage];if(!next)return;const c=
 function buildBuilding(id){const sp=SP(),B0=BLD[id];if(sp.bld[id])return;if(B0.geo&&!GEOF[S.planet])return fail('Hier gibt es keine nutzbare Erdwärme');if(gs(sp)<B0.stage)return fail('Erst Basisstufe '+B0.stage+' auf einem Planeten');
   if(B0.research&&!S.research.done[B0.research])return fail('Erst '+RES.find(r=>r.id===B0.research).name+' erforschen');
   const c=Math.round(B0.cost*PLANETS[S.planet].diff);if(S.credits<c)return fail(lacks(c));
-  S.credits-=c;sp.bld[id]=1;if(id==='research'){calcFront(S.planet);repaintAll();}rebuildBase();SFX.buy();toast(B0.name+' steht','good');save();}
+  S.credits-=c;sp.bld[id]=1;for(const a of W[S.planet].act.values())clearUnderBuildings(S.planet,a);if(id==='research'){calcFront(S.planet);repaintAll();}rebuildBase();SFX.buy();toast(B0.name+' steht','good');save();}
 function vehCost(t){const n=SP().veh.filter(v=>v.type===t).length;return Math.round(VT[t].cost*PLANETS[S.planet].diff*Math.pow(1.22,n));}
 /* ---- Sammelwagen: early helper for the hand container. Once the container is (nearly) full it drives to where you wipe;
    you empty the whole container into it and it brings the load to the unload station with the most room (or the raw store). ---- */
@@ -2502,7 +2519,7 @@ function updateVisuals(dt,t){
   {const seen=new Set();for(const dr of sp.bld.hangar?sp.drones:[]){seen.add(dr.id);let dw=droneViews.get(dr.id);
       if(!dw){dw=droneModel(bv.VL);dw.alt=1;dw.prev=dr.d.slice();dw.fwd=vnorm(vcross(dr.d,[0,1,0]));world.add(dw.g);droneViews.set(dr.id,dw);}
       const mv=arcDist(dw.prev,dr.d,R);if(mv>.002){const f2=vnorm(vsub(dr.d,dw.prev));dw.fwd=vnorm(vadd(vsc(dw.fwd,.8),vsc(f2,.2)));}dw.prev=dr.d.slice();
-      const ta=dr.mode==='out'||dr.mode==='back'?7:dr.mode==='load'?3.2:dr.busy?6:1.1;dw.alt=lerp(dw.alt,ta,1-Math.exp(-2*dt));
+      const ta=dr.mode==='out'||dr.mode==='back'||dr.mode==='toSt'?12:dr.mode==='load'?3.2:dr.mode==='stdrop'?6.5:dr.busy?10:1.1;dw.alt=lerp(dw.alt,ta,1-Math.exp(-4*dt));
       orient(dw.g,dr.d,dw.fwd,R,dw.alt+Math.sin(t*3+dr.id)*.08);dw.g.visible=!mapMode;for(const r of dw.rotors)r.rotation.y+=dt*(dw.alt>1.3?40:6);
       const c2=dr.mode==='load'?0x7fb4ff:dr.mode==='idle'&&!dr.busy?0xeef2fb:0x6ff2d2;dw.light.color.setHex(c2);dw.light.emissive.setHex(c2);
       if(!mapMode&&dr.mode==='load'&&Math.random()<dt*14)emit3(dr.d,R+1.6,0xa49c8e,1,.4,1.2);

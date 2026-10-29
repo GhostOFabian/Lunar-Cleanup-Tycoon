@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.2)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.3)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -136,7 +136,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Das Produktionsfenster zeigt ganz oben alle gelben und roten Stellen mit Erklärung und bis zu 5 passende Upgrades zum direkten Kaufen. Jedes Produktionsgebäude hat eine Lampe (grün/gelb/rot, grau = wartet).
 
 ## 9. Drohnen und Außenlager
-- **Drohnen** (Forschung „Drohnentechnik“ + Drohnenhangar, Stufe 4): max. 8 pro Planet, Kosten `2 500 × Planetfaktor × 1,35^n`, Ladung 60 × Upgrade, 9 m/s × Upgrade, Umladen 30 E/s. Ziel: Fahrzeuge > 30 m vom Hangar mit ≥ 40 % Tank (Score = Füllgrad × Entfernung). Volles Fahrzeug mit zugewiesener Drohne wartet („Wartet auf Drohne“). Die Drohne liefert direkt ins Rohstofflager. Energie 0,4/s im Flug.
+- **Drohnen** (Forschung „Drohnentechnik“ + Drohnenhangar, Stufe 4): max. 8 pro Planet, Kosten `2 500 × Planetfaktor × 1,35^n`, Ladung 60 × Upgrade, 9 m/s × Upgrade, Umladen 30 E/s. Ziel: Fahrzeuge > 30 m vom Hangar mit ≥ 40 % Tank (Score = Füllgrad × Entfernung). Volles Fahrzeug mit zugewiesener Drohne wartet („Wartet auf Drohne“). Die Drohne liefert an die Entladestation mit dem meisten freien Platz (`toSt → stdrop`, ab v5.3), nur wenn alle voll sind über den Hangar ins Rohstofflager. Flughöhe 12 m, beim Abholen 3,2 m, beim Abgeben 6,5 m. Energie 0,4/s im Flug.
 - **Außenlager** (Forschung „Außenlager-Logistik“, nach Drohnen; Technikstufe 4): auf sauberer Parzelle ab Ring 4, nicht neben einem anderen Außenlager, max. 4 pro Planet, Kosten `20 000 × Planetfaktor × 1,6^n`. 2 Docks, Puffer 400, 20 E/s, alle Fahrzeuggrößen, Pipeline 8 E/s × Bandtempo ins Rohstofflager (sichtbare Röhre, über der Basis erhöht).
 
 ## 9a. Lastdrohnen (Schwerlast-Hangar, ab v3.7)

@@ -48,6 +48,11 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,pid='moon',sp=t.S.planets.moon,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];const nv=t.navGrid(pid);let bad=0,n=0;
       for(let i=0;i<3000;i++){t.simStep(pid,.25,false);for(const v of sp.veh){if(!(v.mode==='drive'||v.mode==='toUnload'))continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>30)continue;
         if(t.STATIONS.some(s=>Math.hypot(l[0]-t.BLD[s].pos[0],l[1]-t.BLD[s].pos[1])<5.2))continue;n++;if(nv.g[t.navIdx(l[0],l[1])])bad++;}}return {n,bad}}""")
+    r2 = E("""()=>{const t=__t,pid='moon',sp=t.S.planets.moon,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];const hits={};let n=0;
+      const ids=t.BORDER.filter(k=>sp.bld[k]);for(let i=0;i<4000;i++){t.simStep(pid,.25,false);
+        for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
+          for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}}}return {n,hits}}""")
+    show('inside buildings', r2); check(sum(r2['hits'].values()) <= 2, 'vehicles inside building footprints')
     show('pathing', r); check(r['bad'] <= max(3, r['n'] * .01), 'vehicles drive through obstacles')
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;const c0=t.S.credits;sp.auto.staub=true;sp.roh.staub=t.rohCap()*.5;for(let i=0;i<600;i++)t.simStep('moon',.5,false);
@@ -124,6 +129,13 @@ with game() as (pg, errs):
       const a=vis();t.openSheet('building','roh');t.updLabels();const b=vis();t.closeSheet();t.updLabels();return {closed:a,open:b,after:vis()}}""")
     show('labels', r); check(r['closed'] == [] and r['open'] in ([], ['roh']) and r['after'] == [], 'building labels')  # with the three.js mock traverse() is a no-op, so 'open' stays empty; verified with real three.js
 
+    r = E("""()=>{const t=__t,pid='moon',sp=t.S.planets.moon,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];t.S.credits+=1e12;t.S.maxStage=5;sp.stage=5;
+      for(const k of t.BORDER)if(!t.BLD[k].geo){t.S.research.done[t.BLD[k].research]=true;t.buildBuilding(k);}for(const ty of ['buggy','sauger','truck','staubi','sauger','truck'])t.buyVehicle(ty);
+      for(const r of sp.rigs||[])r.buf={staub:200};const hits={},dr={};let n=0;const ids=t.BORDER.filter(k=>sp.bld[k]);
+      for(let i=0;i<4000;i++){t.simStep(pid,.25,false);for(const d of sp.drones)dr[d.mode]=(dr[d.mode]||0)+1;
+        for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
+          for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}}}return {n,hits,veh:sp.veh.length,dr}}""")
+    show('full base: inside buildings + drones', r); check(sum(r['hits'].values()) <= 3 and r['dr'].get('stdrop', 0) > 0, 'full base: vehicles inside buildings or drones never deliver to stations')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

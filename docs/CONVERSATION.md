@@ -46,6 +46,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 30. **Beim Antippen eines Bandes sehen, was befördert wird**; Staub soll ab einem Punkt nicht mehr roh transportiert, sondern erst zu höheren Ressourcen umgewandelt werden – die Kette läuft von klein nach groß, im Frachtraum landet immer das Endprodukt, außer es gibt keine höhere Stufe. → v5.0.
 31. **Jeder Planet braucht eigene Ziele**, die abgeschlossen werden können. → v5.1.
 32. Auf dem Mond werden nach 100 % **nur noch Bricks** hergestellt, alle anderen Bänder stehen – Produktionskette so korrigieren, dass **alle Bänder dauerhaft zu tun haben**, auf allen Planeten. → v5.2.
+33. Fahrzeuge fahren teilweise noch durch Gebäude, **Drohnen fliegen durch Gebäude** und laden nicht korrekt; **Drohnen sollen ihre Ladung bei den Entladestationen abgeben**. → v5.3.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).
