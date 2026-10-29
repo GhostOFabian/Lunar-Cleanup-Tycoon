@@ -60,6 +60,14 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t;const t0=performance.now();const rep=t.runOffline(8*3600);return {ms:performance.now()-t0,cr:rep.credits,moon:rep.p.moon}}""")
     show('offline 8h', r); check(r['cr'] > 0 and r['ms'] < 15000, 'offline simulation')
 
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon');t.S.credits+=1000;t.buyCart();const c=sp.cart;
+      const far=pd.cells.find(x=>x.kind!=='base'&&x.ring===4);window.__hp=t.toDir(far,0,0,pd.R);
+      sp.hand={staub:t.handCap()};const roh0=t.rohSum(sp)+Object.values(sp.st).reduce((a,s)=>a+t.sumObj(s.buf),0);const modes=[];
+      t.cam.gd=null;t.cam.d=window.__hp;for(let i=0;i<600&&c.mode!=='wait';i++){t.simStep('moon',.1,true);if(modes[modes.length-1]!==c.mode)modes.push(c.mode);}
+      const dist=t.arcDist(c.d,t.cartGoal(),pd.R),gd=t.arcDist(t.cartPark('moon'),t.cartGoal(),pd.R);t.unloadHand();const hand=t.sumObj(sp.hand),load=t.sumObj(c.tank);
+      for(let i=0;i<900&&c.mode!=='park';i++){t.simStep('moon',.1,true);if(modes[modes.length-1]!==c.mode)modes.push(c.mode);}
+      const roh1=t.rohSum(sp)+Object.values(sp.st).reduce((a,s)=>a+t.sumObj(s.buf),0);return {modes,dist,gd,hand,load,left:t.sumObj(c.tank),cap:t.handCap()}}""")
+    show('collector cart', r); check(r['dist'] < 3.5 and r['hand'] < .01 and abs(r['load'] - r['cap']) < .1 and r['left'] < .05 and r['modes'][-1] == 'park', 'collector cart')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')

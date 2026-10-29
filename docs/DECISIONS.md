@@ -65,3 +65,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Nachts bleibt die Szene mit 34 % Himmelslicht lesbar – ganz dunkel wäre auf dem Handy nicht spielbar.
 - Lichtkegel als additive, transparente Kegel und Bodenflecken statt echter Spotlights – viele Fahrzeuge mit echten Lichtern wären auf Handys zu teuer.
 - Erfolge von Hand abholen (Belohnung 250 × 5^Stufe) und über den Neustart behalten – sichtbare Belohnung, kein Verlust beim Prestige.
+
+## v4.1
+- Sammelwagen als eigenes Objekt (`sp.cart`) statt Fahrzeugtyp – er reinigt nicht, braucht keinen Platz und keinen Strom und darf von Anfang an da sein.
+- Der Spieler leert den Behälter selbst per Tipp in den wartenden Wagen (Wunsch: „bei dem ich meinen Behälter leeren kann“); der Wagen fährt nur los, wenn der Behälter fast voll ist oder gerufen wird.
+- Neues Hauptziel 7 „Sammelwagen kaufen“; alte Stände werden per `qv` 3 verschoben.

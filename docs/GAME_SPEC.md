@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.0)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.1)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -105,6 +105,11 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - **Wegfindung:** In der Basis (Radius 31 m) fahren Fahrzeuge per Raster-A* (66×66, 1 m, 8-Nachbarn, String-Pulling) um Gebäude (fp + 0,9 m) und alle Förderbänder (1,15 m) herum. Draußen geradeaus, mit Ausweichpunkt um Außenlager. Raster wird bei jeder Gebäudeänderung neu gebaut, Pfade gecacht.
 - Entladen: nächste passende Station oder Außenlager (Außenlager mit > 90 % Puffer werden gemieden).
 
+### 7a. Sammelwagen (ab v4.1)
+- Pro Planet einer, ab Basisstufe 1, Kosten `120 × diff^0,85`, belegt keinen Fahrzeugplatz, kein Strom. Ladung `2 × Tragkraft des Sammelbehälters`, Tempo `7 × (1 + 0,15 × Stufe)` m/s (Upgrade „Schneller Sammelwagen“, global).
+- Zustände `park → go → wait → back → drop → park`. Auslöser: Sammelbehälter ≥ 95 % voll (oder „Zu mir rufen“) und der Spieler ist auf dem Planeten. Ziel: letzte Wischstelle (sonst Kameramitte); entfernt sich der Finger > 8 m, fährt er hinterher. Ankunft < 3,2 m.
+- Im Zustand `wait` leert der Behälter-Knopf alles in den Wagen (zählt als Entladen). Danach fährt er zur Annahme der Entladestation mit dem meisten Platz (sonst Rohstofflager), entlädt 60 E/s, weicht bei vollem Ziel nach 3 s aus und parkt an der Basis. Offline fährt er nur zurück und entlädt.
+
 ## 8. Logistik und Produktion
 - Förderbänder entstehen automatisch, sobald beide Gebäude stehen. Ihre Enden reichen bis in die Gebäude (≤ halber Footprint-Radius vom Gebäudemittelpunkt, notfalls mit Knick; vom Layout-Test geprüft). An jedem Anschluss steht ein offenes Übergabetor (1,05 m über dem Band), unter dem die Waren durchfahren. Bänder zum selben Ziel rechnen ihre Ware unterwegs gemeinsam gegen den freien Platz. Sie laufen als Item-Listen `[Position, Material, Menge]`, Abstand 1,25 m, Tempo 2,4 m/s × Upgrade, Paket 8 E × Upgrade (Produkte 1 Stück pro 8 E).
 - Kurven sind abgerundet (Radius 1,4 m, quadratische Bézier-Kurven). Hochbänder (h > 1) sind Brücken mit Stützen, die nicht auf anderen Bändern stehen.
@@ -156,7 +161,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - **Tägliche Aufträge**: 3 pro Kalendertag (seeded), Typen: Material verkaufen, Parzellen fertig reinigen, m² reinigen, Credits verdienen; Ziel und Belohnung skalieren mit Technikstufe und Planetfaktor. Alle 3 = +50 % Bonus. Zählt über alle Planeten und offline. Badge am Auftragsknopf.
 - **Statistik**: Gesamtwerte, pro Planet Einnahmen/h, Parzellen/h (gleitender Mittelwert, alle 10 s gemessen), Prognose für 80 % und 100 %.
 - **Sternenstaub (Prestige)**: ab Mars möglich. Gewinn `⌊sqrt(Verdienst dieses Laufs / 200 000)⌋ + 3 × komplette Planeten`. Jeder Sternenstaub: +5 % Preise, +3 % Reinigung (Hand und Fahrzeuge). Zurückgesetzt wird alles außer Sternenstaub, Artefakten, Funden, Lebenszeit-Statistik und Toneinstellung.
-- **Ziele/Quests** (43, Reihenfolge im Prototyp): Tutorial → Stufe 2 → Entladestation → Buggy → Presse → Bricks → Stufe 3 → Schmelze → Barren → Drohnentechnik → Hangar + Drohne → 80 % Mond → Mars → Außenlager → 80 % Mars und Europa → Akkupark 3 → Radioisotopen-Generator → Raffinerie → Eisfräse → Sturmschild → Titan → Schlammraupe → Geothermie → Io → Lavapanzer → Kernspaltung → Kernreaktor → Lastdrohne → Venus → ein Planet komplett → Ganymed → Magnetgleiter → Enceladus → Triton → Kryo-Koloss → Pluto → Pluto 80 % → Neustart mit Sternenstaub.
+- **Ziele/Quests** (44, Reihenfolge im Prototyp): Tutorial (inkl. Sammelwagen kaufen) → Stufe 2 → Entladestation → Buggy → Presse → Bricks → Stufe 3 → Schmelze → Barren → Drohnentechnik → Hangar + Drohne → 80 % Mond → Mars → Außenlager → 80 % Mars und Europa → Akkupark 3 → Radioisotopen-Generator → Raffinerie → Eisfräse → Sturmschild → Titan → Schlammraupe → Geothermie → Io → Lavapanzer → Kernspaltung → Kernreaktor → Lastdrohne → Venus → ein Planet komplett → Ganymed → Magnetgleiter → Enceladus → Triton → Kryo-Koloss → Pluto → Pluto 80 % → Neustart mit Sternenstaub.
 - **Erfolge** (17, `ACH`, ab v4.0): Stufenziele für Parzellen, Verdienst (Lebenszeit), Raketenstarts, Fahrzeuge, Planeten erreicht/komplett, Bricks, Barren, Hand-m², Meteoritenschauer, Drohnen-Abholungen, eingeflogene Maschinen, Tagesaufträge, Forschung, Funde, Basisstufe, Sternenstaub. Belohnung Stufe n (ab 0): `250 × 5^n` Cr, von Hand abholen. Stand `S.ach` und Zähler `S.ctr` bleiben über den Neustart erhalten.
 - **Ziel-Übersicht** (Tippen auf den Ziel-Chip): aktuelles Ziel mit „Hinführen“, alle Erfolge (abholbare zuerst), Liste aller Hauptziele. Der Chip zeigt, wie viele Erfolge bereit sind.
 
