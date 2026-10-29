@@ -85,6 +85,18 @@ with game() as (pg, errs):
       t.openSheet('goals');const txt=document.querySelector('#sheet').textContent;t.closeSheet();
       return {n:L.length,ne:Lm.length,spec:Lm.some(g=>g.id==='sp_eisfraese'),ready:ready.length,claimed:g0?t.pgDone('moon',g0):null,gain,again:g0?t.pgReady('moon',g0):false,shows:txt.includes('Ziele auf dem Mond')}}""")
     show('planet goals', r); check(r['n'] >= 20 and r['spec'] and r['ready'] > 0 and r['claimed'] and r['gain'] > 0 and not r['again'] and r['shows'], 'planet goals')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;const types={};for(let i=0;i<400;i++){const ty=t.meteorType('moon');types[ty]=(types[ty]||0)+1;}
+      for(const c of pd.cells)if(c.kind!=='base'){w.clean[c.id]=1;w.act.delete(c.id);}t.S.done.moon=1;sp.stage=5;sp.rigs=[];t.S.credits+=1e9;for(let i=0;i<6;i++)t.buildRig(-1);
+      const mats=[...new Set(sp.rigs.map(r=>t.rigMat('moon',r.cell)))];const r0=sp.rigs[0];r0.buf={};sp.energy=1e4;t.rigStep('moon',sp,r0,10,1);
+      t.meteor('moon',false);const dts=[...w.act.values()].filter(a=>a.dust).map(a=>a.dustType);
+      t.save();const saved=JSON.parse(localStorage.getItem('lunar-cleanup-tycoon-v2')).planets.moon.act;const st=Object.values(saved).filter(x=>x.t).length;
+      return {types,mats,buf:Object.keys(r0.buf),dts:[...new Set(dts)],savedTyped:st,nonStart:dts.filter(x=>x!=='dust').length}}""")
+    show('mixed supply', r); check(len(r['types']) >= 3 and len(r['mats']) >= 3 and len(r['buf']) >= 3 and (r['nonStart'] == 0 or r['savedTyped'] > 0), 'all production chains get material')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.research.done.raff=true;t.S.maxStage=5;for(const id of ['u1','u2','u3','presse','schmelze','raff','energy','prod'])t.buildBuilding(id);sp.energy=1e4;
+      const used={};for(let i=0;i<1800;i++){t.simStep('moon',1,false);for(const b of t.BELTS)if(t.beltLive(sp,b)&&sp.belts[b.id].length)used[b.id]=(used[b.id]||0)+1;}
+      return {used,live:t.BELTS.filter(b=>t.beltLive(sp,b)).map(b=>b.id),veh:sp.veh.map(v=>v.type+':'+v.mode+':'+v.sid),u2:t.sumObj(sp.st.u2.buf),u2b:sp.belts.b_u2.length,roh:t.rohSum(sp),rc:t.rohCap(),jam:sp.jam.b_u2}}""")
+    idle = [b for b in r['live'] if r['used'].get(b, 0) < (30 if b in ('b_rp','b_ps','b_pp','b_sp','b_rr','b_rap','b_prs') else 0) and b != 'b_rs']
+    show('belts busy on finished moon', {'idle': idle, 'used': r['used'],'veh':r['veh'],'u2':r['u2'],'u2b':r['u2b'],'roh':[r['roh'],r['rc']],'jam':r['jam']}); check(not idle, 'some belts stay idle on a finished planet')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -123,7 +135,7 @@ with game() as (pg, errs):
         pg.wait_for_timeout(250)
     r = E("()=>({ok:window.__ok,busy0:false,done:!__t.offRun,secs:window.__rep&&window.__rep.secs,gain:__t.S.credits-window.__c0,track:__t.TRACK===null})")
     show('async offline', r); check(r['ok'] and r['done'] and r['secs'] == 7200 and r['track'], 'async offline simulation')
-    s1 = E("()=>{__t.save();return {n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
+    s1 = E("()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');let id=-1;for(const c of pd.cells)if(c.kind!=='base'&&w.clean[c.id]){id=c.id;break;}w.act.delete(id);const a=t.activate('moon',id,null,true,'crystal');a.saveDirty=true;t.dirtyAt(a,0,0,6,.9);__t.save();return {dt:id+':'+a.dustType,n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
     E("""()=>{const t=__t;if(!t.S.planets.mars){t.S.planets.mars=t.freshPlanet('mars');t.initRuntime('mars');}t.travelTo('mars');}""")
     for _ in range(40):
         pg.wait_for_timeout(200)
@@ -135,8 +147,8 @@ with game() as (pg, errs):
         pg.wait_for_timeout(200)
         if not E("()=>!!__t.travelFx"): break
     pg.reload(); pg.wait_for_timeout(1200)
-    s2 = E("()=>({n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
-    show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'], 'save/load roundtrip')
+    s2 = E("()=>({dt:(()=>{for(const[id,a]of __t.W.moon.act)if(a.dustType==='crystal')return id+':crystal';return 'none';})(),n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
+    show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'] and s1['dt'] == s2['dt'], 'save/load roundtrip')
 
     for e in errs[:20]:
         print(e)

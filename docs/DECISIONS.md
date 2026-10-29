@@ -116,3 +116,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v5.1
 - Planetenziele aus einer gemeinsamen Vorlage, mit Planetenbezug (Spezialfahrzeug, Energiequelle, Planetenfaktor bei Zielen und Belohnungen) – jeder Planet hat so eigene, abschließbare Ziele, ohne 230 Ziele von Hand zu pflegen.
 - Die letzten Planetenziele hängen an den endlosen Ausbaustufen (bis 20), damit auch fertige Planeten Ziele behalten.
+
+## v5.2
+- Fertige Planeten liefern sonst fast nur Startschmutz (Staub) – darum gemischter Meteoritenstaub, Nebenprodukte der Bohrtürme und Materialausgleich bei der Bohrturm-Platzierung; so laufen Presse, Schmelze und Raffinerie dauerhaft.
+- Stationswahl mit Lastausgleich (Pufferfüllung × 40 m + 14 m je überzähligem Fahrzeug) statt reiner Nähe – damit alle Entladestationen und ihre Bänder arbeiten.
+- Das Band Rohstofflager → Verkauf bleibt bewusst meist leer, wenn alles veredelt wird (Regel aus v5.0).

@@ -638,13 +638,13 @@ function makePattern(type,seed){
 const PATTERNS={};
 const patternFor=(pid,type)=>PATTERNS[pid+type]||(PATTERNS[pid+type]=makePattern(type,1337+PORDER.indexOf(pid)*2905+type.length*977+type.charCodeAt(0)*31));
 
-function activate(pid,id,saved,dust){
+function activate(pid,id,saved,dust,dtype){
   const w=W[pid],cl=planetData(pid).cells[id];dust=!!(dust||(saved&&saved.r));
-  const type=dust?PLANETS[pid].start:cl.type,pat=patternFor(pid,type);
+  const type=dust?(dtype||(saved&&saved.t&&DIRT[saved.t]?saved.t:PLANETS[pid].start)):cl.type,pat=patternFor(pid,type);
   const grid=new Float32Array(CELLS);if(!dust)for(let k=0;k<CELLS;k++)grid[k]=cl.inside[k];
   const canvas=mkCanvas(MASK),ctx=canvas.getContext('2d');if(!dust||saved)ctx.drawImage(pat,0,0);
   const a={id,cl,grid,sum:dust?0:cl.nIn,canvas,ctx,pat,tex:null,mesh:null,texDirty:true,saveDirty:true,maskStale:false,kind:dust?KINDS.normal:KINDS[cl.kind],D:DIRT[type],dust,hold:0,
-    amt:dust?DIRT[type].amt*DUST_YIELD*(S.done[pid]?1.6:1):parcelYield(cl),thr:dust?.004:DONE};
+    dustType:dust?type:null,amt:dust?DIRT[type].amt*DUST_YIELD*(S.done[pid]?1.6:1):parcelYield(cl),thr:dust?.004:DONE};
   if(saved){try{if(saved.g)decGrid(saved.g,grid,cl.inside);if(saved.m)applyMask(a,saved.m);else if(saved.g)a.maskStale=true;a.saveDirty=false;}catch(e){}}
   let s=0;for(let k=0;k<CELLS;k++)s+=grid[k];a.sum=s;
   w.act.set(id,a);return a;
@@ -724,7 +724,7 @@ function serialize(){
   for(const pid in W){const sp=S.planets[pid],w=W[pid];if(!sp)continue;
     sp.owned=[];for(let i=0;i<w.owned.length;i++)if(w.owned[i])sp.owned.push(i);
     sp.clean=b64e(w.clean);sp.paid=b64e(w.paid);
-    const act={};for(const[id,a]of w.act){const old=sp.act[id];if(!a.saveDirty&&old&&old.g){act[id]={g:old.g,r:old.r||0};continue;}act[id]={g:encGrid(a.grid),r:a.dust?1:0};a.saveDirty=false;}
+    const act={};for(const[id,a]of w.act){const old=sp.act[id];if(!a.saveDirty&&old&&old.g){act[id]={g:old.g,r:old.r||0};if(old.t)act[id].t=old.t;continue;}act[id]={g:encGrid(a.grid),r:a.dust?1:0};if(a.dust&&a.dustType&&a.dustType!==PLANETS[pid].start)act[id].t=a.dustType;a.saveDirty=false;}
     sp.act=act;}
   return JSON.stringify(S);}
 function save(){
@@ -916,7 +916,9 @@ function pickGridTarget(a,v,R,team){
 }
 const gridDir=(a,i,R)=>toDir(a.cl,-a.cl.H+((i%GRID)+.5)*a.cl.cs,-a.cl.H+((i/GRID|0)+.5)*a.cl.cs,R);
 function chooseStation(pid,sp,v){const pd=planetData(pid);let best=null,bd=1e9;
-  for(const s of STATIONS){if(!sp.bld[s]||!vehicleCanUse(v,s))continue;const d=arcDist(v.d,stDir(pid,s,'c'),pd.R);if(d<bd){bd=d;best=s;}}
+  /* nearest station, but spread the load: full buffers and crowded docks count as extra distance, so every station (and its belt) keeps working */
+  for(const s of STATIONS){if(!sp.bld[s]||!vehicleCanUse(v,s))continue;const crowd=sp.veh.filter(o=>o!==v&&o.sid===s&&(o.mode==='toUnload'||o.mode==='queue'||o.mode==='unload')).length,over=Math.max(0,crowd-stDocks(s)+1);
+    const d=arcDist(v.d,stDir(pid,s,'c'),pd.R)+sumObj(sp.st[s].buf)/stBuf(s)*40+over*14;if(d<bd){bd=d;best=s;}}
   for(const o of sp.outposts){const d=arcDist(v.d,stDir(pid,o.key,'c'),pd.R)+(sumObj(o.buf)>stBuf(o.key)*.9?60:0);if(d<bd){bd=d;best=o.key;}}return best;}
 const dockPos=(s,k)=>[BLD[s].pos[0]+2.6,BLD[s].pos[1]-(k-(BLD[s].st.docks-1)/2)*1.8];
 const approachPos=s=>[BLD[s].pos[0]+6.4,BLD[s].pos[1]];
@@ -1052,13 +1054,13 @@ function rigWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).cell
   if(sp.outposts.some(o=>o.cell===id))return 'Hier steht ein Außenlager';
   if(rs.length>=rigMax(sp))return 'Höchstens '+rigMax(sp)+' Bohrtürme auf Basisstufe '+sp.stage+(sp.stage<5?' – die nächste Stufe erlaubt 2 mehr':'');
   return '';}
-function bestRigCell(pid){const pd=planetData(pid);let best=-1,bs=-1;for(const cl of pd.cells){if(cl.kind==='base'||rigWhy(pid,cl.id))continue;const s=rigRich(pid,cl.id)/(1+cl.ring*.05);if(s>bs){bs=s;best=cl.id;}}return best;}
+function bestRigCell(pid){const pd=planetData(pid),cnt={};for(const r of S.planets[pid].rigs||[]){const q=rigMat(pid,r.cell);cnt[q]=(cnt[q]||0)+1;}let best=-1,bs=-1;for(const cl of pd.cells){if(cl.kind==='base'||rigWhy(pid,cl.id))continue;const s=rigRich(pid,cl.id)/(1+cl.ring*.05)*(cnt[DIRT[cl.type].mat]?1/(1+cnt[DIRT[cl.type].mat]):3);if(s>bs){bs=s;best=cl.id;}}return best;}
 function buildRig(id){const pid=S.planet,sp=SP();if(id==null||id<0){id=bestRigCell(pid);if(id<0){const pd=planetData(pid),c=pd.cells.find(x=>x.kind!=='base'&&x.ring>=2);return fail(c?rigWhy(pid,c.id)||'Keine freie Parzelle':'Keine freie Parzelle');}}
   const why=rigWhy(pid,id);if(why)return fail(why);const c=rigCost(pid);if(S.credits<c)return fail(lacks(c));
   S.credits-=c;sp.rigs=sp.rigs||[];sp.rigs.push({cell:id,buf:{},status:'Bohrt',busy:false,mined:0});rebuildBase();SFX.unlock();sparkleCell(pid,id,40);
   toast('Bohrturm auf '+cellName(id)+' fördert '+MATS[rigMat(pid,id)].name+' ('+richTxt(rigRich(pid,id))+'es Vorkommen)','good');save();}
 function rigStep(pid,sp,r,dt,f){const m=rigMat(pid,r.cell),b=sumObj(r.buf);
-  if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt);r.buf[m]=(r.buf[m]||0)+x;r.mined=(r.mined||0)+x;sp.deep=(sp.deep||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
+  if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt),by=planetRaws(pid).filter(q=>q!==m);r.buf[m]=(r.buf[m]||0)+x*(by.length?.75:1);for(const q of by)r.buf[q]=(r.buf[q]||0)+x*.25/by.length;r.mined=(r.mined||0)+x;sp.deep=(sp.deep||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
   if(r.claim!=null&&!sp.veh.some(v=>v.id===r.claim&&v.rig===r.cell&&(v.mode==='toRig'||v.mode==='rigload')))r.claim=null;
   r.status=sumObj(r.buf)>=RIG.buf-.5?(sp.veh.length?'Lager voll – wartet auf Abholung':'Lager voll – kein Fahrzeug holt ab'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt'+(r.claim!=null?' · Fahrzeug holt ab':'');}
 const rigDock=(pid,r)=>toDir(planetData(pid).cells[r.cell],2.7,0,planetData(pid).R);
@@ -1067,7 +1069,7 @@ function pickRig(pid,sp,v,idle){if(v.fix!=null||!(sp.rigs||[]).length)return nul
   for(const r of sp.rigs){if(r.claim!=null)continue;const b=sumObj(r.buf);if(b<(idle?Math.min(15,RIG.buf*.05):RIG.buf*.7))continue;const d=arcDist(v.d,rigDock(pid,r),planetData(pid).R)-b*.05;if(d<bs){bs=d;best=r;}}
   return best;}
 function rigSec(pid,id){const sp=S.planets[pid],r=(sp.rigs||[]).find(x=>x.cell===id),m=rigMat(pid,id),rich=rigRich(pid,id);
-  if(r)return '<section class="sec"><h3>Bohrturm</h3><p class="note">Fördert '+MATS[m].name+' aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Lager</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+RIG.buf+' E')+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+upgRow('rigrate')+'</section>';
+  if(r)return '<section class="sec"><h3>Bohrturm</h3><p class="note">Fördert '+MATS[m].name+' aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd>'+(planetRaws(pid).length>1?'<dt>Mischung</dt><dd>75 % '+MATS[m].name+', 25 % '+planetRaws(pid).filter(q=>q!==m).map(q=>MATS[q].name).join(', ')+'</dd>':'')+'<dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Lager</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+RIG.buf+' E')+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+upgRow('rigrate')+'</section>';
   if(!S.done[pid])return '';const why=rigWhy(pid,id);
   return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+(why?why+'.':'Tiefenvorkommen: <b>'+richTxt(rich)+'</b> (×'+dec(rich,2)+') '+MATS[m].name+'. Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildrig" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigCost(pid))+'">Bohrturm bauen · '+cr(rigCost(pid))+'</button>')+'</section>';}
 function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const rs=sp.rigs||[],n=rs.length,mx=rigMax(sp);
@@ -1132,14 +1134,16 @@ function dirtyAt(a,x,y,r,s){
   dctx.globalCompositeOperation='destination-in';dctx.drawImage(BRUSH,0,0,R2,R2);dctx.globalCompositeOperation='source-over';
   a.ctx.globalAlpha=s;a.ctx.drawImage(dtmp,0,0,R2,R2,sx,sy,R2,R2);a.ctx.globalAlpha=1;a.texDirty=true;a.saveDirty=true;
 }
+/* Shower material: 45 % the planet's start dirt, otherwise one of its dirt types (weighted) – so metal, crystal and chemistry keep flowing on finished planets. */
+function meteorType(pid){const P=PLANETS[pid];if(Math.random()<.45)return P.start;let tot=0;for(const[t,wt]of P.types)if(t!==P.start)tot+=wt;let r=Math.random()*tot;for(const[t,wt]of P.types){if(t===P.start)continue;r-=wt;if(r<=0)return t;}return P.start;}
 /* A shower hits a whole patch: the target parcel plus neighbours (2–4 parcels, 4–7 on a finished planet), each almost fully covered. */
 function meteor(pid,live){
   const pd=planetData(pid),w=W[pid],c=[],ok=i=>w.clean[i]&&pd.cells[i].kind!=='base'&&!(w.act.get(i)&&w.act.get(i).sum>pd.cells[i].nIn*.5);
   for(let i=0;i<pd.N;i++)if(ok(i))c.push(i);if(!c.length)return;
   const id=c[Math.random()*c.length|0],done=!!S.done[pid],want=done?4+(Math.random()*4|0):2+(Math.random()*3|0),patch=[id];
   for(let g=0;g<want*3&&patch.length<want;g++){const from=patch[Math.random()*patch.length|0],nb=pd.cells[from].nb.filter(j=>ok(j)&&!patch.includes(j));if(nb.length)patch.push(nb[Math.random()*nb.length|0]);}
-  const vis=live&&!TRACK&&pid===S.planet&&world;
-  patch.forEach((cid,pi)=>{let a=w.act.get(cid);if(!a){a=activate(pid,cid,null,true);if(pid===S.planet&&world&&!TRACK){buildActiveMesh(pid,a);paintCell(pid,cid);}}
+  const vis=live&&!TRACK&&pid===S.planet&&world,dtype=meteorType(pid);
+  patch.forEach((cid,pi)=>{let a=w.act.get(cid);if(!a){a=activate(pid,cid,null,true,dtype);if(pid===S.planet&&world&&!TRACK){buildActiveMesh(pid,a);paintCell(pid,cid);}}
     const n=11+(Math.random()*5|0);
     for(let k=0;k<n;k++){let gi=0;for(let t=0;t<30;t++){gi=Math.random()*CELLS|0;if(a.cl.inside[gi])break;}
       const x=-a.cl.H+((gi%GRID)+.5)*a.cl.cs,y=-a.cl.H+((gi/GRID|0)+.5)*a.cl.cs,r=3.4+Math.random()*1.8,s=.9+Math.random()*.08;
@@ -2091,7 +2095,7 @@ function renderSheet(){
       '<section class="sec"><h3>Gerade auf dem Band</h3><div data-h="'+bind(()=>beltContents(SP(),b))+'"></div></section><section class="sec"><h3>Befördert</h3><p class="note" data-b="'+bind(()=>beltGoodsText(SP(),b))+'"></p></section><section class="sec"><h3>Upgrades</h3>'+upgRow('bspeed')+upgRow('bcap')+upgRow('beff')+'</section>';}
   else if(kind==='cell'){const id=arg,cl=pd.cells[id],D=DIRT[cl.type],K=KINDS[cl.kind];k=cl.kind==='base'?'Basisgelände':(w.disc[id]?D.name:'Unerforscht');t='Parzelle '+cellName(id);selectCell(id);
     if(cl.kind==='base')h+='<p class="note">Teil deiner Basis. Hier stehen Gebäude, Bänder und Bauplätze.</p><button class="buy wide alt" data-act="go" data-id="base">Basis öffnen</button>';
-    else if(w.clean[id])h+='<p class="note">Gereinigt'+(cl.kind!=='normal'?' · '+K.name:'')+'. Zählt dauerhaft zum Planetenfortschritt, die Prämie gab es schon. Staubschauer legen hier mit der Zeit neuen Meteoritenstaub ab – den sammeln Fahrzeuge automatisch ein, oder du wischst selbst.</p><dl class="kv"><dt>Ursprünglich</dt><dd>'+D.name+'</dd><dt>Meteoritenstaub</dt><dd data-b="'+bind(()=>{const a2=w.act.get(id);return a2?fmt(a2.sum/cl.nIn*a2.amt)+' Staub · '+Math.round(a2.sum/cl.nIn*100)+' % bedeckt':'keiner';})+'"></dd></dl>'+rigSec(pid,id)+outpostSec(pid,id);
+    else if(w.clean[id])h+='<p class="note">Gereinigt'+(cl.kind!=='normal'?' · '+K.name:'')+'. Zählt dauerhaft zum Planetenfortschritt, die Prämie gab es schon. Staubschauer legen hier mit der Zeit neuen Meteoritenstaub ab – den sammeln Fahrzeuge automatisch ein, oder du wischst selbst.</p><dl class="kv"><dt>Ursprünglich</dt><dd>'+D.name+'</dd><dt>Meteoritenstaub</dt><dd data-b="'+bind(()=>{const a2=w.act.get(id);return a2?fmt(a2.sum/cl.nIn*a2.amt)+' '+MATS[a2.D.mat].name+' · '+Math.round(a2.sum/cl.nIn*100)+' % bedeckt':'keiner';})+'"></dd></dl>'+rigSec(pid,id)+outpostSec(pid,id);
     else if(workable(pid,id)){const veh=sp.veh.filter(v=>v.cell===id&&(v.mode==='clean'||v.mode==='drive')).length;
       h+='<section class="sec"><div class="bar big-bar"><i data-w="'+bind(()=>{const a2=w.act.get(id);return a2?prog(a2)*100:0;})+'" style="background:var(--clean)"></i></div><div class="row-d" data-b="'+bind(()=>{const a2=w.act.get(id);return a2?Math.round(prog(a2)*100)+' % sauber · noch '+fmt(a2.sum/cl.nIn*parcelYield(cl))+' '+MATS[D.mat].name+' · '+fmt(a2.sum/cl.nIn*cellArea(cl))+' m²':'Unberührt · direkt reinigbar – einfach loswischen';})+'"></div>'+
       '<dl class="kv"><dt>Typ</dt><dd>'+K.name+'</dd><dt>Härte</dt><dd>'+dec(D.hard*K.hard,1)+'</dd><dt>Gesamtertrag</dt><dd>'+fmt(parcelYield(cl))+' '+MATS[D.mat].name+'</dd><dt>Abschlussprämie</dt><dd>'+(w.paid[id]?'bereits erhalten':fmt(parcelYield(cl)*MATS[D.mat].v*.3*uv('bonus')*pvM())+' Cr, einmalig')+'</dd><dt>Fahrzeuge hier</dt><dd>'+veh+'</dd>'+(K.tier?'<dt>Braucht</dt><dd>Industriesauger oder Truck</dd>':'')+'</dl></section>'+
