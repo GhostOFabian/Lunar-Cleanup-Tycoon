@@ -1294,11 +1294,17 @@ function buildSky(pid){
   if(gi==='neptune'){const m=new THREE.Mesh(Sph(260,40,28),new THREE.MeshStandardMaterial({map:banded(['#3a6ad8','#4a7ae8','#2a58c0','#6a9af0'],7),roughness:1,emissive:0x0a1a40,emissiveIntensity:.5}));m.position.set(-1200,500,-1700);world.add(m);bv.earth=m;}
   if(gi==='charon'){const m=new THREE.Mesh(Sph(90,24,16),mat(0x9a9088,{roughness:1}));m.position.set(900,400,-1300);world.add(m);}
 }
-function makeLabel(text){
-  const c=mkCanvas(256,64),x=c.getContext('2d');x.font='600 26px Oxanium, "Trebuchet MS", sans-serif';const w=Math.min(250,x.measureText(text).width+34);
-  x.fillStyle='rgba(8,12,24,.75)';x.beginPath();x.moveTo(128-w/2+20,6);x.arcTo(128+w/2,6,128+w/2,58,26);x.arcTo(128+w/2,58,128-w/2,58,26);x.arcTo(128-w/2,58,128-w/2,6,26);x.arcTo(128-w/2,6,128+w/2,6,26);x.fill();
-  x.fillStyle='#eef2fb';x.textAlign='center';x.textBaseline='middle';x.fillText(text,128,33);
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));s.scale.set(4.2,1.05,1);s.renderOrder=20;s.visible=false;s.userData.label=1;return s;
+/* Name sign sized to its text (two lines with a small caption on top when `kick` is given), so long names are never cut off. */
+function makeLabel(text,kick){
+  const mc=mkCanvas(8,8).getContext('2d');mc.font='600 30px Oxanium, "Trebuchet MS", sans-serif';let w=mc.measureText(text).width;
+  if(kick){mc.font='600 20px Oxanium, "Trebuchet MS", sans-serif';w=Math.max(w,mc.measureText(kick.toUpperCase()).width*1.15);}
+  const W=Math.ceil(Math.min(1000,w+56)),H=kick?96:64,c=mkCanvas(W,H),x=c.getContext('2d'),r=H/2-4;
+  x.fillStyle='rgba(8,12,24,.8)';x.beginPath();x.moveTo(4+r,4);x.arcTo(W-4,4,W-4,H-4,r);x.arcTo(W-4,H-4,4,H-4,r);x.arcTo(4,H-4,4,4,r);x.arcTo(4,4,W-4,4,r);x.fill();
+  x.textAlign='center';x.textBaseline='middle';
+  if(kick){x.fillStyle='#ffbf4d';x.font='600 20px Oxanium, "Trebuchet MS", sans-serif';x.fillText(kick.toUpperCase(),W/2,30);x.fillStyle='#eef2fb';x.font='600 30px Oxanium, "Trebuchet MS", sans-serif';x.fillText(text,W/2,64);}
+  else{x.fillStyle='#eef2fb';x.font='600 30px Oxanium, "Trebuchet MS", sans-serif';x.fillText(text,W/2,34);}
+  const tex=new THREE.CanvasTexture(c);tex.anisotropy=4;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false}));
+  const hh=kick?1.5:1.05;s.scale.set(hh*W/H,hh,1);s.renderOrder=20;s.visible=false;s.userData.label=1;s.userData.text=text;return s;
 }
 function matsLib(){return{
   metal:mat(0xd6dce4,{metalness:.35,roughness:.45}),dark:mat(0x2a3140,{metalness:.4,roughness:.6}),amber:mat(0xffbf4d,{metalness:.2,roughness:.5}),
@@ -1375,7 +1381,7 @@ function buildBase(pid){
     else if(gs(sp)>=B.stage){const g=new THREE.Group();
       const ring=new THREE.Mesh(new THREE.RingGeometry(1.9,2.2,40),new THREE.MeshBasicMaterial({color:0xffbf4d,transparent:true,opacity:.6,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.08;g.add(ring);
       const pl=new THREE.Mesh(new THREE.CircleGeometry(1.9,40),new THREE.MeshBasicMaterial({color:0xffbf4d,transparent:true,opacity:.1,side:THREE.DoubleSide,depthWrite:false}));pl.rotation.x=-Math.PI/2;pl.position.y=.06;g.add(pl);
-      const lb=makeLabel('Bauplatz: '+B.name);lb.scale.set(5.4,1.35,1);lb.position.set(0,2.2,0);g.add(lb);
+      const lb=makeLabel(B.name,'Bauplatz');lb.position.set(0,2.6,0);g.add(lb);
       g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(g,pd,B.pos[0],B.pos[1],0);world.add(g);pickables.push(g);buildViews[id]={g,site:1};}}
   buildBelts(pid);
   {const dm=new THREE.Mesh(new THREE.SphereGeometry(34,40,16,0,TAU,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0x7fb4ff,transparent:true,opacity:.13,side:THREE.DoubleSide,depthWrite:false}));const dg=new THREE.Group();dg.add(dm);placeOnPlan(dg,pd,0,0,-1);dg.visible=false;world.add(dg);buildViews.dome={g:dg};}
@@ -2174,7 +2180,7 @@ function boot(){
   camApply();setMapMode(false);updateHUD();updLocks();
   $('#loading').remove();
   if(!loaded)showWelcome();else if(rep)afterOffline(rep);
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{for(const L of lockPool)L.key='';});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{for(const L of lockPool)L.key='';try{if(world)rebuildBase();}catch(e){}});
   lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;requestAnimationFrame(frame);
   if(!loaded)save();
   cloudInit();

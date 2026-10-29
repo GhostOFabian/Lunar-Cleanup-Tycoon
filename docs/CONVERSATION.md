@@ -30,6 +30,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 14. Fahrzeuge sollen sich **gegenseitig bei der Reinigung unterstützen**; manche nutzen **Ladestationen für ihre Akkus**; der Spieler bekommt ein **ausbaufähiges Tragevolumen**, das er selbst in Trichter oder Entladestation leert. → v3.8.
 15. Bandausgänge prüfen – Rohstofflager → Verkauf war nicht verbunden; Bricks clippten durch die schwarz-gelben Übergabekästen. → v3.8.1.
 16. Gebäudenamen ausblenden (clippten mit dem Boden), nur beim Antippen zeigen. → v3.8.2.
+17. Schild am Bauplatz zeigte nur „uplatz“ (Text abgeschnitten). → v3.8.3.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).
