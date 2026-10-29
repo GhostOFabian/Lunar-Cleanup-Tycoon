@@ -57,7 +57,7 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;sp.sellBuf={staub:30,metall:20,staubBrick:3};sp.order={m:'metall'};const c=t.cargoValue('moon',sp);
       const base=30*t.matValue('staub')+20*t.matValue('metall')+3*t.matValue('staubBrick');const c0=t.S.credits;sp.rk=0;t.ACT.rkgo();return {c,base,gain:t.S.credits-c0,order:sp.order.m}}""")
     show('cargo value', r); check(abs(r['c']['base'] - r['base']) < 1e-6 and r['c']['total'] > r['base'] * 1.2 and abs(r['gain'] - r['c']['total']) < 1e-3, 'cargo value / freight order')
-    r = E("""()=>{const t=__t;const t0=performance.now();const rep=t.runOffline(8*3600);return {ms:performance.now()-t0,cr:rep.credits,moon:rep.p.moon}}""")
+    r = E("""()=>{const t=__t;const t0=performance.now();const rep=t.runOffline(8*3600);const sp=t.S.planets.moon;return {ms:performance.now()-t0,cr:rep.credits,moon:rep.p.moon,dbg:{sb:sp.sellBuf,rk:sp.rk,roh:sp.roh,prod:sp.prod,cap:t.sellCap(),rc:t.rohCap(),ef:sp.ef,jam:sp.jam,ps:sp.mach.presse,bld:Object.keys(sp.bld).filter(k=>sp.bld[k])}}}""")
     show('offline 8h', r); check(r['cr'] > 0 and r['ms'] < 15000, 'offline simulation')
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon');t.S.credits+=1000;t.buyCart();const c=sp.cart;
@@ -76,6 +76,10 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.done.moon=1;sp.stage=5;t.S.credits+=1e9;sp.deep=0;const why=t.expWhy('moon');sp.deep=t.expNeed('moon');
       const m0=t.rigMax(sp),c0=t.rohCap(),u0=t.upMax('rohcap'),s0=t.vehSlots('moon');t.buyExp();return {why,exp:sp.exp,dm:t.rigMax(sp)-m0,cap:t.rohCap()/c0,du:t.upMax('rohcap')-u0,ds:t.vehSlots('moon')-s0,deep:sp.deep}}""")
     show('expansion level', r); check(r['why'] != '' and r['exp'] == 1 and r['dm'] == 2 and abs(r['cap'] - 1.3) < .01 and r['du'] == 2 and r['ds'] == 1 and r['deep'] == 0, 'expansion levels')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;const b=t.BELTS.find(x=>x.id==='b_rs');const g=t.beltGoods(sp,b),route=t.rawRoute(sp,'staub');
+      sp.belts.b_rs=[[1,'kristall',5],[3,'kristall',4]];t.openSheet('belt','b_rs');const txt=document.querySelector('#sheet').textContent;t.closeSheet();
+      const so=[];for(let i=0;i<30;i++){t.newOrder('moon',sp);so.push(sp.order.m);}return {g,route,shows:txt.includes('Gerade auf dem Band')&&txt.includes('Kristallsplitter'),orders:[...new Set(so)]}}""")
+    show('value chain + belt sheet', r); check(r['route'] and 'staub' not in r['g'] and r['shows'] and 'staub' not in r['orders'], 'value chain / belt contents')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -104,7 +108,7 @@ with game() as (pg, errs):
     show('labels', r); check(r['closed'] == [] and r['open'] in ([], ['roh']) and r['after'] == [], 'building labels')  # with the three.js mock traverse() is a no-op, so 'open' stays empty; verified with real three.js
 
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
-    r = E("()=>{const h=document.querySelector('#sheet').innerText;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
+    r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')
     E("()=>{window.__c0=__t.S.credits;window.__ok=__t.startOffline(2*3600,rep=>{window.__rep=rep;});}")
     pg.wait_for_timeout(500)

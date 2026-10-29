@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.9)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.0)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -121,9 +121,12 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - **Überlauf:** Ab 90 % Füllung von Rohstoff- oder Produktlager geht der Überschuss automatisch zur Verkaufsrakete, auch für Waren mit „Band aus“.
 - Maschinen: Presse (Energie 1,5; Eingang 60, Ausgang 8; 10 Staub → Staub-Brick 2 s, 10 Metall → Metall-Brick 2,5 s), Schmelze (4; 20/3; 10 Metall-Bricks → Barren 8 s), Raffinerie (5; 40/6; 5 Kristall → Reinkristall, 5 Chemie → Polymer, je 4 s). Produktionsplan schaltet Rezepte an oder aus.
 
+### 8.0 Förderband-Fenster (ab v5.0)
+- Antippen eines Bandes zeigt neben Status und Durchsatz „Gerade auf dem Band“ (Ware, Menge/Stück, Wert, live) und „Befördert“ (welche Waren dieses Band nach den aktuellen Regeln transportiert).
+
 ### 8.1 Verkauf per Rakete
-- Pro Ware „Band an/aus“ (Start: Produkte an, Rohstoffe aus). Die Bänder füllen den Frachtraum (120 E × 1,45^Stufe).
-- **Frachtauftrag:** Jede Rakete sucht eine Rohware des Planeten (+60 % auf diese Ware); nach jedem Start ein neuer Auftrag. **Mischfracht:** +8 % je weiterer Warensorte im Frachtraum, max. +40 %. Das Band Rohstofflager → Verkauf bedient den Auftrag laufend (Schalter „Frachtauftrag automatisch bedienen“, Vorrat von 8 % der Lagerkapazität bleibt für Presse/Raffinerie). Das Verkaufsfenster zeigt Ladung, Auftrag, Bonus und den Gesamtwert, auch auf dem Knopf „Jetzt starten“.
+- **Wertschöpfungskette (ab v5.0):** Rohwaren gehen nur in den Frachtraum, wenn auf diesem Planeten keine Maschine sie veredelt (`rawRoute`: Staub/Metall → Presse gebaut und im Plan an; Kristall/Chemie → Raffinerie gebaut und an). Sonst laufen sie Presse → (Schmelze) bzw. Raffinerie, und nur das Endprodukt (`endGood`: Staub-Brick, Barren bzw. Metall-Brick ohne Schmelze, Reinkristall, Polymer) kommt in den Frachtraum. Sicherheitsventil: Rohstofflager ≥ 97 % → Überschuss geht unveredelt mit. Produkte haben weiter „Band an/aus“, Rohwaren zeigen nur „wird X“ / „zur Rakete“. Frachtraum 120 E × 1,45^Stufe.
+- **Frachtauftrag:** Jede Rakete sucht eines der Endprodukte des Planeten (aus seinen Rohwaren über `endGood`, +60 % auf diese Ware); nach jedem Start ein neuer, nie zweimal derselbe. **Mischfracht:** +8 % je weiterer Warensorte, max. +40 %. Ist der Auftrag eine Rohware ohne Maschine, bedient das Rohstoffband ihn bevorzugt (Schalter „Frachtauftrag automatisch bedienen“).
 - **Die Rakete startet erst, wenn der Frachtraum voll ist** (≥ 98 %), verkauft alles und ist 12 s / Raketentempo unterwegs. Knopf „Jetzt starten“ für früher. Direktverkauf per Hand bleibt möglich.
 - Verkaufsautomat (Stufe 3, Schalter): Lager ≥ 90 % → kompletter Inhalt wird sofort verkauft (Notfallschutz).
 

@@ -43,6 +43,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 27. Jeder Planet kommt irgendwann an den Punkt, an dem er nicht mehr ausgebaut werden kann – es braucht **immer eine Möglichkeit, nach 100 % weiter auszubauen**; **Reisen soll ein nahtloser Wechsel sein**. → v4.8.
 28. Reisen noch **ruckelig**, soll flüssiger laufen. → v4.8.1.
 29. **Idle-Test in den Einstellungen muss weg** (macht das Spiel kaputt); dafür soll Idle besser laufen, wenn der Bildschirm aus ist oder das Fenster nicht im Fokus. → v4.9.
+30. **Beim Antippen eines Bandes sehen, was befördert wird**; Staub soll ab einem Punkt nicht mehr roh transportiert, sondern erst zu höheren Ressourcen umgewandelt werden – die Kette läuft von klein nach groß, im Frachtraum landet immer das Endprodukt, außer es gibt keine höhere Stufe. → v5.0.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

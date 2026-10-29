@@ -107,3 +107,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Idle-Test-Knöpfe entfernt – sie haben Zeit doppelt simuliert und den Stand verzerrt („macht das Spiel kaputt“).
 - Offline-Nachrechnung asynchron in Scheiben statt in einem Block; die Simulation bleibt dieselbe (1-s-Schritte von `simStep`), nur die Verteilung auf Bilder ändert sich.
 - Live-Bilder mit mehr als 0,25 s Abstand holen die verlorene Zeit sofort nach (bis 5 s); darüber greift die Offline-Nachrechnung.
+
+## v5.0
+- Rohwaren nur dann zur Rakete, wenn keine Maschine sie hier veredelt – Wunsch des Spielers, maximiert den Verkaufswert; ersetzt die 8-%-Reserve und den rohwarenbasierten Frachtauftrag aus v3.9.
+- Sicherheitsventil bei 97 % Rohstofflager bleibt, damit Fahrzeuge und Bänder nie ganz stehen; die Ampel zeigt den Engpass dann an.
+- Der „Band an/aus“-Schalter für Rohwaren entfällt (er hätte nach der neuen Regel nichts mehr bewirkt); Produkte behalten ihn.
