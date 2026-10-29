@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.9)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.0)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -76,7 +76,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 | Raumhafen | 5 | 60 000 | -21,-12 | 3,4 | +20 % Preise überall |
 
 - Docks: `x+2,6`, Abstand 1,8 m; Anfahrpunkt `x+6,4`. Parkplätze `[19 + (i%4)·1,8, 13 + ⌊i/4⌋·1,8]`. Spawn: Werkstatt `[13,-16,2]`, sonst `[2,5,13]`.
-- Energie: Speicher 150 (+150), Produktion `(3 + 8) × Solar-Upgrade × Solarfaktor`; Bedarf × Planet-Energiefaktor. Reicht sie nicht, laufen alle Verbraucher anteilig langsamer.
+- Energie: Speicher 150 (+150), Produktion `(3 + 8) × Solar-Upgrade × Solarfaktor × 2,6 × Tagesfaktor` (siehe 9c); Bedarf × Planet-Energiefaktor. Reicht sie nicht, laufen alle Verbraucher anteilig langsamer.
 
 ## 7. Fahrzeuge
 | Typ | Stufe | Kosten | m/s | Radius | Kraft | Tank | Energie | Größe |
@@ -139,6 +139,12 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Kernreaktor (Forschung „Kernspaltung“ nach Radioisotopen, Stufe 5, 150 000, Pos -2,-23): +150/s und +1000 Speicher – Gegenmittel für wenig Sonne und hohen Energiebedarf der äußeren Planeten.
 - Akkupark (Upgrade pro Planet): +250 Speicher pro Stufe, max. 10.
 
+## 9c. Tag und Nacht (ab v4.0)
+- Jeder Planet hat eine eigene Tageslänge in Sekunden (`DAYLEN`): Mond 480, Mars 420, Europa 540, Titan 600, Io 360, Venus 720, Ganymed 540, Enceladus 420, Triton 600, Pluto 720. Uhr `sp.dayT` pro Planet, läuft in `simStep` (also auch offline); neue Planeten starten am Vormittag (8 % der Tageslänge).
+- Sonnenwinkel θ = 2π · Phase, Tagesfaktor `clamp((sin θ + 0,08) / 1,08, 0, 1)^0,8` – erste Hälfte Tag, zweite Hälfte Nacht. Spitze Solar = 2,6 × alter Wert, Tagesmittel ≈ 0,92 × alter Wert.
+- Nachts: Solar 0. Strom kommt aus dem Speicher (Akkupark), Radioisotopen-Generator, Geothermie und Kernreaktor; Akku-Fahrzeuge fahren aus dem Akku. Die Ampel nennt bei Strommangel in der Nacht die Nacht als Ursache und schlägt Akkupark vor.
+- Optik: Sonne kommt aus der echten Richtung über der Basis, Licht wird nachts gedimmt (Hemisphäre 34 %, kein Sonnenlicht). Fahrzeuge schalten Scheinwerfer, Lichtkegel und Lichtfleck am Boden ein; die Basis hat ein warmes Flutlicht. HUD-Balken heißt „Tag“/„Nacht“, das Energiefenster zeigt die Zeit bis Sonnenunter-/-aufgang.
+
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.
 - **Warnung 30 s vorher** (Toast + HUD-Countdown). **Sturmschild** (Forschung): pro Planet einschaltbar, schwächt Sturmeffekte um 80 % (Solar ausgenommen), kostet 4 Energie/s während des Sturms, sichtbar als Kuppel über der Basis. Gefahren-Fenster über den HUD-Chip oder die Energieansicht.
@@ -150,7 +156,9 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - **Tägliche Aufträge**: 3 pro Kalendertag (seeded), Typen: Material verkaufen, Parzellen fertig reinigen, m² reinigen, Credits verdienen; Ziel und Belohnung skalieren mit Technikstufe und Planetfaktor. Alle 3 = +50 % Bonus. Zählt über alle Planeten und offline. Badge am Auftragsknopf.
 - **Statistik**: Gesamtwerte, pro Planet Einnahmen/h, Parzellen/h (gleitender Mittelwert, alle 10 s gemessen), Prognose für 80 % und 100 %.
 - **Sternenstaub (Prestige)**: ab Mars möglich. Gewinn `⌊sqrt(Verdienst dieses Laufs / 200 000)⌋ + 3 × komplette Planeten`. Jeder Sternenstaub: +5 % Preise, +3 % Reinigung (Hand und Fahrzeuge). Zurückgesetzt wird alles außer Sternenstaub, Artefakten, Funden, Lebenszeit-Statistik und Toneinstellung.
-- **Ziele/Quests** (19, Reihenfolge im Prototyp): Tutorial → Stufe 2 → Entladestation → Buggy → Presse → Bricks → Stufe 3 → Schmelze → Barren → Drohnentechnik → Hangar + Drohne → 80 % Mond → Mars → Außenlager → 80 % Mars und Europa.
+- **Ziele/Quests** (43, Reihenfolge im Prototyp): Tutorial → Stufe 2 → Entladestation → Buggy → Presse → Bricks → Stufe 3 → Schmelze → Barren → Drohnentechnik → Hangar + Drohne → 80 % Mond → Mars → Außenlager → 80 % Mars und Europa → Akkupark 3 → Radioisotopen-Generator → Raffinerie → Eisfräse → Sturmschild → Titan → Schlammraupe → Geothermie → Io → Lavapanzer → Kernspaltung → Kernreaktor → Lastdrohne → Venus → ein Planet komplett → Ganymed → Magnetgleiter → Enceladus → Triton → Kryo-Koloss → Pluto → Pluto 80 % → Neustart mit Sternenstaub.
+- **Erfolge** (17, `ACH`, ab v4.0): Stufenziele für Parzellen, Verdienst (Lebenszeit), Raketenstarts, Fahrzeuge, Planeten erreicht/komplett, Bricks, Barren, Hand-m², Meteoritenschauer, Drohnen-Abholungen, eingeflogene Maschinen, Tagesaufträge, Forschung, Funde, Basisstufe, Sternenstaub. Belohnung Stufe n (ab 0): `250 × 5^n` Cr, von Hand abholen. Stand `S.ach` und Zähler `S.ctr` bleiben über den Neustart erhalten.
+- **Ziel-Übersicht** (Tippen auf den Ziel-Chip): aktuelles Ziel mit „Hinführen“, alle Erfolge (abholbare zuerst), Liste aller Hauptziele. Der Chip zeigt, wie viele Erfolge bereit sind.
 
 ## 12. Planeten
 

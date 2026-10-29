@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v3.9 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v4.0 (`prototype/index.html`)
+- v4.0: Tag und Nacht auf jedem Planeten (eigene Tageslänge, Solar nur bei Tag, nachts Speicher, Akkus, RTG, Geothermie, Kernkraft), Scheinwerfer mit Lichtkegel an allen Fahrzeugen, Flutlicht an der Basis. 23 neue Hauptziele (jetzt 43, bis Pluto und Neustart), 17 Erfolge mit Stufen und Belohnungen, Ziel-Übersicht über den Ziel-Chip.
 - v3.9: Frachtraum zeigt den Wert der Ladung (auch auf „Jetzt starten“), Inhalt, Frachtauftrag und Mischfracht-Bonus. Jede Rakete hat einen Frachtauftrag für eine Rohware des Planeten (+60 %), gemischte Ladung bringt +8 % je weitere Warensorte (max. +40 %). Das Band Rohstofflager → Verkauf bedient den Auftrag laufend (abschaltbar) und lässt 8 % Vorrat für Presse/Raffinerie.
 - v3.8.3: Namensschilder passen sich der Textlänge an (nichts wird mehr abgeschnitten), Bauplätze zeigen „BAUPLATZ“ klein über dem Gebäudenamen; Schilder werden nach dem Laden der Schrift neu gezeichnet.
 - v3.8.2: Gebäudenamen nur noch beim angetippten Gebäude (immer über allem, kein Clipping mit dem Boden); Webseiten-Screenshots neu.
@@ -26,6 +27,7 @@
 - Balancing der späten Planeten ist grob (Upgrade-Kosten im Verhältnis zu Freischaltkosten, Sternenstaub vermutlich zu großzügig).
 - An Gebäudeecken liegt die Wegfindung in seltenen Fällen eine Rasterzelle zu nah am Gebäude (Rundung, kein sichtbares Durchfahren).
 - Mehrere Fahrzeuge können einander durchfahren (keine Kollision zwischen Fahrzeugen).
+- Nachtoptik nur per Software-Rendering geprüft (Scheinwerfer, Lichtkegel sichtbar); auf echten Handys noch ungesehen. Der Wegfindungstest schwankt gelegentlich knapp über der Grenze (zeitabhängig).
 
 ## Nächste Schritte (Vorschlag)
 1. Feedback des Spielers zur v3.5 einarbeiten (im echten Browser testen lassen).

@@ -59,3 +59,9 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Frachtauftrag pro Rakete (eine Rohware des Planeten, +60 % auf sie, nie zweimal hintereinander dieselbe) und Mischfracht (+8 % je weitere Sorte, max. +40 %) – so lohnt ein stetiger Rohstoffstrom zur Rakete dauerhaft, nicht nur als Überlauf.
 - Das Rohstoffband bedient den Auftrag automatisch, hält aber 8 % der Lagerkapazität für Presse bzw. Raffinerie zurück, damit die Veredelung nicht leerläuft.
 - Toast nur beim manuellen Start, sonst nur die schwebende Zahl – automatische Raketen starten zu oft.
+
+## v4.0
+- Tag/Nacht als Uhr pro Planet in `simStep` – offline gleich wie live; Solar-Spitze ×2,6, damit das Tagesmittel ungefähr gleich bleibt und Nächte über Speicher und Grundlast (RTG, Geothermie, Kern) gelöst werden.
+- Nachts bleibt die Szene mit 34 % Himmelslicht lesbar – ganz dunkel wäre auf dem Handy nicht spielbar.
+- Lichtkegel als additive, transparente Kegel und Bodenflecken statt echter Spotlights – viele Fahrzeuge mit echten Lichtern wären auf Handys zu teuer.
+- Erfolge von Hand abholen (Belohnung 250 × 5^Stufe) und über den Neustart behalten – sichtbare Belohnung, kein Verlust beim Prestige.

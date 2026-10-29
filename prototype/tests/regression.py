@@ -60,6 +60,12 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t;const t0=performance.now();const rep=t.runOffline(8*3600);return {ms:performance.now()-t0,cr:rep.credits,moon:rep.p.moon}}""")
     show('offline 8h', r); check(r['cr'] > 0 and r['ms'] < 15000, 'offline simulation')
 
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
+      let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
+    show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
+    r = E("""()=>{const t=__t;t.S.ctr.cells=30;t.S.ach={};const c0=t.S.credits;const n0=t.achClaimable();t.claimAch('cells');t.claimAch('cells');t.claimAch('cells');
+      t.openSheet('goals');const rows=document.querySelectorAll('#sheet .qline').length;t.closeSheet();return {n0,lvl:t.S.ach.cells,gain:t.S.credits-c0,rows,q:t.QUESTS.length}}""")
+    show('achievements', r); check(r['lvl'] == 2 and abs(r['gain'] - 1500) < 1 and r['rows'] == r['q'] and r['q'] >= 40, 'achievements / goals sheet')
     r = E("""()=>{const t=__t;t.S.stats.earned=5e7;t.S.planets.mars=t.freshPlanet('mars');t.grantAuto(t.S.planets.mars);t.initRuntime('mars');return {gain:t.prestigeGain(),mars:t.powReq('mars')}}""")
     show('prestige gain', r); check(r['gain'] > 0, 'prestige')
 

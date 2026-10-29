@@ -32,6 +32,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 16. Gebäudenamen ausblenden (clippten mit dem Boden), nur beim Antippen zeigen. → v3.8.2.
 17. Schild am Bauplatz zeigte nur „uplatz“ (Text abgeschnitten). → v3.8.3.
 18. Wert der Frachtraum-Ladung sehen (auch beim manuellen Start); das Band Rohstofflager → Verkauf braucht später einen dauerhaften Nutzen, auch gegen überlastete Bänder. → v3.9: Frachtaufträge + Mischfracht-Bonus.
+19. **Viel mehr Ziele** und eine Ziel-Übersicht wie bei den Tageszielen; **Tag und Nacht** mit Scheinwerfern und Lichtkegeln an den Fahrzeugen; nachts laufen Fahrzeuge und Maschinen aus dem am Tag gefüllten Speicher oder aus dem Akkupack. → v4.0.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).
