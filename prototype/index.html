@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lunar Cleanup Tycoon</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1825,7 +1830,7 @@ function updateHUD(){
   $('#pname').textContent=PLANETS[pid].name;$('#pprog').textContent=c+'/'+tot+' Parzellen sauber · Stufe '+sp.stage;$('#pdot').style.background='radial-gradient(circle at 34% 30%,'+PLANETS[pid].col[0]+','+PLANETS[pid].col[1]+' 72%)';
   const warns=[];if(sp.noStation)warns.push(sp.noStation+' Fahrzeug'+(sp.noStation>1?'e':'')+' ohne passende Entladestation');
   const waiting=sp.veh.filter(v=>v.status==='Station voll – wartet').length;if(waiting)warns.push(waiting+' Fahrzeug'+(waiting>1?'e warten':' wartet')+': Station voll');
-  const noJob=sp.veh.filter(v=>v.status==='Kein Auftrag').length;if(noJob)warns.push(w.front.size||[...w.act.values()].length?noJob+' ohne Auftrag – nichts erreichbar für diesen Fahrzeugtyp':'Planet sauber – '+noJob+' Fahrzeug'+(noJob>1?'e warten':' wartet')+' auf neuen Meteoritenstaub');
+  const noJob=sp.veh.filter(v=>v.status==='Kein Auftrag').length;if(noJob)warns.push(w.front.size?noJob+' ohne Auftrag – nichts erreichbar für diesen Fahrzeugtyp':'Planet sauber – '+noJob+' Fahrzeug'+(noJob>1?'e warten':' wartet')+' auf neuen Meteoritenstaub');
   if(sp.veh.length&&!powOK(pid))warns.push('Fahrzeuge zu schwach für '+PLANETS[pid].name+' (nur 30 %): Doppelbürsten Stufe '+powReq(pid)+' nötig');
   if(sp.ef<.99&&(sp.veh.length||sp.bld.presse))warns.push('Energie reicht nicht – alles läuft langsamer');
   const wb=$('#warn');wb.hidden=!warns.length||mapMode;wb.textContent=warns.join(' · ');

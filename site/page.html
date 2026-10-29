@@ -1,0 +1,348 @@
+<title>Lunar Cleanup Tycoon</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Mobiles Idle-Tycoon-Spiel: Planeten sauber wischen, Reinigungsindustrie automatisieren, zehn Planeten vom Mond bis Pluto.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: a mission briefing from the night side of the moon – hero with the phone, then alternating screen/explanation rows, a planet data table and a developer appendix.
+   Deliberately single-theme: the game itself is a dark control panel, the site wears the same colors. */
+:root{
+  --void:#070b16; --deck:#0d1424; --panel:#121b2f; --line:rgba(160,182,232,.16);
+  --ink:#e9eef8; --ink-2:#a8b3cb; --ink-3:#7480a0;
+  --credit:#ffbf4d; --clean:#6ff2d2; --part:#ffd23f; --dirty:#ff4d3d; --base:#4f86e8;
+  --f-display:"Oxanium","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --step--1:clamp(.8rem,.78rem + .1vw,.86rem); --step-0:clamp(1rem,.96rem + .2vw,1.08rem);
+  --step-1:clamp(1.2rem,1.1rem + .5vw,1.45rem); --step-2:clamp(1.55rem,1.3rem + 1.2vw,2.2rem);
+  --step-3:clamp(2.3rem,1.6rem + 3.4vw,4.4rem);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--void)}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--f-body);font-size:var(--step-0);line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--void)}
+img{max-width:100%;display:block}
+a{color:var(--clean)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--credit);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-size:var(--step-2);font-weight:700}
+h3{font-size:var(--step-1);font-weight:600}
+p{margin:0;max-width:64ch}
+.eyebrow{font-family:var(--f-display);font-size:var(--step--1);font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+
+/* starfield backdrop, drawn once */
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+
+/* hero */
+.hero{padding-block:clamp(40px,7vw,96px) clamp(32px,5vw,72px)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(28px,5vw,72px);align-items:center}
+.hero h1{font-size:var(--step-3);font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+.hero h1 span{display:block;color:var(--credit)}
+.hero .lead{font-size:var(--step-1);color:var(--ink-2);line-height:1.5;margin-top:18px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:12px 20px;border-radius:14px;font-family:var(--f-display);font-weight:700;font-size:1rem;letter-spacing:.03em;text-decoration:none;border:1px solid var(--line);color:var(--ink);background:var(--panel)}
+.btn.primary{background:var(--credit);color:#1d1404;border-color:transparent}
+.btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin-top:36px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--line)}
+.facts div{background:var(--deck);padding:14px 16px}
+.facts b{display:block;font-family:var(--f-display);font-size:var(--step-1);color:var(--ink);font-variant-numeric:tabular-nums}
+.facts span{font-size:var(--step--1);color:var(--ink-3)}
+
+/* phone frame */
+.phone{position:relative;max-width:330px;margin-inline:auto;width:100%;border-radius:38px;padding:10px;background:linear-gradient(160deg,#2a3550,#0b111f);box-shadow:0 30px 80px -30px rgba(111,242,210,.35),0 0 0 1px var(--line)}
+.phone img{border-radius:29px;aspect-ratio:585/1266;width:100%;height:auto;object-fit:cover}
+.phone.tilt{transform:rotate(2.5deg)}
+@media (prefers-reduced-motion:no-preference){.phone.tilt{transition:transform .5s ease}.phone.tilt:hover{transform:rotate(0)}}
+
+/* loop */
+.loop{padding-block:clamp(40px,6vw,80px);border-top:1px solid var(--line)}
+.loop ol{list-style:none;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;counter-reset:s}
+.loop li{counter-increment:s;background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.loop li::before{content:counter(s);font-family:var(--f-display);font-weight:700;color:var(--credit);font-size:var(--step-1)}
+.loop li b{font-family:var(--f-display);font-size:1.05rem}
+.loop li span{color:var(--ink-2);font-size:.95rem;line-height:1.45}
+.loop .note{margin-top:14px;color:var(--ink-3);font-size:var(--step--1)}
+
+/* feature rows */
+.feature{padding-block:clamp(44px,6vw,88px);border-top:1px solid var(--line)}
+.feature .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(28px,5vw,72px);align-items:center}
+.feature.flip .wrap{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
+.feature.flip .shots{order:2}
+.copy{display:flex;flex-direction:column;gap:16px;min-width:0}
+.copy p{color:var(--ink-2)}
+.copy ul{margin:0;padding-left:1.1em;color:var(--ink-2);display:grid;gap:6px;max-width:62ch}
+.copy li::marker{color:var(--clean)}
+.shots{display:flex;gap:16px;justify-content:center;min-width:0}
+.shots .phone{max-width:290px}
+.shots .phone + .phone{margin-top:48px}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--deck);font-size:.9rem}
+.chip i{width:14px;height:4px;border-radius:2px;background:currentColor}
+.c-clean{color:var(--clean)}.c-part{color:var(--part)}.c-dirty{color:var(--dirty)}.c-base{color:var(--base)}
+.chip em{font-style:normal;color:var(--ink)}
+.lamp{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0;box-shadow:0 0 8px currentColor;background:currentColor}
+
+/* planet table */
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--deck);margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.95rem}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-family:var(--f-display);font-weight:600;font-size:var(--step--1);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+td .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:10px;vertical-align:-1px}
+
+/* long game cards */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
+.trio article{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.trio article img{height:auto;width:100%;border-radius:12px;aspect-ratio:585/700;object-fit:cover;object-position:top}
+.trio p{color:var(--ink-2);font-size:.97rem}
+
+/* gallery */
+.gallery{padding-block:clamp(44px,6vw,80px);border-top:1px solid var(--line)}
+.strip{display:flex;gap:16px;overflow-x:auto;padding-block:20px 12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.strip figure{margin:0;flex:0 0 min(220px,62vw);scroll-snap-align:start}
+.strip img{height:auto;border-radius:18px;border:1px solid var(--line);aspect-ratio:585/1266;object-fit:cover;width:100%}
+.strip figcaption{font-size:var(--step--1);color:var(--ink-2);margin-top:8px}
+
+/* developer */
+.dev{padding-block:clamp(44px,6vw,80px);border-top:1px solid var(--line)}
+.dev .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,56px)}
+.files{display:grid;gap:8px;margin-top:18px}
+.files div{display:grid;grid-template-columns:minmax(0,13ch) minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.files code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88rem;color:var(--clean);overflow-wrap:anywhere}
+.files span{color:var(--ink-2);font-size:.95rem}
+pre{margin:0;overflow-x:auto;background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:16px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.86rem;line-height:1.6;color:var(--ink)}
+pre .c{color:var(--ink-3)}
+footer{padding-block:32px 48px;border-top:1px solid var(--line);color:var(--ink-3);font-size:var(--step--1)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+
+@media (max-width:900px){
+  .hero .wrap,.feature .wrap,.feature.flip .wrap,.dev .wrap{grid-template-columns:minmax(0,1fr)}
+  .feature.flip .shots{order:0}
+  .loop ol{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .loop li:last-child{grid-column:1/-1}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio article img{aspect-ratio:585/520}
+}
+@media (max-width:560px){
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .shots .phone{max-width:46%}
+  .shots .phone + .phone{margin-top:32px}
+  .shots .phone:only-child{max-width:280px}
+}
+</style>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Mobile Idle-Tycoon · Spielbarer Prototyp v3.5</div>
+      <h1 style="margin-top:14px">Lunar Cleanup <span>Tycoon</span></h1>
+      <p class="lead">Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.</p>
+      <div class="cta">
+        <a class="btn primary" href="prototype/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Im Browser spielen</a>
+        <a class="btn" href="https://github.com/GhostOFabian/Lunar-Cleanup-Tycon"><svg viewBox="0 0 24 24"><path d="M8 6 2 12l6 6M16 6l6 6-6 6"/></svg>Code auf GitHub</a>
+      </div>
+      <div class="facts">
+        <div><b>10</b><span>Planeten, Mond bis Pluto</span></div>
+        <div><b>252–3.242</b><span>Parzellen pro Planet</span></div>
+        <div><b>24 h</b><span>Offline-Produktion</span></div>
+        <div><b>19</b><span>Ziele als roter Faden</span></div>
+      </div>
+    </div>
+    <div class="phone tilt"><img src="assets/screens/03-basis.jpg" width="585" height="1266" alt="Die Mondbasis von oben: Rohstofflager, Staubpresse, Förderbänder mit runden Kurven und Entladestationen"></div>
+  </div>
+</header>
+
+<section class="loop" aria-labelledby="loop-h">
+  <div class="wrap">
+    <div class="eyebrow">Kern-Loop</div>
+    <h2 id="loop-h" style="margin-top:10px">So läuft eine Runde</h2>
+    <ol>
+      <li><b>Wischen</b><span>Mit dem Finger Staub, Schrott und Satellitenreste von der Parzelle holen.</span></li>
+      <li><b>Verkaufen</b><span>Förderbänder füllen den Frachtraum. Ist er voll, startet die Rakete.</span></li>
+      <li><b>Ausbauen</b><span>Basisstufen, Gebäude, Fahrzeuge, Upgrades und Forschung kaufen.</span></li>
+      <li><b>Automatisieren</b><span>Fahrzeuge reinigen sich von der Basis nach außen, Drohnen holen ihre Ladung ab.</span></li>
+      <li><b>Weiterreisen</b><span>Bei 80 % Sauberkeit öffnet sich der nächste Planet. Der alte putzt sich weiter.</span></li>
+    </ol>
+    <p class="note">Danach beginnt der Kreis auf dem nächsten Planeten, nur härter, wertvoller und mit neuen Gefahren.</p>
+  </div>
+</section>
+
+<section class="feature" aria-labelledby="f1">
+  <div class="wrap">
+    <div class="copy">
+      <div class="eyebrow">Handreinigung</div>
+      <h2 id="f1">Eine Parzelle nach der anderen</h2>
+      <p>Der Planet ist in Sechsecke geteilt, dazu genau zwölf Fünfecke. Reinigen kannst du jede Parzelle, die an eine saubere grenzt, ohne Freischalten und ohne Kosten. Ein Wisch bleibt immer auf der Parzelle, auf der er beginnt. Ist sie fertig, leuchtet sie kurz grün auf und zahlt eine einmalige Prämie.</p>
+      <div class="legend" aria-label="Farben der Parzellenränder">
+        <span class="chip c-clean"><i></i><em>Sauber</em></span>
+        <span class="chip c-part"><i></i><em>In Arbeit</em></span>
+        <span class="chip c-dirty"><i></i><em>Verschmutzt</em></span>
+        <span class="chip c-base"><i></i><em>Basis</em></span>
+      </div>
+      <p>Ab und zu geht ein Meteoritenschauer nieder: selten, aber dann ist eine saubere Parzelle zu 50 bis 90 % wieder voller Staub, und ihr Rand wird rot.</p>
+    </div>
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/01-start.jpg" width="585" height="1266" alt="Spielstart: verschmutzte Startparzelle mit rotem Rand neben der blau umrandeten Basis"></div>
+      <div class="phone"><img src="assets/screens/02-handreinigung.jpg" width="585" height="1266" alt="Halb gereinigte Parzelle mit gelbem Rand und Saugring"></div>
+    </div>
+  </div>
+</section>
+
+<section class="feature flip" aria-labelledby="f2">
+  <div class="wrap">
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/04-entladestationen.jpg" width="585" height="1266" alt="Entladestationen, Rohstofflager und Staubpresse, verbunden durch Förderbänder"></div>
+    </div>
+    <div class="copy">
+      <div class="eyebrow">Automatisierung</div>
+      <h2 id="f2">Eine Basis, die sich selbst trägt</h2>
+      <ul>
+        <li>Vier Fahrzeugtypen vom Staubi bis zum 520er-Truck. Sie suchen sich die nächste Parzelle selbst und fahren um Gebäude und Bänder herum.</li>
+        <li>Drei Entladestationen mit Andockplätzen, Förderbänder mit runden Kurven und Brücken.</li>
+        <li>Staubpresse, Schmelzanlage und Raffinerie machen aus 10 Metallschrott einen Brick und aus 10 Bricks einen Barren für 340 Credits.</li>
+        <li>Drohnen holen die Ladung weit entfernter Fahrzeuge ab, Außenlager pumpen ihr Material per Pipeline zur Basis.</li>
+        <li>Ein Sturmschild hält 80 % jedes Sturms ab, solange die Energie reicht.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="feature" aria-labelledby="f3">
+  <div class="wrap">
+    <div class="copy">
+      <div class="eyebrow">Produktions-Ampel</div>
+      <h2 id="f3">Du siehst sofort, wo es hakt</h2>
+      <p>Die Ampel im HUD bewertet jede Station, jedes Lager, jede Maschine und jedes Band. Bei Gelb oder Rot steht dabei, warum: zum Beispiel „Puffer voll, weil das Förderband zu langsam abtransportiert“. Darunter liegen die passenden Upgrades zum direkten Kaufen.</p>
+      <div class="legend">
+        <span class="chip"><span class="lamp c-clean"></span><em>Produktion läuft</em></span>
+        <span class="chip"><span class="lamp c-part"></span><em>Engpass</em></span>
+        <span class="chip"><span class="lamp c-dirty"></span><em>Stau</em></span>
+      </div>
+      <p>Bänder holen nur so viel, wie am Ziel Platz ist. Ab 90 % Lagerfüllung geht der Überschuss automatisch zur Rakete, so bleibt nichts stehen.</p>
+    </div>
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/07-produktion-ampel.jpg" width="585" height="1266" alt="Produktionsfenster mit grüner Ampel, Produktionskette und Produktionsplan"></div>
+    </div>
+  </div>
+</section>
+
+<section class="feature flip" aria-labelledby="f4">
+  <div class="wrap">
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/05-planetenkarte.jpg" width="585" height="1266" alt="Planetenkarte: der komplett gereinigte Mond mit grünen Parzellenrändern"></div>
+      <div class="phone"><img src="assets/screens/06-io-vulkanausbruch.jpg" width="585" height="1266" alt="Io während eines Vulkanausbruchs mit Lavagestein und Sturmanzeige"></div>
+    </div>
+    <div class="copy">
+      <div class="eyebrow">Zehn Planeten</div>
+      <h2 id="f4">Jeder Planet bringt sein eigenes Problem</h2>
+      <p>Zoomst du heraus, wird der Planet zur Karte. Jeder Planet hat seine eigene Basis. Freigeschaltete Technik kannst du überall bauen, Lager, Bänder und Maschinen musst du aber auf jedem Planeten neu ausbauen. Je weiter draußen, desto mehr ist das Material wert, desto härter ist der Schmutz und desto stärker müssen deine Doppelbürsten sein.</p>
+    </div>
+  </div>
+</section>
+
+<section class="feature" aria-labelledby="planets-h" style="padding-top:0;border-top:0">
+  <div class="wrap" style="display:block">
+    <h3 id="planets-h">Die Route durchs Sonnensystem</h3>
+    <div class="tablebox" role="region" aria-label="Planetentabelle" tabindex="0">
+      <table>
+        <thead><tr><th>Planet</th><th class="num">Parzellen</th><th class="num">Ertrag ×</th><th class="num">Freischalten</th><th class="num">Bürsten-Stufe</th><th>Gefahr</th></tr></thead>
+        <tbody>
+          <tr><td><span class="dot" style="background:#cfd5de"></span>Mond</td><td class="num">252</td><td class="num">1</td><td class="num">Start</td><td class="num">0</td><td>Meteoritenschauer</td></tr>
+          <tr><td><span class="dot" style="background:#e07a4c"></span>Mars</td><td class="num">492</td><td class="num">2,2</td><td class="num">25 k</td><td class="num">1</td><td>Staubstürme, Solar halbiert</td></tr>
+          <tr><td><span class="dot" style="background:#c9dcef"></span>Europa</td><td class="num">1.002</td><td class="num">5</td><td class="num">140 k</td><td class="num">3</td><td>Eisstürme bremsen Bänder</td></tr>
+          <tr><td><span class="dot" style="background:#d6a659"></span>Titan</td><td class="num">1.442</td><td class="num">10</td><td class="num">450 k</td><td class="num">4</td><td>Säureregen bremst Maschinen</td></tr>
+          <tr><td><span class="dot" style="background:#e9c64a"></span>Io</td><td class="num">1.692</td><td class="num">22</td><td class="num">1,4 Mio</td><td class="num">5</td><td>Vulkanausbrüche, 6× Staub</td></tr>
+          <tr><td><span class="dot" style="background:#e8b36a"></span>Venus</td><td class="num">1.962</td><td class="num">45</td><td class="num">4,2 Mio</td><td class="num">6</td><td>Hitze, Säurestürme</td></tr>
+          <tr><td><span class="dot" style="background:#a99a86"></span>Ganymed</td><td class="num">2.252</td><td class="num">90</td><td class="num">12 Mio</td><td class="num">8</td><td>Magnetstürme legen Bänder lahm</td></tr>
+          <tr><td><span class="dot" style="background:#e8f3fb"></span>Enceladus</td><td class="num">2.562</td><td class="num">180</td><td class="num">34 Mio</td><td class="num">9</td><td>Geysire, 2,5× Staub</td></tr>
+          <tr><td><span class="dot" style="background:#c7b8c4"></span>Triton</td><td class="num">2.892</td><td class="num">360</td><td class="num">96 Mio</td><td class="num">10</td><td>Kryostürme, halber Solarstrom</td></tr>
+          <tr><td><span class="dot" style="background:#d8b090"></span>Pluto</td><td class="num">3.242</td><td class="num">700</td><td class="num">270 Mio</td><td class="num">12</td><td>Ewige Dämmerung, 35 % Solar</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px;color:var(--ink-3);font-size:var(--step--1)">Der nächste Planet öffnet sich erst, wenn der vorherige zu 80 % sauber ist. Unter der nötigen Bürsten-Stufe reinigen Fahrzeuge nur mit 30 %.</p>
+  </div>
+</section>
+
+<section class="feature" aria-labelledby="f5">
+  <div class="wrap" style="display:block">
+    <div class="eyebrow">Langzeit</div>
+    <h2 id="f5" style="margin-top:10px">Gründe, morgen wiederzukommen</h2>
+    <div class="trio">
+      <article><img src="assets/screens/09-auftraege.jpg" width="585" height="1266" alt="Tägliche Aufträge mit Fortschrittsbalken und Belohnungen"><h3>Tägliche Aufträge</h3><p>Jeden Tag drei neue Aufgaben, etwa 600 m² reinigen oder 250 Staub verkaufen. Sie zählen auf allen Planeten und auch offline. Wer alle drei schafft, bekommt 50 % Bonus.</p></article>
+      <article><img src="assets/screens/10-statistik.jpg" width="585" height="1266" alt="Statistik mit Gesamtwerten, Funden und Planetenprognosen"><h3>Statistik und Funde</h3><p>Einnahmen pro Stunde und eine Prognose, wann 80 % und 100 % erreicht sind. Beim Reinigen tauchen Satellitenkerne, Datenkerne und seltene Alien-Artefakte auf.</p></article>
+      <article><img src="assets/screens/08-planeten.jpg" width="585" height="1266" alt="Planetenliste mit Fortschritt und Anzeige „reinigt sich selbst“"><h3>Sternenstaub</h3><p>Ein komplett sauberer Planet gibt dauerhaft +10 % Preise. Später startest du mit Sternenstaub neu: jeder bringt für immer +5 % Preise und +3 % Reinigungsleistung.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="gallery" aria-labelledby="g-h">
+  <div class="wrap">
+    <div class="eyebrow">Galerie</div>
+    <h2 id="g-h" style="margin-top:10px">Alle Screenshots</h2>
+    <div class="strip" tabindex="0" aria-label="Screenshots, seitlich scrollbar">
+      <figure><img src="assets/screens/01-start.jpg" width="585" height="1266" alt="Spielstart" loading="lazy"><figcaption>Spielstart mit Ziel 1 von 19</figcaption></figure>
+      <figure><img src="assets/screens/02-handreinigung.jpg" width="585" height="1266" alt="Handreinigung" loading="lazy"><figcaption>Wischen mit dem Saugring</figcaption></figure>
+      <figure><img src="assets/screens/03-basis.jpg" width="585" height="1266" alt="Basis" loading="lazy"><figcaption>Ausgebaute Mondbasis</figcaption></figure>
+      <figure><img src="assets/screens/04-entladestationen.jpg" width="585" height="1266" alt="Entladestationen" loading="lazy"><figcaption>Entladestationen und Bänder</figcaption></figure>
+      <figure><img src="assets/screens/05-planetenkarte.jpg" width="585" height="1266" alt="Planetenkarte" loading="lazy"><figcaption>Planetenkarte, 100 % sauber</figcaption></figure>
+      <figure><img src="assets/screens/06-io-vulkanausbruch.jpg" width="585" height="1266" alt="Io" loading="lazy"><figcaption>Io im Vulkanausbruch</figcaption></figure>
+      <figure><img src="assets/screens/07-produktion-ampel.jpg" width="585" height="1266" alt="Produktion" loading="lazy"><figcaption>Produktion mit Ampel</figcaption></figure>
+      <figure><img src="assets/screens/08-planeten.jpg" width="585" height="1266" alt="Planeten" loading="lazy"><figcaption>Planetenliste</figcaption></figure>
+      <figure><img src="assets/screens/09-auftraege.jpg" width="585" height="1266" alt="Aufträge" loading="lazy"><figcaption>Tägliche Aufträge</figcaption></figure>
+      <figure><img src="assets/screens/10-statistik.jpg" width="585" height="1266" alt="Statistik" loading="lazy"><figcaption>Statistik</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="dev" aria-labelledby="d-h">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Für Entwickler</div>
+      <h2 id="d-h" style="margin-top:10px">Mit Claude Code weiterbauen</h2>
+      <p style="margin-top:14px;color:var(--ink-2)">Der Browser-Prototyp ist die Referenz: eine einzige HTML-Datei mit three.js. Später wird er nach Unity 6 für Android und iOS übertragen. Die ganze Entwicklungsgeschichte steht im Repository.</p>
+      <div class="files">
+        <div><code>prototype/</code><span>Das Spiel und die Headless-Tests</span></div>
+        <div><code>CLAUDE.md</code><span>Projektregeln für Claude Code</span></div>
+        <div><code>docs/GAME_SPEC.md</code><span>Alle Systeme und Zahlen</span></div>
+        <div><code>docs/CONVERSATION.md</code><span>Wünsche und Feedback im Verlauf</span></div>
+        <div><code>docs/PROGRESS.md</code><span>Stand und nächste Schritte</span></div>
+      </div>
+    </div>
+    <div style="min-width:0;display:flex;flex-direction:column;gap:12px;justify-content:center">
+<pre><span class="c"># einmalig</span>
+pip install playwright
+python -m playwright install chromium
+
+<span class="c"># Tests</span>
+cd prototype/tests
+python build_test_page.py
+python regression.py
+python layout_check.py</pre>
+      <p style="color:var(--ink-3);font-size:var(--step--1)">Die Tests prüfen die komplette Spiellogik ohne Grafik: Reinigung, Fahrzeuge, Wegfindung, Rakete, 8 Stunden offline sowie Speichern und Laden.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Lunar Cleanup Tycoon · Prototyp v3.5 · Oktober 2026</span>
+    <span>Screenshots aus dem Browser-Prototyp</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  const c=document.getElementById('stars');if(!c||!c.getContext)return;const x=c.getContext('2d');
+  function draw(){const d=Math.min(window.devicePixelRatio||1,2),w=innerWidth,h=innerHeight;c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);
+    let s=1337;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};const n=Math.round(w*h/2600);
+    for(let i=0;i<n;i++){const a=.15+r()*.6,z=r()<.08?1.4:.8;x.fillStyle=r()<.1?'rgba(255,214,150,'+a+')':'rgba(220,232,255,'+a+')';x.beginPath();x.arc(r()*w,r()*h,z,0,6.283);x.fill();}
+    const g=x.createRadialGradient(w*.85,-h*.1,0,w*.85,-h*.1,h*.9);g.addColorStop(0,'rgba(111,242,210,.08)');g.addColorStop(1,'rgba(111,242,210,0)');x.fillStyle=g;x.fillRect(0,0,w,h);}
+  draw();let t=0;addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(draw,150);});
+})();
+</script>

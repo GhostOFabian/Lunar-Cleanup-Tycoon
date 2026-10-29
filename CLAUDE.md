@@ -8,6 +8,7 @@ Spielbarer 3D-Mobile-Prototyp: Reinigungssimulation + Idle-Tycoon + Automatisier
 - `docs/GAME_SPEC.md` – vollständige Spezifikation (vor größeren Änderungen lesen).
 - `docs/PROGRESS.md` – Stand und nächste Schritte (nach jeder Phase aktualisieren).
 - `docs/DECISIONS.md` – getroffene Entscheidungen (neue Entscheidungen mit einem Satz ergänzen).
+- `index.html` + `assets/screens/` – Projekt-Webseite (GitHub Pages). Quelle ist `site/page.html`; `python tools/standalone.py site/page.html index.html` erzeugt die fertige Seite.
 - `docs/CONVERSATION.md` – Verlauf der Wünsche und des Feedbacks des Spielers (Fabian). Daran erkennst du, was ihm wichtig ist.
 
 ## Zwei Arbeitsbereiche
@@ -15,7 +16,7 @@ Spielbarer 3D-Mobile-Prototyp: Reinigungssimulation + Idle-Tycoon + Automatisier
 2. **Unity-Umsetzung** (`unity/`, noch nicht angelegt): erst auf ausdrücklichen Wunsch. Das Verhalten des Prototyps wird 1:1 übernommen.
 
 ## Prototyp – Regeln
-- Eine HTML-Datei, kein Build-Schritt. Externe Skripte nur three.js r128 von cdnjs; Schriften Oxanium + Atkinson Hyperlegible (Google Fonts).
+- Eine HTML-Datei, kein Build-Schritt. Die ersten 5 Zeilen (doctype, html, head, charset, viewport) machen sie eigenständig lauffähig (GitHub Pages). Für eine Veröffentlichung als Claude-Artefakt diese 5 Zeilen weglassen. Externe Skripte nur three.js r128 von cdnjs; Schriften Oxanium + Atkinson Hyperlegible (Google Fonts).
 - **Eine Simulation für live und offline:** `simStep(pid, dt, live)` ist die einzige Quelle für Reinigung, Fahrzeuge, Drohnen, Bänder, Maschinen, Energie, Verkauf, Stürme und Meteoriten. Offline (`runOffline`) ruft dieselbe Funktion in 1-s-Schritten auf. Nie eine separate Offline-Formel.
 - Lokale (pro Planet) Upgrades werden über `CUR` gelesen – `simStep` setzt `CUR=pid`. Neue lokale Upgrades bekommen `loc:1`.
 - Spielstand: `localStorage` `lunar-cleanup-tycoon-v2`. Neue Felder immer mit Default in `freshSave()`/`freshPlanet()` anlegen; `load()` füllt fehlende Felder auf. Bestehende Spielstände dürfen nicht kaputtgehen.
@@ -33,7 +34,7 @@ python regression.py                 # Kernsysteme, Offline 8 h, Speichern/Laden
 python layout_check.py               # Gebäude/Bänder/Docks auf allen 10 Planeten
 # Syntax: JS aus index.html extrahieren und `node --check` (macht build_test_page.py mit)
 ```
-Die 3D-Darstellung kann headless nicht geprüft werden (three.js wird gemockt). Visuelle Änderungen klar als „ungetestet im Browser“ melden.
+Die Tests mocken three.js. Für echte Screenshots three.js r128 (`git clone --depth 1 --branch r128 --filter=blob:none --sparse https://github.com/mrdoob/three.js`, dann `git sparse-checkout set build`) per Playwright-Route einspielen und Chromium mit `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader` starten. Visuelle Änderungen klar als „ungetestet im Browser“ melden.
 
 ## Unity-Umsetzung (später) – Tech-Stack
 - Unity 6 (6000.x LTS), C#, URP, Android + iOS, neues Input System (EnhancedTouch), uGUI + TextMeshPro, Canvas Scaler 1080×1920, Safe Area.
