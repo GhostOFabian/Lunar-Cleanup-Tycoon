@@ -1557,15 +1557,25 @@ function outpostModel(L){const g=new THREE.Group(),v={g};add(Box(4.4,.3,5),L.pad
   add(Cyl(.05,.05,2.2,6),L.metal,1.2,1.4,-2,g);add(Sph(.14,8,6),L.mint,1.2,2.6,-2,g);v.docks=[];
   for(let k=0;k<OUTPOST.docks+2;k++){const kk=(k-(OUTPOST.docks-1)/2)*2;add(Box(1.6,.06,1.6),L.dark,2.9,.05,kk,g,false);const m=L.mint.clone();m.emissiveIntensity=.15;add(Box(1.7,.05,.12),m,2.9,.1,kk+.85,g,false);v.docks.push(m);}
   return v;}
-function pipeCurve(pd,a,b){const R=pd.R,bc=basePlanDir(pd,0,0),dist=arcDist(a,b,R),n=Math.max(4,Math.ceil(dist/1.6)),pts=[],ang=Math.acos(clamp(vdot(a,b),-1,1)),s=Math.sin(ang)||1;
-  for(let i=0;i<=n;i++){const t=i/n,d=vnorm(vadd(vsc(a,Math.sin((1-t)*ang)/s),vsc(b,Math.sin(t*ang)/s))),db=arcDist(d,bc,R),h=.35+4.4*(1-smooth(23,29,db));pts.push(V3(vsc(d,R+h)));}
+function pipeCurve(pd,a,b,hEnd){const R=pd.R,bc=basePlanDir(pd,0,0),dist=arcDist(a,b,R),n=Math.max(4,Math.ceil(dist/1.6)),pts=[],ang=Math.acos(clamp(vdot(a,b),-1,1)),s=Math.sin(ang)||1;
+  for(let i=0;i<=n;i++){const t=i/n,d=vnorm(vadd(vsc(a,Math.sin((1-t)*ang)/s),vsc(b,Math.sin(t*ang)/s))),db=arcDist(d,bc,R);let h=.35+4.4*(1-smooth(23,29,db));if(hEnd!=null)h=lerp(h,Math.max(h,hEnd+1.2),smooth(.6,.97,t));pts.push(V3(vsc(d,R+h)));}
+  if(hEnd!=null)pts.push(V3(vsc(b,R+hEnd)));
   return new THREE.CatmullRomCurve3(pts);}
 /* building frame: local +X = plan +x, local +Z = plan -y (so plan coordinates map consistently) */
 function placeOnPlan(obj,pd,x,y,lift){const d=basePlanDir(pd,x,y),fwd=vsc(pd.cells[pd.base].e2,-1);orient(obj,d,fwd,pd.R,lift);}
+/* how much a building may grow sideways without touching neighbours, foreign belts or the gates of its own belts */
+function growRoom(sp,id,g){g.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(g),hx=Math.max(.5,Math.max(-bb.min.x,bb.max.x)),hz=Math.max(.5,Math.max(-bb.min.z,bb.max.z)),hr=Math.max(hx,hz),B=BLD[id];let s=1.25;
+  for(const k of BORDER){if(k===id||!sp.bld[k])continue;const o=BLD[k];s=Math.min(s,(Math.hypot(o.pos[0]-B.pos[0],o.pos[1]-B.pos[1])-o.fp-.5)/hr);}
+  for(const b of BELTS){if(!beltLive(sp,b))continue;if(b.from===id||b.to===id){for(const q of[b.from===id?b.port0:b.port1]){const x=Math.abs(q[0]-B.pos[0]),z=Math.abs(q[1]-B.pos[1]);const sp0=Math.max((x-.25)/hx,(z-.25)/hz);if(sp0>=1)s=Math.min(s,sp0);}continue;}
+    const P=b.rp;for(let i=0;i<P.length-1;i++)s=Math.min(s,(segD(B.pos,P[i],P[i+1])-.9)/hr);}
+  return Math.max(1,s);}
 function buildBase(pid){
   const pd=planetData(pid),sp=S.planets[pid],L=matsLib(pid);buildViews={};
   for(const id of BORDER){const B=BLD[id];
-    if(sp.bld[id]){const v=buildingModel(id,L),bl=(sp.blvl&&sp.blvl[id])||0;if(bl){for(let k=0;k<bl;k++){const ring=add(Tor(B.fp*.92,.08,6,40),L.glow,0,.32+k*.22,0,v.g,false);ring.rotation.x=Math.PI/2;}v.g.scale.set(1+.07*bl,1+.2*bl,1+.07*bl);}v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0);world.add(v.g);pickables.push(v.g);
+    if(sp.bld[id]){const v=buildingModel(id,L),bl=(sp.blvl&&sp.blvl[id])||0;if(bl){const sx=Math.min(1+.07*bl,growRoom(sp,id,v.g)),bb=new THREE.Box3().setFromObject(v.g),top=bb.max.y,mh=.45+.38*bl;
+      /* level badge: a short mast on the roof with one glowing marker per level – stays inside the building, never over belts */
+      add(Cyl(.05,.05,mh,6),L.metal,0,top+mh/2,0,v.g,false);for(let k=0;k<bl;k++){const m=add(new THREE.OctahedronGeometry(.2),L.glow,0,top+.4+k*.38,0,v.g,false);m.scale.set(1,.7,1);}
+      v.g.scale.set(sx,1+.2*bl,sx);}v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0);world.add(v.g);pickables.push(v.g);
       const lb=makeLabel(B.name);lb.position.set(0,id==='port'?8:5.4,0);v.g.add(lb);buildViews[id]=v;
       if(STATIONS.includes(id)||MACH[id]||id==='roh'||id==='prod'||id==='sell'){v.lamp=new THREE.MeshBasicMaterial({color:0x3fe58a});add(Sph(.32,10,8),v.lamp,0,id==='raff'?6:id==='sell'?4.9:4.5,0,v.g,false);}}
     else if(gs(sp)>=B.stage){const g=new THREE.Group();
@@ -1579,8 +1589,8 @@ function buildBase(pid){
   {const dm=new THREE.Mesh(new THREE.SphereGeometry(34,40,16,0,TAU,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0x7fb4ff,transparent:true,opacity:.13,side:THREE.DoubleSide,depthWrite:false}));const dg=new THREE.Group();dg.add(dm);placeOnPlan(dg,pd,0,0,-1);dg.visible=false;world.add(dg);buildViews.dome={g:dg};}
   for(const o of sp.outposts){const cl=pd.cells[o.cell],v=outpostModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:o.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
     const lb=makeLabel('Außenlager');lb.position.set(0,4.8,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews[o.key]=v;
-    const curve=pipeCurve(pd,toDir(cl,-2.4,0,pd.R),basePlanDir(pd,BLD.roh.pos[0]-2.6,BLD.roh.pos[1]+1.6));const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.min(400,curve.points.length*3),.17,6,false),L.metal);
-    const pg=new THREE.Group();pg.add(tube);world.add(pg);buildViews[o.key+'p']={g:pg};}
+    const rl=(sp.blvl&&sp.blvl.roh)||0,siloTop=4.25*(1+.2*rl),curve=pipeCurve(pd,toDir(cl,-2.4,0,pd.R),basePlanDir(pd,BLD.roh.pos[0]-1.2,BLD.roh.pos[1]),siloTop);const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.min(400,curve.points.length*3),.17,6,false),L.metal);
+    const pg=new THREE.Group();pg.add(tube);const flow=[];for(let k=0;k<6;k++){const m=new THREE.Mesh(Sph(.2,8,6),L.mint);m.visible=false;pg.add(m);flow.push(m);}world.add(pg);buildViews[o.key+'p']={g:pg,curve,flow,len:curve.getLength()};}
   for(const r of sp.rigs||[]){const cl=pd.cells[r.cell],v=r.bag?baggerModel(L):rigModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:r.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
     const lb=makeLabel(r.bag?'Erzbagger':'Bohrturm');lb.position.set(0,r.bag?6:8.2,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews['r'+r.cell]=v;}
 }
@@ -2589,6 +2599,8 @@ function updateVisuals(dt,t){
     else if(r.busy){rv.drill.rotation.y+=dt*9;rv.drill.position.y=3.3-.35*(.5+.5*Math.sin(t*2.2+r.cell));rv.spark.emissiveIntensity=1.2+Math.sin(t*23+r.cell)*.6;if(!mapMode&&Math.random()<dt*14)emit3(cl.c,R+.4,DIRT[cl.type].light,1,1.6,1.6);}else rv.spark.emissiveIntensity=0;
     const f=Math.min(1,sumObj(r.buf)/rigBuf(r)),hh=Math.max(.02,f*2.4);rv.fill.scale.y=hh;rv.fill.position.y=.3+hh/2;rv.dockM.emissiveIntensity=r.claim!=null?.9:.15;
     rv.beacon.color.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissive.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissiveIntensity=Math.sin(t*3+r.cell)>.4?1.6:.35;}
+  /* pipeline flow: glowing pellets travel from the outpost to the silo while it pumps */
+  for(const o of sp.outposts){const pv=buildViews[o.key+'p'];if(!pv||!pv.flow)continue;const on=o.busy&&!mapMode;for(let k=0;k<pv.flow.length;k++){const m=pv.flow[k];m.visible=on;if(on){const u=((t*6/pv.len)+k/pv.flow.length)%1;m.position.copy(pv.curve.getPointAt(u));}}}
   for(const o of sp.outposts){const ov=buildViews[o.key];if(!ov||!ov.fill)continue;const f=Math.min(1,sumObj(o.buf)/stBuf(o.key)),hh=Math.max(.02,f*2.9);ov.fill.scale.y=hh;ov.fill.position.y=.55+hh/2;
     ov.docks.forEach((m,k)=>{m.emissiveIntensity=k>=stDocks(o.key)?0:o.docks[k]?.9+.3*Math.sin(t*8):.15;});}
   if(bvv0().hangar&&bvv0().hangar.pads){const dn=sp.drones.filter(d=>d.mode==='idle'&&!d.busy).length;bvv0().hangar.pads.forEach((m,k)=>{m.emissiveIntensity=k<dn?.9:.2;});}

@@ -50,6 +50,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 34. **Presse upgraden**, damit sie mit dem Input mithält; **Bohrtürme nach Maximalstufe zu Erzbaggern** umbauen; **Gebäude nach ausgereizten Upgrades eine weitere, sichtbar größere Stufe**; **Gebäude und Fahrzeuge je Planet in eigenen Farben**. → v5.4.
 35. Bei der Presse auch das **Volumen** anpassen (mehr pro Durchgang, nicht nur schneller). → v5.5.
 36. Die Presse wirkt **viel zu schnell** – sie darf schnell sein, soll aber nicht so aussehen; alles soll **langfristig klar und verständlich** bleiben, **Upgrades sinnvoll**. → v5.6.
+37. **Größen prüfen und Bänder anpassen**, wenn Gebäudestufen steigen; **Außenlager-Pipeline geht neben das Rohstofflager** und pumpt scheinbar nicht hinein. → v5.7.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

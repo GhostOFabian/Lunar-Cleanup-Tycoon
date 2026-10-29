@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v5.6 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v5.7 (`prototype/index.html`)
+- v5.7: Gebäudestufen wachsen in der Breite nur so weit, wie Nachbarn, fremde Bänder und die Übergabetore der eigenen Bänder es erlauben (Höhe wächst immer); Stufenanzeige als Mast mit leuchtenden Markern auf dem Dach statt Bodenringen über den Bändern. Außenlager-Pipeline endet senkrecht im Rohstoffsilo (Höhe folgt der Gebäudestufe), leuchtende Kugeln zeigen, wenn sie pumpt.
 - v5.6: Presse sieht ruhig aus: ein Hub alle 1,6 s, unabhängig vom echten Tempo; beim Hub erscheint, wie viele Bricks gepresst wurden. Upgrades aufgeräumt: „Hochdruckpresse“ entfällt (doppelte sich mit Hydraulik-Tuning), gekaufte Stufen werden erstattet. Presse-Fenster zeigt die Höchstleistung pro Minute; der Fortschrittsbalken flackert bei schnellen Maschinen nicht mehr.
 - v5.5: Upgrade **Größere Presskammer** (Presse presst bis zu 8 Chargen pro Hub, Ein- und Ausgangspuffer wachsen mit); zählt zu den Voraussetzungen der Presse-Gebäudestufe.
 - v5.4: Upgrade **Hochdruckpresse** (nur Presse, ×1,35 je Stufe, max. 10). **Gebäudestufen**: sind die Upgrades eines Gebäudes ausgereizt, wächst es eine Stufe (bis 3 + Ausbaustufe): größer, leuchtende Ringe in Planetenfarbe, +50 % (Maschinen) bzw. +40 % (Stationen, Lager, Frachtraum) bzw. +30 % (Energie). **Bohrturm-Stufen** 0–5 (+30 % je Stufe), danach Umbau zum **Erzbagger** (×2,5, alle Rohstoffe gleich verteilt, Lager 600, räumt Meteoritenstaub auf eigener und Nachbarparzellen, Schaufelrad-Modell). **Planetenfarben** für Gebäude und Fahrzeuge. Reisen lässt Kleinteile und Schattenupdate in der Ferne weg.

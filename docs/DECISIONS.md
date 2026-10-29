@@ -139,3 +139,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v5.6
 - Animation von der Simulation entkoppelt: die Presse hebt sich in festem Takt und zeigt die Menge pro Hub – schnell ist sie trotzdem, sie wirkt nur nicht hektisch.
 - Pro Wirkung genau ein Upgrade: Tempo = Hydraulik-Tuning, Menge = Größere Presskammer; die doppelte Hochdruckpresse entfällt mit voller Erstattung.
+
+## v5.7
+- Gebäude wachsen seitlich nur, solange nichts berührt wird – sonst würden Bänder und Tore in die Gebäude ragen; die Stufe zeigt ein Dachmast statt Ringe am Boden.
+- Pipeline endet im Silo des Rohstofflagers (senkrechter Einlauf) statt daneben; Kugeln im Rohr zeigen das Pumpen. Die Pump-Logik selbst war korrekt, man hat sie nur nicht gesehen.
