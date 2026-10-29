@@ -54,6 +54,9 @@ with game() as (pg, errs):
       return {rockets:sp.rkN||0,flow:t.flowReport('moon').filter(n=>n.lvl>0).map(n=>n.name+': '+n.why)}}""")
     show('rocket + traffic light', r); check(r['rockets'] > 0, 'rocket never launched')
 
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;sp.sellBuf={staub:30,metall:20,staubBrick:3};sp.order={m:'metall'};const c=t.cargoValue('moon',sp);
+      const base=30*t.matValue('staub')+20*t.matValue('metall')+3*t.matValue('staubBrick');const c0=t.S.credits;sp.rk=0;t.ACT.rkgo();return {c,base,gain:t.S.credits-c0,order:sp.order.m}}""")
+    show('cargo value', r); check(abs(r['c']['base'] - r['base']) < 1e-6 and r['c']['total'] > r['base'] * 1.2 and abs(r['gain'] - r['c']['total']) < 1e-3, 'cargo value / freight order')
     r = E("""()=>{const t=__t;const t0=performance.now();const rep=t.runOffline(8*3600);return {ms:performance.now()-t0,cr:rep.credits,moon:rep.p.moon}}""")
     show('offline 8h', r); check(r['cr'] > 0 and r['ms'] < 15000, 'offline simulation')
 

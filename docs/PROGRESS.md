@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v3.8 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v3.9 (`prototype/index.html`)
+- v3.9: Frachtraum zeigt den Wert der Ladung (auch auf „Jetzt starten“), Inhalt, Frachtauftrag und Mischfracht-Bonus. Jede Rakete hat einen Frachtauftrag für eine Rohware des Planeten (+60 %), gemischte Ladung bringt +8 % je weitere Warensorte (max. +40 %). Das Band Rohstofflager → Verkauf bedient den Auftrag laufend (abschaltbar) und lässt 8 % Vorrat für Presse/Raffinerie.
 - v3.8.3: Namensschilder passen sich der Textlänge an (nichts wird mehr abgeschnitten), Bauplätze zeigen „BAUPLATZ“ klein über dem Gebäudenamen; Schilder werden nach dem Laden der Schrift neu gezeichnet.
 - v3.8.2: Gebäudenamen nur noch beim angetippten Gebäude (immer über allem, kein Clipping mit dem Boden); Webseiten-Screenshots neu.
 - v3.8.1: Alle Bandenden reichen bis in ihr Gebäude (Rohstofflager → Verkauf und Rohstofflager → Raffinerie bekamen einen Knick hinein, Layout-Test prüft jetzt jede Lücke). Übergabekästen ersetzt durch offene Tore, unter denen die Waren durchfahren. Bänder zum selben Ziel rechnen ihre Ware gemeinsam (kein Stau mehr am Verkaufsfrachtraum).

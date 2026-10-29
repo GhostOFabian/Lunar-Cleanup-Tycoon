@@ -54,3 +54,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Akku-Fahrzeuge ziehen unterwegs keinen Netzstrom, beim Laden 2,5× ihren Verbrauch – Vorteil auf sonnenarmen Planeten. Leerer Akku: 30 % Tempo und Leistung, nie festgefahren.
 - Teamarbeit: Parzelle wird nach Winkel in Sektoren je Fahrzeug geteilt, +10 % Reinigung je weiterem Fahrzeug (max. 4); bei > 35 % Restschmutz zieht eine belegte Parzelle Helfer an, sonst wird sie gemieden.
 - Sammelbehälter 60 E × 1,5^Stufe; ohne Ziel-Auswahl entlädt der Knopf in den Trichter mit dem meisten Platz, sonst ins Rohstofflager. Neues Tutorial-Ziel 2, alte Spielstände werden per `qv` verschoben.
+
+## v3.9
+- Frachtauftrag pro Rakete (eine Rohware des Planeten, +60 % auf sie, nie zweimal hintereinander dieselbe) und Mischfracht (+8 % je weitere Sorte, max. +40 %) – so lohnt ein stetiger Rohstoffstrom zur Rakete dauerhaft, nicht nur als Überlauf.
+- Das Rohstoffband bedient den Auftrag automatisch, hält aber 8 % der Lagerkapazität für Presse bzw. Raffinerie zurück, damit die Veredelung nicht leerläuft.
+- Toast nur beim manuellen Start, sonst nur die schwebende Zahl – automatische Raketen starten zu oft.

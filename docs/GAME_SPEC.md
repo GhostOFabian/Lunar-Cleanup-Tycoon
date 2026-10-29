@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.8)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.9)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -115,6 +115,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 
 ### 8.1 Verkauf per Rakete
 - Pro Ware „Band an/aus“ (Start: Produkte an, Rohstoffe aus). Die Bänder füllen den Frachtraum (120 E × 1,45^Stufe).
+- **Frachtauftrag:** Jede Rakete sucht eine Rohware des Planeten (+60 % auf diese Ware); nach jedem Start ein neuer Auftrag. **Mischfracht:** +8 % je weiterer Warensorte im Frachtraum, max. +40 %. Das Band Rohstofflager → Verkauf bedient den Auftrag laufend (Schalter „Frachtauftrag automatisch bedienen“, Vorrat von 8 % der Lagerkapazität bleibt für Presse/Raffinerie). Das Verkaufsfenster zeigt Ladung, Auftrag, Bonus und den Gesamtwert, auch auf dem Knopf „Jetzt starten“.
 - **Die Rakete startet erst, wenn der Frachtraum voll ist** (≥ 98 %), verkauft alles und ist 12 s / Raketentempo unterwegs. Knopf „Jetzt starten“ für früher. Direktverkauf per Hand bleibt möglich.
 - Verkaufsautomat (Stufe 3, Schalter): Lager ≥ 90 % → kompletter Inhalt wird sofort verkauft (Notfallschutz).
 
