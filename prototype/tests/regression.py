@@ -53,9 +53,18 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t;t.S.stats.earned=5e7;t.S.planets.mars=t.freshPlanet('mars');t.grantAuto(t.S.planets.mars);t.initRuntime('mars');return {gain:t.prestigeGain(),mars:t.powReq('mars')}}""")
     show('prestige gain', r); check(r['gain'] > 0, 'prestige')
 
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;const e0=t.energyProd(sp);t.S.research.done.rtg=true;t.S.research.done.nuclear=true;t.S.maxStage=5;t.buildBuilding('rtg');t.buildBuilding('reactor');t.buildBuilding('geo');
+      return {e0,e1:t.energyProd(sp),geo:!!sp.bld.geo,cap:t.energyCap(sp),locked:t.vehLocked('eisfraese')}}""")
+    show('energy + vehicle lock', r); check(r['e1'] >= r['e0'] + 159 and not r['geo'] and r['locked'], 'energy buildings / vehicle lock')
+
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.research.done.airlift=true;t.buildBuilding('lifter');t.buyLifter();
+      for(const c of pd.cells)if(c.kind!=='base'&&c.ring<=6){w.clean[c.id]=1;}w.nClean=pd.cells.filter(c=>c.kind!=='base'&&w.clean[c.id]).length;for(const c of pd.cells)if(c.ring>6)w.clean[c.id]=0;t.calcFront('moon');
+      sp.veh=[];t.buyVehicle('truck');const v=sp.veh[0];v.d=t.basePlanDir(pd,2.5,13);v.mode='seek';const seen=new Set();for(let i=0;i<800;i++){t.simStep('moon',.25,false);seen.add(v.mode);}
+      return {modes:[...seen],lifter:sp.lifters[0].mode}}""")
+    show('airlift', r); check('lifted' in r['modes'], 'heavy-lift drone never carried a vehicle')
     for k in ['vehicles', 'production', 'base', 'upgrades', 'planets', 'settings', 'daily', 'stats', 'hazard']:
         E(f"()=>__t.openSheet('{k}')"); pg.wait_for_timeout(40)
-    for bid in ['hq', 'roh', 'prod', 'sell', 'u1', 'u2', 'u3', 'presse', 'schmelze', 'energy', 'research', 'werkstatt', 'hangar']:
+    for bid in ['hq', 'roh', 'prod', 'sell', 'u1', 'u2', 'u3', 'presse', 'schmelze', 'energy', 'research', 'werkstatt', 'hangar', 'rtg', 'geo', 'reactor', 'lifter']:
         E(f"()=>__t.openSheet('building','{bid}')"); pg.wait_for_timeout(30)
     E("()=>__t.closeSheet()")
 

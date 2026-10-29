@@ -26,6 +26,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 10. **Spielstand wurde nach Updates zweimal zurückgesetzt.** Alte Spielstände ließen sich im Test immer laden – wahrscheinliche Ursache: Speicher pro Ansicht (Claude-App, Browser, Vorschau, Webseiten-Kopie haben getrennte Speicher) oder ein stillschweigend fehlgeschlagenes Speichern. → v3.6: Cloud-Spielstand im Claude-Konto, Sicherungskopie, Export/Import-Code, schlanker Speicherstand, sichtbare Fehlermeldung.
 11. Website: Link zum Code und Entwickler-Infos entfernt (Sorge vor Ideenklau). Hinweis: Repo ist öffentlich.
 12. **Steuerung schwergängig:** Beim Wischen blieb der Finger „kleben“, statt dass sich der Planet mitbewegt. → Verlässt der Wisch die Parzelle, wird er zur Kamerabewegung; Wischen am Rand scrollt mit.
+13. **Mehr Fahrzeugtypen**, spätere Planeten brauchen andere Fahrzeuge; **Bänder ohne Lücken** an den Ausgängen; **Transportdrohnen für schwere Maschinen** zu neuen schmutzigen Stellen (spät); **neue Energie bis Kernkraft** für die Nachteile der äußeren Planeten. → v3.7.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

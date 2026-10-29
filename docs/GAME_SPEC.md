@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.6)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.7)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -86,6 +86,16 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 | Industriesauger | 3 | 2 400 | 3,6 | 1,6 | 3,8 | 150 | 1,4 | M |
 | Schwerer Truck | 4 | 14 000 | 2,5 | 2,2 | 6,5 | 520 | 3 | L |
 
+- **Spezialfahrzeuge (ab v3.7)** – erst kaufbar, wenn der genannte Planet erreicht ist; auf ihren Heimatplaneten ×2,2 Reinigungskraft und sturmfest (kein Sturm-Tempoabzug):
+
+| Typ | Ab Planet | Stufe | Kosten | m/s | Radius | Kraft | Tank | Energie | Größe | Heimat |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Eisfräse | Europa | 3 | 4 000 | 3,4 | 1,8 | 5 | 220 | 1,8 | M | Europa, Enceladus, Triton, Pluto |
+| Schlammraupe | Titan | 4 | 8 000 | 3 | 2 | 7 | 320 | 2,4 | M | Titan, Venus, Enceladus |
+| Lavapanzer | Io | 4 | 16 000 | 2,8 | 2,4 | 11 | 600 | 4 | L | Io, Venus |
+| Magnetgleiter | Ganymed | 5 | 25 000 | 7 | 2,2 | 13 | 480 | 3,5 | L | Ganymed, Triton, Europa |
+| Kryo-Koloss | Triton | 5 | 40 000 | 2,6 | 3 | 20 | 1 400 | 6 | L | Triton, Pluto |
+
 - Beliebig viele pro Typ, solange Plätze frei sind. Plätze = 4 (ab Technikstufe 2) + Werkstatt 4 + Stufe 4: 4 + Stufe 5: 6 + Fahrzeughalle 2/Stufe + 1 pro kompletter Planet. Kosten × Planetfaktor × 1,22^Anzahl dieses Typs.
 - Reinigung pro Tick `k = 1 − exp(−Kraft·2,6·Doppelbürsten·Leistungsfaktor·Sternenstaub·Energie·dt / Härte)`. (Faktor 2,6 = Buff, damit Fahrzeuge mit Upgrades klar besser sind als die Hand.) Gemessen: Buggy ohne Upgrades ≈ 0,64 m²/s inkl. Entladefahrten.
 - **Leistungsanforderung pro Planet** (Doppelbürsten-Stufe): Mond 0, Mars 1, Europa 3, Titan 4, Io 5, Venus 6, Ganymed 8, Enceladus 9, Triton 10, Pluto 12. Darunter reinigen Fahrzeuge nur mit 30 % (Warnung im HUD und in der Planetenliste).
@@ -94,7 +104,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Entladen: nächste passende Station oder Außenlager (Außenlager mit > 90 % Puffer werden gemieden).
 
 ## 8. Logistik und Produktion
-- Förderbänder entstehen automatisch, sobald beide Gebäude stehen. Sie laufen als Item-Listen `[Position, Material, Menge]`, Abstand 1,25 m, Tempo 2,4 m/s × Upgrade, Paket 8 E × Upgrade (Produkte 1 Stück pro 8 E).
+- Förderbänder entstehen automatisch, sobald beide Gebäude stehen. Ihre Enden reichen bis in die Gebäude (keine Lücke), an jedem Anschluss sitzt ein Übergabekasten. Sie laufen als Item-Listen `[Position, Material, Menge]`, Abstand 1,25 m, Tempo 2,4 m/s × Upgrade, Paket 8 E × Upgrade (Produkte 1 Stück pro 8 E).
 - Kurven sind abgerundet (Radius 1,4 m, quadratische Bézier-Kurven). Hochbänder (h > 1) sind Brücken mit Stützen, die nicht auf anderen Bändern stehen.
 - Bänder: Stationen → Rohstofflager, Zentrale Entladeanlage → Presse, Rohstofflager → Presse/Raffinerie, Presse → Schmelze/Produktlager, Schmelze/Raffinerie → Produktlager, **Rohstofflager → Verkauf, Produktlager → Verkauf** (ab Technikstufe 2).
 - **Stau-Vermeidung (Pull-Prinzip):** Ein Band nimmt nur so viel auf, wie am Ziel nach Abzug der Ware unterwegs noch Platz ist → Bänder blockieren sich nie gegenseitig.
@@ -114,6 +124,17 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 ## 9. Drohnen und Außenlager
 - **Drohnen** (Forschung „Drohnentechnik“ + Drohnenhangar, Stufe 4): max. 8 pro Planet, Kosten `2 500 × Planetfaktor × 1,35^n`, Ladung 60 × Upgrade, 9 m/s × Upgrade, Umladen 30 E/s. Ziel: Fahrzeuge > 30 m vom Hangar mit ≥ 40 % Tank (Score = Füllgrad × Entfernung). Volles Fahrzeug mit zugewiesener Drohne wartet („Wartet auf Drohne“). Die Drohne liefert direkt ins Rohstofflager. Energie 0,4/s im Flug.
 - **Außenlager** (Forschung „Außenlager-Logistik“, nach Drohnen; Technikstufe 4): auf sauberer Parzelle ab Ring 4, nicht neben einem anderen Außenlager, max. 4 pro Planet, Kosten `20 000 × Planetfaktor × 1,6^n`. 2 Docks, Puffer 400, 20 E/s, alle Fahrzeuggrößen, Pipeline 8 E/s × Bandtempo ins Rohstofflager (sichtbare Röhre, über der Basis erhöht).
+
+## 9a. Lastdrohnen (Schwerlast-Hangar, ab v3.7)
+- Forschung „Schwerlastflug“ (nach Außenlager-Logistik), Gebäude Schwerlast-Hangar (Stufe 5, 90 000, Pos 2,24), max. 3 Lastdrohnen (`30 000 × Planetfaktor × 1,6^n`), 12 m/s × Drohnentempo, 2 Energie/s im Flug.
+- Wählt ein M- oder L-Fahrzeug eine Parzelle > 45 m entfernt, holt eine freie Lastdrohne es ab und fliegt es direkt hin (Zustände `liftwait` → `lifted` → `drive`). Kleine Fahrzeuge fahren selbst.
+
+## 9b. Energie (ab v3.7)
+- Solar (Hauptstation 3 + Energiezentrale 8) × Solarfelder × Sonnenfaktor – leidet unter Planet und Sturm.
+- Radioisotopen-Generator (Forschung, Stufe 3, 6 000, Pos -7,5,10): +10/s konstant.
+- Geothermie-Kraftwerk (Stufe 4, 25 000, Pos -21,5,10,5): +30/s × Erdwärme (Mond 0 – nicht baubar, Mars 0,4, Europa 0,8, Titan 0,6, Io 2, Venus 1,5, Ganymed 0,6, Enceladus 1,6, Triton 1, Pluto 0,4).
+- Kernreaktor (Forschung „Kernspaltung“ nach Radioisotopen, Stufe 5, 150 000, Pos -2,-23): +150/s und +1000 Speicher – Gegenmittel für wenig Sonne und hohen Energiebedarf der äußeren Planeten.
+- Akkupark (Upgrade pro Planet): +250 Speicher pro Stufe, max. 10.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

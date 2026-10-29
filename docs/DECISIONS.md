@@ -42,3 +42,9 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## Steuerung
 - Ein Wisch, der die gesperrte Parzelle (Rand + 0,6 × Saugradius) oder den Planeten verlässt, wird ohne Absetzen zur Kamerabewegung – sonst „klebt“ der Finger.
 - Wischen in den äußeren 14 % (max. 70 px) des Bildschirms scrollt den Planeten mit bis 260 px/s.
+
+## v3.7
+- Spezialfahrzeuge an Planeten gebunden (kaufbar ab Erreichen des Planeten) und auf Heimatplaneten ×2,2 + sturmfest – macht jeden neuen Planeten zu einem Grund für neue Fahrzeuge.
+- Lastdrohnen nur für M/L-Fahrzeuge und Ziele > 45 m – kurze Wege fährt man schneller selbst.
+- Batterien als Upgrade (Akkupark) statt Gebäude – auf der Basis ist nur noch Platz für drei große und ein kleines Gebäude.
+- Geothermie ist auf dem Mond nicht baubar (keine Erdwärme), auf Io am stärksten.
