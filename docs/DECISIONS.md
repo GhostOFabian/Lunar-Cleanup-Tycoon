@@ -38,3 +38,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Zusätzlich Cloud-Spielstand über die Claude-Artefakt-Datenbank (`data/users/<id>/save`, privat pro Spieler, in Stücken ≤ 180 000 Zeichen, zwei Slots im Wechsel) – getrennte Speicher je Ansicht waren die wahrscheinlichste Ursache der Resets.
 - Ein lokaler Stand ohne Spielstand wird nie über einen vorhandenen Cloud-Stand gelegt; ein neuerer Cloud-Stand wird beim Start übernommen.
 - Rolling Backup (`…-bak`, alle 5 min), unlesbare Stände werden als `…-broken-<Zeit>` aufgehoben, Export/Import-Code (gzip + Base64, Präfix `LCT1:`).
+
+## Steuerung
+- Ein Wisch, der die gesperrte Parzelle (Rand + 0,6 × Saugradius) oder den Planeten verlässt, wird ohne Absetzen zur Kamerabewegung – sonst „klebt“ der Finger.
+- Wischen in den äußeren 14 % (max. 70 px) des Bildschirms scrollt den Planeten mit bis 260 px/s.

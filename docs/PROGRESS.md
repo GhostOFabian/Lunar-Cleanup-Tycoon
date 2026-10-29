@@ -1,6 +1,7 @@
 # Fortschritt
 
 ## Fertig – Browser-Prototyp v3.6 (`prototype/index.html`)
+- v3.6.1: Wischen klebt nicht mehr – verlässt der Finger die Parzelle (oder den Planeten), dreht sich ab da der Planet mit; am Bildschirmrand scrollt der Planet beim Wischen mit.
 - v3.6: Cloud-Spielstand (Claude-Konto), Sicherungskopie, Export/Import-Code, schlanker Speicherstand, Meldung bei Speicherfehler.
 - 10 Planeten als Goldberg-Polyeder (252 bis 3 242 Parzellen), eigene Optik, Gefahren und Stürme.
 - Handreinigung (eine Parzelle pro Wisch), Frontier-System ohne Freischaltung, farbige Parzellenränder, grünes Aufleuchten.

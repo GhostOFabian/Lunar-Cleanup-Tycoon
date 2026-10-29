@@ -24,6 +24,8 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 8. **Fahrzeuge dürfen nicht durch Gebäude oder Bänder fahren** (richtige Wege). **Band-Verbindung zur Verkaufsstation**, upgradebar; die Rakete fliegt erst los, wenn ihr Lager voll ist. **Produktionsstau vermeiden**, Bänder und Produktion im Gleichgewicht; bei Stau beschreiben warum, damit man passende Upgrades kaufen kann; kleine **Ampel**.
 9. Repository angelegt (heute `GhostOFabian/Lunar-Cleanup-Tycoon`, anfangs mit Tippfehler „Tycon“); Unterhaltung in Claude Code überführt (dieses Dokument). Projekt-Webseite mit echten Screenshots.
 10. **Spielstand wurde nach Updates zweimal zurückgesetzt.** Alte Spielstände ließen sich im Test immer laden – wahrscheinliche Ursache: Speicher pro Ansicht (Claude-App, Browser, Vorschau, Webseiten-Kopie haben getrennte Speicher) oder ein stillschweigend fehlgeschlagenes Speichern. → v3.6: Cloud-Spielstand im Claude-Konto, Sicherungskopie, Export/Import-Code, schlanker Speicherstand, sichtbare Fehlermeldung.
+11. Website: Link zum Code und Entwickler-Infos entfernt (Sorge vor Ideenklau). Hinweis: Repo ist öffentlich.
+12. **Steuerung schwergängig:** Beim Wischen blieb der Finger „kleben“, statt dass sich der Planet mitbewegt. → Verlässt der Wisch die Parzelle, wird er zur Kamerabewegung; Wischen am Rand scrollt mit.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).
