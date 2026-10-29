@@ -1298,7 +1298,7 @@ function makeLabel(text){
   const c=mkCanvas(256,64),x=c.getContext('2d');x.font='600 26px Oxanium, "Trebuchet MS", sans-serif';const w=Math.min(250,x.measureText(text).width+34);
   x.fillStyle='rgba(8,12,24,.75)';x.beginPath();x.moveTo(128-w/2+20,6);x.arcTo(128+w/2,6,128+w/2,58,26);x.arcTo(128+w/2,58,128-w/2,58,26);x.arcTo(128-w/2,58,128-w/2,6,26);x.arcTo(128-w/2,6,128+w/2,6,26);x.fill();
   x.fillStyle='#eef2fb';x.textAlign='center';x.textBaseline='middle';x.fillText(text,128,33);
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));s.scale.set(4.2,1.05,1);s.userData.label=1;return s;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));s.scale.set(4.2,1.05,1);s.renderOrder=20;s.visible=false;s.userData.label=1;return s;
 }
 function matsLib(){return{
   metal:mat(0xd6dce4,{metalness:.35,roughness:.45}),dark:mat(0x2a3140,{metalness:.4,roughness:.6}),amber:mat(0xffbf4d,{metalness:.2,roughness:.5}),
@@ -1709,9 +1709,12 @@ function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in 
 const sheet=$('#sheet'),sheetBody=$('#sheetBody');let sheetState=null,B={},bid=0;
 const bind=fn=>{const k='b'+(bid++);B[k]=fn;return k;};
 const cr=n=>'<span class="cr-ico" aria-hidden="true"></span>'+fmt(n);
-function openSheet(kind,arg){sheetState={kind,arg};renderSheet();sheet.hidden=false;requestAnimationFrame(()=>sheet.classList.add('open'));
+/* Building names only appear for the building you tapped. */
+function updLabels(){const st=sheetState,sel=st&&st.kind==='building'?st.arg:st&&st.kind==='cell'&&SP().outposts.some(o=>o.cell===st.arg)?'o'+st.arg:null;
+  for(const id in buildViews)buildViews[id].g.traverse(o=>{if(o.userData.label)o.visible=!mapMode&&id===sel;});}
+function openSheet(kind,arg){sheetState={kind,arg};setTimeout(updLabels,0);renderSheet();sheet.hidden=false;requestAnimationFrame(()=>sheet.classList.add('open'));
   document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.nav!=='clean')b.classList.toggle('on',b.dataset.nav===kind);});}
-function closeSheet(){sheetState=null;sheet.classList.remove('open');selectCell(null);setTimeout(()=>{if(!sheetState)sheet.hidden=true;},230);document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.nav!=='clean')b.classList.remove('on');});}
+function closeSheet(){sheetState=null;setTimeout(updLabels,0);sheet.classList.remove('open');selectCell(null);setTimeout(()=>{if(!sheetState)sheet.hidden=true;},230);document.querySelectorAll('#nav button').forEach(b=>{if(b.dataset.nav!=='clean')b.classList.remove('on');});}
 function upgRow(id){const u=UP[id],l=lvl(id),max=l>=u.max;
   return '<div class="row"><div class="row-main"><div class="row-t">'+u.name+'<span class="lvl">Stufe '+l+'/'+u.max+(u.loc?' · nur '+PLANETS[S.planet].name:'')+'</span></div><div class="row-d">'+u.label+': '+u.show(u.val(l))+(max?'':' → <b>'+u.show(u.val(l+1))+'</b>')+'</div></div>'+
     (max?'<button class="buy" disabled>Max</button>':'<button class="buy" data-act="upg" data-id="'+id+'" data-en="'+bind(()=>S.credits>=ucost(id))+'">'+cr(ucost(id))+'</button>')+'</div>';}
@@ -2048,7 +2051,7 @@ function updLocks(){
   lockPool.forEach((L,i)=>{const id=want[i];if(id==null){L.sp.visible=false;return;}L.sp.visible=true;const cl=pd.cells[id],ok=false,txt='Forschung',key=id+'|'+txt+'|'+w.disc[id];
     if(L.key!==key){if(L.sp.material.map)L.sp.material.map.dispose();L.sp.material.map=new THREE.CanvasTexture(lockCanvas(txt,ok,w.disc[id]?cl.kind:'normal'));L.sp.material.needsUpdate=true;L.key=key;}
     const p=vsc(cl.c,R+2.6);L.sp.position.set(p[0],p[1],p[2]);});
-  for(const id in buildViews)buildViews[id].g.traverse(o=>{if(o.userData.label)o.visible=!mapMode&&cam.alt<75;});
+  updLabels();
 }
 const bvv0=()=>buildViews;
 function updateVisuals(dt,t){

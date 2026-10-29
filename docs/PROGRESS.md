@@ -1,6 +1,7 @@
 # Fortschritt
 
 ## Fertig – Browser-Prototyp v3.8 (`prototype/index.html`)
+- v3.8.2: Gebäudenamen nur noch beim angetippten Gebäude (immer über allem, kein Clipping mit dem Boden); Webseiten-Screenshots neu.
 - v3.8.1: Alle Bandenden reichen bis in ihr Gebäude (Rohstofflager → Verkauf und Rohstofflager → Raffinerie bekamen einen Knick hinein, Layout-Test prüft jetzt jede Lücke). Übergabekästen ersetzt durch offene Tore, unter denen die Waren durchfahren. Bänder zum selben Ziel rechnen ihre Ware gemeinsam (kein Stau mehr am Verkaufsfrachtraum).
 - v3.8: Teamarbeit der Fahrzeuge (Sektoren auf einer Parzelle, +10 % je Partner, große/harte Parzellen ziehen Helfer an), Akkus für Staubi, Buggy, Industriesauger und Magnetgleiter (laden an Andockplätzen, Upgrade „Größere Akkus“, ziehen unterwegs keinen Netzstrom), Sammelbehälter des Spielers (Handabbau wird getragen und von Hand in Trichter oder Lager entladen, Upgrade „Größerer Sammelbehälter“), neues Tutorial-Ziel. Tests mit festem Zufallsstartwert.
 - v3.7: 5 Spezialfahrzeuge für spätere Planeten, Lastdrohnen (Schwerlast-Hangar) fliegen Maschinen zu entfernten Parzellen, Radioisotopen-Generator, Geothermie, Kernreaktor, Akkupark, Förderbänder ohne Lücke mit Übergabekästen, Zahlen bis Mrd/Bio.
