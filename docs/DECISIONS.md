@@ -126,3 +126,9 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Wege, deren gerade Linie die Basiszone schneidet, laufen auf einem Kreis knapp außerhalb (Radius 33–37 m) um die Basis – vorher fuhren Fahrzeuge zwischen zwei Außenpunkten quer durch die Gebäude.
 - Schmutz unter Gebäudeflächen (fp + 0,6 m) zählt als sauber, damit kein Fahrzeug hineinfahren muss, um eine Randparzelle fertig zu machen.
 - Drohnen geben an Entladestationen ab (Wunsch des Spielers) – deren Bänder bekommen so auch Arbeit; Flughöhe 12 m über allen Gebäuden.
+
+## v5.4
+- Presse bekommt ein eigenes Upgrade, weil sie mit 10 E pro Charge der Engpass der Kette ist.
+- Gebäudestufen erst nach ausgereizten Upgrades („vollständig abgegrast“), mit sichtbarer Größe und Ringen; Obergrenze steigt mit der Ausbaustufe, damit es endlos weitergeht.
+- Erzbagger als Endstufe der Bohrtürme (Wunsch des Spielers), räumt zusätzlich Meteoritenstaub – passt zu „holt alles raus, was da rumliegt“.
+- Farben pro Planet über die Materialbibliothek, nicht pro Modell – ein Ort für alle Gebäude und Fahrzeuge.

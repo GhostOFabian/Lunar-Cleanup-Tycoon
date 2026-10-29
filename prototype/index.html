@@ -455,6 +455,7 @@ const UPG=[
   {id:'bspeed',loc:1,cat:'Förderbänder',name:'Schnellere Bänder',base:120,grow:1.7,max:10,val:l=>1+0.25*l,show:v=>'×'+dec(v,2),label:'Tempo',stage:2},
   {id:'bcap',loc:1,cat:'Förderbänder',name:'Größere Paletten',base:180,grow:1.8,max:8,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Kapazität pro Paket',stage:2},
   {id:'beff',loc:1,cat:'Förderbänder',name:'Leichtlaufrollen',base:150,grow:1.7,max:6,val:l=>Math.pow(.85,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
+  {id:'pspeed',loc:1,cat:'Maschinen',name:'Hochdruckpresse',base:400,grow:1.75,max:10,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Tempo der Staubpresse',stage:2},
   {id:'mspeed',loc:1,cat:'Maschinen',name:'Hydraulik-Tuning',base:300,grow:1.85,max:10,val:l=>1+0.2*l,show:v=>'×'+dec(v,1),label:'Verarbeitungstempo',stage:2},
   {id:'mcap',loc:1,cat:'Maschinen',name:'Größere Puffer',base:250,grow:1.8,max:8,val:l=>1+0.4*l,show:v=>'×'+dec(v,1),label:'Ein-/Ausgangskapazität',stage:2},
   {id:'meff',loc:1,cat:'Maschinen',name:'Wärmerückgewinnung',base:350,grow:1.8,max:6,val:l=>Math.pow(.86,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
@@ -573,7 +574,7 @@ function expCard(pid){const sp=S.planets[pid],n=expN(pid),why=expWhy(pid);
   return '<div class="row-d">'+(n?'Ausbaustufe '+n+' · ':'')+'Höchste Basisstufe erreicht.</div><div class="row-t" style="margin-top:8px">Ausbaustufe '+(n+1)+'</div><div class="row-d">+2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, alle Anlagen-Upgrades dieses Planeten 2 Stufen höher. Es gibt kein Ende – jede Stufe kostet mehr.</div>'+
     (S.done[pid]&&sp.stage>=5?'<div class="bar"><i data-w="'+bind(()=>Math.min(1,(SP().deep||0)/expNeed(S.planet))*100)+'"></i></div><div class="row-d" data-b="'+bind(()=>fmt(Math.min(SP().deep||0,expNeed(S.planet)))+' / '+fmt(expNeed(S.planet))+' E aus der Tiefe')+'"></div>':'<div class="row-d"><b>'+why+'</b></div>')+
     '<button class="buy wide" data-act="buyexp" data-en="'+bind(()=>!expWhy(S.planet)&&S.credits>=expCost(S.planet))+'">Ausbauen · '+cr(expCost(pid))+'</button>';}
-const rohCap=()=>uv('rohcap')*expF(),prodCap=()=>uv('prodcap')*expF();
+const rohCap=()=>uv('rohcap')*expF()*blF('roh'),prodCap=()=>uv('prodcap')*expF()*blF('prod');
 const rohSum=sp=>RAW.reduce((a,k)=>a+sp.roh[k],0);
 const prodSum=sp=>PRODS.reduce((a,k)=>a+sp.prod[k],0);
 const anyPort=()=>{for(const k in S.planets)if(S.planets[k].bld.port)return true;return false;};
@@ -589,7 +590,7 @@ function grantAuto(sp){for(const id in BLD)if(BLD[id].auto&&BLD[id].stage<=gs(sp
 const doneCount=()=>Object.keys(S.done||{}).length;
 const starMul=()=>1+.05*(S.star||0),cleanMul=()=>1+.03*(S.star||0);
 const matValue=(m,pid)=>MATS[m].v*uv('price')*(MATS[m].raw?1:uv('mqual'))*(anyPort()?1.2:1)*pvM(pid)*(1+.1*doneCount())*starMul()*(1+.02*(S.arte||0));
-const energyCap=sp=>150+(sp.bld.energy?150:0)+uv('ecap')+(sp.bld.reactor?1000:0);
+const energyCap=sp=>(150+(sp.bld.energy?150:0)+uv('ecap'))*blF('energy')+(sp.bld.reactor?1000:0);
 const GEOF={moon:0,mars:.4,europa:.8,titan:.6,io:2,venus:1.5,ganymed:.6,enceladus:1.6,triton:1,pluto:.4};
 /* Day and night: every planet turns; solar power follows the sun's height over the base. Peak solar is 2.6x the old constant value,
    so a full day yields about as much as before – but at night it is storage, batteries, RTG, geothermal or nuclear. */
@@ -600,7 +601,7 @@ const sunAng=(pid,sp)=>((sp.dayT==null?dayLen(pid)*.08:sp.dayT)%dayLen(pid))/day
 const dayF=(pid,sp)=>{const e=Math.sin(sunAng(pid,sp));return Math.pow(clamp((e+.08)/1.08,0,1),.8);};
 function sunDir(pid,sp){const pd=planetData(pid),c=pd.cells[pd.base],a=sunAng(pid,sp);return vnorm(vadd(vsc(c.c,Math.sin(a)),vsc(c.e1,Math.cos(a))));}
 function dayInfo(pid,sp){const L=dayLen(pid),t=(sp.dayT==null?L*.08:sp.dayT)%L,day=t<L/2;return{day,left:day?L/2-t:L-t,f:dayF(pid,sp)};}
-const solarProd=sp=>(3+(sp.bld.energy?8:0))*uv('energy')*(sp.solar||1)*SOLAR_PEAK;
+const solarProd=sp=>(3+(sp.bld.energy?8:0))*uv('energy')*(sp.solar||1)*SOLAR_PEAK*blF('energy');
 const extraProd=(sp,pid)=>(sp.bld.rtg?10:0)+(sp.bld.geo?30*(GEOF[pid]||0):0)+(sp.bld.reactor?150:0);
 const energyProd=sp=>{let pid=CUR||S.planet;for(const k in S.planets)if(S.planets[k]===sp)pid=k;return solarProd(sp)+extraProd(sp,pid);};
 
@@ -612,7 +613,7 @@ function freshPlanet(pid){
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
   return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
-    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
+    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},blvl:{},nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
 function freshSave(){return{v:2,layout:3,qv:3,ach:{},maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
 
@@ -792,7 +793,7 @@ const tankCap=v=>VT[v.type].tank*uv('vtank');
 const isOut=s=>typeof s==='string'&&s[0]==='o';
 const stDef=s=>isOut(s)?OUTPOST:BLD[s].st;
 const stDocks=id=>stDef(id).docks+uv('udock');
-const stBuf=id=>stDef(id).buf*uv('ubuf');
+const stBuf=id=>stDef(id).buf*uv('ubuf')*(isOut(id)?1:blF(id));
 const stObj=(sp,s)=>isOut(s)?sp.outposts.find(o=>o.key===s)||null:(sp.bld[s]?sp.st[s]:null);
 const stName=s=>isOut(s)?'Außenlager '+cellName(+s.slice(1)):BLD[s].name;
 function stDir(pid,s,kind,k){const pd=planetData(pid);
@@ -806,9 +807,22 @@ const beltLive=(sp,b)=>!!(sp.bld[b.from]&&sp.bld[b.to]&&(!b.stage||gs(sp)>=b.sta
 const pressable=(sp,m)=>(m==='staub'&&sp.plan.pressStaub)||(m==='metall'&&sp.plan.pressMetall);
 const smeltOn=sp=>!!(sp.plan.smelt&&sp.bld.schmelze);
 const machIn=M=>sumObj(M.in),machOut=M=>sumObj(M.out);
-const machInCap=id=>MACH[id].inCap*uv('mcap'),machOutCap=id=>MACH[id].outCap*uv('mcap');
+/* Gebäudestufen: once a building's own upgrades are maxed it can grow another level (bigger, faster, more room) */
+const BLV_REQ={presse:['mspeed','pspeed'],schmelze:['mspeed','mcap'],raff:['mspeed','mcap'],u1:['urate','ubuf'],u2:['urate','ubuf'],u3:['urate','ubuf'],roh:['rohcap'],prod:['prodcap'],sell:['sellcap'],energy:['energy','ecap']};
+const blvl=(id,pid)=>{const sp=S.planets[pid||CUR||S.planet];return(sp&&sp.blvl&&sp.blvl[id])||0;};
+const blMax=()=>3+expN();
+const blF=id=>1+(MACH[id]?.5:id==='energy'?.3:.4)*blvl(id);
+function blWhy(id){const sp=SP();if(!sp.bld[id])return 'Erst bauen';const miss=BLV_REQ[id].filter(u=>lvl(u)<upMax(u));
+  if(miss.length)return 'Erst die Upgrades ausreizen: '+miss.map(u=>UP[u].name+' '+lvl(u)+'/'+upMax(u)).join(', ');if(blvl(id)>=blMax())return 'Höchste Gebäudestufe'+(blMax()<99?' – jede Ausbaustufe des Planeten erlaubt eine mehr':'');return '';}
+const blCost=id=>Math.round(Math.max(4000,(BLD[id].cost||0)*15)*PLANETS[S.planet].diff*Math.pow(3,blvl(id)));
+function buyBl(id){const why=blWhy(id);if(why)return fail(why);const c=blCost(id);if(S.credits<c)return fail(lacks(c));S.credits-=c;const sp=SP();sp.blvl=sp.blvl||{};sp.blvl[id]=(sp.blvl[id]||0)+1;
+  SFX.unlock();toast(BLD[id].name+' erreicht Gebäudestufe '+sp.blvl[id]+' – größer und '+Math.round((blF(id)-1)*100)+' % stärker','good');rebuildBase();updateHUD();save();}
+function blSec(id){const l=blvl(id),why=blWhy(id),eff=MACH[id]?'Verarbeitungstempo und Puffer':STATIONS.includes(id)?'Entladetempo und Trichter':id==='energy'?'Solarleistung':'Kapazität';
+  return '<section class="sec"><h3>Gebäudestufe '+l+' / '+blMax()+'</h3><p class="note">Sind alle Upgrades dieses Gebäudes ausgereizt, kann es eine Stufe wachsen: Es wird sichtbar größer und bekommt +'+(MACH[id]?50:id==='energy'?30:40)+' % '+eff+' je Stufe.'+(l?' Jetzt: ×'+dec(blF(id),1)+'.':'')+'</p>'+
+    (why?'<p class="note"><b>'+why+'</b></p>':'<button class="buy wide" data-act="buybl" data-id="'+id+'" data-en="'+bind(()=>S.credits>=blCost(id))+'">Auf Stufe '+(l+1)+' ausbauen · '+cr(blCost(id))+'</button>')+'</section>';}
+const machInCap=id=>MACH[id].inCap*uv('mcap')*blF(id),machOutCap=id=>MACH[id].outCap*uv('mcap')*blF(id);
 
-const sellCap=()=>uv('sellcap'),rocketTime=()=>12/uv('rspeed');
+const sellCap=()=>uv('sellcap')*blF('sell'),rocketTime=()=>12/uv('rspeed');
 function destFree(sp,b){if(b.to==='roh')return rohCap()-rohSum(sp);if(b.to==='prod')return prodCap()-prodSum(sp);if(b.to==='sell')return sellCap()-sumObj(sp.sellBuf);if(MACH[b.to])return machInCap(b.to)-machIn(sp.mach[b.to]);return 0;}
 function beltTake(sp,b,lim){
   if(lim==null)lim=1e9;const P=Math.min(packet(),lim),PB=Math.min(Math.max(1,Math.round(packet()/8)),Math.floor(lim+1e-9));if(P<=1e-6)return null;
@@ -847,7 +861,7 @@ function machStep(sp,id,dt,f){
     if(M.cur<0){M.status=machOut(M)+1>machOutCap(id)?'Ausgang voll':D.rec.every(rc=>rc.plan&&!sp.plan[rc.plan])?'Pausiert (Plan aus)':'Wartet auf Material';return;}}
   const rc=D.rec[M.cur];
   if(f<.05){M.status='Keine Energie';return;}
-  M.prog+=dt*uv('mspeed')*f*(sp.mm||1);M.status='Arbeitet';
+  M.prog+=dt*uv('mspeed')*(id==='presse'?uv('pspeed'):1)*blF(id)*f*(sp.mm||1);M.status='Arbeitet';
   if(M.prog>=rc.t){M.in[rc.in]-=rc.n;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k;M.cur=-1;M.prog=0;M.flash=1;
     sp.stats.value+=Math.max(0,MATS[rc.out].v*rc.k-MATS[rc.in].v*rc.n)*(sp.pv||1);
     if(rc.out==='barren')S.stats.barren+=rc.k;if(rc.out.endsWith('Brick'))S.stats.bricks+=rc.k;}
@@ -989,7 +1003,7 @@ function vehStep(pid,sp,v,dt,f,live){
       const free=stBuf(s)-sumObj(st.buf);let charged=true;
       if(T.batt){const bc=battCap(v);if(v.bat==null)v.bat=bc;if(v.bat<bc){v.bat=Math.min(bc,v.bat+bc/16*uv('urate')*Math.max(.25,f)*dt);v.charging=true;}charged=v.bat>=bc*.97;}
       if(free<=.01&&tank>.01){v.status=v.charging?'Station voll – lädt Akku':'Station voll – wartet';break;}
-      const amt=Math.min(stDef(s).rate*uv('urate')*dt,free,tank),f0=tank>0?amt/tank:0;
+      const amt=Math.min(stDef(s).rate*uv('urate')*(isOut(s)?1:blF(s))*dt,free,tank),f0=tank>0?amt/tank:0;
       for(const m in v.tank){const x=v.tank[m]*f0;v.tank[m]-=x;st.buf[m]=(st.buf[m]||0)+x;}
       v.status=tank>.01?(v.charging?'Entlädt und lädt Akku':'Entlädt'):'Lädt Akku · '+Math.round((v.bat||0)/battCap(v)*100)+' %';
       if(sumObj(v.tank)<.01&&!charged){v.tank={};break;}
@@ -1061,7 +1075,15 @@ const rigRich=(pid,id)=>{let h=(id*2654435761+(PORDER.indexOf(pid)+1)*40503)>>>0
 const rigMax=sp=>2+2*sp.stage+2*(sp.exp||0);
 const rigCost=pid=>Math.round(3000*PLANETS[pid].diff*Math.pow(1.45,(S.planets[pid].rigs||[]).length));
 const rigMat=(pid,id)=>DIRT[planetData(pid).cells[id].type].mat;
-const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate')*(1+.25*expN(pid));
+const RIG_MAXLV=5;
+const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate')*(1+.25*expN(pid))*(1+.3*(r.lv||0))*(r.bag?2.5:1);
+const rigBuf=r=>r.bag?600:RIG.buf;
+const rigUpCost=(pid,r)=>Math.round(2500*PLANETS[pid].diff*Math.pow(1.9,r.lv||0));
+const bagCost=pid=>Math.round(60000*PLANETS[pid].diff);
+function rigUp(cell){const pid=S.planet,r=(SP().rigs||[]).find(x=>x.cell===cell);if(!r)return;if((r.lv||0)>=RIG_MAXLV)return fail('Höchste Stufe – baue ihn zum Erzbagger um');const c=rigUpCost(pid,r);if(S.credits<c)return fail(lacks(c));
+  S.credits-=c;r.lv=(r.lv||0)+1;SFX.buy();toast('Bohrturm Stufe '+r.lv+' · +30 % Förderung','good');save();}
+function rigToBagger(cell){const pid=S.planet,r=(SP().rigs||[]).find(x=>x.cell===cell);if(!r||r.bag)return;if((r.lv||0)<RIG_MAXLV)return fail('Erst Bohrturm-Stufe '+RIG_MAXLV);const c=bagCost(pid);if(S.credits<c)return fail(lacks(c));
+  S.credits-=c;r.bag=1;SFX.unlock();sparkleCell(pid,cell,40);toast('Erzbagger auf '+cellName(cell)+' – gräbt alle Rohstoffe aus und räumt Meteoritenstaub in der Nähe weg','good');rebuildBase();save();}
 const richTxt=x=>x>=1.3?'reich':x>=.95?'gut':'mager';
 function rigWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).cells[id],rs=sp.rigs||[];
   if(!S.done[pid])return 'Erst wenn '+PLANETS[pid].name+' komplett sauber ist';
@@ -1076,17 +1098,25 @@ function buildRig(id){const pid=S.planet,sp=SP();if(id==null||id<0){id=bestRigCe
   const why=rigWhy(pid,id);if(why)return fail(why);const c=rigCost(pid);if(S.credits<c)return fail(lacks(c));
   S.credits-=c;sp.rigs=sp.rigs||[];sp.rigs.push({cell:id,buf:{},status:'Bohrt',busy:false,mined:0});rebuildBase();SFX.unlock();sparkleCell(pid,id,40);
   toast('Bohrturm auf '+cellName(id)+' fördert '+MATS[rigMat(pid,id)].name+' ('+richTxt(rigRich(pid,id))+'es Vorkommen)','good');save();}
-function rigStep(pid,sp,r,dt,f){const m=rigMat(pid,r.cell),b=sumObj(r.buf);
-  if(b<RIG.buf-.01){const x=Math.min(RIG.buf-b,rigRate(pid,r)*f*dt),by=planetRaws(pid).filter(q=>q!==m);r.buf[m]=(r.buf[m]||0)+x*(by.length?.75:1);for(const q of by)r.buf[q]=(r.buf[q]||0)+x*.25/by.length;r.mined=(r.mined||0)+x;sp.deep=(sp.deep||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
+function rigStep(pid,sp,r,dt,f){const m=rigMat(pid,r.cell),b=sumObj(r.buf),cap=rigBuf(r);
+  if(r.bag&&b<cap-1)baggerSweep(pid,sp,r,dt*f);
+  if(sumObj(r.buf)<cap-.01){const x=Math.min(cap-sumObj(r.buf),rigRate(pid,r)*f*dt),raws=planetRaws(pid),by=raws.filter(q=>q!==m);
+    if(r.bag){for(const q of raws)r.buf[q]=(r.buf[q]||0)+x/raws.length;}else{r.buf[m]=(r.buf[m]||0)+x*(by.length?.75:1);for(const q of by)r.buf[q]=(r.buf[q]||0)+x*.25/by.length;}r.mined=(r.mined||0)+x;sp.deep=(sp.deep||0)+x;S.ctr.deep=(S.ctr.deep||0)+x;sp.stats.value+=x*MATS[m].v*pvM(pid);if(TRACK){const t=TRACK.p[pid];t.mats[m]=(t.mats[m]||0)+x;}r.busy=true;}else r.busy=false;
   if(r.claim!=null&&!sp.veh.some(v=>v.id===r.claim&&v.rig===r.cell&&(v.mode==='toRig'||v.mode==='rigload')))r.claim=null;
-  r.status=sumObj(r.buf)>=RIG.buf-.5?(sp.veh.length?'Lager voll – wartet auf Abholung':'Lager voll – kein Fahrzeug holt ab'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt'+(r.claim!=null?' · Fahrzeug holt ab':'');}
+  r.status=sumObj(r.buf)>=rigBuf(r)-.5?(sp.veh.length?'Lager voll – wartet auf Abholung':'Lager voll – kein Fahrzeug holt ab'):f<.6?'Bohrt langsam – zu wenig Energie':'Bohrt'+(r.claim!=null?' · Fahrzeug holt ab':'');}
+/* Erzbagger: also scoops meteor dust off its own parcel and the neighbouring ones */
+function baggerSweep(pid,sp,r,dt){const w=W[pid],pd=planetData(pid),cells=[r.cell,...pd.cells[r.cell].nb];
+  for(const id of cells){const a=w.act.get(id);if(!a||!a.dust||a.sum<=.001)continue;const k=1-Math.exp(-.06*dt),got=a.sum*k;if(got<=0)continue;
+    for(let i=0;i<CELLS;i++)if(a.grid[i])a.grid[i]*=1-k;a.sum-=got;a.saveDirty=true;a.maskStale=true;const amt=got/a.cl.nIn*a.amt;r.buf[a.D.mat]=(r.buf[a.D.mat]||0)+amt;r.mined=(r.mined||0)+amt;
+    if(a.sum<a.cl.nIn*a.thr)finishCell(pid,id,!TRACK);}}
 const rigDock=(pid,r)=>toDir(planetData(pid).cells[r.cell],2.7,0,planetData(pid).R);
 /* vehicles pick up from rigs: whenever they have nothing to clean, or when a rig store is 70 % full */
 function pickRig(pid,sp,v,idle){if(v.fix!=null||!(sp.rigs||[]).length)return null;const cap=tankCap(v)-sumObj(v.tank);if(cap<5)return null;let best=null,bs=1e9;
-  for(const r of sp.rigs){if(r.claim!=null)continue;const b=sumObj(r.buf);if(b<(idle?Math.min(15,RIG.buf*.05):RIG.buf*.7))continue;const d=arcDist(v.d,rigDock(pid,r),planetData(pid).R)-b*.05;if(d<bs){bs=d;best=r;}}
+  for(const r of sp.rigs){if(r.claim!=null)continue;const b=sumObj(r.buf);if(b<(idle?Math.min(15,rigBuf(r)*.05):rigBuf(r)*.7))continue;const d=arcDist(v.d,rigDock(pid,r),planetData(pid).R)-b*.05;if(d<bs){bs=d;best=r;}}
   return best;}
 function rigSec(pid,id){const sp=S.planets[pid],r=(sp.rigs||[]).find(x=>x.cell===id),m=rigMat(pid,id),rich=rigRich(pid,id);
-  if(r)return '<section class="sec"><h3>Bohrturm</h3><p class="note">Fördert '+MATS[m].name+' aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd>'+(planetRaws(pid).length>1?'<dt>Mischung</dt><dd>75 % '+MATS[m].name+', 25 % '+planetRaws(pid).filter(q=>q!==m).map(q=>MATS[q].name).join(', ')+'</dd>':'')+'<dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Lager</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+RIG.buf+' E')+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+upgRow('rigrate')+'</section>';
+  if(r)return '<section class="sec"><h3>'+(r.bag?'Erzbagger':'Bohrturm · Stufe '+(r.lv||0)+' / '+RIG_MAXLV)+'</h3><p class="note">'+(r.bag?'Gräbt alle Rohstoffe des Planeten zu gleichen Teilen aus und räumt Meteoritenstaub auf seiner und den Nachbarparzellen weg. ':'')+'Fördert '+MATS[m].name+' aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>r.status)+'"></dd><dt>Vorkommen</dt><dd>'+richTxt(rich)+' · ×'+dec(rich,2)+'</dd>'+(planetRaws(pid).length>1&&!r.bag?'<dt>Mischung</dt><dd>75 % '+MATS[m].name+', 25 % '+planetRaws(pid).filter(q=>q!==m).map(q=>MATS[q].name).join(', ')+'</dd>':'')+'<dt>Förderung</dt><dd data-b="'+bind(()=>dec(rigRate(pid,r)*60,0)+' '+MATS[m].name+' pro Minute')+'"></dd><dt>Lager</dt><dd data-b="'+bind(()=>fmt(sumObj(r.buf))+' / '+rigBuf(r)+' E')+'"></dd><dt>Gefördert</dt><dd data-b="'+bind(()=>fmt(r.mined||0))+'"></dd></dl>'+
+    (r.bag?'':(r.lv||0)<RIG_MAXLV?'<div class="row"><div class="row-main"><div class="row-t">Bohrturm verbessern</div><div class="row-d">Stufe '+(r.lv||0)+' → '+((r.lv||0)+1)+' · +30 % Förderung. Auf Stufe '+RIG_MAXLV+' wird er zum Erzbagger umgebaut.</div></div><button class="buy" data-act="rigup" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigUpCost(S.planet,r))+'">'+cr(rigUpCost(pid,r))+'</button></div>':'<div class="row"><div class="row-main"><div class="row-t">Zum Erzbagger umbauen</div><div class="row-d">×2,5 Förderung, alle Rohstoffe zu gleichen Teilen, doppeltes Lager, räumt Meteoritenstaub in der Nähe weg.</div></div><button class="buy" data-act="rigbag" data-id="'+id+'" data-en="'+bind(()=>S.credits>=bagCost(S.planet))+'">'+cr(bagCost(pid))+'</button></div>')+upgRow('rigrate')+'</section>';
   if(!S.done[pid])return '';const why=rigWhy(pid,id);
   return '<section class="sec"><h3>Tiefenabbau</h3><p class="note">'+(why?why+'.':'Tiefenvorkommen: <b>'+richTxt(rich)+'</b> (×'+dec(rich,2)+') '+MATS[m].name+'. Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildrig" data-id="'+id+'" data-en="'+bind(()=>S.credits>=rigCost(pid))+'">Bohrturm bauen · '+cr(rigCost(pid))+'</button>')+'</section>';}
 function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const rs=sp.rigs||[],n=rs.length,mx=rigMax(sp);
@@ -1094,6 +1124,15 @@ function rigBaseSec(pid){const sp=S.planets[pid];if(!S.done[pid])return '';const
     '<dl class="kv"><dt>Bohrtürme</dt><dd>'+n+' / '+mx+'</dd><dt>Förderung</dt><dd data-b="'+bind(()=>dec((SP().rigs||[]).reduce((a,r)=>a+rigRate(S.planet,r),0)*60,0)+' E pro Minute')+'"></dd></dl>'+
     (n<mx?'<button class="buy wide" data-act="buildrig" data-id="-1" data-en="'+bind(()=>S.credits>=rigCost(S.planet))+'">Bohrturm auf dem besten Vorkommen · '+cr(rigCost(pid))+'</button><p class="note">Oder tippe eine saubere Parzelle an und baue dort.</p>':'<p class="note">Alle Plätze belegt – '+(sp.stage<5?'baue die Basis aus':'die nächste Ausbaustufe (oben) bringt')+' 2 weitere Bohrtürme.</p>')+
     upgRow('rigrate')+'</section>';}
+function baggerModel(L){const g=new THREE.Group(),v={g,bag:1};const dk=mat(0x1e232c,{roughness:.8});add(Box(4.6,.3,4.4),L.pad,0,.15,0,g,false);
+  for(const sx of[-.95,.95])add(Box(.5,.6,3),dk,sx,.6,0,g);add(Box(2.2,1,2.4),L.amber,0,1.4,-.2,g);add(Box(1.1,.9,1,),L.white,.4,2.35,-.7,g);add(Box(.8,.4,.05),mat(0x223355,{metalness:.6,roughness:.2}),.4,2.45,-.18,g);
+  const boom=add(Box(.35,.35,2.6),L.metal,0,2.2,1.3,g);boom.rotation.x=.35;v.drill=new THREE.Group();v.drill.position.set(0,1.75,2.55);g.add(v.drill);
+  add(Cyl(1.1,1.1,.3,16),L.amber,0,0,0,v.drill).rotation.z=Math.PI/2;for(let k=0;k<8;k++){const a=k/8*TAU,bk=add(Box(.34,.36,.42),L.metal,0,Math.sin(a)*1.15,Math.cos(a)*1.15,v.drill);bk.rotation.x=-a;}
+  add(Cyl(.6,.6,2.6,16),L.glass,-1.65,1.6,.9,g,false);v.fill=add(Cyl(.54,.54,1,16),mat(0xa49c8e,{roughness:.9}),-1.65,.5,.9,g);add(Cyl(.68,.68,.16,16),L.metal,-1.65,2.95,.9,g);
+  add(Box(1.7,.06,1.7),L.dark,2.7,.05,0,g,false);v.dockM=L.mint.clone();v.dockM.emissiveIntensity=.15;add(Box(1.8,.05,.12),v.dockM,2.7,.1,.9,g,false);add(Box(1.8,.05,.12),v.dockM,2.7,.1,-.9,g,false);
+  v.spark=new THREE.MeshStandardMaterial({color:0xffd08a,emissive:0xffb04d,emissiveIntensity:0});add(Sph(.25,8,6),v.spark,0,.5,2.6,g,false);
+  v.beacon=new THREE.MeshStandardMaterial({color:0xff6b5b,emissive:0xff6b5b,emissiveIntensity:1});add(Sph(.15,8,6),v.beacon,.4,2.95,-.7,g,false);
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return v;}
 function rigModel(L){const g=new THREE.Group(),v={g};add(Box(4.6,.3,4.4),L.pad,0,.15,0,g,false);const legM=mat(0xffbf4d,{metalness:.4,roughness:.5});
   for(const[x,z]of[[-.75,-.75],[.75,-.75],[-.75,.75],[.75,.75]])add(Box(.16,6.2,.16),legM,x,3.3,z,g);
   for(const y of[1.6,3.2,4.8])for(const[x,z,w,d]of[[0,-.75,1.5,.1],[0,.75,1.5,.1],[-.75,0,.1,1.5],[.75,0,.1,1.5]])add(Box(w,.1,d),legM,x,y,z,g);
@@ -1450,9 +1489,13 @@ function makeLabel(text,kick){
   const tex=new THREE.CanvasTexture(c);tex.anisotropy=4;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false}));
   const hh=kick?1.5:1.05;s.scale.set(hh*W/H,hh,1);s.renderOrder=20;s.visible=false;s.userData.label=1;s.userData.text=text;return s;
 }
-function matsLib(){return{
-  metal:mat(0xd6dce4,{metalness:.35,roughness:.45}),dark:mat(0x2a3140,{metalness:.4,roughness:.6}),amber:mat(0xffbf4d,{metalness:.2,roughness:.5}),
-  white:mat(0xeef2f6,{metalness:.25,roughness:.4}),pad:mat(0x3a4150,{roughness:.95}),
+/* every planet paints its base and fleet in its own colours: accent (frames, vehicle bodies), body tint, second vehicle colour */
+const PCOL={moon:[0xffbf4d,0x58cdb4],mars:[0xe2553a,0xd9a05b],europa:[0x5fc8ff,0x8fe3d0],titan:[0xe0a13a,0x7fbf5a],io:[0xf2d23c,0xe27a3a],venus:[0xff8a5b,0xf2c66d],ganymed:[0x9ad0b0,0x6f9fe0],enceladus:[0xb8e8ff,0x7fd0ff],triton:[0xc49bff,0x7fe0c8],pluto:[0xff9fd0,0xb8a0ff]};
+const mixHex=(a,b,t)=>new THREE.Color(a).lerp(new THREE.Color(b),t).getHex();
+function matsLib(pid){const P=PCOL[pid||S.planet]||PCOL.moon;return{
+  metal:mat(0xd6dce4,{metalness:.35,roughness:.45}),dark:mat(0x2a3140,{metalness:.4,roughness:.6}),amber:mat(P[0],{metalness:.2,roughness:.5}),acc2:mat(P[1],{metalness:.3,roughness:.45}),acc:P,
+  glow:new THREE.MeshStandardMaterial({color:P[0],emissive:P[0],emissiveIntensity:.9}),
+  white:mat(mixHex(0xeef2f6,P[0],.16),{metalness:.25,roughness:.4}),pad:mat(0x3a4150,{roughness:.95}),
   glass:new THREE.MeshStandardMaterial({color:0x9fc4ff,transparent:true,opacity:.25,roughness:.1,metalness:.2,depthWrite:false}),
   mint:new THREE.MeshStandardMaterial({color:0x6ff2d2,emissive:0x6ff2d2,emissiveIntensity:.6}),
 };}
@@ -1517,9 +1560,9 @@ function pipeCurve(pd,a,b){const R=pd.R,bc=basePlanDir(pd,0,0),dist=arcDist(a,b,
 /* building frame: local +X = plan +x, local +Z = plan -y (so plan coordinates map consistently) */
 function placeOnPlan(obj,pd,x,y,lift){const d=basePlanDir(pd,x,y),fwd=vsc(pd.cells[pd.base].e2,-1);orient(obj,d,fwd,pd.R,lift);}
 function buildBase(pid){
-  const pd=planetData(pid),sp=S.planets[pid],L=matsLib();buildViews={};
+  const pd=planetData(pid),sp=S.planets[pid],L=matsLib(pid);buildViews={};
   for(const id of BORDER){const B=BLD[id];
-    if(sp.bld[id]){const v=buildingModel(id,L);v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0);world.add(v.g);pickables.push(v.g);
+    if(sp.bld[id]){const v=buildingModel(id,L),bl=(sp.blvl&&sp.blvl[id])||0;if(bl){for(let k=0;k<bl;k++){const ring=add(Tor(B.fp*.92,.08,6,40),L.glow,0,.32+k*.22,0,v.g,false);ring.rotation.x=Math.PI/2;}v.g.scale.set(1+.07*bl,1+.2*bl,1+.07*bl);}v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0);world.add(v.g);pickables.push(v.g);
       const lb=makeLabel(B.name);lb.position.set(0,id==='port'?8:5.4,0);v.g.add(lb);buildViews[id]=v;
       if(STATIONS.includes(id)||MACH[id]||id==='roh'||id==='prod'||id==='sell'){v.lamp=new THREE.MeshBasicMaterial({color:0x3fe58a});add(Sph(.32,10,8),v.lamp,0,id==='raff'?6:id==='sell'?4.9:4.5,0,v.g,false);}}
     else if(gs(sp)>=B.stage){const g=new THREE.Group();
@@ -1535,8 +1578,8 @@ function buildBase(pid){
     const lb=makeLabel('Außenlager');lb.position.set(0,4.8,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews[o.key]=v;
     const curve=pipeCurve(pd,toDir(cl,-2.4,0,pd.R),basePlanDir(pd,BLD.roh.pos[0]-2.6,BLD.roh.pos[1]+1.6));const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.min(400,curve.points.length*3),.17,6,false),L.metal);
     const pg=new THREE.Group();pg.add(tube);world.add(pg);buildViews[o.key+'p']={g:pg};}
-  for(const r of sp.rigs||[]){const cl=pd.cells[r.cell],v=rigModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:r.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
-    const lb=makeLabel('Bohrturm');lb.position.set(0,8.2,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews['r'+r.cell]=v;}
+  for(const r of sp.rigs||[]){const cl=pd.cells[r.cell],v=r.bag?baggerModel(L):rigModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:r.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
+    const lb=makeLabel(r.bag?'Erzbagger':'Bohrturm');lb.position.set(0,r.bag?6:8.2,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews['r'+r.cell]=v;}
 }
 function buildBelts(pid){
   const pd=planetData(pid),R=pd.R,sp=S.planets[pid];beltViews={};
@@ -1587,7 +1630,7 @@ function addHeadlights(v,g,z,y,w){const beamM=new THREE.MeshBasicMaterial({color
   v.lights={beamM,poolM,lampM};}
 function vehicleModel(type,L){
   const g=new THREE.Group(),v={g,wheels:[]};const dk=mat(0x1e232c,{roughness:.8});
-  const LK=VT[type].look;if(LK){const s=LK.s,c=mat(LK.col,{metalness:.35,roughness:.5}),y0=LK.hover?.75*s:.3*s;
+  const LK=VT[type].look;if(LK){const s=LK.s,c=mat(mixHex(LK.col,L.acc[0],.35),{metalness:.35,roughness:.5}),y0=LK.hover?.75*s:.3*s;
     add(Box(1.35*s,.5*s,2.3*s),c,0,y0+.4*s,0,g);add(Box(1.1*s,.6*s,.7*s),L.white,0,y0+.95*s,.75*s,g);add(Box(.9*s,.3*s,.06),mat(0x223355,{metalness:.6,roughness:.2}),0,y0+1.05*s,1.11*s,g);
     if(LK.tracks){for(const sx of[-.8,.8]){add(Box(.38*s,.55*s,2.5*s),dk,sx*s,.28*s,0,g);for(const z of[-.9,0,.9]){const w=add(Cyl(.24*s,.24*s,.4*s,10),L.metal,sx*s,.28*s,z*s,g);w.rotation.z=Math.PI/2;v.wheels.push(w);}}}
     else if(LK.hover){const ring=new THREE.MeshStandardMaterial({color:0xb79cff,emissive:0xb79cff,emissiveIntensity:1.2});add(Tor(.75*s,.08*s,6,24),ring,0,.25*s,-.4*s,g,false).rotation.x=Math.PI/2;add(Tor(.75*s,.08*s,6,24),ring,0,.25*s,.6*s,g,false).rotation.x=Math.PI/2;}
@@ -1601,7 +1644,7 @@ function vehicleModel(type,L){
   if(type==='buggy'){add(Box(.95,.3,1.4),L.amber,0,.48,0,g);add(Box(.7,.35,.5),L.white,0,.8,.25,g);wheel(-.55,.45,.28);wheel(.55,.45,.28);wheel(-.55,-.45,.28);wheel(.55,-.45,.28);
     add(Cyl(.34,.34,.72,12),L.glass,0,.85,-.35,g,false).rotation.z=Math.PI/2;v.tank=add(Box(.62,.56,.5),mat(0xa49c8e),0,.85,-.35,g);v.tankY=.85;v.tankH=.56;
     v.brush=add(Cyl(.12,.12,.95,8),L.dark,0,.16,.82,g);v.brush.rotation.z=Math.PI/2;v.brushAxis='x';}
-  if(type==='sauger'){add(Box(1.3,.45,2.2),mat(0x58cdb4,{metalness:.3,roughness:.45}),0,.7,0,g);add(Box(1.1,.6,.7),L.white,0,1.2,.6,g);for(const z of[-.75,0,.75]){wheel(-.72,z,.36);wheel(.72,z,.36);}
+  if(type==='sauger'){add(Box(1.3,.45,2.2),L.acc2,0,.7,0,g);add(Box(1.1,.6,.7),L.white,0,1.2,.6,g);for(const z of[-.75,0,.75]){wheel(-.72,z,.36);wheel(.72,z,.36);}
     add(Box(1.2,.9,1.1),L.glass,0,1.35,-.5,g,false);v.tank=add(Box(1.05,.8,1),mat(0xa49c8e),0,1.3,-.5,g);v.tankY=1.3;v.tankH=.8;
     v.brush=add(Cyl(.16,.16,1.8,10),L.amber,0,.22,1.3,g);v.brush.rotation.z=Math.PI/2;v.brushAxis='x';}
   if(type==='truck'){add(Box(1.9,.5,3.6),L.dark,0,.75,0,g);add(Box(1.8,1.2,1.1),L.white,0,1.55,1.2,g);add(Box(1.6,.5,.06),mat(0x223355,{metalness:.6,roughness:.2}),0,1.8,1.76,g);
@@ -1626,7 +1669,7 @@ function buildWorld(pid){
   scene.background=new THREE.Color(th.sky);
   hemi.color.setHex(th.hemi[0]);hemi.groundColor.setHex(th.hemi[1]);hemi.intensity=th.hemi[2];sun.color.setHex(th.sun[0]);sun.intensity=th.sun[1];
   for(const a of W[pid].act.values())if(a.maskStale)syncMask(a);
-  bv.VL=matsLib();SUBL=PLANETS[pid].freq<=7?3:2;
+  bv.VL=matsLib(pid);SUBL=PLANETS[pid].freq<=7?3:2;
   buildSky(pid);buildPlanetMeshes(pid);buildDebris(pid);buildBase(pid);
   for(const a of W[pid].act.values()){a.mesh=null;buildActiveMesh(pid,a);}
   const mm=new THREE.BufferGeometry();mm.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*64),3));mm.setAttribute('color',new THREE.BufferAttribute(new Float32Array(3*64),3));
@@ -1929,7 +1972,7 @@ function loadCart(){const sp=SP(),c=sp.cart,tot=sumObj(sp.hand);if(!c)return;if(
   for(const m in sp.hand){const x=sp.hand[m]*k;sp.hand[m]-=x;if(sp.hand[m]<1e-6)delete sp.hand[m];c.tank[m]=(c.tank[m]||0)+x;}
   c.got=(c.got||0)+amt;c.mode='back';c.to=null;S.stats.handUnloads=(S.stats.handUnloads||0)+1;S.ctr.cart=(S.ctr.cart||0)+1;SFX.pop();$('#handBtn').classList.remove('pulse');
   floatText3(c.d,2.4,'+'+fmt(amt)+' in den Wagen','mat');toast(fmt(amt)+' E im Sammelwagen – er bringt sie zur Entladestation','good');updateHUD();save();}
-function cartModel(L){const g=new THREE.Group(),v={g,wheels:[]};const dk=mat(0x1e232c,{roughness:.8}),body=mat(0x3fc9a8,{metalness:.25,roughness:.5}),bin=mat(0x3a4250,{roughness:.7});
+function cartModel(L){const g=new THREE.Group(),v={g,wheels:[]};const dk=mat(0x1e232c,{roughness:.8}),body=L.acc2,bin=mat(0x3a4250,{roughness:.7});
   add(Box(1.1,.35,1.8),body,0,.5,0,g);add(Box(.9,.45,.45),L.white,0,.9,.6,g);add(Box(.72,.22,.05),mat(0x223355,{metalness:.6,roughness:.2}),0,.98,.84,g);
   add(Box(1.05,.08,1),bin,0,.72,-.32,g);for(const[x,z,w,d]of[[-.5,-.32,.06,1],[.5,-.32,.06,1],[0,-.82,1.05,.06],[0,.18,1.05,.06]])add(Box(w,.45,d),bin,x,.95,z,g);
   v.tank=add(Box(.92,.4,.9),mat(0xa49c8e),0,.95,-.32,g);v.tankY=.95;v.tankH=.4;
@@ -1978,7 +2021,7 @@ function stepTravel(dt){const F=travelFx;if(!F||!world)return;cam.gd=null;
     /* upload textures and compile shaders now, while only stars are on screen, so the fly-in doesn't stutter */
     try{world.traverse(o=>{const m=o.material;if(!m)return;for(const mm of Array.isArray(m)?m:[m])for(const k of['map','alphaMap','emissiveMap'])if(mm[k]&&renderer.initTexture)renderer.initTexture(mm[k]);});renderer.compile(scene,camera);}catch(e){}
     F.ph=1;F.t=0;F.hold=2;updateHUD();}
-  else if(F.ph===1&&F.t>=TRV[1]){world.position.set(0,0,0);if(F.bg1)scene.background.copy(F.bg1);travelFx=null;toast('Willkommen auf dem '+PLANETS[F.pid].name,'good');updateHUD();setTimeout(save,900);}}
+  else if(F.ph===1&&F.t>=TRV[1]){world.position.set(0,0,0);renderer.shadowMap.autoUpdate=true;for(const ds of debrisSets)ds.im.visible=!mapMode;if(F.bg1)scene.background.copy(F.bg1);travelFx=null;toast('Willkommen auf dem '+PLANETS[F.pid].name,'good');updateHUD();setTimeout(save,900);}}
 /* runs after camUpdate: blends the normal camera into a view of the whole planet from afar, slides the planets, and back */
 function travelCam(){const F=travelFx;if(!F||!world)return;const R=planetData(S.planet).R,k=Math.min(1,F.t/TRV[F.ph]);
   let far,b,slide;if(F.ph===0){far=smooth(0,.55,k);b=smooth(0,.3,k);slide=-smooth(.5,1,k);}else{far=1-smooth(.45,1,k);b=1-smooth(.7,1,k);slide=1-smooth(0,.5,k);}
@@ -1986,6 +2029,8 @@ function travelCam(){const F=travelFx;if(!F||!world)return;const R=planetData(S.
   const dist=lerp(R+cam.alt,R*3.4,far),pos=dir.clone().multiplyScalar(dist),tgt=dir.clone().multiplyScalar(R*(1-far));
   camera.position.copy(pos);camera.up.set(cam.N[0],cam.N[1],cam.N[2]);camera.lookAt(tgt);const oq=camera.quaternion.clone();
   camera.position.copy(np.lerp(pos,b));camera.quaternion.copy(nq.slerp(oq,b));camera.updateMatrixWorld();
+  /* far away the small debris and fresh shadows are not visible – skip them for a smoother flight */
+  const lite=far>.35;for(const ds of debrisSets)ds.im.visible=!lite&&!mapMode;renderer.shadowMap.autoUpdate=!lite;
   const right=new THREE.Vector3(1,0,0).applyQuaternion(oq);world.position.copy(right).multiplyScalar(slide*R*1.9);
   if(F.ph===1&&F.bg0&&F.bg1)scene.background.copy(F.bg0).lerp(F.bg1,smooth(0,.6,k));}
 function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in W)delete W[k];S=freshSave();initRuntime('moon');mapMode=false;buildWorld('moon');startCam();setMapMode(false);closeSheet();showWelcome();updateHUD();save();try{cloudPush(serialize(),true);}catch(e){}}
@@ -2035,7 +2080,7 @@ const SEC={
 function machSec(id){const D=MACH[id],B0=BLD[id];
   return '<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+D.rec.map(rc=>rc.n+' '+MATS[rc.in].name+' → '+rc.k+' '+MATS[rc.out].name+' ('+dec(rc.t,1)+' s · Wert '+fmt(MATS[rc.in].v*rc.n*pvM())+' → '+fmt(MATS[rc.out].v*rc.k*pvM())+' Cr)').join('<br>')+'<br>Energie: '+dec(D.energy,1)+'/s während der Arbeit.</p>'+
   '<dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>SP().mach[id].status||'–')+'"></dd><dt>Eingang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].in)+' / '+fmt(machInCap(id)))+'"></dd><dt>Ausgang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].out)+' / '+fmt(machOutCap(id)))+'"></dd></dl>'+
-  '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
+  '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+(id==='presse'?upgRow('pspeed'):'')+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
 function handRow(id){return '<div class="row"><div class="row-main"><div class="row-t">Sammelbehälter hier entladen</div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().hand))+' / '+fmt(handCap())+' E im Behälter')+'"></div></div><button class="buy" data-act="unhand" data-id="'+id+'" data-en="'+bind(()=>sumObj(SP().hand)>=.05)+'">Entladen</button></div>';}
 function stationSec(id){const B0=BLD[id];
   return handRow(id)+'<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+B0.desc+' Fahrzeuge laden hier ihren Tank ab, das Material läuft über das Förderband weiter.</p><dl class="kv"><dt>Andockplätze</dt><dd data-b="'+bind(()=>SP().st[id].docks.filter(x=>x).length+' belegt von '+stDocks(id))+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(SP().st[id].buf))+' / '+fmt(stBuf(id)))+'"></dd><dt>Entladetempo</dt><dd>'+dec(B0.st.rate*uv('urate'),1)+' E/s</dd><dt>Passend für</dt><dd>'+Object.keys(VT).filter(t=>B0.st.acc.includes(VT[t].size)).map(t=>VT[t].name).join(', ')+'</dd><dt>In der Warteschlange</dt><dd data-b="'+bind(()=>String(SP().veh.filter(v=>v.sid===id&&v.status==='Wartet auf Andockplatz').length))+'"></dd></dl>'+upgRow('urate')+upgRow('ubuf')+(SP().stage>=3?upgRow('udock'):'')+'</section>';}
@@ -2106,6 +2151,7 @@ function renderSheet(){
     else if(id==='roh')h=SEC.roh();else if(id==='prod')h=SEC.prod();else if(id==='sell')h=SEC.sell();else if(id==='energy'||id==='hq'||id==='rtg'||id==='geo'||id==='reactor')h=(BNOTE[id]?'<p class="note">'+BNOTE[id]+'</p>':'')+SEC.energy();else if(id==='research')h=SEC.research();
     else if(id==='hangar')h=SEC.hangar();else if(id==='lifter')h=SEC.lifter();else if(MACH[id])h=machSec(id);else if(STATIONS.includes(id))h=stationSec(id);
     else h='<p class="note">'+(BNOTE[id]||B0.desc)+'</p>'+(id==='werkstatt'?'<section class="sec"><h3>Basis</h3>'+upgRow('slots')+'</section>':'');
+    if(sp.bld[id]&&BLV_REQ[id])h+=blSec(id);
     if(!sheetState.focused){sheetState.focused=1;focusDir(basePlanDir(pd,B0.pos[0],B0.pos[1]),Math.min(cam.alt,fitAlt(20)));}}
   else if(kind==='belt'){const b=BELTS.find(x=>x.id===arg);k='Förderband';t=BLD[b.from].name+' → '+BLD[b.to].name;
     h+='<section class="sec"><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>beltStatus(b))+'"></dd><dt>Länge</dt><dd>'+dec(b.L,1)+' m</dd><dt>Tempo</dt><dd>'+dec(beltSpeed(),1)+' m/s</dd><dt>Paketgröße</dt><dd>'+dec(packet(),1)+' E · Produkte '+Math.max(1,Math.round(packet()/8))+' Stück</dd><dt>Max. Durchsatz</dt><dd>'+dec(beltSpeed()/BSP*packet(),1)+' E/s</dd><dt>Energie</dt><dd>'+dec(.1*uv('beff')*PLANETS[pid].energy,2)+'/s</dd></dl></section>'+
@@ -2165,7 +2211,7 @@ const ACT={
   research(d){startResearch(d.id);},travel(d){travelTo(d.id);return 'keep';},unlock(d){unlockPlanet(d.id);return 'keep';},
 flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);return 'keep';},
   sound(){S.sound=!S.sound;if(!S.sound)scrub(0);},
-  buydrone(){buyDrone();},claimpg(d){claimPg(d.id);},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
+  buydrone(){buyDrone();},buybl(d){buyBl(d.id);},rigup(d){rigUp(+d.id);},rigbag(d){rigToBagger(+d.id);},claimpg(d){claimPg(d.id);},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autoorder(){const sp=SP();sp.autoOrder=sp.autoOrder===false;toast(sp.autoOrder!==false?'Frachtauftrag wird automatisch bedient':'Frachtauftrag nicht mehr automatisch');},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
@@ -2210,7 +2256,7 @@ const LCOL=[0x3fe58a,0xffd23f,0xff4d3d];
 function flowReport(pid){const sp=S.planets[pid],out=[];const o=CUR;CUR=pid;try{
   const add=(id,name,lvl,why,fix)=>out.push({id,name,lvl,why,fix:fix||[]});const rf=rohSum(sp)/rohCap(),pf=prodSum(sp)/prodCap();
   if(sp.ef<.99&&(sp.veh.length||sp.bld.presse||(sp.rigs||[]).length)){const night=!dayInfo(pid,sp).day;add(sp.bld.energy?'energy':'hq','Energie',2,night?'Nacht und der Speicher ist leer – mehr Akkupark, Radioisotopen-Generator oder Kernreaktor.':'Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.',night?['ecap','energy']:['energy','ecap']);}
-  {const rs=sp.rigs||[],full=rs.filter(r=>sumObj(r.buf)>=RIG.buf-.5).length,high=rs.filter(r=>sumObj(r.buf)>=RIG.buf*.7).length;
+  {const rs=sp.rigs||[],full=rs.filter(r=>sumObj(r.buf)>=rigBuf(r)-.5).length,high=rs.filter(r=>sumObj(r.buf)>=rigBuf(r)*.7).length;
     if(full)add('roh','Bohrtürme',2,full+(full>1?' Bohrtürme sind':' Bohrturm ist')+' voll – '+(sp.veh.length?'die Fahrzeuge holen nicht schnell genug ab. Mehr Fahrzeuge, größere Tanks oder schnelleres Fahrwerk.':'kauf Fahrzeuge, die abholen.'),['vtank','vspeed','urate']);
     else if(high)add('roh','Bohrtürme',1,'Die Lager der Bohrtürme füllen sich – die Abholung wird knapp.',['vtank','vspeed']);}
   for(const s of STATIONS)if(sp.bld[s]){const f=sumObj(sp.st[s].buf)/stBuf(s),full=rf>.97,cause=full?'das Rohstofflager voll ist':'das Förderband zu langsam abtransportiert';
@@ -2473,7 +2519,7 @@ function updLocks(){
   updLabels();
 }
 const bvv0=()=>buildViews;
-let nightVis=0;
+let nightVis=0,maskAcc=0;
 function updDayNight(dt){const pid=S.planet,sp=SP(),th=PLANETS[pid].theme,sd=sunDir(pid,sp),lv=smooth(-.14,.3,vdot(sd,cam.d));
   sun.intensity=th.sun[1]*lv;hemi.intensity=th.hemi[2]*(.34+.66*lv);amb.intensity=.08+.08*lv;nightVis=lerp(nightVis,1-lv,1-Math.exp(-3*dt));
   const nf=clamp((nightVis-.2)/.6,0,1);for(const vw of cartView?[...vehViews.values(),cartView]:vehViews.values())if(vw.lights){vw.lights.beamM.opacity=.22*nf;vw.lights.poolM.opacity=.5*nf;vw.lights.lampM.emissiveIntensity=.2+1.6*nf;}
@@ -2490,6 +2536,7 @@ function updateVisuals(dt,t){
   updDayNight(dt);
   const pid=S.planet,sp=SP(),pd=planetData(pid),R=pd.R,w=W[pid];
   const mt=MAP_ALT();if(!mapMode&&cam.alt>mt*1.05)setMapMode(true);else if(mapMode&&cam.alt<mt*.95)setMapMode(false);
+  maskAcc+=dt;if(maskAcc>1){maskAcc=0;for(const a of w.act.values())if(a.maskStale&&a.dust)syncMask(a);}
   for(const a of w.act.values())if(a.texDirty&&a.tex){a.tex.needsUpdate=true;a.texDirty=false;}
   debAcc+=dt;if(debAcc>.15){debAcc=0;for(const id of w.act.keys())refreshDebrisCell(pid,id,false);}
   mapAcc+=dt;if(mapAcc>1){mapAcc=0;if(mapMode)for(const id of w.act.keys())paintCell(pid,id);}
@@ -2535,8 +2582,9 @@ function updateVisuals(dt,t){
   if(bvv0().reactor&&bvv0().reactor.core)bvv0().reactor.core.emissiveIntensity=1+.5*Math.sin(t*3.1);
   for(const id of['geo','reactor'])if(bvv0()[id]&&bvv0()[id].steam&&!mapMode&&Math.random()<dt*8)emit3(basePlanDir(pd,BLD[id].pos[0]-(id==='reactor'?1:.7),BLD[id].pos[1]),R+(id==='reactor'?4.8:4),0xdfe6ef,1,.25,1.2);
   for(const r of sp.rigs||[]){const rv=buildViews['r'+r.cell];if(!rv)continue;const cl=pd.cells[r.cell];
-    if(r.busy){rv.drill.rotation.y+=dt*9;rv.drill.position.y=3.3-.35*(.5+.5*Math.sin(t*2.2+r.cell));rv.spark.emissiveIntensity=1.2+Math.sin(t*23+r.cell)*.6;if(!mapMode&&Math.random()<dt*14)emit3(cl.c,R+.4,DIRT[cl.type].light,1,1.6,1.6);}else rv.spark.emissiveIntensity=0;
-    const f=Math.min(1,sumObj(r.buf)/RIG.buf),hh=Math.max(.02,f*2.4);rv.fill.scale.y=hh;rv.fill.position.y=.3+hh/2;rv.dockM.emissiveIntensity=r.claim!=null?.9:.15;
+    if(r.busy&&rv.bag){rv.drill.rotation.x+=dt*2.5;rv.spark.emissiveIntensity=.8;if(!mapMode&&Math.random()<dt*18)emit3(toDir(cl,0,2.6,R),R+.6,DIRT[cl.type].light,1,1.8,1.6);}
+    else if(r.busy){rv.drill.rotation.y+=dt*9;rv.drill.position.y=3.3-.35*(.5+.5*Math.sin(t*2.2+r.cell));rv.spark.emissiveIntensity=1.2+Math.sin(t*23+r.cell)*.6;if(!mapMode&&Math.random()<dt*14)emit3(cl.c,R+.4,DIRT[cl.type].light,1,1.6,1.6);}else rv.spark.emissiveIntensity=0;
+    const f=Math.min(1,sumObj(r.buf)/rigBuf(r)),hh=Math.max(.02,f*2.4);rv.fill.scale.y=hh;rv.fill.position.y=.3+hh/2;rv.dockM.emissiveIntensity=r.claim!=null?.9:.15;
     rv.beacon.color.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissive.setHex(f>=.99?0xff6b5b:f>=.7?0xffbf4d:0x3fe58a);rv.beacon.emissiveIntensity=Math.sin(t*3+r.cell)>.4?1.6:.35;}
   for(const o of sp.outposts){const ov=buildViews[o.key];if(!ov||!ov.fill)continue;const f=Math.min(1,sumObj(o.buf)/stBuf(o.key)),hh=Math.max(.02,f*2.9);ov.fill.scale.y=hh;ov.fill.position.y=.55+hh/2;
     ov.docks.forEach((m,k)=>{m.emissiveIntensity=k>=stDocks(o.key)?0:o.docks[k]?.9+.3*Math.sin(t*8):.15;});}

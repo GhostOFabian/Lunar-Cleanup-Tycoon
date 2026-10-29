@@ -136,6 +136,13 @@ with game() as (pg, errs):
         for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
           for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}}}return {n,hits,veh:sp.veh.length,dr}}""")
     show('full base: inside buildings + drones', r); check(sum(r['hits'].values()) <= 3 and r['dr'].get('stdrop', 0) > 0, 'full base: vehicles inside buildings or drones never deliver to stations')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.credits+=1e13;
+      const why0=t.blWhy('presse');for(const u of t.BLV_REQ.presse)sp.upg[u]=t.upMax(u);const f0=t.blF('presse'),c0=t.machInCap('presse');t.buyBl('presse');const f1=t.blF('presse'),c1=t.machInCap('presse');
+      const ps=t.uv('pspeed');t.S.done.moon=1;for(const c of pd.cells)if(c.kind!=='base')w.clean[c.id]=1;if(!(sp.rigs||[]).length)t.buildRig(-1);const r=sp.rigs[0];for(let i=0;i<5;i++)t.rigUp(r.cell);const rate0=t.rigRate('moon',r);t.rigToBagger(r.cell);const rate1=t.rigRate('moon',r);
+      const nb=pd.cells[r.cell].nb.find(id=>pd.cells[id].kind!=='base');w.act.delete(nb);const a=t.activate('moon',nb,null,true,'dust');t.dirtyAt(a,0,0,8,.95);const s0=a.sum;r.buf={};for(let i=0;i<60;i++)t.rigStep('moon',sp,r,1,1);
+      const m1=t.matsLib('moon'),m2=t.matsLib('mars');
+      return {why0,f0,f1,c0,c1,ps,lv:r.lv,bag:r.bag,rate:rate1/rate0,swept:s0-(w.act.get(nb)?w.act.get(nb).sum:0),s0,col:[m1.acc[0],m2.acc[0]]}}""")
+    show('press/building level/bagger/colours', r); check(r['why0'] != '' and r['f1'] > r['f0'] and r['c1'] > r['c0'] and r['ps'] > 1 and r['lv'] == 5 and r['bag'] == 1 and abs(r['rate'] - 2.5) < .01 and r['swept'] > r['s0'] * .5 and r['col'][0] != r['col'][1], 'press upgrade / building levels / Erzbagger / planet colours')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

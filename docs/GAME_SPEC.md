@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.3)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.4)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -168,6 +168,12 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 
 ## 9f. Reisen (ab v4.8)
 - Nahtlos ohne Ladebild: Phase 1 (1,0 s) Kamera blendet in eine Gesamtansicht (3,4 R, Blick auf die Mitte), der Planet gleitet seitlich weg; Wechsel; Phase 2 (1,25 s) neuer Planet gleitet herein, Kamera blendet in die normale Ansicht (Höhe für 30 m). Eingaben sind währenddessen gesperrt. Beim Wechsel: `renderer.initTexture` + `renderer.compile` vorab, 2 Bilder Pause ohne Animationsfortschritt, Himmel blendet über, Hintergrund-Simulation und Speichern warten bis nach der Ankunft.
+
+## 9g. Gebäudestufen, Bohrturm-Stufen, Erzbagger, Planetenfarben (ab v5.4)
+- Gebäudestufe (`sp.blvl[id]`, max. 3 + Ausbaustufe): verfügbar, wenn alle zugehörigen Upgrades auf Maximum sind (`BLV_REQ`: Presse = Hydraulik-Tuning + Hochdruckpresse; Schmelze/Raffinerie = Hydraulik-Tuning + Größere Puffer; Stationen = Schnellentladung + Größere Trichter; Lager/Frachtraum = Kapazitäts-Upgrade; Energiezentrale = Solar + Akkupark). Kosten `max(4 000, 15 × Baukosten) × diff × 3^Stufe`. Wirkung `blF = 1 + 0,5/0,4/0,3 × Stufe` auf Tempo und Puffer bzw. Kapazität bzw. Solar und Speicher. Modell: ×(1 + 0,07 n) Breite, ×(1 + 0,2 n) Höhe, n leuchtende Ringe.
+- Hochdruckpresse (`pspeed`, lokal): Presse-Tempo × (1 + 0,35 × Stufe), max. 10.
+- Bohrturm-Stufe `r.lv` 0–5: +30 % je Stufe, Kosten `2 500 × diff × 1,9^lv`. Auf Stufe 5 Umbau zum Erzbagger (`r.bag`, `60 000 × diff`): ×2,5 Förderung, alle Planetenrohstoffe zu gleichen Teilen, Lager 600 E, räumt Meteoritenstaub auf eigener und Nachbarparzellen (6 %/s).
+- Planetenfarben `PCOL[pid]` = [Akzent, Zweitfarbe]: Akzent ersetzt Gelb an Gebäuden und Fahrzeugen, Weiß wird 16 % zum Akzent getönt, Industriesauger und Sammelwagen in der Zweitfarbe, Spezialfahrzeuge 35 % zum Akzent gemischt.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.
