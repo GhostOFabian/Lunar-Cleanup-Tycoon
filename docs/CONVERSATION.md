@@ -41,6 +41,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 25. Silo und Klotz am Bohrturm clippen in die Turmstreben; **Fahrzeuge sollen beim Herauszoomen orange blinken**. → v4.6.
 26. **Meteoriten sollen viel größere Flächen und viel mehr verschmutzen**, gern öfter, vor allem auf 100 % sauberen Planeten. → v4.7.
 27. Jeder Planet kommt irgendwann an den Punkt, an dem er nicht mehr ausgebaut werden kann – es braucht **immer eine Möglichkeit, nach 100 % weiter auszubauen**; **Reisen soll ein nahtloser Wechsel sein**. → v4.8.
+28. Reisen noch **ruckelig**, soll flüssiger laufen. → v4.8.1.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

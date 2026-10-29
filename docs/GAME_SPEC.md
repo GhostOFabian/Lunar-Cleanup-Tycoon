@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.8)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.8.1)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -164,7 +164,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Anzeige im Basis-Fenster an Stelle von „Höchste Stufe erreicht“ mit Fortschrittsbalken.
 
 ## 9f. Reisen (ab v4.8)
-- Nahtlos ohne Ladebild: Phase 1 (0,9 s) Kamera blendet in eine Gesamtansicht (3,4 R, Blick auf die Mitte), der Planet gleitet seitlich weg; Wechsel; Phase 2 (1,1 s) neuer Planet gleitet herein, Kamera blendet in die normale Ansicht (Höhe für 30 m). Eingaben sind währenddessen gesperrt.
+- Nahtlos ohne Ladebild: Phase 1 (1,0 s) Kamera blendet in eine Gesamtansicht (3,4 R, Blick auf die Mitte), der Planet gleitet seitlich weg; Wechsel; Phase 2 (1,25 s) neuer Planet gleitet herein, Kamera blendet in die normale Ansicht (Höhe für 30 m). Eingaben sind währenddessen gesperrt. Beim Wechsel: `renderer.initTexture` + `renderer.compile` vorab, 2 Bilder Pause ohne Animationsfortschritt, Himmel blendet über, Hintergrund-Simulation und Speichern warten bis nach der Ankunft.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

@@ -1929,12 +1929,18 @@ function unlockPlanet(pid){const P=PLANETS[pid];if(S.planets[pid])return;const p
   if(!powOK(pid))setTimeout(()=>toast('Deine Fahrzeuge sind hier zu schwach: Doppelbürsten Stufe '+powReq(pid)+' nötig','bad'),2600);}
 /* Seamless travel: the camera pulls back, the planet flies off to the side, the next one flies in from the other side and the camera comes down. */
 let travelFx=null;
-function travelTo(pid){if(pid===S.planet||!S.planets[pid]||travelFx)return;closeSheet();SFX.planet();save();if(stroke)endStroke();G=null;if(mapMode)setMapMode(false);
-  travelFx={pid,ph:0,t:0};}
-const TRV=[.9,1.1];
-function stepTravel(dt){const F=travelFx;if(!F||!world)return;F.t+=Math.min(dt,.05);cam.gd=null;
-  if(F.ph===0&&F.t>=TRV[0]){S.planet=F.pid;lastCell=-1;mapMode=false;buildWorld(F.pid);startCam();cam.alt=fitAlt(30);cam.gd=null;setMapMode(false);F.ph=1;F.t=0;updateHUD();}
-  else if(F.ph===1&&F.t>=TRV[1]){world.position.set(0,0,0);travelFx=null;toast('Willkommen auf dem '+PLANETS[F.pid].name,'good');updateHUD();save();}}
+function travelTo(pid){if(pid===S.planet||!S.planets[pid]||travelFx)return;closeSheet();SFX.planet();if(stroke)endStroke();G=null;if(mapMode)setMapMode(false);
+  travelFx={pid,ph:0,t:0,hold:0};}
+const TRV=[1,1.25];
+function stepTravel(dt){const F=travelFx;if(!F||!world)return;cam.gd=null;
+  if(F.hold>0){F.hold--;return;}            // frames right after the rebuild don't advance the animation
+  F.t+=Math.min(dt,1/30);
+  if(F.ph===0&&F.t>=TRV[0]){F.bg0=scene.background.clone();S.planet=F.pid;lastCell=-1;mapMode=false;buildWorld(F.pid);startCam();cam.alt=fitAlt(30);cam.gd=null;setMapMode(false);
+    F.bg1=scene.background.clone();scene.background.copy(F.bg0);
+    /* upload textures and compile shaders now, while only stars are on screen, so the fly-in doesn't stutter */
+    try{world.traverse(o=>{const m=o.material;if(!m)return;for(const mm of Array.isArray(m)?m:[m])for(const k of['map','alphaMap','emissiveMap'])if(mm[k]&&renderer.initTexture)renderer.initTexture(mm[k]);});renderer.compile(scene,camera);}catch(e){}
+    F.ph=1;F.t=0;F.hold=2;updateHUD();}
+  else if(F.ph===1&&F.t>=TRV[1]){world.position.set(0,0,0);if(F.bg1)scene.background.copy(F.bg1);travelFx=null;toast('Willkommen auf dem '+PLANETS[F.pid].name,'good');updateHUD();setTimeout(save,900);}}
 /* runs after camUpdate: blends the normal camera into a view of the whole planet from afar, slides the planets, and back */
 function travelCam(){const F=travelFx;if(!F||!world)return;const R=planetData(S.planet).R,k=Math.min(1,F.t/TRV[F.ph]);
   let far,b,slide;if(F.ph===0){far=smooth(0,.55,k);b=smooth(0,.3,k);slide=-smooth(.5,1,k);}else{far=1-smooth(.45,1,k);b=1-smooth(.7,1,k);slide=1-smooth(0,.5,k);}
@@ -1942,7 +1948,8 @@ function travelCam(){const F=travelFx;if(!F||!world)return;const R=planetData(S.
   const dist=lerp(R+cam.alt,R*3.4,far),pos=dir.clone().multiplyScalar(dist),tgt=dir.clone().multiplyScalar(R*(1-far));
   camera.position.copy(pos);camera.up.set(cam.N[0],cam.N[1],cam.N[2]);camera.lookAt(tgt);const oq=camera.quaternion.clone();
   camera.position.copy(np.lerp(pos,b));camera.quaternion.copy(nq.slerp(oq,b));camera.updateMatrixWorld();
-  const right=new THREE.Vector3(1,0,0).applyQuaternion(oq);world.position.copy(right).multiplyScalar(slide*R*1.9);}
+  const right=new THREE.Vector3(1,0,0).applyQuaternion(oq);world.position.copy(right).multiplyScalar(slide*R*1.9);
+  if(F.ph===1&&F.bg0&&F.bg1)scene.background.copy(F.bg0).lerp(F.bg1,smooth(0,.6,k));}
 function resetGame(){try{localStorage.removeItem(KEY);}catch(e){}for(const k in W)delete W[k];S=freshSave();initRuntime('moon');mapMode=false;buildWorld('moon');startCam();setMapMode(false);closeSheet();showWelcome();updateHUD();save();try{cloudPush(serialize(),true);}catch(e){}}
 
 /* ===================== 11. UI sheets ===================== */
@@ -2480,7 +2487,7 @@ function frame(now){
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;T0+=dt;
   holdCheck(now);edgePan(dt);
   simStep(S.planet,dt,true);
-  bgAcc+=dt;if(bgAcc>=1){for(const pid in S.planets)if(pid!==S.planet&&W[pid])simStep(pid,bgAcc,false);bgAcc=0;}
+  bgAcc+=dt;if(bgAcc>=1&&!travelFx){for(const pid in S.planets)if(pid!==S.planet&&W[pid])simStep(pid,bgAcc,false);bgAcc=0;}
   researchTick(dt);
   updateVisuals(dt,T0);camUpdate(dt);travelCam();
   renderer.render(scene,camera);

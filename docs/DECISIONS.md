@@ -101,3 +101,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Endloser Ausbau pro Planet über Ausbaustufen, die Credits und Tiefenförderung auf genau diesem Planeten verlangen – jeder Planet bleibt so dauerhaft ausbaufähig, auch wenn Reinigung immer schneller wird.
 - Ausbaustufen heben die Maximalstufe der lokalen Anlagen-Upgrades an statt neue Gebäude zu bringen – auf der Basis ist kein Platz mehr, und die vorhandenen Systeme skalieren weiter.
 - Reisen als Kamerafahrt (Pose-Blend + seitliches Gleiten) statt Schwarzblende; der Welt-Neuaufbau passiert in dem Moment, in dem kein Planet im Bild ist.
+- Ruckler beim Reisen: Neuaufbau, Textur-Upload und Shader-Kompilierung passieren gebündelt im Sternen-Moment, die Animationszeit läuft dabei nicht weiter; Speichern und Hintergrund-Simulation werden verschoben.
