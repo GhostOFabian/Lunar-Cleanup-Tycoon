@@ -112,20 +112,11 @@ td .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-rig
 .strip img{height:auto;border-radius:18px;border:1px solid var(--line);aspect-ratio:585/1266;object-fit:cover;width:100%}
 .strip figcaption{font-size:var(--step--1);color:var(--ink-2);margin-top:8px}
 
-/* developer */
-.dev{padding-block:clamp(44px,6vw,80px);border-top:1px solid var(--line)}
-.dev .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,56px)}
-.files{display:grid;gap:8px;margin-top:18px}
-.files div{display:grid;grid-template-columns:minmax(0,13ch) minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.files code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88rem;color:var(--clean);overflow-wrap:anywhere}
-.files span{color:var(--ink-2);font-size:.95rem}
-pre{margin:0;overflow-x:auto;background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:16px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.86rem;line-height:1.6;color:var(--ink)}
-pre .c{color:var(--ink-3)}
 footer{padding-block:32px 48px;border-top:1px solid var(--line);color:var(--ink-3);font-size:var(--step--1)}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
 
 @media (max-width:900px){
-  .hero .wrap,.feature .wrap,.feature.flip .wrap,.dev .wrap{grid-template-columns:minmax(0,1fr)}
+  .hero .wrap,.feature .wrap,.feature.flip .wrap{grid-template-columns:minmax(0,1fr)}
   .feature.flip .shots{order:0}
   .loop ol{grid-template-columns:repeat(2,minmax(0,1fr))}
   .loop li:last-child{grid-column:1/-1}
@@ -150,7 +141,6 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
       <p class="lead">Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.</p>
       <div class="cta">
         <a class="btn primary" href="prototype/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Im Browser spielen</a>
-        <a class="btn" href="https://github.com/GhostOFabian/Lunar-Cleanup-Tycoon"><svg viewBox="0 0 24 24"><path d="M8 6 2 12l6 6M16 6l6 6-6 6"/></svg>Code auf GitHub</a>
       </div>
       <div class="facts">
         <div><b>10</b><span>Planeten, Mond bis Pluto</span></div>
@@ -306,39 +296,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
   </div>
 </section>
 
-<section class="dev" aria-labelledby="d-h">
-  <div class="wrap">
-    <div>
-      <div class="eyebrow">Für Entwickler</div>
-      <h2 id="d-h" style="margin-top:10px">Mit Claude Code weiterbauen</h2>
-      <p style="margin-top:14px;color:var(--ink-2)">Der Browser-Prototyp ist die Referenz: eine einzige HTML-Datei mit three.js. Später wird er nach Unity 6 für Android und iOS übertragen. Die ganze Entwicklungsgeschichte steht im Repository.</p>
-      <div class="files">
-        <div><code>prototype/</code><span>Das Spiel und die Headless-Tests</span></div>
-        <div><code>CLAUDE.md</code><span>Projektregeln für Claude Code</span></div>
-        <div><code>docs/GAME_SPEC.md</code><span>Alle Systeme und Zahlen</span></div>
-        <div><code>docs/CONVERSATION.md</code><span>Wünsche und Feedback im Verlauf</span></div>
-        <div><code>docs/PROGRESS.md</code><span>Stand und nächste Schritte</span></div>
-      </div>
-    </div>
-    <div style="min-width:0;display:flex;flex-direction:column;gap:12px;justify-content:center">
-<pre><span class="c"># einmalig</span>
-pip install playwright
-python -m playwright install chromium
-
-<span class="c"># Tests</span>
-cd prototype/tests
-python build_test_page.py
-python regression.py
-python layout_check.py</pre>
-      <p style="color:var(--ink-3);font-size:var(--step--1)">Die Tests prüfen die komplette Spiellogik ohne Grafik: Reinigung, Fahrzeuge, Wegfindung, Rakete, 8 Stunden offline sowie Speichern und Laden.</p>
-    </div>
-  </div>
-</section>
-
 <footer>
   <div class="wrap">
     <span>Lunar Cleanup Tycoon · Prototyp v3.6 · Oktober 2026</span>
-    <span>Screenshots aus dem Browser-Prototyp</span>
+    <span>Alle Rechte vorbehalten</span>
   </div>
 </footer>
 
