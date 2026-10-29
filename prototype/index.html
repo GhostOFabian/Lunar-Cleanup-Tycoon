@@ -34,6 +34,8 @@ button:focus-visible{outline:2px solid var(--clean);outline-offset:2px}
 .cred{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:14px;min-width:0}
 .cred-v{display:flex;flex-direction:column;line-height:1.05}
 #credits{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.01em;font-variant-numeric:tabular-nums;color:var(--credit)}
+#credits.long{font-size:17px}
+.planet-chip{min-width:96px}
 #rate{font-size:11px;color:var(--clean);font-variant-numeric:tabular-nums;white-space:nowrap;min-height:12px}
 .planet-chip{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:14px;text-align:left}
 .planet-chip>span:last-child{min-width:0}
@@ -67,7 +69,7 @@ button:focus-visible{outline:2px solid var(--clean);outline-offset:2px}
 .flowchip{align-self:flex-start;display:flex;align-items:center;gap:8px;max-width:min(440px,100%);padding:6px 12px 6px 9px;border-radius:12px;font-size:12.5px;line-height:1.35;color:var(--ink-1,#eef2fb);text-align:left}
 .flowchip i,.ldot{flex:none;width:11px;height:11px;border-radius:50%;background:#3fe58a;box-shadow:0 0 8px currentColor}
 .ldot{display:inline-block;margin-right:7px;vertical-align:-1px}
-.l0{background:#3fe58a;color:#3fe58a}.l1{background:#ffd23f;color:#ffd23f}.l2{background:#ff4d3d;color:#ff4d3d}.lx{background:#6c7588;color:#6c7588;box-shadow:none}
+.l0,.flowchip i.l0{background:#3fe58a;color:#3fe58a}.l1,.flowchip i.l1{background:#ffd23f;color:#ffd23f}.l2,.flowchip i.l2{background:#ff4d3d;color:#ff4d3d}.lx{background:#6c7588;color:#6c7588;box-shadow:none}
 .warnchip{align-self:flex-start;max-width:min(440px,100%);padding:7px 12px;border-radius:12px;font-size:12.5px;line-height:1.35;color:var(--warn);border-color:rgba(255,107,91,.45);text-align:left}
 #mapPanel{align-self:flex-start;width:min(360px,100%);padding:12px 14px;border-radius:14px}
 #mapPanel h4{margin:0 0 6px;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
@@ -1813,7 +1815,7 @@ let rateEMA=0,prodRate=0,lastRohFull=false;
 function updateHUD(){
   if(!S)return;genDaily();const pid=S.planet,sp=SP(),pd=planetData(pid),w=W[pid];
   $('#toasts').style.top=($('#hud').offsetHeight+8)+'px';
-  $('#credits').textContent=fmt(S.credits);$('#rate').textContent=rateEMA>=.05?'+'+dec(rateEMA,rateEMA<10?1:0)+' Cr/s':'';
+  {const ct=fmt(S.credits);$('#credits').textContent=ct;$('#credits').classList.toggle('long',ct.length>6);}$('#rate').textContent=rateEMA>=.05?'+'+dec(rateEMA,rateEMA<10?1:0)+' Cr/s':'';
   $('#energyBar').style.width=(sp.energy/energyCap(sp)*100).toFixed(1)+'%';$('#energyTxt').textContent=fmt(sp.energy);$('#mEnergy').classList.toggle('low',sp.ef<.99);
   const rs=rohSum(sp),rc=rohCap(),full=rs>=rc-.5;$('#rohBar').style.width=Math.min(100,rs/rc*100).toFixed(1)+'%';$('#rohTxt').textContent=fmt(rs)+'/'+fmt(rc);$('#mRoh').classList.toggle('full',full);
   if(full&&!lastRohFull)toast('Rohstofflager voll – verkaufen, veredeln oder ausbauen','bad');lastRohFull=full;
@@ -1823,7 +1825,7 @@ function updateHUD(){
   $('#pname').textContent=PLANETS[pid].name;$('#pprog').textContent=c+'/'+tot+' Parzellen sauber · Stufe '+sp.stage;$('#pdot').style.background='radial-gradient(circle at 34% 30%,'+PLANETS[pid].col[0]+','+PLANETS[pid].col[1]+' 72%)';
   const warns=[];if(sp.noStation)warns.push(sp.noStation+' Fahrzeug'+(sp.noStation>1?'e':'')+' ohne passende Entladestation');
   const waiting=sp.veh.filter(v=>v.status==='Station voll – wartet').length;if(waiting)warns.push(waiting+' Fahrzeug'+(waiting>1?'e warten':' wartet')+': Station voll');
-  const noJob=sp.veh.filter(v=>v.status==='Kein Auftrag').length;if(noJob)warns.push(noJob+' ohne Auftrag – nichts erreichbar für diesen Fahrzeugtyp');
+  const noJob=sp.veh.filter(v=>v.status==='Kein Auftrag').length;if(noJob)warns.push(w.front.size||[...w.act.values()].length?noJob+' ohne Auftrag – nichts erreichbar für diesen Fahrzeugtyp':'Planet sauber – '+noJob+' Fahrzeug'+(noJob>1?'e warten':' wartet')+' auf neuen Meteoritenstaub');
   if(sp.veh.length&&!powOK(pid))warns.push('Fahrzeuge zu schwach für '+PLANETS[pid].name+' (nur 30 %): Doppelbürsten Stufe '+powReq(pid)+' nötig');
   if(sp.ef<.99&&(sp.veh.length||sp.bld.presse))warns.push('Energie reicht nicht – alles läuft langsamer');
   const wb=$('#warn');wb.hidden=!warns.length||mapMode;wb.textContent=warns.join(' · ');
