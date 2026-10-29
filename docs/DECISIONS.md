@@ -1,0 +1,34 @@
+# Entscheidungen
+
+Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
+
+## Plattform
+- Erst Browser-Prototyp (eine HTML-Datei, three.js r128), Unity später – der Spieler wollte das Spiel schnell sehen, bevor viel Aufwand reingeht.
+- Prototyp ist Referenz für die Unity-Umsetzung – Verhalten und Zahlen sind dort getestet.
+
+## Welt
+- Planeten als Goldberg-Polyeder (12 Fünfecke + Sechsecke), ~140 m² pro Parzelle – gleichmäßige Kugelteilung, Zellzahl wächst mit der Frequenz.
+- 10 Planeten Mond → Pluto mit steigendem Ertragsfaktor (1 bis 700) statt steigender Materialmengen – sonst wären Lager sofort voll.
+- Basis = Ringe 0–2, Gebäude auf einem festen Plan mit ≥ 2 m Abstand – keine Überlappungen.
+
+## Reinigung
+- Keine Freischaltung und keine Kosten für Parzellen; reinigbar ist nur, was an Sauberes grenzt – Wunsch des Spielers, ermöglicht volle Automatik.
+- Abschluss bei < 3 % Restschmutz – sonst hängen Parzellen bei 97 %.
+- Meteoritenstaub selten, aber 8–11 Einschläge mit 50–90 % Bedeckung – „seltener, aber dann richtig“.
+- Ein Wisch reinigt nur die Parzelle, auf der er begonnen hat – Wunsch: nie zwei gleichzeitig.
+- Handgerät ohne Leistungsdeckel – ausdrücklicher Wunsch; stattdessen Fahrzeuge ×2,6 und weit ausbaubare Fahrzeug-Upgrades.
+
+## Fahrzeuge und Logistik
+- Raster-A* nur im Basisbereich (Radius 31 m), draußen gerade Linien – billig genug für Offline-Simulation; draußen gibt es nur Außenlager als Hindernis.
+- Alle Förderbänder (auch Hochbänder) sind Hindernisse für Fahrzeuge – Trucks sind höher als die Brücken.
+- Bänder nach dem Pull-Prinzip (nehmen nur, was am Ziel Platz hat) – verhindert gegenseitige Blockaden.
+- Überlauf ab 90 % Lagerfüllung zur Verkaufsrakete – es fließt immer etwas, kein Totalstau.
+- Verkauf per Rakete, die erst bei vollem Frachtraum startet – Wunsch des Spielers; ersetzt den alten „Autoverkauf“ (Cr/s).
+- Drohnen nur für Fahrzeuge > 30 m vom Hangar mit ≥ 40 % Tank – nahe Fahrzeuge fahren selbst schneller.
+
+## Progression
+- Technik global (`maxStage`), Basisstufe pro Planet – alte Maschinen sofort baubar, Plätze müssen aber pro Planet ausgebaut werden.
+- Anlagen-Upgrades (Stationen, Bänder, Maschinen, Lager, Solar, Verkauf) pro Planet, Rest global – jeder Planet hat wieder etwas aufzubauen.
+- Leistungsanforderung (Doppelbürsten-Stufe) pro Planet, sonst 30 % – „man muss alte Maschinen upgraden, um auf neuen Planeten zurechtzukommen“.
+- Nächster Planet ab 80 % des vorherigen statt Forschung – Wunsch des Spielers.
+- Prestige ab Mars, Formel `√(Verdienst/200 k) + 3 × komplette Planeten` – eventuell zu großzügig, beobachten.

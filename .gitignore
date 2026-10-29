@@ -1,0 +1,33 @@
+# Prototype tests
+prototype/tests/test.html
+__pycache__/
+*.pyc
+
+# Unity (for the later unity/ project)
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Bb]uild/
+unity/[Bb]uilds/
+unity/[Ll]ogs/
+unity/[Uu]ser[Ss]ettings/
+unity/[Mm]emoryCaptures/
+unity/.vs/
+unity/.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.apk
+*.aab
+*.unitypackage
+build.log
+tests*.log
+editmode.xml
+playmode.xml
+
+# OS
+.DS_Store
+Thumbs.db
