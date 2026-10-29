@@ -28,6 +28,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 12. **Steuerung schwergängig:** Beim Wischen blieb der Finger „kleben“, statt dass sich der Planet mitbewegt. → Verlässt der Wisch die Parzelle, wird er zur Kamerabewegung; Wischen am Rand scrollt mit.
 13. **Mehr Fahrzeugtypen**, spätere Planeten brauchen andere Fahrzeuge; **Bänder ohne Lücken** an den Ausgängen; **Transportdrohnen für schwere Maschinen** zu neuen schmutzigen Stellen (spät); **neue Energie bis Kernkraft** für die Nachteile der äußeren Planeten. → v3.7.
 14. Fahrzeuge sollen sich **gegenseitig bei der Reinigung unterstützen**; manche nutzen **Ladestationen für ihre Akkus**; der Spieler bekommt ein **ausbaufähiges Tragevolumen**, das er selbst in Trichter oder Entladestation leert. → v3.8.
+15. Bandausgänge prüfen – Rohstofflager → Verkauf war nicht verbunden; Bricks clippten durch die schwarz-gelben Übergabekästen. → v3.8.1.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

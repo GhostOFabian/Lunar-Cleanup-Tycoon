@@ -423,7 +423,9 @@ function roundPath(path,r){if(path.length<3)return path.map(p=>p.slice());const 
 function beltExtend(path,id,atStart){const B=BLD[id];if(!B)return path;const p=path.slice(),i0=atStart?0:p.length-1,i1=atStart?1:p.length-2;
   const a=p[i0],b=p[i1],dx=a[0]-b[0],dy=a[1]-b[1],l=Math.hypot(dx,dy)||1,ux=dx/l,uy=dy/l,lim=B.fp*.5;let best=a,bd=1e9;
   for(let t=0;t<=4.001;t+=.05){const c=[a[0]+ux*t,a[1]+uy*t],d=Math.hypot(c[0]-B.pos[0],c[1]-B.pos[1]);if(d<=lim){best=c;break;}if(d<bd){bd=d;best=c;}}
-  p[i0]=best;return p;}
+  p[i0]=best;const dC=Math.hypot(best[0]-B.pos[0],best[1]-B.pos[1]);
+  if(dC>lim+.05){const e=[B.pos[0]+(best[0]-B.pos[0])/dC*lim*.85,B.pos[1]+(best[1]-B.pos[1])/dC*lim*.85];if(atStart)p.unshift(e);else p.push(e);}
+  return p;}
 for(const b of BELTS){b.port0=b.path[0].slice();b.port1=b.path[b.path.length-1].slice();b.path=beltExtend(beltExtend(b.path,b.from,true),b.to,false);}
 for(const b of BELTS){b.rp=roundPath(b.path,1.4);let L=0;for(let i=1;i<b.rp.length;i++)L+=Math.hypot(b.rp[i][0]-b.rp[i-1][0],b.rp[i][1]-b.rp[i-1][1]);b.L=L;}
 const STAGES=[
@@ -800,7 +802,7 @@ function beltStep(sp,b,dt,f){
   for(let i=0;i<items.length;i++){const it=items[i],lim=i===0?L:items[i-1][0]-BSP,ns=Math.min(it[0]+v*dt,lim);if(ns>it[0]+1e-4)moved=true;if(ns>it[0])it[0]=ns;}
   let jam=false;
   while(items.length&&items[0][0]>=L-1e-3){const h=items[0];if(beltAccept(sp,b,h[1],h[2]))items.shift();else{jam=true;break;}}
-  if(!items.length||items[items.length-1][0]>=BSP){let tr=0;for(const it of items)tr+=it[2];const pk=beltTake(sp,b,destFree(sp,b)-tr);if(pk)items.push([0,pk.m,pk.a]);}
+  if(!items.length||items[items.length-1][0]>=BSP){let tr=0;for(const o of BELTS)if(o.to===b.to&&beltLive(sp,o))for(const it of sp.belts[o.id])tr+=it[2];const pk=beltTake(sp,b,destFree(sp,b)-tr);if(pk)items.push([0,pk.m,pk.a]);}
   sp.jam[b.id]=jam;return moved;
 }
 function machStep(sp,id,dt,f){
@@ -1409,7 +1411,11 @@ function buildBelts(pid){
       for(let i=2;i<n-2;i+=5){const q=pts[i];let near=false;for(const o of BELTS){if(o===b||!beltLive(sp,o))continue;for(let k=0;k<o.rp.length-1&&!near;k++)if(segD(q,o.rp[k],o.rp[k+1])<1)near=true;if(near)break;}if(near)continue;
         const tx=pts[i+1][0]-pts[i-1][0],ty=pts[i+1][1]-pts[i-1][1],tl=Math.hypot(tx,ty)||1;
         for(const sx of[-.38,.38]){const sup=new THREE.Mesh(Box(.12,b.h,.12),railMat);orient(sup,basePlanDir(pd,q[0]-ty/tl*sx,q[1]+tx/tl*sx),[1,0,0],R,b.h/2);grp.add(sup);}}}
-    for(const q of[b.port0,b.port1]){const hop=new THREE.Group();add(Box(1.25,b.h+.32,1.15),bodyMat,0,(b.h+.32)/2,0,hop);add(Box(1.27,.07,.16),railMat,0,b.h+.3,.5,hop,false);add(Box(1.27,.07,.16),railMat,0,b.h+.3,-.5,hop,false);orient(hop,basePlanDir(pd,q[0],q[1]),pd.cells[pd.base].e2,R,0);grp.add(hop);}
+    /* transfer gate at each building exit: an open arch high enough for the goods to pass under */
+    for(const[q,qi]of[[b.port0,1],[b.port1,-1]]){let k=0,bd=1e9;for(let i=0;i<pts.length;i++){const d0=Math.hypot(pts[i][0]-q[0],pts[i][1]-q[1]);if(d0<bd){bd=d0;k=i;}}
+      const k2=clamp(k+qi,0,pts.length-1),tx=pts[k2][0]-pts[k][0],ty=pts[k2][1]-pts[k][1],tl=Math.hypot(tx,ty)||1,nx=-ty/tl,ny=tx/tl,top=b.h+1.05;
+      const hop=new THREE.Group();for(const sx of[-.62,.62])add(Box(.14,top,.14),bodyMat,sx,top/2,0,hop);add(Box(1.4,.12,.18),railMat,0,top,0,hop,false);
+      const e1=pd.cells[pd.base].e1,e2=pd.cells[pd.base].e2;orient(hop,basePlanDir(pd,pts[k][0],pts[k][1]),vnorm(vadd(vsc(e1,tx/tl),vsc(e2,ty/tl))),R,0);grp.add(hop);}
     grp.traverse(o=>{o.userData.pick={type:'belt',id:b.id};});world.add(grp);pickables.push(grp);
     beltViews[b.id]={grp,tex,b};
   }

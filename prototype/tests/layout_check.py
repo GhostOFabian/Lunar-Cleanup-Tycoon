@@ -15,9 +15,10 @@ with game() as (pg, errs):
       let nofail=0;for(const pid of t.PORDER){if(!t.S.planets[pid]){t.S.planets[pid]=t.freshPlanet(pid);t.initRuntime(pid);}const sp=t.S.planets[pid];sp.stage=5;t.S.maxStage=5;for(const id of t.BORDER)sp.bld[id]=1;
         const pts=t.STATIONS.map(s=>t.approachPos(s)).concat([[2.5,13],[13,-16.2]]);for(let i=0;i<12;i++)pts.push([19+(i%4)*1.8,13+Math.floor(i/4)*1.8]);
         for(let k=0;k<16;k++){const a=[Math.cos(k/16*6.283)*30,Math.sin(k/16*6.283)*30];for(const q of pts)if(!t.navPath(pid,a,q))nofail++;}}
-      return {issues:[...new Set(issues)],off:[...new Set(off)],unreachable:nofail}}""")
+      const gaps=[];for(const bl of t.BELTS){const A=t.BLD[bl.from],B=t.BLD[bl.to],s=bl.path[0],e=bl.path[bl.path.length-1];if(Math.hypot(s[0]-A.pos[0],s[1]-A.pos[1])>A.fp*.5+.05)gaps.push(bl.id+' start');if(Math.hypot(e[0]-B.pos[0],e[1]-B.pos[1])>B.fp*.5+.05)gaps.push(bl.id+' end');}
+      return {issues:[...new Set(issues)],off:[...new Set(off)],unreachable:nofail,gaps}}""")
     show('layout', r)
-    ok = not r['issues'] and not r['off'] and r['unreachable'] == 0 and not errs
+    ok = not r['issues'] and not r['off'] and r['unreachable'] == 0 and not r['gaps'] and not errs
     for e in errs: print(e)
 print('ALL OK' if ok else 'FAILED')
 sys.exit(0 if ok else 1)

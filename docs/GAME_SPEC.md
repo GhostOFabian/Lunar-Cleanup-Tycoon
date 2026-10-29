@@ -106,7 +106,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Entladen: nächste passende Station oder Außenlager (Außenlager mit > 90 % Puffer werden gemieden).
 
 ## 8. Logistik und Produktion
-- Förderbänder entstehen automatisch, sobald beide Gebäude stehen. Ihre Enden reichen bis in die Gebäude (keine Lücke), an jedem Anschluss sitzt ein Übergabekasten. Sie laufen als Item-Listen `[Position, Material, Menge]`, Abstand 1,25 m, Tempo 2,4 m/s × Upgrade, Paket 8 E × Upgrade (Produkte 1 Stück pro 8 E).
+- Förderbänder entstehen automatisch, sobald beide Gebäude stehen. Ihre Enden reichen bis in die Gebäude (≤ halber Footprint-Radius vom Gebäudemittelpunkt, notfalls mit Knick; vom Layout-Test geprüft). An jedem Anschluss steht ein offenes Übergabetor (1,05 m über dem Band), unter dem die Waren durchfahren. Bänder zum selben Ziel rechnen ihre Ware unterwegs gemeinsam gegen den freien Platz. Sie laufen als Item-Listen `[Position, Material, Menge]`, Abstand 1,25 m, Tempo 2,4 m/s × Upgrade, Paket 8 E × Upgrade (Produkte 1 Stück pro 8 E).
 - Kurven sind abgerundet (Radius 1,4 m, quadratische Bézier-Kurven). Hochbänder (h > 1) sind Brücken mit Stützen, die nicht auf anderen Bändern stehen.
 - Bänder: Stationen → Rohstofflager, Zentrale Entladeanlage → Presse, Rohstofflager → Presse/Raffinerie, Presse → Schmelze/Produktlager, Schmelze/Raffinerie → Produktlager, **Rohstofflager → Verkauf, Produktlager → Verkauf** (ab Technikstufe 2).
 - **Stau-Vermeidung (Pull-Prinzip):** Ein Band nimmt nur so viel auf, wie am Ziel nach Abzug der Ware unterwegs noch Platz ist → Bänder blockieren sich nie gegenseitig.
