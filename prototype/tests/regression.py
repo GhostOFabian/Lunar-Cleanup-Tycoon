@@ -98,10 +98,10 @@ with game() as (pg, errs):
       return {types,mats,buf:Object.keys(r0.buf),dts:[...new Set(dts)],savedTyped:st,nonStart:dts.filter(x=>x!=='dust').length}}""")
     show('mixed supply', r); check(len(r['types']) >= 3 and len(r['mats']) >= 3 and len(r['buf']) >= 3 and (r['nonStart'] == 0 or r['savedTyped'] > 0), 'all production chains get material')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.research.done.raff=true;t.S.maxStage=5;for(const id of ['u1','u2','u3','presse','schmelze','raff','energy','prod'])t.buildBuilding(id);sp.energy=1e4;
-      const used={};for(let i=0;i<1800;i++){t.simStep('moon',1,false);for(const b of t.BELTS)if(t.beltLive(sp,b)&&sp.belts[b.id].length)used[b.id]=(used[b.id]||0)+1;}
-      return {used,live:t.BELTS.filter(b=>t.beltLive(sp,b)).map(b=>b.id),veh:sp.veh.map(v=>v.type+':'+v.mode+':'+v.sid),u2:t.sumObj(sp.st.u2.buf),u2b:sp.belts.b_u2.length,roh:t.rohSum(sp),rc:t.rohCap(),jam:sp.jam.b_u2}}""")
+      const used={};for(let i=0;i<1800;i++){sp.dayT=t.dayLen('moon')*.25;t.simStep('moon',1,false);for(const b of t.BELTS)if(t.beltLive(sp,b)&&sp.belts[b.id].length)used[b.id]=(used[b.id]||0)+1;}
+      return {used,live:t.BELTS.filter(b=>t.beltLive(sp,b)).map(b=>b.id),veh:sp.veh.map(v=>v.type+':'+v.mode+':'+v.sid),u2:t.sumObj(sp.st.u2.buf),u2b:sp.belts.b_u2.length,sell:[t.sumObj(sp.sellBuf),t.sellCap(),sp.rk,sp.bld.sell],prod:[t.prodSum(sp),t.prodCap()],auto:sp.auto,mach:sp.mach.presse.status,ef:sp.ef,en:sp.energy,roh:t.rohSum(sp),rc:t.rohCap(),jam:sp.jam.b_u2}}""")
     idle = [b for b in r['live'] if r['used'].get(b, 0) < (30 if b in ('b_rp','b_ps','b_pp','b_sp','b_rr','b_rap','b_prs') else 0) and b != 'b_rs']
-    show('belts busy on finished moon', {'idle': idle, 'used': r['used'],'veh':r['veh'],'u2':r['u2'],'u2b':r['u2b'],'roh':[r['roh'],r['rc']],'jam':r['jam']}); check(not idle, 'some belts stay idle on a finished planet')
+    show('belts busy on finished moon', {'idle': idle, 'used': r['used'],'veh':r['veh'],'u2':r['u2'],'u2b':r['u2b'],'roh':[r['roh'],r['rc']],'jam':r['jam'],'sell':r['sell'],'prod':r['prod'],'mach':r['mach'],'ef':r['ef']}); check(not idle, 'some belts stay idle on a finished planet')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -132,7 +132,7 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,pid='moon',sp=t.S.planets.moon,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];t.S.credits+=1e12;t.S.maxStage=5;sp.stage=5;
       for(const k of t.BORDER)if(!t.BLD[k].geo){t.S.research.done[t.BLD[k].research]=true;t.buildBuilding(k);}for(const ty of ['buggy','sauger','truck','staubi','sauger','truck'])t.buyVehicle(ty);
       for(const r of sp.rigs||[])r.buf={staub:200};const hits={},dr={};let n=0;const ids=t.BORDER.filter(k=>sp.bld[k]);
-      for(let i=0;i<4000;i++){t.simStep(pid,.25,false);for(const d of sp.drones)dr[d.mode]=(dr[d.mode]||0)+1;
+      for(let i=0;i<4000;i++){sp.dayT=t.dayLen(pid)*.25;t.simStep(pid,.25,false);for(const d of sp.drones)dr[d.mode]=(dr[d.mode]||0)+1;
         for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
           for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}}}return {n,hits,veh:sp.veh.length,dr}}""")
     show('full base: inside buildings + drones', r); check(sum(r['hits'].values()) <= 3 and r['dr'].get('stdrop', 0) > 0, 'full base: vehicles inside buildings or drones never deliver to stations')
@@ -147,6 +147,9 @@ with game() as (pg, errs):
         for(let i=0;i<120;i++){const b0=M.out.staubBrick;t.machStep(sp,'presse',.25,1);made+=Math.max(0,M.out.staubBrick-b0);M.out.staubBrick=0;M.out.metallBrick=0;M.in.staub=1e3;}return made;};
       const a=run(0),b=run(4);sp.upg.pvol=0;return {a,b}}""")
     show('press volume', r); check(r['b'] >= r['a'] * 4, 'press volume upgrade')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;if(!sp.outposts.length)return {skip:1};const o=sp.outposts[0];const run=l=>{sp.upg.pipe=l;o.buf={staub:300};for(const k in sp.roh)sp.roh[k]=0;const b0=t.sumObj(o.buf);t.outpostStep('moon',sp,o,1,1);return b0-t.sumObj(o.buf);};
+      const a=run(0),b=run(4);return {a,b}}""")
+    show('pipeline pumps', r); check(r.get('skip') or r['b'] >= r['a'] * 2.9, 'pipeline upgrade')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

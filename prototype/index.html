@@ -452,6 +452,7 @@ const UPG=[
   {id:'urate',loc:1,cat:'Entladestationen',name:'Schnellentladung',base:200,grow:1.8,max:8,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Entladetempo',stage:2},
   {id:'ubuf',loc:1,cat:'Entladestationen',name:'Größere Trichter',base:250,grow:1.8,max:8,val:l=>1+0.4*l,show:v=>'×'+dec(v,1),label:'Kapazität',stage:2},
   {id:'udock',loc:1,cat:'Entladestationen',name:'Zusätzliche Andockplätze',base:3000,grow:3,max:2,val:l=>l,show:v=>'+'+v,label:'Plätze pro Station',stage:3},
+  {id:'pipe',loc:1,cat:'Außenlager',name:'Stärkere Pumpen',base:2500,grow:1.65,max:12,val:l=>1+0.5*l,show:v=>dec(OUTPOST.pipe*v,0)+' E/s',label:'Pipeline-Leistung je Außenlager',stage:4,res:'outpost'},
   {id:'bspeed',loc:1,cat:'Förderbänder',name:'Schnellere Bänder',base:120,grow:1.7,max:10,val:l=>1+0.25*l,show:v=>'×'+dec(v,2),label:'Tempo',stage:2},
   {id:'bcap',loc:1,cat:'Förderbänder',name:'Größere Paletten',base:180,grow:1.8,max:8,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Kapazität pro Paket',stage:2},
   {id:'beff',loc:1,cat:'Förderbänder',name:'Leichtlaufrollen',base:150,grow:1.7,max:6,val:l=>Math.pow(.85,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
@@ -1063,7 +1064,7 @@ function droneStep(pid,sp,dr,dt,f){
 }
 function outpostStep(pid,sp,o,dt,f){const b=sumObj(o.buf);if(b<=.001){o.status='Bereit';o.busy=false;return;}
   const fr=rohCap()-rohSum(sp);if(fr<=.01){o.status='Rohstofflager voll';o.busy=false;return;}
-  const amt=Math.min(b,fr,OUTPOST.pipe*uv('bspeed')*Math.max(.25,f)*(sp.bm||1)*dt),k=amt/b;for(const m in o.buf){const x=o.buf[m]*k;o.buf[m]-=x;sp.roh[m]=(sp.roh[m]||0)+x;}
+  const amt=Math.min(b,fr,OUTPOST.pipe*uv('pipe')*Math.max(.25,f)*(sp.bm||1)*dt),k=amt/b;for(const m in o.buf){const x=o.buf[m]*k;o.buf[m]-=x;sp.roh[m]=(sp.roh[m]||0)+x;}
   o.status='Pumpt zur Basis';o.busy=true;}
 const outpostCost=pid=>Math.round(20000*PLANETS[pid].diff*Math.pow(1.6,S.planets[pid].outposts.length));
 function outpostWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).cells[id];
@@ -2004,7 +2005,7 @@ function buyDrone(){const pid=S.planet,sp=SP();if(!sp.bld.hangar)return fail('Er
 function buildOutpost(id){const pid=S.planet,sp=SP(),why=outpostWhy(pid,id);if(why)return fail(why);const c=outpostCost(pid);if(S.credits<c)return fail(lacks(c));
   S.credits-=c;sp.outposts.push({key:'o'+id,cell:id,buf:{},docks:[],status:'Bereit'});rebuildBase();SFX.unlock();sparkleCell(pid,id,40);toast('Außenlager auf '+cellName(id)+' steht – Fahrzeuge entladen jetzt auch hier','good');save();}
 function outpostSec(pid,id){const sp=S.planets[pid],o=sp.outposts.find(x=>x.cell===id);
-  if(o)return '<section class="sec"><h3>Außenlager</h3><p class="note">Entladestation weit draußen. Alle Fahrzeugtypen docken hier an, eine Pipeline pumpt alles ins Rohstofflager der Basis.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>o.status||'Bereit')+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(o.buf))+' / '+fmt(stBuf(o.key)))+'"></dd><dt>Andockplätze</dt><dd data-b="'+bind(()=>o.docks.filter(x=>x).length+' belegt von '+stDocks(o.key))+'"></dd><dt>Pipeline</dt><dd>'+dec(OUTPOST.pipe*uv('bspeed'),1)+' E/s</dd></dl></section>';
+  if(o)return '<section class="sec"><h3>Außenlager</h3><p class="note">Entladestation weit draußen. Alle Fahrzeugtypen docken hier an, eine Pipeline pumpt alles ins Rohstofflager der Basis.</p><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>o.status||'Bereit')+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(o.buf))+' / '+fmt(stBuf(o.key)))+'"></dd><dt>Andockplätze</dt><dd data-b="'+bind(()=>o.docks.filter(x=>x).length+' belegt von '+stDocks(o.key))+'"></dd><dt>Pipeline</dt><dd data-b="'+bind(()=>dec(OUTPOST.pipe*uv('pipe'),0)+' E/s')+'"></dd></dl>'+upgRow('pipe')+upgRow('ubuf')+'</section>';
   if(!S.research.done.outpost)return S.research.done.drones?'<p class="note">Mit Außenlager-Logistik (Forschung) kannst du hier später ein Außenlager mit Pipeline zur Basis bauen.</p>':'';
   const why=outpostWhy(pid,id);
   return '<section class="sec"><h3>Außenlager</h3><p class="note">'+(why||'Fahrzeuge, die weit draußen arbeiten, entladen hier statt an der Basis. Eine Pipeline verbindet es mit dem Rohstofflager.')+'</p>'+(why?'':'<button class="buy wide" data-act="buildout" data-id="'+id+'" data-en="'+bind(()=>S.credits>=outpostCost(pid))+'">Außenlager bauen · '+cr(outpostCost(pid))+'</button>')+'</section>';}
@@ -2276,7 +2277,7 @@ function flowReport(pid){const sp=S.planets[pid],out=[];const o=CUR;CUR=pid;try{
     if(f>.97)add(s,BLD[s].name,2,'Puffer voll – Fahrzeuge warten, weil '+cause+'.',full?['rohcap','sellcap']:['bspeed','bcap','ubuf']);
     else if(f>.7)add(s,BLD[s].name,1,'Puffer füllt sich – '+(full?'das Rohstofflager ist voll':'das Förderband kommt nicht ganz hinterher')+'.',full?['rohcap','sellcap']:['bspeed','bcap']);
     else add(s,BLD[s].name,0,'Läuft – Puffer '+Math.round(f*100)+' %');}
-  for(const op of sp.outposts){const f=sumObj(op.buf)/stBuf(op.key);add(op.key,stName(op.key),f>.97?2:f>.7?1:0,f>.97?'Puffer voll – die Pipeline ist zu langsam'+(rf>.97?' und das Rohstofflager voll':'')+'.':f>.7?'Pipeline am Limit.':'Läuft',['bspeed','ubuf']);}
+  for(const op of sp.outposts){const f=sumObj(op.buf)/stBuf(op.key);add(op.key,stName(op.key),f>.97?2:f>.7?1:0,f>.97?'Puffer voll – die Pipeline ist zu langsam'+(rf>.97?' und das Rohstofflager voll':'')+'.':f>.7?'Pipeline am Limit.':'Läuft',['pipe','ubuf']);}
   if(rf>.97)add('roh','Rohstofflager',2,'Voll – Maschinen verarbeiten zu wenig, und die Waren sind nicht fürs Verkaufsband markiert. (Ab 90 % geht der Überschuss automatisch zur Rakete.)',['rohcap','mspeed','sellcap']);
   else if(rf>.85)add('roh','Rohstofflager',1,'Fast voll – der Überschuss geht schon zur Rakete.',['rohcap','sellcap','bspeed']);else add('roh','Rohstofflager',0,'Läuft – '+Math.round(rf*100)+' % belegt');
   for(const m in MACH)if(sp.bld[m]){const M=sp.mach[m],inF=machIn(M)/machInCap(m);
@@ -2669,6 +2670,7 @@ function startCam(){const pd=planetData(S.planet),st=pd.cells[pd.start];cam.d=vn
 function migrate(){
   if((S.qv||1)<2){if(S.quest>=1)S.quest++;S.qv=2;}
   if(S.qv<3){if(S.quest>=6)S.quest++;S.qv=3;}
+  for(const pid in S.planets){const sp=S.planets[pid];sp.upg=sp.upg||{};if(sp.upg.pipe==null&&sp.outposts&&sp.outposts.length)sp.upg.pipe=Math.ceil((sp.upg.bspeed||0)/2);}
   {let back=0;for(const pid in S.planets){const sp=S.planets[pid],l=(sp.upg&&sp.upg.pspeed)||0;if(!l)continue;const u=UP.pspeed;for(let i=0;i<l;i++)back+=u.base*Math.pow(u.grow,i)*PLANETS[pid].diff;sp.upg.pspeed=0;}
     if(back>0){S.credits+=Math.round(back);setTimeout(()=>{try{toast('Hochdruckpresse entfällt – Hydraulik-Tuning (Tempo) und Größere Presskammer (Menge) übernehmen. Erstattet: '+fmt(back)+' Cr','good');}catch(e){}},3500);}}
   if(Object.keys(S.done||{}).length&&!S.hintRig){S.hintRig=1;setTimeout(()=>{try{toast('Neu: Tiefenabbau! Auf komplett sauberen Planeten baust du jetzt Bohrtürme – Basis → Tiefenabbau','good');}catch(e){}},4500);}

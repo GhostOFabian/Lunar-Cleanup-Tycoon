@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.7)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.8)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -138,6 +138,8 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 ## 9. Drohnen und Außenlager
 - **Drohnen** (Forschung „Drohnentechnik“ + Drohnenhangar, Stufe 4): max. 8 pro Planet, Kosten `2 500 × Planetfaktor × 1,35^n`, Ladung 60 × Upgrade, 9 m/s × Upgrade, Umladen 30 E/s. Ziel: Fahrzeuge > 30 m vom Hangar mit ≥ 40 % Tank (Score = Füllgrad × Entfernung). Volles Fahrzeug mit zugewiesener Drohne wartet („Wartet auf Drohne“). Die Drohne liefert an die Entladestation mit dem meisten freien Platz (`toSt → stdrop`, ab v5.3), nur wenn alle voll sind über den Hangar ins Rohstofflager. Flughöhe 12 m, beim Abholen 3,2 m, beim Abgeben 6,5 m. Energie 0,4/s im Flug.
 - **Außenlager** (Forschung „Außenlager-Logistik“, nach Drohnen; Technikstufe 4): auf sauberer Parzelle ab Ring 4, nicht neben einem anderen Außenlager, max. 4 pro Planet, Kosten `20 000 × Planetfaktor × 1,6^n`. 2 Docks, Puffer 400, 20 E/s, alle Fahrzeuggrößen, Pipeline 8 E/s × Bandtempo ins Rohstofflager (sichtbare Röhre, über der Basis erhöht).
+
+- Pipeline-Leistung (ab v5.8): `8 E/s × Stärkere Pumpen (1 + 0,5 × Stufe)` je Außenlager, unabhängig vom Bandtempo; Puffer über „Größere Trichter“.
 
 ## 9a. Lastdrohnen (Schwerlast-Hangar, ab v3.7)
 - Forschung „Schwerlastflug“ (nach Außenlager-Logistik), Gebäude Schwerlast-Hangar (Stufe 5, 90 000, Pos 2,24), max. 3 Lastdrohnen (`30 000 × Planetfaktor × 1,6^n`), 12 m/s × Drohnentempo, 2 Energie/s im Flug.

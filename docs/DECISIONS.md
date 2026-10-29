@@ -143,3 +143,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v5.7
 - Gebäude wachsen seitlich nur, solange nichts berührt wird – sonst würden Bänder und Tore in die Gebäude ragen; die Stufe zeigt ein Dachmast statt Ringe am Boden.
 - Pipeline endet im Silo des Rohstofflagers (senkrechter Einlauf) statt daneben; Kugeln im Rohr zeigen das Pumpen. Die Pump-Logik selbst war korrekt, man hat sie nur nicht gesehen.
+
+## v5.8
+- Pipeline bekommt ein eigenes Upgrade statt am Bandtempo zu hängen – eine Wirkung, ein Upgrade; alte Stände erhalten Pumpenstufe = ⌈Bandstufe / 2⌉, damit nichts langsamer wird.
+- Die Vollausbau-Tests laufen bei Tag, damit Nachtstrom-Engpässe sie nicht zufällig scheitern lassen.
