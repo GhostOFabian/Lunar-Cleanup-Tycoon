@@ -91,6 +91,7 @@ th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);whit
 th{font-family:var(--f-display);font-weight:600;font-size:var(--step--1);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
+table.fit{min-width:0}table.fit td:last-child{white-space:normal;min-width:12ch}
 td .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:10px;vertical-align:-1px}
 
 /* long game cards */
@@ -130,7 +131,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <header class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Mobile Idle-Tycoon · Spielbarer Prototyp v3.6</div>
+      <div class="eyebrow">Mobile Idle-Tycoon · Spielbarer Prototyp v3.7</div>
       <h1 style="margin-top:14px">Lunar Cleanup <span>Tycoon</span></h1>
       <p class="lead">Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.</p>
       <div class="cta">
@@ -140,7 +141,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
         <div><b>10</b><span>Planeten, Mond bis Pluto</span></div>
         <div><b>252–3.242</b><span>Parzellen pro Planet</span></div>
         <div><b>24 h</b><span>Offline-Produktion</span></div>
-        <div><b>19</b><span>Ziele als roter Faden</span></div>
+        <div><b>9</b><span>Fahrzeugtypen</span></div>
       </div>
     </div>
     <div class="phone tilt"><img src="assets/screens/03-basis.jpg" width="585" height="1266" alt="Die Mondbasis von oben: Rohstofflager, Staubpresse, Förderbänder mit runden Kurven und Entladestationen"></div>
@@ -192,10 +193,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
       <div class="eyebrow">Automatisierung</div>
       <h2 id="f2">Eine Basis, die sich selbst trägt</h2>
       <ul>
-        <li>Vier Fahrzeugtypen vom Staubi bis zum 520er-Truck. Sie suchen sich die nächste Parzelle selbst und fahren um Gebäude und Bänder herum.</li>
-        <li>Drei Entladestationen mit Andockplätzen, Förderbänder mit runden Kurven und Brücken.</li>
+        <li>Neun Fahrzeugtypen vom Staubi bis zum Kryo-Koloss mit 1.400er-Tank. Sie suchen sich die nächste Parzelle selbst und fahren um Gebäude und Bänder herum.</li>
+        <li>Drei Entladestationen mit Andockplätzen. Förderbänder laufen in runden Kurven und über Brücken und sind an jedem Gebäude direkt angeschlossen.</li>
         <li>Staubpresse, Schmelzanlage und Raffinerie machen aus 10 Metallschrott einen Brick und aus 10 Bricks einen Barren für 340 Credits.</li>
-        <li>Drohnen holen die Ladung weit entfernter Fahrzeuge ab, Außenlager pumpen ihr Material per Pipeline zur Basis.</li>
+        <li>Drohnen holen die Ladung weit entfernter Fahrzeuge ab, Außenlager pumpen ihr Material per Pipeline zur Basis, und Lastdrohnen fliegen schwere Maschinen direkt an neue Einsatzorte.</li>
         <li>Ein Sturmschild hält 80 % jedes Sturms ab, solange die Energie reicht.</li>
       </ul>
     </div>
@@ -259,6 +260,53 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
   </div>
 </section>
 
+<section class="feature" aria-labelledby="f6">
+  <div class="wrap">
+    <div class="copy">
+      <div class="eyebrow">Spezialfahrzeuge</div>
+      <h2 id="f6">Neue Planeten, neue Maschinen</h2>
+      <p>Auf jedem neuen Planeten wartet ein Fahrzeug, das genau für dessen Schmutz gebaut ist. Auf seinen Heimatplaneten reinigt es 2,2-mal so stark, und Stürme bremsen es nicht.</p>
+      <div class="tablebox" role="region" aria-label="Spezialfahrzeuge" tabindex="0">
+        <table class="fit">
+          <thead><tr><th>Fahrzeug</th><th>Ab</th><th class="num">Tank</th><th>Stark auf</th></tr></thead>
+          <tbody>
+            <tr><td>Eisfräse</td><td>Europa</td><td class="num">220</td><td>Europa, Enceladus, Triton, Pluto</td></tr>
+            <tr><td>Schlammraupe</td><td>Titan</td><td class="num">320</td><td>Titan, Venus, Enceladus</td></tr>
+            <tr><td>Lavapanzer</td><td>Io</td><td class="num">600</td><td>Io, Venus</td></tr>
+            <tr><td>Magnetgleiter</td><td>Ganymed</td><td class="num">480</td><td>Ganymed, Triton, Europa</td></tr>
+            <tr><td>Kryo-Koloss</td><td>Triton</td><td class="num">1.400</td><td>Triton, Pluto</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Weit draußen holt eine Lastdrohne aus dem Schwerlast-Hangar die schweren Maschinen ab und fliegt sie direkt zur nächsten schmutzigen Parzelle.</p>
+    </div>
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/11-fahrzeuge.jpg" width="585" height="1266" alt="Spezialfahrzeuge bei der Arbeit am Rand der Basis"></div>
+      <div class="phone"><img src="assets/screens/12-lastdrohne.jpg" width="585" height="1266" alt="Eine Lastdrohne trägt einen Lavapanzer über die Basis"></div>
+    </div>
+  </div>
+</section>
+
+<section class="feature flip" aria-labelledby="f7">
+  <div class="wrap">
+    <div class="shots">
+      <div class="phone"><img src="assets/screens/13-kernreaktor.jpg" width="585" height="1266" alt="Kernreaktor mit Kühlturm am Rand der Mondbasis"></div>
+    </div>
+    <div class="copy">
+      <div class="eyebrow">Energie</div>
+      <h2 id="f7">Vom Solarfeld bis zum Kernreaktor</h2>
+      <p>Je weiter du dich von der Sonne entfernst, desto weniger bringen Solarfelder. Auf Pluto sind es nur noch 35 %, und gleichzeitig brauchen die Maschinen dort 2,4-mal so viel Strom. Darum wächst auch das Kraftwerk mit.</p>
+      <ul>
+        <li>Solarfelder: günstig, aber abhängig von Sonne und Stürmen.</li>
+        <li>Radioisotopen-Generator: +10 Energie pro Sekunde, Tag und Nacht.</li>
+        <li>Geothermie: je nach Planet bis +60 pro Sekunde, auf Io am stärksten.</li>
+        <li>Kernreaktor: +150 pro Sekunde und großer Speicher, die Antwort auf die dunklen Welten.</li>
+        <li>Akkupark: Speicher, um Stürme zu überbrücken.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
 <section class="feature" aria-labelledby="f5">
   <div class="wrap" style="display:block">
     <div class="eyebrow">Langzeit</div>
@@ -286,13 +334,16 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
       <figure><img src="assets/screens/08-planeten.jpg" width="585" height="1266" alt="Planeten" loading="lazy"><figcaption>Planetenliste</figcaption></figure>
       <figure><img src="assets/screens/09-auftraege.jpg" width="585" height="1266" alt="Aufträge" loading="lazy"><figcaption>Tägliche Aufträge</figcaption></figure>
       <figure><img src="assets/screens/10-statistik.jpg" width="585" height="1266" alt="Statistik" loading="lazy"><figcaption>Statistik</figcaption></figure>
+      <figure><img src="assets/screens/11-fahrzeuge.jpg" width="585" height="1266" alt="Spezialfahrzeuge" loading="lazy"><figcaption>Spezialfahrzeuge im Einsatz</figcaption></figure>
+      <figure><img src="assets/screens/12-lastdrohne.jpg" width="585" height="1266" alt="Lastdrohne" loading="lazy"><figcaption>Lastdrohne mit Lavapanzer</figcaption></figure>
+      <figure><img src="assets/screens/13-kernreaktor.jpg" width="585" height="1266" alt="Kernreaktor" loading="lazy"><figcaption>Kernreaktor</figcaption></figure>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <span>Lunar Cleanup Tycoon · Prototyp v3.6 · Oktober 2026</span>
+    <span>Lunar Cleanup Tycoon · Prototyp v3.7 · Oktober 2026</span>
     <span>Alle Rechte vorbehalten</span>
   </div>
 </footer>
