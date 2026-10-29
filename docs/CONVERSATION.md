@@ -36,6 +36,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 20. Früh ein **Fahrzeug, das zum Spieler fährt, wenn der Sammelbehälter voll ist**; man leert den ganzen Behälter hinein, es fährt zur Entladestation. → v4.1: Sammelwagen.
 21. Beim manuellen Reinigen nachts eine **Lichtquelle**; das **Bild verschiebt sich störend**, wenn man beim Halten außerhalb der Fläche wischt. → v4.2.
 22. **Bessere Beleuchtung der Basis**: Laternen, die nachts auch die Gebäude anstrahlen. → v4.3.
+23. Laternen **besser positionieren**; **Mond 100 % sauber – was jetzt?** Fertige Planeten brauchen einen Grund, die Basis weiter auszubauen. → v4.4: Tiefenabbau mit Bohrtürmen, Laternen paarweise.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

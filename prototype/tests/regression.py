@@ -68,6 +68,11 @@ with game() as (pg, errs):
       for(let i=0;i<900&&c.mode!=='park';i++){t.simStep('moon',.1,true);if(modes[modes.length-1]!==c.mode)modes.push(c.mode);}
       const roh1=t.rohSum(sp)+Object.values(sp.st).reduce((a,s)=>a+t.sumObj(s.buf),0);return {modes,dist,gd,hand,load,left:t.sumObj(c.tank),cap:t.handCap()}}""")
     show('collector cart', r); check(r['dist'] < 3.5 and r['hand'] < .01 and abs(r['load'] - r['cap']) < .1 and r['left'] < .05 and r['modes'][-1] == 'park', 'collector cart')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;const why0=t.rigWhy('moon',pd.cells.find(c=>c.kind!=='base'&&c.ring===3).id);
+      for(const c of pd.cells)if(c.kind!=='base'){w.clean[c.id]=1;w.act.delete(c.id);}t.S.done.moon=1;t.S.credits+=1e7;const n0=(sp.rigs||[]).length;for(let i=0;i<20;i++)t.buildRig(-1);
+      const n=sp.rigs.length,max=t.rigMax(sp);for(const k in sp.roh)sp.roh[k]=0;sp.energy=1e4;for(let i=0;i<60;i++)t.simStep('moon',1,false);
+      const mined=sp.rigs.reduce((a,r)=>a+r.mined,0);return {why0,n,max,mined,roh:t.rohSum(sp),status:sp.rigs.map(r=>r.status).slice(0,3),cells:new Set(sp.rigs.map(r=>r.cell)).size}}""")
+    show('deep drilling', r); check(r['n'] == r['max'] and r['cells'] == r['n'] and r['mined'] > r['n'] * 20 and r['roh'] > 0, 'deep drilling rigs')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')

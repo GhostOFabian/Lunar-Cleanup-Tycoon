@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.3)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.4)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -150,7 +150,12 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Jeder Planet hat eine eigene Tageslänge in Sekunden (`DAYLEN`): Mond 480, Mars 420, Europa 540, Titan 600, Io 360, Venus 720, Ganymed 540, Enceladus 420, Triton 600, Pluto 720. Uhr `sp.dayT` pro Planet, läuft in `simStep` (also auch offline); neue Planeten starten am Vormittag (8 % der Tageslänge).
 - Sonnenwinkel θ = 2π · Phase, Tagesfaktor `clamp((sin θ + 0,08) / 1,08, 0, 1)^0,8` – erste Hälfte Tag, zweite Hälfte Nacht. Spitze Solar = 2,6 × alter Wert, Tagesmittel ≈ 0,92 × alter Wert.
 - Nachts: Solar 0. Strom kommt aus dem Speicher (Akkupark), Radioisotopen-Generator, Geothermie und Kernreaktor; Akku-Fahrzeuge fahren aus dem Akku. Die Ampel nennt bei Strommangel in der Nacht die Nacht als Ursache und schlägt Akkupark vor.
-- Optik: Sonne kommt aus der echten Richtung über der Basis, Licht wird nachts gedimmt (Hemisphäre 34 %, kein Sonnenlicht). Fahrzeuge schalten Scheinwerfer, Lichtkegel und Lichtfleck am Boden ein; die Basis hat ein warmes Flutlicht. Straßenlaternen (`lampSpots`): je Gebäude 1 (fp < 3) bzw. 2 Laternen im Abstand fp + 0,15–0,35 m – im für Fahrzeuge gesperrten Ring, nicht auf der Andockseite (Osten) der Entladestationen, ≥ 1,5 m von Bändern, ≥ 2,2 m von Parkplätzen und Pipeline-Anschluss, ≥ 4 m zueinander, nur auf Basiszellen. Alle glühen (Kopf, Lichthof, Lichtfleck); die 6 Laternen nächst der Kamera tragen ein echtes Punktlicht (Reichweite 16 m). HUD-Balken heißt „Tag“/„Nacht“, das Energiefenster zeigt die Zeit bis Sonnenunter-/-aufgang.
+- Optik: Sonne kommt aus der echten Richtung über der Basis, Licht wird nachts gedimmt (Hemisphäre 34 %, kein Sonnenlicht). Fahrzeuge schalten Scheinwerfer, Lichtkegel und Lichtfleck am Boden ein; die Basis hat ein warmes Flutlicht. Straßenlaternen (`lampSpots`): je Gebäude 1 (fp < 2,6) bzw. 2 Laternen als symmetrisches Paar zur Basismitte hin (Versatz ±0,62 rad, sonst weiter nach hinten), Abstand fp + 0,12–0,3 m, ≥ 1,9 m von Bändern – im für Fahrzeuge gesperrten Ring, nicht auf der Andockseite (Osten) der Entladestationen, ≥ 1,5 m von Bändern, ≥ 2,2 m von Parkplätzen und Pipeline-Anschluss, ≥ 4 m zueinander, nur auf Basiszellen. Alle glühen (Kopf, Lichthof, Lichtfleck); die 6 Laternen nächst der Kamera tragen ein echtes Punktlicht (Reichweite 16 m). HUD-Balken heißt „Tag“/„Nacht“, das Energiefenster zeigt die Zeit bis Sonnenunter-/-aufgang.
+
+## 9d. Tiefenabbau (ab v4.4)
+- Freigeschaltet pro Planet, sobald er komplett sauber ist (`S.done[pid]`). Bohrtürme auf sauberen Parzellen ab Ring 2, nicht auf Außenlagern, eine pro Parzelle, max. `2 + 2 × Basisstufe`.
+- Kosten `3 000 × diff × 1,45^n`. Förderung `0,8 E/s × Vorkommen × Diamantbohrköpfe (1 + 0,3·Stufe, lokal)`, Vorkommen fest pro Parzelle (Hash) 0,6–1,6, Material = ursprünglicher Schmutz der Parzelle. Puffer 150 E, unterirdische Leitung (unsichtbar) `6 E/s × Bandtempo` ins Rohstofflager, nur bei freiem Platz. Strom 1,5/s × Maschinen-Effizienz, solange gebohrt wird.
+- Basis-Fenster „Tiefenabbau“: Übersicht + „Bohrturm auf dem besten Vorkommen“ (Vorkommen / (1 + 0,05 × Ring)); Parzellenfenster zeigt Vorkommen und baut gezielt. Fahrzeuge umfahren Bohrtürme wie Außenlager. Ampel: Bohrtürme stehen (Lager voll) rot, Leitung zu langsam gelb.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

@@ -79,3 +79,10 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v4.3
 - Laternen stehen im Sperr-Ring direkt um jedes Gebäude – dort fährt nie ein Fahrzeug, die Wegfindung bleibt unverändert.
 - Nur 6 echte Punktlichter, die den Laternen nahe der Kamera folgen; alle übrigen leuchten nur optisch – konstante Lichterzahl, keine Shader-Neukompilierung, auf Handys bezahlbar.
+
+## v4.4
+- Fertige Planeten bekommen Tiefenabbau statt nur Meteoritenstaub – die Bohrtürme erzeugen einen Dauerstrom, der den weiteren Ausbau von Bändern, Lager, Maschinen, Energie und Verkauf auf diesem Planeten sinnvoll macht.
+- Bohrturm-Zahl an die Basisstufe gekoppelt (2 + 2 × Stufe), damit sich auch die Stufen auf alten Planeten noch lohnen.
+- Feste Vorkommen pro Parzelle (mager/gut/reich) – eine kleine Standortentscheidung, ohne Zufall beim Neuladen.
+- Laternen als Paar an der Front jedes Gebäudes – vorher wirkte die Verteilung zufällig.
+- Bohrtürme liefern über unterirdische Leitungen (keine Röhren) – zwölf sichtbare Röhren über der Basis waren zu unruhig.
