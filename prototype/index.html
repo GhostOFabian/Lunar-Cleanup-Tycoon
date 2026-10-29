@@ -93,6 +93,10 @@ button:focus-visible{outline:2px solid var(--clean);outline-offset:2px}
 #nav button.on{color:var(--ink);background:rgba(255,255,255,.07)}
 #nav button[data-nav="clean"]{color:var(--clean)}
 #nav button[data-nav="clean"].cam{color:var(--energy)}
+#handBtn{position:absolute;z-index:6;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;min-height:52px;padding:8px 12px 8px 10px;border-radius:16px;color:var(--ink);font:600 12px var(--f-display);letter-spacing:.04em}
+#handBtn svg{width:22px;height:22px;stroke:var(--clean);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#handBtn span{display:flex;flex-direction:column;gap:4px;min-width:64px}#handBtn .bar{display:block;height:5px;width:64px}#handBar{display:block;height:100%;width:0;border-radius:3px;background:var(--clean)}
+#handBtn.full #handBar{background:var(--warn)}#handBtn.pulse{animation:hpulse 1s ease-in-out infinite}@keyframes hpulse{50%{box-shadow:0 0 0 3px rgba(255,107,91,.55)}}@media (prefers-reduced-motion:reduce){#handBtn.pulse{animation:none;box-shadow:0 0 0 2px rgba(255,107,91,.7)}}
 #fab{position:absolute;z-index:6;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 #fab button{width:52px;height:52px;border-radius:16px;display:grid;place-items:center}
 #fab svg{width:24px;height:24px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -205,6 +209,7 @@ button:focus-visible{outline:2px solid var(--clean);outline-offset:2px}
 
   <div id="toasts"></div>
 
+  <button id="handBtn" class="glass hit" aria-label="Sammelbehälter entladen"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1.4 11.2a2 2 0 0 1-2 1.8H9.4a2 2 0 0 1-2-1.8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span><b id="handTxt">0/40</b><i class="bar"><i id="handBar"></i></i></span></button>
   <div id="fab"><button id="fabMap" class="glass" aria-label="Planetenkarte"><svg viewBox="0 0 24 24" id="fabIco"></svg></button></div>
 
   <section id="sheet" hidden aria-live="polite">
@@ -354,14 +359,14 @@ const PORDER=['moon','mars','europa','titan','io','venus','ganymed','enceladus',
 for(const t in DIRT){const D=DIRT[t];if(D.amt==null)D.amt=Math.round(D.a*100);}
 const cellCount=pid=>10*PLANETS[pid].freq*PLANETS[pid].freq+2;
 const VT={
-  staubi:{name:'Staubi',stage:2,cost:150,speed:3.2,radius:.8,power:1.4,tank:15,energy:.3,tier:0,size:'s',desc:'Mini-Saugroboter aus Version 1. Winziger Tank.'},
-  buggy:{name:'Reinigungsbuggy',stage:2,cost:180,speed:4.4,radius:1.0,power:1.8,tank:40,energy:.5,tier:1,size:'s',desc:'Günstig, kleiner Tank, ideal für frühe Parzellen.'},
-  sauger:{name:'Industriesauger',stage:3,cost:2400,speed:3.6,radius:1.6,power:3.8,tank:150,energy:1.4,tier:2,size:'m',desc:'Breite Saugdüse, großer Tank, schafft Industrieflächen.'},
+  staubi:{name:'Staubi',batt:110,stage:2,cost:150,speed:3.2,radius:.8,power:1.4,tank:15,energy:.3,tier:0,size:'s',desc:'Mini-Saugroboter aus Version 1. Winziger Tank.'},
+  buggy:{name:'Reinigungsbuggy',batt:140,stage:2,cost:180,speed:4.4,radius:1.0,power:1.8,tank:40,energy:.5,tier:1,size:'s',desc:'Günstig, kleiner Tank, ideal für frühe Parzellen.'},
+  sauger:{name:'Industriesauger',batt:220,stage:3,cost:2400,speed:3.6,radius:1.6,power:3.8,tank:150,energy:1.4,tier:2,size:'m',desc:'Breite Saugdüse, großer Tank, schafft Industrieflächen.'},
   truck:{name:'Schwerer Reinigungs-Truck',stage:4,cost:14000,speed:2.5,radius:2.2,power:6.5,tank:520,energy:3,tier:3,size:'l',desc:'Riesiger Tank, langsam. Entlädt nur an der zentralen Anlage.'},
   eisfraese:{name:'Eisfräse',stage:3,cost:4000,speed:3.4,radius:1.8,power:5,tank:220,energy:1.8,tier:2,size:'m',planet:'europa',home:['europa','enceladus','triton','pluto'],look:{col:0x9fd3ff,s:1.1,tool:'drill',tracks:1},desc:'Fräst gefrorenen Schmutz. Auf Eiswelten doppelt stark und sturmfest.'},
   schlammraupe:{name:'Schlammraupe',stage:4,cost:8000,speed:3,radius:2,power:7,tank:320,energy:2.4,tier:2,size:'m',planet:'titan',home:['titan','venus','enceladus'],look:{col:0x7fbf5a,s:1.2,tool:'scoop',tracks:1},desc:'Kettenfahrzeug mit Schlammpumpe. Auf Titan, Venus und Enceladus doppelt stark und sturmfest.'},
   lavapanzer:{name:'Lavapanzer',stage:4,cost:16000,speed:2.8,radius:2.4,power:11,tank:600,energy:4,tier:3,size:'l',planet:'io',home:['io','venus'],look:{col:0xd2643a,s:1.35,tool:'scoop',tracks:1},desc:'Hitzefester Koloss. Auf Io und Venus doppelt stark und sturmfest.'},
-  magnetgleiter:{name:'Magnetgleiter',stage:5,cost:25000,speed:7,radius:2.2,power:13,tank:480,energy:3.5,tier:3,size:'l',planet:'ganymed',home:['ganymed','triton','europa'],look:{col:0xb79cff,s:1.2,tool:'brush',hover:1},desc:'Schwebt über dem Boden und ist sehr schnell. Auf Ganymed, Triton und Europa doppelt stark und sturmfest.'},
+  magnetgleiter:{name:'Magnetgleiter',batt:300,stage:5,cost:25000,speed:7,radius:2.2,power:13,tank:480,energy:3.5,tier:3,size:'l',planet:'ganymed',home:['ganymed','triton','europa'],look:{col:0xb79cff,s:1.2,tool:'brush',hover:1},desc:'Schwebt über dem Boden und ist sehr schnell. Auf Ganymed, Triton und Europa doppelt stark und sturmfest.'},
   kryokoloss:{name:'Kryo-Koloss',stage:5,cost:40000,speed:2.6,radius:3,power:20,tank:1400,energy:6,tier:3,size:'l',planet:'triton',home:['triton','pluto'],look:{col:0x5fd0c8,s:1.55,tool:'drill',tracks:1},desc:'Die größte Reinigungsmaschine. Auf Triton und Pluto doppelt stark und sturmfest.'},
 };
 const BLD={
@@ -430,11 +435,13 @@ const STAGES=[
 ];
 const UPG=[
   {id:'radius',cat:'Handgerät',name:'Breiterer Saugkopf',base:40,grow:1.75,max:10,val:l=>0.95*(1+0.15*l),show:v=>dec(v,2)+' m',label:'Radius'},
+  {id:'handcap',cat:'Handgerät',name:'Größerer Sammelbehälter',base:50,grow:1.7,max:12,val:l=>Math.round(60*Math.pow(1.5,l)),show:v=>fmt(v)+' E',label:'Tragkraft'},
   {id:'power',cat:'Handgerät',name:'Turbo-Saugkraft',base:60,grow:1.8,max:10,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Saugkraft'},
   {id:'vspeed',cat:'Fahrzeuge',name:'Leichtbau-Fahrwerk',base:200,grow:1.7,max:20,val:l=>1+0.15*l,show:v=>'×'+dec(v,2),label:'Tempo',stage:2},
   {id:'vpower',cat:'Fahrzeuge',name:'Doppelbürsten',base:250,grow:1.6,max:30,val:l=>1+0.25*l,show:v=>'×'+dec(v,2),label:'Reinigungsleistung',stage:2},
   {id:'vtank',cat:'Fahrzeuge',name:'Größere Staubtanks',base:220,grow:1.7,max:20,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Ladekapazität',stage:2},
   {id:'veff',cat:'Fahrzeuge',name:'Sparmotoren',base:300,grow:1.8,max:10,val:l=>Math.pow(.88,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
+  {id:'vbatt',cat:'Fahrzeuge',name:'Größere Akkus',base:260,grow:1.7,max:15,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Akku-Laufzeit',stage:2},
   {id:'vradius',cat:'Fahrzeuge',name:'Breitere Düsen',base:400,grow:1.75,max:15,val:l=>1+0.12*l,show:v=>'×'+dec(v,2),label:'Arbeitsradius',stage:3},
   {id:'urate',loc:1,cat:'Entladestationen',name:'Schnellentladung',base:200,grow:1.8,max:8,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Entladetempo',stage:2},
   {id:'ubuf',loc:1,cat:'Entladestationen',name:'Größere Trichter',base:250,grow:1.8,max:8,val:l=>1+0.4*l,show:v=>'×'+dec(v,1),label:'Kapazität',stage:2},
@@ -575,9 +582,9 @@ function freshPlanet(pid){
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
   return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
-    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],upg:{},sellBuf:{},rk:0,lifters:[]};
+    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
-function freshSave(){return{v:2,layout:3,maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
+function freshSave(){return{v:2,layout:3,qv:2,maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
 
 const BRUSH=(()=>{const c=mkCanvas(64),x=c.getContext('2d');const g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.5,'rgba(255,255,255,.75)');g.addColorStop(.8,'rgba(255,255,255,.36)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return c;})();
 function makePattern(type,seed){
@@ -699,7 +706,7 @@ function save(){
 }
 function normalizeSave(o){
   if(!o||o.v!==2||!o.planets||!o.planets.moon)return null;
-  const b=freshSave();Object.assign(b,o);b.locMig=o.locMig?1:0;b.life=Object.assign({earned:o.stats&&o.stats.earned||0},o.life||{});b.ctr=Object.assign({sold:{},cells:0},o.ctr||{});b.upg=o.upg||{};b.research=Object.assign({done:{},active:null},o.research||{});b.stats=Object.assign(freshSave().stats,o.stats||{});
+  const b=freshSave();Object.assign(b,o);b.locMig=o.locMig?1:0;b.qv=o.qv||1;b.life=Object.assign({earned:o.stats&&o.stats.earned||0},o.life||{});b.ctr=Object.assign({sold:{},cells:0},o.ctr||{});b.upg=o.upg||{};b.research=Object.assign({done:{},active:null},o.research||{});b.stats=Object.assign(freshSave().stats,o.stats||{});
   for(const pid in b.planets){if(!PLANETS[pid]){delete b.planets[pid];continue;}const sp=b.planets[pid],f=freshPlanet(pid);for(const k in f)if(sp[k]===undefined||sp[k]===null)sp[k]=f[k];
     for(const k in f.st)if(!sp.st[k])sp.st[k]=f.st[k];for(const k in f.mach)if(!sp.mach[k])sp.mach[k]=f.mach[k];for(const k in f.belts)if(!sp.belts[k])sp.belts[k]=[];
     RAW.forEach(k=>{if(sp.roh[k]==null)sp.roh[k]=0;});PRODS.forEach(k=>{if(sp.prod[k]==null)sp.prod[k]=0;});}
@@ -809,6 +816,11 @@ function machStep(sp,id,dt,f){
 }
 
 const VEH_BUFF=2.6;
+const battCap=v=>(VT[v.type].batt||0)*uv('vbatt');
+const battLow=v=>VT[v.type].batt&&(v.bat==null?battCap(v):v.bat)<battCap(v)*.15;
+function battUse(v,dt){if(!VT[v.type].batt)return 1;if(v.bat==null)v.bat=battCap(v);v.bat=Math.max(0,v.bat-dt);return v.bat>0?1:.3;}
+/* Teamwork: vehicles on the same parcel split it into sectors and clean faster together. */
+function teamOf(sp,cell){const t=[];for(const o of sp.veh)if(o.cell===cell&&(o.mode==='clean'||o.mode==='drive'))t.push(o);t.sort((a,b)=>a.id-b.id);return t;}
 const homeF=(v,pid)=>{const h=VT[v.type].home;return h&&h.includes(pid)?2.2:1;};
 const vehLocked=ty=>VT[ty].planet&&!S.planets[VT[ty].planet];
 /* ---- base navigation: vehicles route around buildings and ground belts (grid A* in plan space) ---- */
@@ -856,15 +868,17 @@ function chooseCell(pid,sp,v){
   const w=W[pid],pd=planetData(pid),T=VT[v.type];let best=-1,bs=1e9;
   if(v.fix!=null){if(workable(pid,v.fix)&&KINDS[pd.cells[v.fix].kind].tier<=T.tier)return v.fix;return -1;}
   for(const[id,a]of w.act){if(a.kind.tier>T.tier||a.sum<a.cl.nIn*a.thr)continue;
-    let crowd=0;for(const o of sp.veh)if(o!==v&&o.cell===id&&(o.mode==='drive'||o.mode==='clean'))crowd++;if(crowd>=(a.dust?2:3))continue;
-    const sc=arcDist(v.d,a.cl.c,pd.R)+crowd*14-(v.last===id?8:0)+(a.dust?(a.sum>a.cl.nIn*.2?20:60):0);if(sc<bs){bs=sc;best=id;}}
+    let crowd=0;for(const o of sp.veh)if(o!==v&&o.cell===id&&(o.mode==='drive'||o.mode==='clean'))crowd++;if(crowd>=(a.dust?2:a.kind.tier>0?4:3))continue;
+    const left=a.sum/a.cl.nIn,team=crowd&&left>.35?-6*Math.min(crowd,2)-(a.kind.hard>1.3?6:0):crowd*14;
+    const sc=arcDist(v.d,a.cl.c,pd.R)+team-(v.last===id?8:0)+(a.dust?(a.sum>a.cl.nIn*.2?20:60):0);if(sc<bs){bs=sc;best=id;}}
   for(const id of w.front){if(w.act.has(id))continue;const cl=pd.cells[id];if(KINDS[cl.kind].tier>T.tier)continue;
     const sc=arcDist(v.d,cl.c,pd.R)+6-(cl.kind==='rich'?6:0);if(sc<bs){bs=sc;best=id;}}
   return best;
 }
-function pickGridTarget(a,v,R){
-  const cl=a.cl,me=toLocal(cl,v.d,R);let best=-1,bs=-1e9;
-  for(let k=0;k<44;k++){const i=Math.random()*CELLS|0,g=a.grid[i];if(g<.15)continue;const x=-cl.H+((i%GRID)+.5)*cl.cs,y=-cl.H+((i/GRID|0)+.5)*cl.cs,sc=g-Math.hypot(x-me[0],y-me[1])*.04;if(sc>bs){bs=sc;best=i;}}
+function pickGridTarget(a,v,R,team){
+  const cl=a.cl,me=toLocal(cl,v.d,R);let best=-1,bs=-1e9;const n=team?team.length:1,my=team?Math.max(0,team.indexOf(v)):0;
+  for(let k=0;k<44;k++){const i=Math.random()*CELLS|0,g=a.grid[i];if(g<.15)continue;const x=-cl.H+((i%GRID)+.5)*cl.cs,y=-cl.H+((i/GRID|0)+.5)*cl.cs;
+    const sec=n>1?Math.floor((Math.atan2(y,x)+Math.PI)/TAU*n)%n:0,sc=g-Math.hypot(x-me[0],y-me[1])*.04-(n>1&&sec!==my?.6:0);if(sc>bs){bs=sc;best=i;}}
   if(best<0){let bv0=0;for(let i=0;i<CELLS;i++)if(a.grid[i]>bv0){bv0=a.grid[i];best=i;}}
   return best;
 }
@@ -877,11 +891,11 @@ const approachPos=s=>[BLD[s].pos[0]+6.4,BLD[s].pos[1]];
 function parkPos(sp,v){const i=sp.veh.indexOf(v);return[19+(i%4)*1.8,13+Math.floor(i/4)*1.8];}
 function vehStep(pid,sp,v,dt,f,live){
   const T=VT[v.type],pd=planetData(pid),R=pd.R,w=W[pid];
-  const spd=T.speed*uv('vspeed')*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1));
-  const tank=sumObj(v.tank),cap=tankCap(v);v.busy=false;
+  const bf=T.batt&&v.bat!=null&&v.bat<=0?.3:1,spd=T.speed*uv('vspeed')*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1))*bf;
+  const tank=sumObj(v.tank),cap=tankCap(v);v.busy=false;v.charging=false;
   switch(v.mode){
     case 'seek':{
-      if(tank>=cap*.98){v.mode='toUnload';break;}
+      if(tank>=cap*.98||battLow(v)){v.mode='toUnload';break;}
       const c=chooseCell(pid,sp,v);
       if(c<0){if(tank>.5){v.mode='toUnload';break;}v.status=v.fix!=null?'Kein verfügbarer Arbeitsbereich':'Kein Auftrag';
         const pp=parkPos(sp,v);if(!navMove(pid,v,basePlanDir(pd,pp[0],pp[1]),spd*.7*dt,R))v.busy=true;break;}
@@ -890,13 +904,14 @@ function vehStep(pid,sp,v,dt,f,live){
     case 'lifted':{if(v.lift==null||!sp.lifters.some(l=>l.id===v.lift&&l.veh===v.id)){v.lift=null;v.mode='drive';break;}v.status='Wird eingeflogen';break;}
     case 'drive':case 'clean':{
       const a=w.act.get(v.cell);if(!a||a.sum<a.cl.nIn*a.thr){v.mode='seek';v.cell=-1;break;}
-      if(tank>=cap){v.mode='toUnload';break;}
-      if(v.ti<0||a.grid[v.ti]<.05){v.ti=pickGridTarget(a,v,R);if(v.ti<0){v.mode='seek';break;}}
-      const gdir=gridDir(a,v.ti,R),arrived=v.mode==='drive'?navMove(pid,v,gdir,spd*dt,R):moveDir(v,gdir,spd*dt*.6,R);v.busy=true;
+      if(tank>=cap||battLow(v)){v.mode='toUnload';break;}
+      const team=teamOf(sp,v.cell);
+      if(v.ti<0||a.grid[v.ti]<.05){v.ti=pickGridTarget(a,v,R,team);if(v.ti<0){v.mode='seek';break;}}
+      const gdir=gridDir(a,v.ti,R),arrived=v.mode==='drive'?navMove(pid,v,gdir,spd*dt,R):moveDir(v,gdir,spd*dt*.6,R);v.busy=true;battUse(v,dt);
       if(v.mode==='drive'){v.status='Fährt zum Einsatz';const dl=toLocal(a.cl,v.d,R);if(arrived||Math.hypot(dl[0],dl[1])<a.cl.H*.9)v.mode='clean';break;}
-      v.status='Reinigt';v.ph=(v.ph||0)+dt*4;
+      const tn=Math.min(4,team.filter(o=>o.mode==='clean').length);v.status=tn>1?'Reinigt im Team ('+tn+')':'Reinigt';v.ph=(v.ph||0)+dt*4;
       const loc=toLocal(a.cl,v.d,R),wg=arrived?.4:0;
-      const k=1-Math.exp(-T.power*VEH_BUFF*homeF(v,pid)*uv('vpower')*powF(pid)*cleanMul()*Math.max(.25,f)*dt*(arrived?1:.5)/(a.D.hard*a.kind.hard));
+      const k=1-Math.exp(-T.power*VEH_BUFF*homeF(v,pid)*uv('vpower')*powF(pid)*cleanMul()*(1+.1*Math.max(0,tn-1))*bf*Math.max(.25,f)*dt*(arrived?1:.5)/(a.D.hard*a.kind.hard));
       const rem=cleanAt(a,loc[0]+Math.cos(v.ph)*wg,loc[1]+Math.sin(v.ph)*wg,T.radius*uv('vradius'),k,live);
       if(rem>0){const amt=rem/a.cl.nIn*a.amt,m2=rem/a.cl.nIn*cellArea(a.cl);v.tank[a.D.mat]=(v.tank[a.D.mat]||0)+amt;v.coll=(v.coll||0)+amt;sp.stats.value+=amt*MATS[a.D.mat].v*pvM(pid);sp.stats.cleanedM2+=m2;
         if(TRACK){const t=TRACK.p[pid];t.area+=m2;t.mats[a.D.mat]=(t.mats[a.D.mat]||0)+amt;}}
@@ -905,7 +920,7 @@ function vehStep(pid,sp,v,dt,f,live){
       if(v.drone!=null){v.mode='wait';break;}
       const s=chooseStation(pid,sp,v);
       if(!s){v.status='Keine passende Entladestation';v.warn=1;break;}
-      v.warn=0;v.sid=s;v.busy=true;v.status=isOut(s)?'Fährt zum Außenlager':'Fährt zur Entladestation';
+      v.warn=0;v.sid=s;v.busy=true;battUse(v,dt);v.status=battLow(v)?'Akku fast leer – fährt zum Laden':isOut(s)?'Fährt zum Außenlager':'Fährt zur Entladestation';
       if(navMove(pid,v,stDir(pid,s,'a'),spd*dt,R))v.mode='queue';break;}
     case 'wait':{
       if(v.drone==null){v.mode=tank>=cap*.98?'toUnload':'seek';break;}
@@ -919,11 +934,13 @@ function vehStep(pid,sp,v,dt,f,live){
       if(moveDir(v,stDir(pid,s,'d',k),spd*.6*dt,R))v.mode='unload';break;}
     case 'unload':{
       const s=v.sid,st=s&&stObj(sp,s);if(!st){v.mode='toUnload';break;}
-      const free=stBuf(s)-sumObj(st.buf);
-      if(free<=.01){v.status='Station voll – wartet';break;}
+      const free=stBuf(s)-sumObj(st.buf);let charged=true;
+      if(T.batt){const bc=battCap(v);if(v.bat==null)v.bat=bc;if(v.bat<bc){v.bat=Math.min(bc,v.bat+bc/16*uv('urate')*Math.max(.25,f)*dt);v.charging=true;}charged=v.bat>=bc*.97;}
+      if(free<=.01&&tank>.01){v.status=v.charging?'Station voll – lädt Akku':'Station voll – wartet';break;}
       const amt=Math.min(stDef(s).rate*uv('urate')*dt,free,tank),f0=tank>0?amt/tank:0;
       for(const m in v.tank){const x=v.tank[m]*f0;v.tank[m]-=x;st.buf[m]=(st.buf[m]||0)+x;}
-      v.status='Entlädt';
+      v.status=tank>.01?(v.charging?'Entlädt und lädt Akku':'Entlädt'):'Lädt Akku · '+Math.round((v.bat||0)/battCap(v)*100)+' %';
+      if(sumObj(v.tank)<.01&&!charged){v.tank={};break;}
       if(sumObj(v.tank)<.01){const main=Object.keys(v.tank).sort((p,q)=>v.tank[q]-v.tank[p])[0]||'staub';v.tank={};const kk=st.docks.indexOf(v.id);if(kk>=0)st.docks[kk]=0;v.mode='seek';v.sid=null;
         if(live&&!TRACK&&v.coll>=1)floatText3(stDir(pid,s,'c'),3,'+'+fmt(v.coll)+' entladen','mat');v.coll=0;}
       break;}
@@ -1058,7 +1075,7 @@ function simStep0(pid,dt,live){
   sp.pv=P.diff;sp.vm=st&&st.veh||1;sp.bm=st&&st.belt||1;sp.mm=st&&st.mach||1;sp.solar=(hz.solar||1)*(st&&st.solar||1);sp.dm=(hz.dust||1)*(st&&st.dust||1);
   let demand=0;
   const vE=uv('veff')*(S.research.done.motor?.7:1);
-  for(const v of sp.veh)if(v.busy)demand+=VT[v.type].energy*vE;
+  for(const v of sp.veh){const T=VT[v.type];if(T.batt){if(v.charging)demand+=T.energy*2.5*vE;}else if(v.busy)demand+=T.energy*vE;}
   for(const dr of sp.drones)if(dr.busy)demand+=.4*vE;for(const L of sp.lifters)if(L.busy)demand+=2*vE;if(sp.shOn)demand+=4;for(const o of sp.outposts)if(o.busy)demand+=.2;
   for(const m in MACH)if(sp.bld[m]&&sp.mach[m].cur>=0)demand+=MACH[m].energy*uv('meff');
   for(const b of BELTS)if(beltLive(sp,b)&&sp.belts[b.id].length)demand+=.1*uv('beff');
@@ -1532,6 +1549,15 @@ function pick(x,y){
   const d=sphereHit(x,y);if(!d)return null;lastCell=cellOf(planetData(S.planet),d,lastCell);return{type:'cell',id:lastCell,d};
 }
 let cleanMode=true,G=null,stroke=null,strokeRem=0,rohWarnT=0;
+/* The player's own collector: hand-cleaned material is carried until you unload it into a hopper or storage yourself. */
+const handCap=()=>uv('handcap');
+function handTargets(){const sp=SP(),out=[];for(const s of STATIONS)if(sp.bld[s])out.push({id:s,name:BLD[s].name,free:stBuf(s)-sumObj(sp.st[s].buf)});out.push({id:'roh',name:'Rohstofflager',free:rohCap()-rohSum(sp)});return out;}
+function unloadHand(to){const sp=SP(),tot=sumObj(sp.hand);if(tot<.05)return fail('Dein Sammelbehälter ist leer');
+  const tg=handTargets();let t=to?tg.find(x=>x.id===to):tg.filter(x=>x.id!=='roh').sort((a,b)=>b.free-a.free)[0];if(!t||t.free<1)t=tg.find(x=>x.id==='roh');if(!t||t.free<.05)return fail('Kein Platz – Trichter und Lager sind voll');
+  const amt=Math.min(tot,t.free),k=amt/tot;const dst=t.id==='roh'?sp.roh:sp.st[t.id].buf;
+  for(const m in sp.hand){const x=sp.hand[m]*k;sp.hand[m]-=x;if(sp.hand[m]<1e-6)delete sp.hand[m];dst[m]=(dst[m]||0)+x;}
+  S.stats.handUnloads=(S.stats.handUnloads||0)+1;SFX.pop();$('#handBtn').classList.remove('pulse');
+  const B0=BLD[t.id];floatText3(basePlanDir(planetData(S.planet),B0.pos[0],B0.pos[1]),3.5,'+'+fmt(amt)+' entladen','mat');toast(fmt(amt)+' E in '+t.name+(amt<tot-.05?' · Rest bleibt im Behälter':''),'good');updateHUD();save();}
 const ptrs=new Map();
 const brushRing=new THREE.Mesh(new THREE.RingGeometry(.86,1,40),new THREE.MeshBasicMaterial({color:0x6ff2d2,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide}));brushRing.visible=false;brushRing.renderOrder=5;scene.add(brushRing);
 const canClean=hit=>cleanMode&&!mapMode&&hit&&hit.type==='cell'&&workable(S.planet,hit.id);
@@ -1547,13 +1573,13 @@ function strokeTo(x,y){const d=sphereHit(x,y);if(!stroke)return;if(strokeLeaves(
 function stampManual(d){
   const pid=S.planet,sp=SP(),pd=planetData(pid),R=pd.R,w=W[pid],r=uv('radius');stroke.ld=d;
   orient(brushRing,d,cam.N,R,.07);brushRing.rotateX(-Math.PI/2);brushRing.scale.setScalar(r);brushRing.visible=true;
-  if(rohCap()-rohSum(sp)<=.05){if(performance.now()-rohWarnT>2500){rohWarnT=performance.now();toast('Rohstofflager voll – verkaufe oder baue aus','bad');SFX.error();}return;}
+  if(handCap()-sumObj(sp.hand)<=.05){if(performance.now()-rohWarnT>2500){rohWarnT=performance.now();toast('Sammelbehälter voll – tippe unten links auf den Behälter, um ihn zu entladen','bad');SFX.error();$('#handBtn').classList.add('pulse');}return;}
   const c0=cellOf(pd,d,lastCell);lastCell=c0;let rem=0,lastA=null;
   if(stroke.cell==null||!workable(pid,stroke.cell))stroke.cell=workable(pid,c0)?c0:null;
   if(stroke.cell==null)return;
   for(const id of[stroke.cell]){if(!workable(pid,id))continue;const cl0=pd.cells[id],l0=toLocal(cl0,d,R);if(Math.abs(l0[0])>cl0.H+r||Math.abs(l0[1])>cl0.H+r)continue;const a=ensureAct(pid,id);if(!a)continue;const loc=l0;
     const k=1-Math.exp(-.35*uv('power')*cleanMul()/(a.D.hard*a.kind.hard)),got=cleanAt(a,loc[0],loc[1],r,k,true);
-    if(got>0){const amt=Math.min(got/a.cl.nIn*a.amt,rohCap()-rohSum(sp));sp.roh[a.D.mat]+=amt;stroke.acc+=amt;S.handAcc=(S.handAcc||0)+amt;if(S.handAcc>=30){S.handAcc-=30;if(Math.random()<.12)rollFind(pid,a.cl,'hand',true,d);}sp.stats.value+=amt*MATS[a.D.mat].v*pvM();sp.stats.cleanedM2+=got/a.cl.nIn*cellArea(a.cl);rem+=got;lastA=a;}}
+    if(got>0){const amt=Math.min(got/a.cl.nIn*a.amt,handCap()-sumObj(sp.hand));sp.hand[a.D.mat]=(sp.hand[a.D.mat]||0)+amt;stroke.acc+=amt;S.handAcc=(S.handAcc||0)+amt;if(S.handAcc>=30){S.handAcc-=30;if(Math.random()<.12)rollFind(pid,a.cl,'hand',true,d);}sp.stats.value+=amt*MATS[a.D.mat].v*pvM();sp.stats.cleanedM2+=got/a.cl.nIn*cellArea(a.cl);rem+=got;lastA=a;}}
   if(rem>.003&&lastA){emit3(d,R+.15,DIRT[lastA.cl.type].light,2+Math.min(4,rem*12|0),2.2,2);strokeRem+=rem;stroke.sfx=lastA.D.sfx;stroke.mat=lastA.D.mat;}
 }
 function endStroke(){if(stroke&&stroke.acc>=1&&stroke.ld)floatText3(stroke.ld,1.2,'+'+fmt(stroke.acc)+' '+MATS[stroke.mat||'staub'].name,'mat');stroke=null;brushRing.visible=false;}
@@ -1686,7 +1712,7 @@ function upgRow(id){const u=UP[id],l=lvl(id),max=l>=u.max;
 const matList=o=>Object.keys(o).filter(k=>o[k]>=.05).map(k=>MATS[k].name+' '+fmt(o[k])).join(' · ')||'leer';
 function vehRow(v){const T=VT[v.type];return '<div class="row"><div class="row-main"><div class="row-t">'+T.name+' #'+v.id+'</div><div class="row-d" data-b="'+bind(()=>v.status+(v.cell>=0&&(v.mode==='clean'||v.mode==='drive')?' · '+cellName(v.cell):''))+'"></div><div class="bar"><i data-w="'+bind(()=>sumObj(v.tank)/tankCap(v)*100)+'"></i></div></div><button class="buy alt" data-act="vehsheet" data-id="'+v.id+'">Details</button></div>';}
 const SEC={
-  roh(){let h='<section class="sec"><h3>Rohstofflager</h3><p class="note">Hier landet alles, was Handgerät und Förderbänder bringen. Ist es voll, stauen sich die Bänder und die Fahrzeuge warten an den Entladestationen.</p><div class="bar big-bar"><i data-w="'+bind(()=>rohSum(SP())/rohCap()*100)+'" style="background:var(--clean)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(rohSum(SP()))+' von '+fmt(rohCap())+' Einheiten')+'"></div><dl class="kv">';
+  roh(){let h=handRow('roh')+'<section class="sec"><h3>Rohstofflager</h3><p class="note">Hier landet alles, was Handgerät und Förderbänder bringen. Ist es voll, stauen sich die Bänder und die Fahrzeuge warten an den Entladestationen.</p><div class="bar big-bar"><i data-w="'+bind(()=>rohSum(SP())/rohCap()*100)+'" style="background:var(--clean)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(rohSum(SP()))+' von '+fmt(rohCap())+' Einheiten')+'"></div><dl class="kv">';
     for(const m of RAW)h+='<dt>'+MATS[m].name+'</dt><dd data-b="'+bind(()=>fmt(SP().roh[m])+' · Wert '+fmt(SP().roh[m]*matValue(m))+' Cr')+'"></dd>';return h+'</dl>'+upgRow('rohcap')+'</section>';},
   prod(){let h='<section class="sec"><h3>Produktlager</h3><div class="bar big-bar"><i data-w="'+bind(()=>prodSum(SP())/prodCap()*100)+'" style="background:var(--prod)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(prodSum(SP()))+' von '+fmt(prodCap())+' Stück')+'"></div><dl class="kv">';
     for(const m of PRODS)h+='<dt>'+MATS[m].name+'</dt><dd data-b="'+bind(()=>fmt(SP().prod[m])+' · je '+fmt(matValue(m))+' Cr')+'"></dd>';return h+'</dl>'+upgRow('prodcap')+'</section>';},
@@ -1714,8 +1740,9 @@ function machSec(id){const D=MACH[id],B0=BLD[id];
   return '<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+D.rec.map(rc=>rc.n+' '+MATS[rc.in].name+' → '+rc.k+' '+MATS[rc.out].name+' ('+dec(rc.t,1)+' s · Wert '+fmt(MATS[rc.in].v*rc.n*pvM())+' → '+fmt(MATS[rc.out].v*rc.k*pvM())+' Cr)').join('<br>')+'<br>Energie: '+dec(D.energy,1)+'/s während der Arbeit.</p>'+
   '<dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>SP().mach[id].status||'–')+'"></dd><dt>Eingang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].in)+' / '+fmt(machInCap(id)))+'"></dd><dt>Ausgang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].out)+' / '+fmt(machOutCap(id)))+'"></dd></dl>'+
   '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
+function handRow(id){return '<div class="row"><div class="row-main"><div class="row-t">Sammelbehälter hier entladen</div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().hand))+' / '+fmt(handCap())+' E im Behälter')+'"></div></div><button class="buy" data-act="unhand" data-id="'+id+'" data-en="'+bind(()=>sumObj(SP().hand)>=.05)+'">Entladen</button></div>';}
 function stationSec(id){const B0=BLD[id];
-  return '<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+B0.desc+' Fahrzeuge laden hier ihren Tank ab, das Material läuft über das Förderband weiter.</p><dl class="kv"><dt>Andockplätze</dt><dd data-b="'+bind(()=>SP().st[id].docks.filter(x=>x).length+' belegt von '+stDocks(id))+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(SP().st[id].buf))+' / '+fmt(stBuf(id)))+'"></dd><dt>Entladetempo</dt><dd>'+dec(B0.st.rate*uv('urate'),1)+' E/s</dd><dt>Passend für</dt><dd>'+Object.keys(VT).filter(t=>B0.st.acc.includes(VT[t].size)).map(t=>VT[t].name).join(', ')+'</dd><dt>In der Warteschlange</dt><dd data-b="'+bind(()=>String(SP().veh.filter(v=>v.sid===id&&v.status==='Wartet auf Andockplatz').length))+'"></dd></dl>'+upgRow('urate')+upgRow('ubuf')+(SP().stage>=3?upgRow('udock'):'')+'</section>';}
+  return handRow(id)+'<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+B0.desc+' Fahrzeuge laden hier ihren Tank ab, das Material läuft über das Förderband weiter.</p><dl class="kv"><dt>Andockplätze</dt><dd data-b="'+bind(()=>SP().st[id].docks.filter(x=>x).length+' belegt von '+stDocks(id))+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(SP().st[id].buf))+' / '+fmt(stBuf(id)))+'"></dd><dt>Entladetempo</dt><dd>'+dec(B0.st.rate*uv('urate'),1)+' E/s</dd><dt>Passend für</dt><dd>'+Object.keys(VT).filter(t=>B0.st.acc.includes(VT[t].size)).map(t=>VT[t].name).join(', ')+'</dd><dt>In der Warteschlange</dt><dd data-b="'+bind(()=>String(SP().veh.filter(v=>v.sid===id&&v.status==='Wartet auf Andockplatz').length))+'"></dd></dl>'+upgRow('urate')+upgRow('ubuf')+(SP().stage>=3?upgRow('udock'):'')+'</section>';}
 function buildRow(id){const sp=SP(),B0=BLD[id],c=Math.round(B0.cost*PLANETS[S.planet].diff),need=B0.research&&!S.research.done[B0.research];
   return '<div class="row"><div class="row-main"><div class="row-t">'+B0.name+'</div><div class="row-d">'+B0.desc+'</div></div>'+
     (sp.bld[id]?'<button class="buy alt" data-act="bsheet" data-id="'+id+'">Öffnen</button>':gs(sp)<B0.stage?'<span class="pill">Stufe '+B0.stage+'</span>':need?'<span class="pill">Forschung</span>':'<button class="buy" data-act="build" data-id="'+id+'" data-en="'+bind(()=>S.credits>=c)+'">'+cr(c)+'</button>')+'</div>';}
@@ -1739,7 +1766,7 @@ function renderSheet(){
       h+='<section class="sec"><h3>Drohnen</h3>'+(sp.bld.hangar?'<div class="row"><div class="row-main"><div class="row-t">Transportdrohnen</div><div class="row-d" data-b="'+bind(()=>SP().drones.length+' von '+DRONE.max+' · '+SP().drones.filter(d=>d.busy).length+' unterwegs')+'"></div></div><button class="buy alt" data-act="bsheet" data-id="hangar">Hangar</button></div>':'<p class="note">'+(S.research.done.drones?'Baue den Drohnenhangar (Basisstufe 4), dann holen Drohnen die Ladung weit entfernter Fahrzeuge ab.':'Später: Mit Drohnentechnik (Forschung) holen Drohnen die Ladung weit entfernter Fahrzeuge ab.')+'</p>')+'</section>';
       h+='<section class="sec"><h3>Fahrzeug-Upgrades</h3>'+['vspeed','vpower','vtank','veff'].concat(gs(sp)>=3?['vradius']:[]).map(upgRow).join('')+'</section>';}}
   else if(kind==='vehicle'){const v=sp.veh.find(x=>x.id===arg);if(!v){closeSheet();return;}const T=VT[v.type];k='Fahrzeug #'+v.id;t=T.name;
-    h+='<section class="sec"><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>v.status)+'"></dd><dt>Tank</dt><dd data-b="'+bind(()=>fmt(sumObj(v.tank))+' / '+fmt(tankCap(v))+(sumObj(v.tank)>.5?' ('+matList(v.tank)+')':''))+'"></dd><dt>Tempo</dt><dd>'+dec(T.speed*uv('vspeed'),1)+' m/s</dd><dt>Radius</dt><dd>'+dec(T.radius*uv('vradius'),2)+' m</dd><dt>Energie</dt><dd>'+dec(T.energy*uv('veff')*PLANETS[pid].energy*(S.research.done.motor?.7:1),2)+'/s</dd><dt>Entladen an</dt><dd>'+STATIONS.filter(s=>BLD[s].st.acc.includes(T.size)).map(s=>BLD[s].name).join(', ')+(sp.outposts.length?', Außenlager':'')+'</dd></dl>'+
+    h+='<section class="sec"><dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>v.status)+'"></dd>'+(T.batt?'<dt>Akku</dt><dd data-b="'+bind(()=>Math.round((v.bat==null?battCap(v):v.bat)/battCap(v)*100)+' % · '+fmtTime(v.bat==null?battCap(v):v.bat)+' Laufzeit'+(v.charging?' · lädt':''))+'"></dd>':'<dt>Antrieb</dt><dd>Netzstrom</dd>')+'<dt>Tank</dt><dd data-b="'+bind(()=>fmt(sumObj(v.tank))+' / '+fmt(tankCap(v))+(sumObj(v.tank)>.5?' ('+matList(v.tank)+')':''))+'"></dd><dt>Tempo</dt><dd>'+dec(T.speed*uv('vspeed'),1)+' m/s</dd><dt>Radius</dt><dd>'+dec(T.radius*uv('vradius'),2)+' m</dd><dt>Energie</dt><dd>'+dec(T.energy*uv('veff')*PLANETS[pid].energy*(S.research.done.motor?.7:1),2)+'/s</dd><dt>Entladen an</dt><dd>'+STATIONS.filter(s=>BLD[s].st.acc.includes(T.size)).map(s=>BLD[s].name).join(', ')+(sp.outposts.length?', Außenlager':'')+'</dd></dl>'+
       '<div class="bar big-bar"><i data-w="'+bind(()=>sumObj(v.tank)/tankCap(v)*100)+'"></i></div></section><section class="sec"><h3>Steuerung</h3><div class="row"><div class="row-main"><div class="row-t">Arbeitsbereich</div><div class="row-d">'+(v.fix!=null?'Fest: '+cellName(v.fix):'Automatisch – nächste verschmutzte Parzelle')+'</div></div>'+(v.fix!=null?'<button class="buy alt" data-act="vehauto" data-id="'+v.id+'">Automatisch</button>':'')+'</div><p class="note">Manuell steuern: Tippe eine erschlossene Parzelle an und wähle „Zuweisen“.</p>'+
       '<div class="btns"><button class="buy alt" data-act="follow" data-id="'+v.id+'">Kamera hin</button><button class="buy alt" data-act="tounload" data-id="'+v.id+'">Jetzt entladen</button></div></section>';}
   else if(kind==='production'){k=PLANETS[pid].name;t='Produktion';h+=flowSec(pid);
@@ -1818,7 +1845,7 @@ const ACT={
   research(d){startResearch(d.id);},travel(d){travelTo(d.id);return 'keep';},unlock(d){unlockPlanet(d.id);return 'keep';},
 flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);return 'keep';},
   sound(){S.sound=!S.sound;if(!S.sound)scrub(0);},
-  buydrone(){buyDrone();},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
+  buydrone(){buyDrone();},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
   off(d){closeSheet();const rep=runOffline(+d.h*3600);if(rep)afterOffline(rep);else toast('Nichts zu simulieren');return 'keep';},
@@ -1837,6 +1864,7 @@ $('#planetChip').addEventListener('click',()=>openSheet('planets'));
 $('#gear').addEventListener('click',()=>openSheet('settings'));
 $('#daily').addEventListener('click',()=>{audioInit();genDaily();openSheet('daily');});
 $('#hz').addEventListener('click',()=>openSheet('hazard'));
+$('#handBtn').addEventListener('click',()=>{audioInit();unloadHand();});
 $('#flowChip').addEventListener('click',()=>openSheet('production'));
 $('#mapPanel').addEventListener('click',e=>{if(e.target.closest('[data-mm]')){S.mapMin=!S.mapMin;updateHUD();}});
 $('#mEnergy').addEventListener('click',()=>openSheet('building',SP().bld.energy?'energy':'hq'));
@@ -1922,6 +1950,7 @@ function doPrestige(){const g=prestigeGain();if(!S.planets.mars||g<=0)return fai
   $('#go').addEventListener('click',()=>{hideModal();SFX.unlock();});updateHUD();}
 const QUESTS=[
   {t:'Wische mit dem Finger über deine erste Parzelle',p:()=>startProg()/.25,r:15,go:()=>focusCell(planetData('moon').start)},
+  {t:'Entlade deinen Sammelbehälter – tippe unten links auf den Behälter',p:()=>(S.stats.handUnloads||0)>0?1:0,r:15,go:()=>{$('#handBtn').classList.add('pulse');}},
   {t:'Reinige die Parzelle vollständig – sie bleibt dann für immer sauber',p:()=>moonW().clean[planetData('moon').start]?1:Math.min(.99,startProg()),r:30,go:()=>focusCell(planetData('moon').start)},
   {t:'Verkaufe Staub an der Verkaufsstation',p:()=>S.stats.sold>0?1:Math.min(.99,rohSum(moonS())/40),r:20,go:()=>openSheet('building','sell')},
   {t:'Reinige gleich weiter – die Nachbarparzellen sind sofort reinigbar',p:()=>moonW().nClean>=2?1:Math.min(.99,(moonW().nClean-1)+[...moonW().act.values()].filter(a=>!a.dust).reduce((m,a)=>Math.max(m,prog(a)),0)),r:25,go:()=>focusDir(cam.d,fitAlt(40))},
@@ -1965,6 +1994,7 @@ function updateHUD(){
     hb.hidden=false;hb.textContent=hzS.name+(sp.shOn?' · Schild hält 80 % ab':' · '+fx.join(' · '))+' · noch '+Math.ceil(sp.hzOn)+' s';}
   else if(hzS&&hzS.every-(sp.hzT||0)<=30){hb.hidden=false;hb.textContent='⚠ '+hzS.name+' in '+Math.ceil(hzS.every-(sp.hzT||0))+' s'+(S.research.done.shield?(sp.shield?' · Schild bereit':' · Tippen: Schild einschalten'):' · Tippen für Infos');}else hb.hidden=true;
   {const fc=$('#flowChip'),show=gs(sp)>=2&&(sp.veh.length||sp.bld.presse)&&!mapMode;fc.hidden=!show;if(show){const r=flowReport(pid),lv=flowLevel(r),worst=r.filter(n=>n.lvl===lv&&lv>0)[0];$('#flowDot').className='l'+lv;$('#flowTxt').textContent=lv===0?'Produktion läuft':(lv===2?'Stau: ':'Engpass: ')+worst.name+' – '+worst.why.split(' – ')[0].split('.')[0];}}
+  {const hs=sumObj(sp.hand),hc=handCap(),hb=$('#handBtn');hb.hidden=mapMode;$('#handTxt').textContent=fmt(hs)+'/'+fmt(hc);$('#handBar').style.width=Math.min(100,hs/hc*100).toFixed(1)+'%';hb.classList.toggle('full',hs>=hc-.5);}
   const dn=dailyReady();$('#dailyBadge').hidden=!dn;$('#dailyBadge').textContent=dn;
   const q=QUESTS[S.quest],qb=$('#quest');
   if(!q||mapMode)qb.hidden=true;else{qb.hidden=false;const v=clamp(q.p(),0,1);$('#qk').textContent='Ziel '+(S.quest+1)+' von '+QUESTS.length;$('#qt').textContent=q.t;$('#qb').style.width=(v*100).toFixed(0)+'%';$('#qr').innerHTML='<span class="cr-ico"></span>+'+fmt(q.r);
@@ -2113,6 +2143,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){save();try
 window.addEventListener('pagehide',save);
 function startCam(){const pd=planetData(S.planet),st=pd.cells[pd.start];cam.d=vnorm(vadd(vsc(st.c,.7),vsc(pd.cells[pd.base].c,.3)));cam.N=pd.cells[pd.base].e2.slice();camReproject();cam.alt=fitAlt(18);cam.gd=null;}
 function migrate(){
+  if((S.qv||1)<2){if(S.quest>=1)S.quest++;S.qv=2;}
   if(S.layout!==3){for(const pid in S.planets){const pd=planetData(pid),sp=S.planets[pid];if(!sp.owned.includes(pd.start))sp.owned.push(pd.start);
       for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload')v.mode='toUnload';v.sid=null;v.d=basePlanDir(pd,2.5,13);}for(const st of STATIONS)sp.st[st].docks=[];}
     S.layout=3;}

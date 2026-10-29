@@ -22,11 +22,18 @@ with game() as (pg, errs):
       return {a:s1-a1.sum,b:s2-a2.sum}}""")
     show('one parcel per stroke', r); check(r['a'] > 1 and r['b'] == 0, 'stroke cleaned two parcels')
 
+    r = E("""()=>{const t=__t,pd=t.planetData('moon'),w=t.W.moon,sp=t.S.planets.moon,a=w.act.get(pd.start);const H=a.cl.H;__ss({last:null,acc:0,ft:0,ld:null});t.stampManual(a.cl.c);
+      for(let p=0;p<3;p++)for(let y=-H;y<=H;y+=.5)for(let x=-H;x<=H;x+=.3)t.stampManual(t.toDir(a.cl,x,y,pd.R));__ss(null);
+      const full=t.sumObj(sp.hand),cap=t.handCap(),roh0=t.rohSum(sp);t.unloadHand();return {full,cap,roh0,roh1:t.rohSum(sp),left:t.sumObj(sp.hand)}}""")
+    show('hand collector', r); check(abs(r['full'] - r['cap']) < 1 and r['roh1'] > r['roh0'] + r['cap'] * .9 and r['left'] < .1, 'hand collector')
     r = E("""()=>{const t=__t,w=t.W.moon,sp=t.S.planets.moon;t.S.credits=30000;t.buyStage();t.buildBuilding('u1');t.buildBuilding('presse');t.buildBuilding('energy');
       t.buyVehicle('buggy');t.buyVehicle('buggy');t.buyVehicle('staubi');const n0=w.nClean;for(let i=0;i<2400;i++)t.simStep('moon',.5,false);
       return {n0,n:w.nClean,rk:sp.rkN||0,veh:sp.veh.map(v=>v.status)}}""")
     show('vehicles 20 min', r); check(r['n'] > r['n0'] + 2, 'vehicles do not clean the frontier')
 
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;let charged=0,team=0,low=0;for(let i=0;i<4000;i++){t.simStep('moon',.5,false);for(const v of sp.veh){if(v.charging)charged++;if((v.status||'').includes('Team'))team++;if((v.status||'').includes('Akku fast leer'))low++;}}
+      return {charged,team,low,bat:sp.veh.filter(v=>t.VT[v.type].batt).map(v=>Math.round(v.bat))}}""")
+    show('battery + teamwork', r); check(r['charged'] > 0 and r['low'] > 0, 'battery charging cycle')
     r = E("""()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');for(const c of pd.cells)if(c.ring>=3&&c.ring<=4){w.clean[c.id]=1;w.nClean++;}t.calcFront('moon');const out=[];
       for(let i=0;i<5;i++){const b=new Set(w.act.keys());t.meteor('moon',false);for(const[id,a]of w.act)if(a.dust&&!b.has(id))out.push(a.sum/a.cl.nIn);}return out}""")
     show('meteor coverage', r); check(r and min(r) > .35, 'meteor showers too weak')
@@ -58,7 +65,7 @@ with game() as (pg, errs):
     show('energy + vehicle lock', r); check(r['e1'] >= r['e0'] + 159 and not r['geo'] and r['locked'], 'energy buildings / vehicle lock')
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.research.done.airlift=true;t.buildBuilding('lifter');t.buyLifter();
-      for(const c of pd.cells)if(c.kind!=='base'&&c.ring<=6){w.clean[c.id]=1;}w.nClean=pd.cells.filter(c=>c.kind!=='base'&&w.clean[c.id]).length;for(const c of pd.cells)if(c.ring>6)w.clean[c.id]=0;t.calcFront('moon');
+      for(const c of pd.cells)if(c.kind!=='base'&&c.ring<=6){w.clean[c.id]=1;}w.nClean=pd.cells.filter(c=>c.kind!=='base'&&w.clean[c.id]).length;for(const c of pd.cells)if(c.ring>6)w.clean[c.id]=0;for(const[id,a]of[...w.act])w.act.delete(id);t.calcFront('moon');
       sp.veh=[];t.buyVehicle('truck');const v=sp.veh[0];v.d=t.basePlanDir(pd,2.5,13);v.mode='seek';const seen=new Set();for(let i=0;i<800;i++){t.simStep('moon',.25,false);seen.add(v.mode);}
       return {modes:[...seen],lifter:sp.lifters[0].mode}}""")
     show('airlift', r); check('lifted' in r['modes'], 'heavy-lift drone never carried a vehicle')

@@ -48,3 +48,9 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Lastdrohnen nur für M/L-Fahrzeuge und Ziele > 45 m – kurze Wege fährt man schneller selbst.
 - Batterien als Upgrade (Akkupark) statt Gebäude – auf der Basis ist nur noch Platz für drei große und ein kleines Gebäude.
 - Geothermie ist auf dem Mond nicht baubar (keine Erdwärme), auf Io am stärksten.
+
+## v3.8
+- Ladestationen = Andockplätze der Entladestationen und Außenlager (Laden 1/16 der Kapazität pro Sekunde × Entladetempo) – auf der Basis ist kein Platz für ein weiteres Gebäude, und so ist jede Rückfahrt auch eine Ladefahrt.
+- Akku-Fahrzeuge ziehen unterwegs keinen Netzstrom, beim Laden 2,5× ihren Verbrauch – Vorteil auf sonnenarmen Planeten. Leerer Akku: 30 % Tempo und Leistung, nie festgefahren.
+- Teamarbeit: Parzelle wird nach Winkel in Sektoren je Fahrzeug geteilt, +10 % Reinigung je weiterem Fahrzeug (max. 4); bei > 35 % Restschmutz zieht eine belegte Parzelle Helfer an, sonst wird sie gemieden.
+- Sammelbehälter 60 E × 1,5^Stufe; ohne Ziel-Auswahl entlädt der Knopf in den Trichter mit dem meisten Platz, sonst ins Rohstofflager. Neues Tutorial-Ziel 2, alte Spielstände werden per `qv` verschoben.

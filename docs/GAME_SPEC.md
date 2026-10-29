@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.7)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v3.8)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -39,7 +39,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Wischen mit einem Finger auf einer reinigbaren Parzelle reinigt; daneben = Kamera drehen. Zwei Finger = Zoom/Drehen.
 - **Ein Wisch reinigt immer nur eine Parzelle** – die, auf der er begonnen hat. Erst wenn sie fertig ist, wechselt der Wisch auf die Parzelle unter dem Finger.
 - Kein Leistungsdeckel für das Handgerät (ausdrücklicher Wunsch). Stärke: Radius `0,95 m × (1 + 0,15·Stufe)`, Kraft `1 + 0,3·Stufe`, pro Stempel `k = 1 − exp(−0,35·Kraft·Sternenstaubbonus / Härte)`.
-- Material geht direkt ins Rohstofflager (stoppt, wenn voll, mit Hinweis).
+- Material geht in den **Sammelbehälter** des Spielers (60 E × 1,5^Stufe, Upgrade „Größerer Sammelbehälter“, max. 12). Ist er voll, stoppt das Wischen mit Hinweis. Entladen per Knopf unten links (Trichter mit dem meisten Platz, sonst Rohstofflager) oder gezielt im Fenster einer Entladestation bzw. des Rohstofflagers.
 - Je 30 Einheiten per Hand: 12 % Chance auf einen Fund (Abschnitt 11).
 
 ## 4. Meteoritenstaub (Neuverschmutzung)
@@ -100,6 +100,8 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Reinigung pro Tick `k = 1 − exp(−Kraft·2,6·Doppelbürsten·Leistungsfaktor·Sternenstaub·Energie·dt / Härte)`. (Faktor 2,6 = Buff, damit Fahrzeuge mit Upgrades klar besser sind als die Hand.) Gemessen: Buggy ohne Upgrades ≈ 0,64 m²/s inkl. Entladefahrten.
 - **Leistungsanforderung pro Planet** (Doppelbürsten-Stufe): Mond 0, Mars 1, Europa 3, Titan 4, Io 5, Venus 6, Ganymed 8, Enceladus 9, Triton 10, Pluto 12. Darunter reinigen Fahrzeuge nur mit 30 % (Warnung im HUD und in der Planetenliste).
 - Zustandsmaschine: `seek → drive → clean → toUnload → queue → unload` (+ `wait` auf Drohne). Zielwahl: nächste aktive oder Frontier-Parzelle passender Stufe (Industrieflächen nur Sauger/Truck), max. 3 Fahrzeuge pro Parzelle, reiche Parzellen bevorzugt. Manuelle Zuweisung möglich.
+- **Teamarbeit:** Mehrere Fahrzeuge auf einer Parzelle teilen sie in Winkelsektoren, +10 % Reinigung je weiterem Fahrzeug (max. 4). Bei > 35 % Restschmutz zieht eine belegte Parzelle Helfer an (harte Parzellen stärker), sonst wird sie gemieden. Industrieflächen erlauben 4 Fahrzeuge.
+- **Akkus:** Staubi 110 s, Buggy 140 s, Industriesauger 220 s, Magnetgleiter 300 s Laufzeit × „Größere Akkus“ (+30 %/Stufe, max. 15). Unter 15 % fahren sie zum nächsten Andockplatz, entladen und laden dort (1/16 Kapazität pro s × Entladetempo, 2,5× Verbrauch aus dem Netz). Unterwegs ziehen sie keinen Netzstrom. Leer: 30 % Tempo/Leistung.
 - **Wegfindung:** In der Basis (Radius 31 m) fahren Fahrzeuge per Raster-A* (66×66, 1 m, 8-Nachbarn, String-Pulling) um Gebäude (fp + 0,9 m) und alle Förderbänder (1,15 m) herum. Draußen geradeaus, mit Ausweichpunkt um Außenlager. Raster wird bei jeder Gebäudeänderung neu gebaut, Pfade gecacht.
 - Entladen: nächste passende Station oder Außenlager (Außenlager mit > 90 % Puffer werden gemieden).
 
