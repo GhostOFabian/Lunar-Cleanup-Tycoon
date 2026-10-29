@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v5.0 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v5.1 (`prototype/index.html`)
+- v5.1: **Planetenziele** – jeder Planet hat eine eigene Liste mit 23–24 Zielen (Reinigung 25/50/80/100 %, Basisstufen, Fahrzeuge, Raketen, Meteoritenschauer, sein Spezialfahrzeug, Energie passend zum Planeten, Verkauf, Bohrtürme, Tiefenförderung, Ausbaustufen 1–20). Belohnung 250 × Planetfaktor × Gewicht, von Hand abholen. Anzeige in „Ziele & Erfolge“ und in der Planetenliste, Ziel-Chip zählt mit, neuer Erfolg „Planetenkenner“.
 - v5.0: **Wertschöpfungskette von klein nach groß** – Rohwaren kommen nur noch in den Frachtraum, wenn keine Maschine auf dem Planeten sie veredelt; sonst nur das Endprodukt (Staub → Staub-Brick, Metall → Barren, Kristall → Reinkristall, Chemie → Polymer). Frachtaufträge fragen Endprodukte. Überlauf erst ab 97 % Rohstofflager. **Band-Fenster** zeigt live, was gerade befördert wird (Ware, Menge, Wert) und welche Waren das Band transportiert. Verkaufsfenster zeigt bei Rohwaren „wird …“ / „zur Rakete“ statt eines wirkungslosen Schalters.
 - v4.9: Idle-Test aus den Einstellungen entfernt. Idle läuft besser: Nachrechnung nach Abwesenheit friert die Seite nicht mehr ein (in Scheiben mit Fortschrittsanzeige), gedrosselte Bilder im Hintergrund verlieren keine Zeit mehr (Nachholen bis 5 s), Speichern auch beim Fensterwechsel.
 - v4.8.1: Reisen flüssiger – kein Speichern am Anfang, Hintergrund-Simulation pausiert während der Fahrt, Texturen und Shader des neuen Planeten werden vorgeladen, solange nur Sterne zu sehen sind, die Bilder direkt nach dem Neuaufbau zählen nicht zur Animation, Himmelsfarbe blendet weich über, Fahrt etwas länger (1,0 + 1,25 s).

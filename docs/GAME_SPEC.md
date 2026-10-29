@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.0)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.1)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -182,6 +182,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - **Sternenstaub (Prestige)**: ab Mars möglich. Gewinn `⌊sqrt(Verdienst dieses Laufs / 200 000)⌋ + 3 × komplette Planeten`. Jeder Sternenstaub: +5 % Preise, +3 % Reinigung (Hand und Fahrzeuge). Zurückgesetzt wird alles außer Sternenstaub, Artefakten, Funden, Lebenszeit-Statistik und Toneinstellung.
 - **Ziele/Quests** (44, Reihenfolge im Prototyp): Tutorial (inkl. Sammelwagen kaufen) → Stufe 2 → Entladestation → Buggy → Presse → Bricks → Stufe 3 → Schmelze → Barren → Drohnentechnik → Hangar + Drohne → 80 % Mond → Mars → Außenlager → 80 % Mars und Europa → Akkupark 3 → Radioisotopen-Generator → Raffinerie → Eisfräse → Sturmschild → Titan → Schlammraupe → Geothermie → Io → Lavapanzer → Kernspaltung → Kernreaktor → Lastdrohne → Venus → ein Planet komplett → Ganymed → Magnetgleiter → Enceladus → Triton → Kryo-Koloss → Pluto → Pluto 80 % → Neustart mit Sternenstaub.
 - **Erfolge** (17, `ACH`, ab v4.0): Stufenziele für Parzellen, Verdienst (Lebenszeit), Raketenstarts, Fahrzeuge, Planeten erreicht/komplett, Bricks, Barren, Hand-m², Meteoritenschauer, Drohnen-Abholungen, eingeflogene Maschinen, Tagesaufträge, Forschung, Funde, Basisstufe, Sternenstaub. Belohnung Stufe n (ab 0): `250 × 5^n` Cr, von Hand abholen. Stand `S.ach` und Zähler `S.ctr` bleiben über den Neustart erhalten.
+- **Planetenziele** (ab v5.1, `planetGoals(pid)`): pro Planet 23–24 Ziele, Stand `sp.pg`, Zähler `sp.nRockets`, `sp.nDust`. Reihenfolge: 10 Parzellen, 3 Fahrzeuge, 25 %, Stufe 3, 10 Raketen, 10 Staubparzellen, 50 %, Spezialfahrzeug des Planeten (falls vorhanden), 8 Fahrzeuge, Energie (Kernreaktor bei Energiefaktor ≥ 1,5, sonst Radioisotopen-Generator), Stufe 5, Verkauf 50 000 × diff Cr, 80 %, 100 Raketen, 100 %, 3 Bohrtürme, 10 000 E Tiefenförderung, Ausbaustufen 1/2/3/5/8/12/20. Belohnung `250 × diff × Gewicht` (1 … 1 200), von Hand abholen.
 - **Ziel-Übersicht** (Tippen auf den Ziel-Chip): aktuelles Ziel mit „Hinführen“, alle Erfolge (abholbare zuerst), Liste aller Hauptziele. Der Chip zeigt, wie viele Erfolge bereit sind.
 
 ## 12. Planeten

@@ -112,3 +112,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Rohwaren nur dann zur Rakete, wenn keine Maschine sie hier veredelt – Wunsch des Spielers, maximiert den Verkaufswert; ersetzt die 8-%-Reserve und den rohwarenbasierten Frachtauftrag aus v3.9.
 - Sicherheitsventil bei 97 % Rohstofflager bleibt, damit Fahrzeuge und Bänder nie ganz stehen; die Ampel zeigt den Engpass dann an.
 - Der „Band an/aus“-Schalter für Rohwaren entfällt (er hätte nach der neuen Regel nichts mehr bewirkt); Produkte behalten ihn.
+
+## v5.1
+- Planetenziele aus einer gemeinsamen Vorlage, mit Planetenbezug (Spezialfahrzeug, Energiequelle, Planetenfaktor bei Zielen und Belohnungen) – jeder Planet hat so eigene, abschließbare Ziele, ohne 230 Ziele von Hand zu pflegen.
+- Die letzten Planetenziele hängen an den endlosen Ausbaustufen (bis 20), damit auch fertige Planeten Ziele behalten.

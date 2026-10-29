@@ -612,7 +612,7 @@ function freshPlanet(pid){
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
   return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
-    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
+    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
 function freshSave(){return{v:2,layout:3,qv:3,ach:{},maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
 
@@ -1103,7 +1103,7 @@ function finishCell(pid,id,live){
   const w=W[pid],sp=S.planets[pid],a=w.act.get(id),cl=planetData(pid).cells[id];
   if(!w.clean[id])w.nClean++;
   w.clean[id]=1;w.act.delete(id);
-  if(a&&a.dust){S.ctr.dust=(S.ctr.dust||0)+1;if(a.mesh)disposeActiveMesh(a);for(const v of sp.veh)if(v.cell===id&&(v.mode==='drive'||v.mode==='clean')){v.mode='seek';v.cell=-1;}
+  if(a&&a.dust){S.ctr.dust=(S.ctr.dust||0)+1;sp.nDust=(sp.nDust||0)+1;if(a.mesh)disposeActiveMesh(a);for(const v of sp.veh)if(v.cell===id&&(v.mode==='drive'||v.mode==='clean')){v.mode='seek';v.cell=-1;}
     if(live&&!TRACK){sparkleCell(pid,id,14);paintCell(pid,id);flashCell(pid,id,0x3fe58a);}return;}
   if(a&&a.mesh)disposeActiveMesh(a);
   for(const v of sp.veh)if(v.cell===id&&(v.mode==='drive'||v.mode==='clean')){v.mode='seek';v.cell=-1;}
@@ -1161,7 +1161,7 @@ function cargoValue(pid,sp){if(!sp.order)newOrder(pid,sp);let base=0,bonus=0,kin
 function sellStep(pid,sp,dt,live){if(!sp.bld.sell)return;if(!sp.order)newOrder(pid,sp);if(sp.rk>0){sp.rk=Math.max(0,sp.rk-dt);return;}
   const tot=sumObj(sp.sellBuf);if(tot<=1e-6){sp.rkGo=0;return;}if(tot<sellCap()*.98&&!sp.rkGo)return;const man=!!sp.rkGo;sp.rkGo=0;
   const cv=cargoValue(pid,sp),val=cv.total;for(const m in sp.sellBuf){const u=sp.sellBuf[m];if(u>0)countSold(m,u);}sp.sellBuf={};const om=sp.order.m;newOrder(pid,sp);
-  earn(val,true);sp.stats.sold+=val;S.stats.sold+=val;S.ctr.rockets=(S.ctr.rockets||0)+1;sp.rk=rocketTime();sp.rkN=(sp.rkN||0)+1;
+  earn(val,true);sp.stats.sold+=val;S.stats.sold+=val;S.ctr.rockets=(S.ctr.rockets||0)+1;sp.nRockets=(sp.nRockets||0)+1;sp.rk=rocketTime();sp.rkN=(sp.rkN||0)+1;
   if(TRACK){TRACK.p[pid].sold+=val;TRACK.p[pid].rockets=(TRACK.p[pid].rockets||0)+1;}
   else if(live&&pid===S.planet&&world){floatText3(basePlanDir(planetData(pid),BLD.sell.pos[0],BLD.sell.pos[1]),5,'+'+fmt(val)+' Cr','big');SFX.rocket();
     if(man)toast('Rakete gestartet · +'+fmt(val)+' Cr'+(cv.order>0?' · Auftrag '+MATS[om].name+' erfüllt':'')+(cv.mix>1.001?' · Mischfracht +'+Math.round((cv.mix-1)*100)+' %':''),'good');}}
@@ -2040,7 +2040,7 @@ function beltGoodsText(sp,b){const g=beltGoods(sp,b),names=g.map(m=>MATS[m].name
   if(b.from==='prod'&&b.to==='sell')return (names||'nichts (alle Waren auf „Band aus“)')+'. Ist das Produktlager zu 90 % voll, geht auch der Rest mit.';
   return names?names+'.':'Gerade nichts – das Rezept ist im Produktionsplan ausgeschaltet.';}
 function beltStatus(b){const sp=SP(),it=sp.belts[b.id];if(!beltLive(sp,b))return 'Nicht verbunden';if(sp.jam[b.id])return 'Stau – Ziel voll ('+it.length+' Pakete)';if(!it.length)return 'Leer – wartet auf Material';return it.length+' Pakete unterwegs';}
-function planetProgressText(pid){const w=W[pid],pd=planetData(pid),sp=S.planets[pid];if(!w)return '';let c=0,t=0;for(const cl of pd.cells){if(cl.kind==='base')continue;t++;if(w.clean[cl.id])c++;}const auto=sp.veh.length?(powOK(pid)?' · <b>reinigt sich selbst</b> ('+sp.veh.length+' Fahrzeuge'+(sp.drones.length?', '+sp.drones.length+' Drohnen':'')+(sp.outposts.length?', '+sp.outposts.length+' Außenlager':'')+')':' · Fahrzeuge zu schwach'):'';return c+' von '+t+' sauber ('+dec(c/t*100,0)+' %)'+auto;}
+function planetProgressText(pid){const w=W[pid],pd=planetData(pid),sp=S.planets[pid];if(!w)return '';let c=0,t=0;for(const cl of pd.cells){if(cl.kind==='base')continue;t++;if(w.clean[cl.id])c++;}const auto=sp.veh.length?(powOK(pid)?' · <b>reinigt sich selbst</b> ('+sp.veh.length+' Fahrzeuge'+(sp.drones.length?', '+sp.drones.length+' Drohnen':'')+(sp.outposts.length?', '+sp.outposts.length+' Außenlager':'')+')':' · Fahrzeuge zu schwach'):'';const G=planetGoals(pid),gd=G.filter(g=>pgDone(pid,g)).length,gr=pgClaimable(pid);return c+' von '+t+' sauber ('+dec(c/t*100,0)+' %) · Ziele '+gd+'/'+G.length+(gr?' · <b>'+gr+' bereit</b>':'')+auto;}
 function renderSheet(){
   if(!sheetState)return;B={};const{kind,arg}=sheetState;let k='',t='',h='';const pid=S.planet,sp=SP(),pd=planetData(pid),w=W[pid];
   if(kind==='upgrades'){k='Global + '+PLANETS[pid].name;t='Upgrades';h+='<p class="note">Handgerät, Fahrzeuge, Drohnen und Wirtschaft gelten überall. <b>Anlagen-Upgrades</b> (Stationen, Bänder, Maschinen, Lager, Solar) baust du auf jedem Planeten neu aus – sie kosten dort auch mehr.</p>';const cats=[...new Set(UPG.map(u=>u.cat))];
@@ -2144,7 +2144,7 @@ const ACT={
   research(d){startResearch(d.id);},travel(d){travelTo(d.id);return 'keep';},unlock(d){unlockPlanet(d.id);return 'keep';},
 flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);return 'keep';},
   sound(){S.sound=!S.sound;if(!S.sound)scrub(0);},
-  buydrone(){buyDrone();},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
+  buydrone(){buyDrone();},claimpg(d){claimPg(d.id);},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autoorder(){const sp=SP();sp.autoOrder=sp.autoOrder===false;toast(sp.autoOrder!==false?'Frachtauftrag wird automatisch bedient':'Frachtauftrag nicht mehr automatisch');},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
@@ -2321,8 +2321,47 @@ const ACH=[
   {id:'rigs',name:'Bohrmeister',unit:'Bohrtürme gebaut',v:()=>Object.values(S.planets).reduce((a,sp)=>a+(sp.rigs||[]).length,0),t:[1,5,15,40]},
   {id:'deep',name:'Tiefenförderung',unit:'E aus der Tiefe',v:()=>S.ctr.deep||0,t:[1e3,1e4,1e5,1e6,1e7]},
   {id:'exp',name:'Ausbaumeister',unit:'höchste Ausbaustufe',v:()=>Math.max(0,...Object.values(S.planets).map(sp=>sp.exp||0)),t:[1,3,5,10,20]},
+  {id:'pgoals',name:'Planetenkenner',unit:'Planetenziele geschafft',v:()=>S.ctr.pg||0,t:[5,25,60,120,200]},
   {id:'star',name:'Sternensammler',unit:'Sternenstaub',v:()=>S.star||0,t:[1,10,50,200]},
 ];
+/* ---- Planetenziele: every planet has its own goal list (cleaning, base, fleet, rockets, hazards, its specialist, energy, deep mining, expansion) ---- */
+function cleanCount(pid){const w=W[pid];if(!w)return 0;const pd=planetData(pid);let c=0;for(const cl of pd.cells)if(cl.kind!=='base'&&w.clean[cl.id])c++;return c;}
+const PG_CACHE={};
+const ART={moon:['dem ','vom '],mars:['dem ','vom '],venus:['der ','von der ']},onP=pid=>'auf '+((ART[pid]||[''])[0])+PLANETS[pid].name,ofP=pid=>((ART[pid]||[0,'von '])[1])+PLANETS[pid].name;
+function planetGoals(pid){if(PG_CACHE[pid])return PG_CACHE[pid];const P=PLANETS[pid],D=P.diff,sp=()=>S.planets[pid],R=k=>Math.round(250*D*k);
+  const pct=p=>({t:p===100?'Reinige '+(ART[pid]?ART[pid][0].replace('dem ','den '):'')+P.name+' komplett':'Reinige '+p+' % '+ofP(pid),v:()=>cleanPct(pid)*100,n:p,pct:1});
+  const spec=Object.keys(VT).filter(t=>VT[t].planet===pid),hazard=P.hz&&P.hz.name;
+  const L=[
+    {id:'c10',t:'Reinige 10 Parzellen',v:()=>cleanCount(pid),n:10,r:R(1)},
+    {id:'v3',t:'Setze 3 Fahrzeuge ein',v:()=>sp().veh.length,n:3,r:R(2)},
+    Object.assign({id:'p25',r:R(3)},pct(25)),
+    {id:'st3',t:'Baue die Basis auf Stufe 3 aus',v:()=>sp().stage,n:3,r:R(4)},
+    {id:'rk10',t:'Starte 10 Raketen '+ofP(pid),v:()=>sp().nRockets||0,n:10,r:R(5)},
+    {id:'dust10',t:'Räume 10 Parzellen nach '+(pid==='moon'?'Meteoritenschauern':'Meteoritenschauern und '+(hazard||'Gefahren')),v:()=>sp().nDust||0,n:10,r:R(5)},
+    Object.assign({id:'p50',r:R(8)},pct(50)),
+    ...spec.map(t=>({id:'sp_'+t,t:'Setze hier einen '+VT[t].name+' ein – den Spezialisten für '+P.name,v:()=>sp().veh.filter(v=>v.type===t).length,n:1,r:R(10)})),
+    {id:'v8',t:'Setze 8 Fahrzeuge ein',v:()=>sp().veh.length,n:8,r:R(10)},
+    P.energy>=1.5?{id:'nuc',t:'Baue einen Kernreaktor – '+P.name+' braucht viel Strom',v:()=>sp().bld.reactor?1:0,n:1,r:R(30)}:{id:'rtg',t:'Baue einen Radioisotopen-Generator für die Nacht',v:()=>sp().bld.rtg?1:0,n:1,r:R(10)},
+    {id:'st5',t:'Baue die Basis auf Stufe 5 aus',v:()=>sp().stage,n:5,r:R(20)},
+    {id:'sold',t:'Verkaufe Waren für '+fmt(5e4*D)+' Cr '+ofP(pid),v:()=>sp().stats.sold||0,n:5e4*D,r:R(15)},
+    Object.assign({id:'p80',r:R(20)},pct(80)),
+    {id:'rk100',t:'Starte 100 Raketen '+ofP(pid),v:()=>sp().nRockets||0,n:100,r:R(25)},
+    Object.assign({id:'p100',r:R(40)},pct(100)),
+    {id:'rig3',t:'Baue 3 Bohrtürme',v:()=>(sp().rigs||[]).length,n:3,r:R(30)},
+    {id:'deep',t:'Fördere 10.000 E aus der Tiefe',v:()=>(sp().rigs||[]).reduce((a,r)=>a+(r.mined||0),0),n:1e4,r:R(40)},
+  ];
+  for(const n of[1,2,3,5,8,12,20])L.push({id:'exp'+n,t:'Erreiche Ausbaustufe '+n,v:()=>sp().exp||0,n,r:R(60*n)});
+  return PG_CACHE[pid]=L;}
+const pgDone=(pid,g)=>!!((S.planets[pid].pg||{})[g.id]);
+const pgReady=(pid,g)=>!pgDone(pid,g)&&g.v()>=g.n-1e-9;
+const pgClaimable=pid=>S.planets[pid]&&W[pid]?planetGoals(pid).filter(g=>pgReady(pid,g)).length:0;
+function claimPg(id){const pid=S.planet,sp=SP(),g=planetGoals(pid).find(x=>x.id===id);if(!g||!pgReady(pid,g))return;sp.pg=sp.pg||{};sp.pg[id]=1;S.ctr.pg=(S.ctr.pg||0)+1;earn(g.r,false);SFX.coin();toast('Ziel '+onP(pid)+' geschafft · +'+fmt(g.r)+' Cr','good');save();}
+function pgHTML(pid){const L=planetGoals(pid),d=L.filter(g=>pgDone(pid,g)).length,rank=g=>pgReady(pid,g)?0:pgDone(pid,g)?2:1;
+  let h='<section class="sec"><h3>Ziele '+onP(pid)+' · '+d+' / '+L.length+'</h3>';
+  for(const g of L.slice().sort((a,b)=>rank(a)-rank(b))){const done=pgDone(pid,g),ready=pgReady(pid,g);
+    h+='<div class="row"><div class="row-main"><div class="row-t">'+g.t+'</div>'+(done?'':'<div class="row-d" data-b="'+bind(()=>{const v=Math.min(g.v(),g.n);return g.pct?dec(v,0)+' / '+g.n+' %':fmt(v)+' / '+fmt(g.n);})+'"></div><div class="bar"><i data-w="'+bind(()=>Math.min(1,g.v()/g.n)*100)+'"></i></div>')+'</div>'+
+      (done?'<span class="pill ok">Geschafft</span>':ready?'<button class="buy" data-act="claimpg" data-id="'+g.id+'">'+cr(g.r)+'</button>':'<span class="pill">'+fmt(g.r)+' Cr</span>')+'</div>';}
+  return h+'</section>';}
 const achRew=i=>Math.round(250*Math.pow(5,i));
 const achGot=a=>{const v=a.v();let n=0;while(n<a.t.length&&v>=a.t[n])n++;return n;};
 const achClaimable=()=>ACH.reduce((s,a)=>s+Math.max(0,achGot(a)-((S.ach||{})[a.id]||0)),0);
@@ -2330,7 +2369,7 @@ function claimAch(id){const a=ACH.find(x=>x.id===id);if(!a)return;S.ach=S.ach||{
 function goalsHTML(){const q=QUESTS[S.quest];let h='<section class="sec"><h3>Aktuelles Ziel</h3>';
   if(q)h+='<div class="row"><div class="row-main"><div class="row-t">'+q.t+'</div><div class="row-d">Ziel '+(S.quest+1)+' von '+QUESTS.length+' · Belohnung '+fmt(q.r)+' Cr</div><div class="bar"><i data-w="'+bind(()=>{const qq=QUESTS[S.quest];return qq?clamp(qq.p(),0,1)*100:100;})+'"></i></div></div><button class="buy alt" data-act="questgo">Hinführen</button></div>';
   else h+='<p class="note">Alle Hauptziele geschafft – stark! Die Erfolge unten laufen weiter.</p>';
-  h+='</section><section class="sec"><h3>Erfolge</h3>';
+  h+='</section>'+pgHTML(S.planet)+'<section class="sec"><h3>Erfolge</h3>';
   const rank=a=>{const g=achGot(a),c=(S.ach||{})[a.id]||0;return g>c?0:c>=a.t.length?2:1;};
   for(const a of ACH.slice().sort((x,y)=>rank(x)-rank(y))){const got=achGot(a),cl=(S.ach||{})[a.id]||0,next=a.t[Math.min(cl,a.t.length-1)],all=cl>=a.t.length,can=got>cl;
     h+='<div class="row"><div class="row-main"><div class="row-t">'+a.name+'<span class="lvl">Stufe '+cl+'/'+a.t.length+'</span></div><div class="row-d" data-b="'+bind(()=>{const v=a.v();return all?'Alle Stufen geschafft · '+fmt(v)+' '+a.unit:fmt(Math.min(v,next))+' / '+fmt(next)+' '+a.unit;})+'"></div>'+(all?'':'<div class="bar"><i data-w="'+bind(()=>Math.min(1,a.v()/next)*100)+'"></i></div>')+'</div>'+
@@ -2365,7 +2404,7 @@ function updateHUD(){
   {const hs=sumObj(sp.hand),hc=handCap(),hb=$('#handBtn');hb.hidden=mapMode;$('#handTxt').textContent=fmt(hs)+'/'+fmt(hc);$('#handBar').style.width=Math.min(100,hs/hc*100).toFixed(1)+'%';hb.classList.toggle('full',hs>=hc-.5);hb.classList.toggle('cart',cartReady());hb.setAttribute('aria-label',cartReady()?'Sammelbehälter in den Sammelwagen leeren':'Sammelbehälter entladen');}
   const dn=dailyReady();$('#dailyBadge').hidden=!dn;$('#dailyBadge').textContent=dn;
   const q=QUESTS[S.quest],qb=$('#quest');
-  if(!q||mapMode)qb.hidden=true;else{qb.hidden=false;const v=clamp(q.p(),0,1);{const ac=achClaimable();$('#qk').textContent='Ziel '+(S.quest+1)+' von '+QUESTS.length+(ac?' · '+ac+' Erfolg'+(ac>1?'e':'')+' bereit':'');}$('#qt').textContent=q.t;$('#qb').style.width=(v*100).toFixed(0)+'%';$('#qr').innerHTML='<span class="cr-ico"></span>+'+fmt(q.r);
+  if(!q||mapMode)qb.hidden=true;else{qb.hidden=false;const v=clamp(q.p(),0,1);{const ac=achClaimable()+pgClaimable(S.planet);$('#qk').textContent='Ziel '+(S.quest+1)+' von '+QUESTS.length+(ac?' · '+ac+' Belohnung'+(ac>1?'en':'')+' bereit':'');}$('#qt').textContent=q.t;$('#qb').style.width=(v*100).toFixed(0)+'%';$('#qr').innerHTML='<span class="cr-ico"></span>+'+fmt(q.r);
     if(v>=1){S.quest++;earn(q.r,false);SFX.coin();toast('Ziel erreicht · +'+fmt(q.r)+' Cr','good');}}
   const mp=$('#mapPanel');mp.hidden=!mapMode;
   if(mapMode){const active=sp.veh.filter(v=>v.mode!=='seek').length;

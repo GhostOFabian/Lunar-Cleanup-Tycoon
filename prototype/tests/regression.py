@@ -80,6 +80,11 @@ with game() as (pg, errs):
       sp.belts.b_rs=[[1,'kristall',5],[3,'kristall',4]];t.openSheet('belt','b_rs');const txt=document.querySelector('#sheet').textContent;t.closeSheet();
       const so=[];for(let i=0;i<30;i++){t.newOrder('moon',sp);so.push(sp.order.m);}return {g,route,shows:txt.includes('Gerade auf dem Band')&&txt.includes('Kristallsplitter'),orders:[...new Set(so)]}}""")
     show('value chain + belt sheet', r); check(r['route'] and 'staub' not in r['g'] and r['shows'] and 'staub' not in r['orders'], 'value chain / belt contents')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;const L=t.planetGoals('moon'),Lm=t.planetGoals('europa');const ready=L.filter(g=>t.pgReady('moon',g)).map(g=>g.id);
+      const c0=t.S.credits,g0=L.find(g=>t.pgReady('moon',g));if(g0)t.claimPg(g0.id);const gain=t.S.credits-c0;
+      t.openSheet('goals');const txt=document.querySelector('#sheet').textContent;t.closeSheet();
+      return {n:L.length,ne:Lm.length,spec:Lm.some(g=>g.id==='sp_eisfraese'),ready:ready.length,claimed:g0?t.pgDone('moon',g0):null,gain,again:g0?t.pgReady('moon',g0):false,shows:txt.includes('Ziele auf dem Mond')}}""")
+    show('planet goals', r); check(r['n'] >= 20 and r['spec'] and r['ready'] > 0 and r['claimed'] and r['gain'] > 0 and not r['again'] and r['shows'], 'planet goals')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,L=t.dayLen('moon');sp.dayT=L*.25;const noon=t.dayF('moon',sp),pn=t.solarProd(Object.assign({},sp,{solar:noon}));sp.dayT=L*.75;const night=t.dayF('moon',sp);
       let avg=0;for(let i=0;i<100;i++){sp.dayT=L*i/100;avg+=t.dayF('moon',sp)/100;}sp.dayT=L*.75;t.simStep('moon',1,false);return {noon,night,avg,solarNight:sp.solar,di:t.dayInfo('moon',sp)}}""")
     show('day/night', r); check(r['noon'] > .99 and r['night'] == 0 and r['solarNight'] == 0 and .3 < r['avg'] * 2.6 / 2.6 < .5 and not r['di']['day'], 'day/night solar')
@@ -120,10 +125,15 @@ with game() as (pg, errs):
     show('async offline', r); check(r['ok'] and r['done'] and r['secs'] == 7200 and r['track'], 'async offline simulation')
     s1 = E("()=>{__t.save();return {n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
     E("""()=>{const t=__t;if(!t.S.planets.mars){t.S.planets.mars=t.freshPlanet('mars');t.initRuntime('mars');}t.travelTo('mars');}""")
-    pg.wait_for_timeout(2600)
+    for _ in range(40):
+        pg.wait_for_timeout(200)
+        if not E("()=>!!__t.travelFx"): break
     r = E("()=>({p:__t.S.planet,fx:!!__t.travelFx})")
     show('seamless travel', r); check(r['p'] == 'mars' and not r['fx'], 'seamless travel')
-    E("()=>{__t.travelTo('moon')}"); pg.wait_for_timeout(2600)
+    E("()=>{__t.travelTo('moon')}")
+    for _ in range(40):
+        pg.wait_for_timeout(200)
+        if not E("()=>!!__t.travelFx"): break
     pg.reload(); pg.wait_for_timeout(1200)
     s2 = E("()=>({n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
     show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'], 'save/load roundtrip')
