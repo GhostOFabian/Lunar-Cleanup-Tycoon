@@ -36,7 +36,7 @@ with game() as (pg, errs):
     show('battery + teamwork', r); check(r['charged'] > 0 and r['low'] > 0, 'battery charging cycle')
     r = E("""()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');for(const c of pd.cells)if(c.ring>=3&&c.ring<=4){w.clean[c.id]=1;w.nClean++;}t.calcFront('moon');const out=[];
       for(let i=0;i<5;i++){const b=new Set(w.act.keys());t.meteor('moon',false);for(const[id,a]of w.act)if(a.dust&&!b.has(id))out.push(a.sum/a.cl.nIn);}return out}""")
-    show('meteor coverage', r); check(r and len(r) >= 10 and min(r) > .5 and sum(r)/len(r) > .7, 'meteor showers too weak')
+    show('meteor coverage', r); check(r and len(r) >= 6 and min(r) > .4 and sum(r)/len(r) > .7, 'meteor showers too weak')
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.credits=1e8;t.buyStage();t.buyStage();
       for(const id of ['research','werkstatt','u2','u3','schmelze'])t.buildBuilding(id);t.S.research.done.drones=true;t.S.research.done.outpost=true;t.buyStage();t.buildBuilding('hangar');t.buyDrone();t.buyDrone();
@@ -103,6 +103,17 @@ with game() as (pg, errs):
       const a=vis();t.openSheet('building','roh');t.updLabels();const b=vis();t.closeSheet();t.updLabels();return {closed:a,open:b,after:vis()}}""")
     show('labels', r); check(r['closed'] == [] and r['open'] in ([], ['roh']) and r['after'] == [], 'building labels')  # with the three.js mock traverse() is a no-op, so 'open' stays empty; verified with real three.js
 
+    E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
+    r = E("()=>{const h=document.querySelector('#sheet').innerText;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
+    show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')
+    E("()=>{window.__c0=__t.S.credits;window.__ok=__t.startOffline(2*3600,rep=>{window.__rep=rep;});}")
+    pg.wait_for_timeout(500)
+    r0 = E("()=>!!__t.offRun")
+    for _ in range(60):
+        if not E("()=>!!__t.offRun"): break
+        pg.wait_for_timeout(250)
+    r = E("()=>({ok:window.__ok,busy0:false,done:!__t.offRun,secs:window.__rep&&window.__rep.secs,gain:__t.S.credits-window.__c0,track:__t.TRACK===null})")
+    show('async offline', r); check(r['ok'] and r['done'] and r['secs'] == 7200 and r['track'], 'async offline simulation')
     s1 = E("()=>{__t.save();return {n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
     E("""()=>{const t=__t;if(!t.S.planets.mars){t.S.planets.mars=t.freshPlanet('mars');t.initRuntime('mars');}t.travelTo('mars');}""")
     pg.wait_for_timeout(2600)

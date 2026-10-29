@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.8.1)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v4.9)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -223,6 +223,7 @@ Effiziente Motoren 2 000/60 s · Langzeitbetrieb I (12 h offline) 4 000/120 s ·
 - Hintergrundplaneten laufen auch live weiter (gesammelt im 1-s-Takt).
 - Nach der Rückkehr: Zusammenfassung pro Planet (m², fertige Parzellen, Material, Verkäufe, Raketen, Stürme, Schauer, Drohnenflüge, Funde, Planet komplett, volle Lager, Energieknappheit) und sichtbar veränderte Masken (`syncMask`).
 - Uhr-Manipulation: negative Zeit = 0, Deckel greift.
+- Ab v4.9: Offline-Nachrechnung in Scheiben (≤ 30 ms pro Scheibe, weiterhin 1-s-Schritte) mit Fortschrittsanzeige ab 15 min Abwesenheit – beim Start, nach Cloud-Übernahme und nach Rückkehr in den Tab (Lücke > 5 s). Gedrosselte Bilder (Fenster im Hintergrund, langsames Gerät): verlorene Zeit bis 5 s wird sofort in 1-s-Schritten nachgerechnet. Gespeichert wird beim Verstecken, beim Fensterwechsel (blur) und beim Schließen; `lastActive` berücksichtigt eine noch laufende Nachrechnung. Der Idle-Test in den Einstellungen ist entfernt.
 
 ## 16. Speichern
 - JSON (Prototyp: localStorage `lunar-cleanup-tycoon-v2`, `S.v=2`, `S.layout=3`, Migrationsflags `locMig`). Pro Planet: saubere/bezahlte Zellen als Base64-Bytes, aktive Zellen als Raster (Base64) + 128²-Masken-Alpha + Staubflag, Fahrzeuge, Drohnen, Außenlager, Stationen, Maschinen, Bänder, Lager, lokale Upgrades.

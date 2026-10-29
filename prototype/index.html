@@ -719,7 +719,7 @@ const KEY='lunar-cleanup-tycoon-v2';
    optional cloud save (Claude artifact db, private per player) and export/import codes. A save is never silently replaced by a fresh game. */
 let saveFailT=0,lastBak=0,bootFresh=false,bootLocalT=0;
 function serialize(){
-  S.lastActive=Date.now();
+  S.lastActive=offRun?Date.now()-(offRun.t-offRun.el)*1000:Date.now();
   for(const pid in W){const sp=S.planets[pid],w=W[pid];if(!sp)continue;
     sp.owned=[];for(let i=0;i<w.owned.length;i++)if(w.owned[i])sp.owned.push(i);
     sp.clean=b64e(w.clean);sp.paid=b64e(w.paid);
@@ -1220,6 +1220,20 @@ function runOffline(seconds){
   while(el<t){const d=Math.min(1,t-el);TRACK.time=el;for(const pid of pids)simStep(pid,d,false);researchTick(d);el+=d;}
   const rep=TRACK;TRACK=null;return rep;
 }
+/* Same offline simulation, but sliced over several frames with a progress note – long absences no longer freeze the page. */
+let offRun=null;
+function startOffline(seconds,cb){const cap=offlineCap(),t=Math.min(Math.max(0,seconds),cap);if(t<5||offRun){if(cb)cb(null);return false;}
+  const pids=Object.keys(S.planets).filter(pid=>W[pid]);
+  TRACK={credits:0,secs:t,capped:seconds>cap+1,p:{},research:[],time:0};
+  for(const pid of pids)TRACK.p[pid]={area:0,mats:{},done:0,full:-1,energy:0,sold:0,opened:0,storms:0};
+  const f=$('#fade'),big=t>900;offRun={t,el:0,pids,cb};if(big){f.textContent='Deine Basis hat weitergearbeitet …';f.classList.add('on');}
+  const slice=()=>{const R=offRun,t0=performance.now();
+    while(R.el<R.t&&performance.now()-t0<30){const d=Math.min(1,R.t-R.el);TRACK.time=R.el;for(const pid of R.pids)simStep(pid,d,false);researchTick(d);R.el+=d;}
+    if(big)f.textContent='Deine Basis hat weitergearbeitet … '+Math.floor(R.el/R.t*100)+' %';
+    if(R.el<R.t){setTimeout(slice,0);return;}
+    const rep=TRACK;TRACK=null;offRun=null;f.classList.remove('on');last=performance.now();lastWall=Date.now();
+    if(R.cb)R.cb(rep);else afterOffline(rep);};
+  slice();return true;}
 function afterOffline(rep){for(const k in S.planets)if(S.planets[k].samp)S.planets[k].samp.reset=1;
   if(world)rebuildPlanetVisuals();
   let any=rep.credits>=1||rep.research.length;for(const pid in rep.p)if(rep.p[pid].area>.5||rep.p[pid].done)any=true;
@@ -2086,9 +2100,8 @@ function renderSheet(){
     h+='</section>'+(S.daily.list.every(c=>c.claimed)?'<p class="note">Alles geschafft – morgen gibt es neue Aufträge.</p>':'');}
   else if(kind==='stats'){k='Übersicht';t='Statistik';h+=statsHTML();}
   else if(kind==='goals'){k='Fortschritt';t='Ziele & Erfolge';h+=goalsHTML();}
-  else if(kind==='settings'){k='Prototyp v3';t='Einstellungen';h+='<button class="buy wide alt" data-act="go" data-id="stats">Statistik & Sternenstaub</button>';
+  else if(kind==='settings'){k='Prototyp v4.9';t='Einstellungen';h+='<button class="buy wide alt" data-act="go" data-id="stats">Statistik & Sternenstaub</button>';
     h+='<section class="sec"><h3>Ton</h3><div class="row"><div class="row-main"><div class="row-t">Soundeffekte</div></div><button class="buy alt" data-act="sound">'+(S.sound?'An':'Aus')+'</button></div></section>'+
-      '<section class="sec"><h3>Idle-Test</h3><p class="note">Tut so, als wäre das Spiel geschlossen gewesen. Fahrzeuge, Bänder, Maschinen, Autoverkauf und Forschung arbeiten bis zu '+(offlineCap()/3600)+' Stunden weiter.</p><div class="btns"><button class="buy alt" data-act="off" data-h="1">+1 Stunde</button><button class="buy alt" data-act="off" data-h="8">+8 Stunden</button></div></section>'+
       '<section class="sec"><h3>Steuerung</h3><dl class="kv"><dt>Wischen auf reinigbarer Parzelle</dt><dd>Reinigen</dd><dt>Ein Finger daneben</dt><dd>Planet drehen</dd><dt>Zwei Finger</dt><dd>Zoomen, drehen</dd><dt>Tippen</dt><dd>Parzelle, Fahrzeug, Gebäude, Band</dd><dt>Weit herauszoomen</dt><dd>Planetenkarte</dd></dl></section>'+
       '<section class="sec"><h3>Spielstand</h3><dl class="kv"><dt>Auf diesem Gerät</dt><dd>alle 12 s gespeichert</dd><dt>Cloud (dein Claude-Konto)</dt><dd data-b="'+bind(()=>CLOUD.status)+'"></dd></dl><p class="note">Mit der Cloud hast du denselben Stand in der Claude-App und im Browser. Updates des Spiels behalten den Spielstand. Zum Übertragen auf ein anderes Gerät oder die Webseite-Version: Code exportieren und dort importieren.</p>'+
       '<div class="btns"><button class="buy alt" data-act="exp">Code exportieren</button><button class="buy alt" data-act="copyexp" id="copyExp" hidden>Kopieren</button></div><textarea id="expBox" class="codebox" readonly hidden aria-label="Spielstand-Code"></textarea>'+
@@ -2115,7 +2128,7 @@ flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);ret
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autoorder(){const sp=SP();sp.autoOrder=sp.autoOrder===false;toast(sp.autoOrder!==false?'Frachtauftrag wird automatisch bedient':'Frachtauftrag nicht mehr automatisch');},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
-  off(d){closeSheet();const rep=runOffline(+d.h*3600);if(rep)afterOffline(rep);else toast('Nichts zu simulieren');return 'keep';},
+
   exp(){exportCode().then(c=>{const b=$('#expBox');if(!b)return;b.value=c;b.hidden=false;$('#copyExp').hidden=false;b.focus();b.select();}).catch(()=>fail('Export fehlgeschlagen'));return 'keep';},
   copyexp(){const b=$('#expBox');if(!b)return 'keep';const done=()=>toast('Code kopiert','good');try{navigator.clipboard.writeText(b.value).then(done,()=>{b.select();toast('Markiert – jetzt kopieren');});}catch(e){b.select();toast('Markiert – jetzt kopieren');}return 'keep';},
   imp(d,el){const v=($('#impBox')||{}).value;const msg=$('#impMsg');if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Aktuellen Stand ersetzen? Nochmal tippen';return 'keep';}
@@ -2482,9 +2495,12 @@ function setMapMode(on){mapMode=on;for(const c of chunks){c.mesh.visible=!on;c.m
 let last=performance.now(),lastWall=Date.now(),bgAcc=0,hudAcc=0,saveAcc=0,rateAcc=0,T0=0,sheetAcc=0,scrubLvl=0,lastValue=0;
 function frame(now){
   requestAnimationFrame(frame);
+  if(offRun){lastWall=Date.now();last=now;return;}
   const wall=Date.now(),gap=(wall-lastWall)/1000;lastWall=wall;
-  if(gap>5){const rep=runOffline(gap);if(rep)afterOffline(rep);last=now;}
-  const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;T0+=dt;
+  if(gap>5){last=now;startOffline(gap);return;}
+  const real=Math.max(0,(now-last)/1000),dt=Math.min(.05,real);last=now;T0+=dt;
+  /* throttled frames (window in the background, slow device): catch the lost time up in 1-s steps, so idle progress never gets lost */
+  if(real>.25){let r=real-dt;while(r>1e-3){const d=Math.min(1,r);for(const pid in S.planets)if(W[pid])simStep(pid,d,false);researchTick(d);r-=d;}}
   holdCheck(now);edgePan(dt);
   simStep(S.planet,dt,true);
   bgAcc+=dt;if(bgAcc>=1&&!travelFx){for(const pid in S.planets)if(pid!==S.planet&&W[pid])simStep(pid,bgAcc,false);bgAcc=0;}
@@ -2500,6 +2516,7 @@ function frame(now){
   saveAcc+=dt;if(saveAcc>12){saveAcc=0;save();}
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){save();try{cloudPush(serialize(),true);}catch(e){}}});
+window.addEventListener('blur',()=>{save();});
 window.addEventListener('pagehide',save);
 function startCam(){const pd=planetData(S.planet),st=pd.cells[pd.start];cam.d=vnorm(vadd(vsc(st.c,.7),vsc(pd.cells[pd.base].c,.3)));cam.N=pd.cells[pd.base].e2.slice();camReproject();cam.alt=fitAlt(18);cam.gd=null;}
 function migrate(){
@@ -2513,20 +2530,20 @@ function migrate(){
   if(!S.maxStage){S.maxStage=1;for(const pid in S.planets)S.maxStage=Math.max(S.maxStage,S.planets[pid].stage);}
   for(const pid in S.planets)grantAuto(S.planets[pid]);}
 function adoptSave(b,msg){for(const k in W)delete W[k];S=b;migrate();for(const pid in S.planets)initRuntime(pid);
-  const rep=runOffline((Date.now()-(S.lastActive||Date.now()))/1000);mapMode=false;buildWorld(S.planet);startCam();
+  const away=(Date.now()-(S.lastActive||Date.now()))/1000;mapMode=false;buildWorld(S.planet);startCam();
   if(SP().stage>=2){cam.d=basePlanDir(planetData(S.planet),0,0);camReproject();cam.alt=fitAlt(36);}camApply();setMapMode(false);closeSheet();hideModal();updateHUD();
-  lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;if(rep)afterOffline(rep);else save();toast(msg,'good');}
+  lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;if(!startOffline(away))save();toast(msg,'good');}
 function boot(){
   resize();
   const loaded=load();S=loaded||freshSave();bootFresh=!loaded;bootLocalT=loaded?(loaded.lastActive||0):0;
   migrate();
   for(const pid in S.planets)initRuntime(pid);
-  let rep=null;if(loaded)rep=runOffline((Date.now()-(S.lastActive||Date.now()))/1000);
+  const away=loaded?(Date.now()-(S.lastActive||Date.now()))/1000:0;
   buildWorld(S.planet);startCam();
   if(loaded&&SP().stage>=2){cam.d=basePlanDir(planetData(S.planet),0,0);camReproject();cam.alt=fitAlt(36);}
   camApply();setMapMode(false);updateHUD();updLocks();
   $('#loading').remove();
-  if(!loaded)showWelcome();else if(rep)afterOffline(rep);
+  if(!loaded)showWelcome();else if(!startOffline(away))save();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{for(const L of lockPool)L.key='';try{if(world)rebuildBase();}catch(e){}});
   lastWall=Date.now();last=performance.now();lastValue=SP().stats.value;requestAnimationFrame(frame);
   if(!loaded)save();

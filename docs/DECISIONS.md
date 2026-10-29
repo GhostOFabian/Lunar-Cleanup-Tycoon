@@ -102,3 +102,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Ausbaustufen heben die Maximalstufe der lokalen Anlagen-Upgrades an statt neue Gebäude zu bringen – auf der Basis ist kein Platz mehr, und die vorhandenen Systeme skalieren weiter.
 - Reisen als Kamerafahrt (Pose-Blend + seitliches Gleiten) statt Schwarzblende; der Welt-Neuaufbau passiert in dem Moment, in dem kein Planet im Bild ist.
 - Ruckler beim Reisen: Neuaufbau, Textur-Upload und Shader-Kompilierung passieren gebündelt im Sternen-Moment, die Animationszeit läuft dabei nicht weiter; Speichern und Hintergrund-Simulation werden verschoben.
+
+## v4.9
+- Idle-Test-Knöpfe entfernt – sie haben Zeit doppelt simuliert und den Stand verzerrt („macht das Spiel kaputt“).
+- Offline-Nachrechnung asynchron in Scheiben statt in einem Block; die Simulation bleibt dieselbe (1-s-Schritte von `simStep`), nur die Verteilung auf Bilder ändert sich.
+- Live-Bilder mit mehr als 0,25 s Abstand holen die verlorene Zeit sofort nach (bis 5 s); darüber greift die Offline-Nachrechnung.
