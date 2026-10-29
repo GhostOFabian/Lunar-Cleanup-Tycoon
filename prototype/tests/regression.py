@@ -150,6 +150,10 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;if(!sp.outposts.length)return {skip:1};const o=sp.outposts[0];const run=l=>{sp.upg.pipe=l;o.buf={staub:300};for(const k in sp.roh)sp.roh[k]=0;const b0=t.sumObj(o.buf);t.outpostStep('moon',sp,o,1,1);return b0-t.sumObj(o.buf);};
       const a=run(0),b=run(4);return {a,b}}""")
     show('pipeline pumps', r); check(r.get('skip') or r['b'] >= r['a'] * 2.9, 'pipeline upgrade')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;if(!sp.outposts.length)return {skip:1};const o=sp.outposts[0];sp.upg.pipe=0;let stuck=0,maxT=0;
+      for(let i=0;i<1200;i++){o.buf={staub:t.stBuf(o.key)};sp.dayT=t.dayLen('moon')*.25;t.simStep('moon',.5,false);let n=0;for(const v of sp.veh)if(v.sid===o.key&&(v.mode==='unload'||v.mode==='queue')){n++;v._st=(v._st||0)+.5;maxT=Math.max(maxT,v._st);}else v._st=0;stuck=Math.max(stuck,n);}
+      return {stuck,maxT}}""")
+    show('vehicles leave a full outpost', r); check(r.get('skip') or r['maxT'] <= 15, 'vehicles camp at a full outpost')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

@@ -52,6 +52,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 36. Die Presse wirkt **viel zu schnell** – sie darf schnell sein, soll aber nicht so aussehen; alles soll **langfristig klar und verständlich** bleiben, **Upgrades sinnvoll**. → v5.6.
 37. **Größen prüfen und Bänder anpassen**, wenn Gebäudestufen steigen; **Außenlager-Pipeline geht neben das Rohstofflager** und pumpt scheinbar nicht hinein. → v5.7.
 38. **Pumpen der Pipeline upgradebar** machen – das Außenlager ist immer zu schnell voll. → v5.8.
+39. Fahrzeuge **stehen fest am Außenlager**, statt weiterzufahren; die **Pipeline sitzt neben dem Außenlager** statt darin. → v5.9.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

@@ -1,6 +1,7 @@
 # Fortschritt
 
-## Fertig – Browser-Prototyp v5.8 (`prototype/index.html`)
+## Fertig – Browser-Prototyp v5.9 (`prototype/index.html`)
+- v5.9: Fahrzeuge warten nicht mehr an vollen Außenlagern/Stationen: volle Außenlager (> 97 %) werden gar nicht angefahren, wer angedockt ist und 4 s nicht entladen kann (oder 8 s auf einen Platz wartet), fährt zu einer anderen Station und meidet diese 25–40 s. Pipeline beginnt jetzt oben im Silo des Außenlagers.
 - v5.8: Upgrade **Stärkere Pumpen** (Außenlager, lokal, +50 % je Stufe, max. 12) für die Pipeline-Leistung; im Außenlager-Fenster zusammen mit „Größere Trichter“. Die Pipeline hängt nicht mehr am Bandtempo; bestehende Stände bekommen passende Pumpenstufen gutgeschrieben.
 - v5.7: Gebäudestufen wachsen in der Breite nur so weit, wie Nachbarn, fremde Bänder und die Übergabetore der eigenen Bänder es erlauben (Höhe wächst immer); Stufenanzeige als Mast mit leuchtenden Markern auf dem Dach statt Bodenringen über den Bändern. Außenlager-Pipeline endet senkrecht im Rohstoffsilo (Höhe folgt der Gebäudestufe), leuchtende Kugeln zeigen, wenn sie pumpt.
 - v5.6: Presse sieht ruhig aus: ein Hub alle 1,6 s, unabhängig vom echten Tempo; beim Hub erscheint, wie viele Bricks gepresst wurden. Upgrades aufgeräumt: „Hochdruckpresse“ entfällt (doppelte sich mit Hydraulik-Tuning), gekaufte Stufen werden erstattet. Presse-Fenster zeigt die Höchstleistung pro Minute; der Fortschrittsbalken flackert bei schnellen Maschinen nicht mehr.

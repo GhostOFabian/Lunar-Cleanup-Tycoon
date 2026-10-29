@@ -147,3 +147,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v5.8
 - Pipeline bekommt ein eigenes Upgrade statt am Bandtempo zu hängen – eine Wirkung, ein Upgrade; alte Stände erhalten Pumpenstufe = ⌈Bandstufe / 2⌉, damit nichts langsamer wird.
 - Die Vollausbau-Tests laufen bei Tag, damit Nachtstrom-Engpässe sie nicht zufällig scheitern lassen.
+
+## v5.9
+- Fahrzeuge meiden volle Entladeziele zeitweise, statt angedockt zu warten – sie sollen nur dort stehen, wo sie wirklich abladen können (Wunsch des Spielers).

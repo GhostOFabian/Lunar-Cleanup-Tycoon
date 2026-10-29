@@ -943,18 +943,19 @@ function pickGridTarget(a,v,R,team){
   return best;
 }
 const gridDir=(a,i,R)=>toDir(a.cl,-a.cl.H+((i%GRID)+.5)*a.cl.cs,-a.cl.H+((i/GRID|0)+.5)*a.cl.cs,R);
-function chooseStation(pid,sp,v){const pd=planetData(pid);let best=null,bd=1e9;
+function chooseStation(pid,sp,v){const pd=planetData(pid);let best=null,bd=1e9;const avoid=v.avoidT>0?v.avoid:null;
   /* nearest station, but spread the load: full buffers and crowded docks count as extra distance, so every station (and its belt) keeps working */
-  for(const s of STATIONS){if(!sp.bld[s]||!vehicleCanUse(v,s))continue;const crowd=sp.veh.filter(o=>o!==v&&o.sid===s&&(o.mode==='toUnload'||o.mode==='queue'||o.mode==='unload')).length,over=Math.max(0,crowd-stDocks(s)+1);
+  for(const s of STATIONS){if(!sp.bld[s]||!vehicleCanUse(v,s)||s===avoid)continue;const crowd=sp.veh.filter(o=>o!==v&&o.sid===s&&(o.mode==='toUnload'||o.mode==='queue'||o.mode==='unload')).length,over=Math.max(0,crowd-stDocks(s)+1);
     const d=arcDist(v.d,stDir(pid,s,'c'),pd.R)+sumObj(sp.st[s].buf)/stBuf(s)*40+over*14;if(d<bd){bd=d;best=s;}}
-  for(const o of sp.outposts){const d=arcDist(v.d,stDir(pid,o.key,'c'),pd.R)+(sumObj(o.buf)>stBuf(o.key)*.9?60:0);if(d<bd){bd=d;best=o.key;}}return best;}
+  for(const o of sp.outposts){if(o.key===avoid)continue;const fill=sumObj(o.buf)/stBuf(o.key);if(fill>.97)continue;const d=arcDist(v.d,stDir(pid,o.key,'c'),pd.R)+(fill>.8?60:0);if(d<bd){bd=d;best=o.key;}}
+  if(!best&&avoid)best=avoid;return best;}
 const dockPos=(s,k)=>[BLD[s].pos[0]+2.6,BLD[s].pos[1]-(k-(BLD[s].st.docks-1)/2)*1.8];
 const approachPos=s=>[BLD[s].pos[0]+6.4,BLD[s].pos[1]];
 function parkPos(sp,v){const i=sp.veh.indexOf(v);return[19+(i%4)*1.8,13+Math.floor(i/4)*1.8];}
 function vehStep(pid,sp,v,dt,f,live){
   const T=VT[v.type],pd=planetData(pid),R=pd.R,w=W[pid];
   const bf=T.batt&&v.bat!=null&&v.bat<=0?.3:1,spd=T.speed*uv('vspeed')*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1))*bf;
-  const tank=sumObj(v.tank),cap=tankCap(v);v.busy=false;v.charging=false;
+  const tank=sumObj(v.tank),cap=tankCap(v);v.busy=false;v.charging=false;if(v.avoidT>0)v.avoidT-=dt;
   switch(v.mode){
     case 'seek':{
       if(tank>=cap*.98||battLow(v)){v.mode='toUnload';break;}
@@ -999,14 +1000,16 @@ function vehStep(pid,sp,v,dt,f,live){
       const s=v.sid,st=s&&stObj(sp,s);if(!st){v.mode='toUnload';break;}
       const n=stDocks(s);while(st.docks.length<n)st.docks.push(0);
       let k=st.docks.indexOf(v.id);if(k<0){k=st.docks.indexOf(0);if(k>=0&&k<n)st.docks[k]=v.id;else k=-1;}
-      if(k<0){v.status='Wartet auf Andockplatz';break;}
+      if(k<0){v.status='Wartet auf Andockplatz';v.qT=(v.qT||0)+dt;if(v.qT>8){v.qT=0;v.avoid=s;v.avoidT=25;v.sid=null;v.mode='toUnload';}break;}v.qT=0;
       v.busy=true;v.status='Dockt an';
       if(moveDir(v,stDir(pid,s,'d',k),spd*.6*dt,R))v.mode='unload';break;}
     case 'unload':{
       const s=v.sid,st=s&&stObj(sp,s);if(!st){v.mode='toUnload';break;}
       const free=stBuf(s)-sumObj(st.buf);let charged=true;
       if(T.batt){const bc=battCap(v);if(v.bat==null)v.bat=bc;if(v.bat<bc){v.bat=Math.min(bc,v.bat+bc/16*uv('urate')*Math.max(.25,f)*dt);v.charging=true;}charged=v.bat>=bc*.97;}
-      if(free<=.01&&tank>.01){v.status=v.charging?'Station voll – lädt Akku':'Station voll – wartet';break;}
+      if(free<=.01&&tank>.01){v.fullT=(v.fullT||0)+dt;v.status=v.charging?'Station voll – lädt Akku':'Station voll – wartet';
+        if(v.fullT>4&&!(v.charging&&!charged)){const kk=st.docks.indexOf(v.id);if(kk>=0)st.docks[kk]=0;v.avoid=s;v.avoidT=40;v.fullT=0;v.sid=null;v.mode='toUnload';v.status='Station voll – fährt woanders hin';}break;}
+      v.fullT=0;
       const amt=Math.min(stDef(s).rate*uv('urate')*(isOut(s)?1:blF(s))*dt,free,tank),f0=tank>0?amt/tank:0;
       for(const m in v.tank){const x=v.tank[m]*f0;v.tank[m]-=x;st.buf[m]=(st.buf[m]||0)+x;}
       v.status=tank>.01?(v.charging?'Entlädt und lädt Akku':'Entlädt'):'Lädt Akku · '+Math.round((v.bat||0)/battCap(v)*100)+' %';
@@ -1558,9 +1561,9 @@ function outpostModel(L){const g=new THREE.Group(),v={g};add(Box(4.4,.3,5),L.pad
   add(Cyl(.05,.05,2.2,6),L.metal,1.2,1.4,-2,g);add(Sph(.14,8,6),L.mint,1.2,2.6,-2,g);v.docks=[];
   for(let k=0;k<OUTPOST.docks+2;k++){const kk=(k-(OUTPOST.docks-1)/2)*2;add(Box(1.6,.06,1.6),L.dark,2.9,.05,kk,g,false);const m=L.mint.clone();m.emissiveIntensity=.15;add(Box(1.7,.05,.12),m,2.9,.1,kk+.85,g,false);v.docks.push(m);}
   return v;}
-function pipeCurve(pd,a,b,hEnd){const R=pd.R,bc=basePlanDir(pd,0,0),dist=arcDist(a,b,R),n=Math.max(4,Math.ceil(dist/1.6)),pts=[],ang=Math.acos(clamp(vdot(a,b),-1,1)),s=Math.sin(ang)||1;
-  for(let i=0;i<=n;i++){const t=i/n,d=vnorm(vadd(vsc(a,Math.sin((1-t)*ang)/s),vsc(b,Math.sin(t*ang)/s))),db=arcDist(d,bc,R);let h=.35+4.4*(1-smooth(23,29,db));if(hEnd!=null)h=lerp(h,Math.max(h,hEnd+1.2),smooth(.6,.97,t));pts.push(V3(vsc(d,R+h)));}
-  if(hEnd!=null)pts.push(V3(vsc(b,R+hEnd)));
+function pipeCurve(pd,a,b,hEnd,hStart){const R=pd.R,bc=basePlanDir(pd,0,0),dist=arcDist(a,b,R),n=Math.max(4,Math.ceil(dist/1.6)),pts=[],ang=Math.acos(clamp(vdot(a,b),-1,1)),s=Math.sin(ang)||1;
+  for(let i=0;i<=n;i++){const t=i/n,d=vnorm(vadd(vsc(a,Math.sin((1-t)*ang)/s),vsc(b,Math.sin(t*ang)/s))),db=arcDist(d,bc,R);let h=.35+4.4*(1-smooth(23,29,db));if(hEnd!=null)h=lerp(h,Math.max(h,hEnd+1.2),smooth(.6,.97,t));if(hStart!=null)h=lerp(h,Math.max(h,hStart+1.2),1-smooth(.03,.4,t));pts.push(V3(vsc(d,R+h)));}
+  if(hEnd!=null)pts.push(V3(vsc(b,R+hEnd)));if(hStart!=null)pts.unshift(V3(vsc(a,R+hStart)));
   return new THREE.CatmullRomCurve3(pts);}
 /* building frame: local +X = plan +x, local +Z = plan -y (so plan coordinates map consistently) */
 function placeOnPlan(obj,pd,x,y,lift){const d=basePlanDir(pd,x,y),fwd=vsc(pd.cells[pd.base].e2,-1);orient(obj,d,fwd,pd.R,lift);}
@@ -1590,7 +1593,7 @@ function buildBase(pid){
   {const dm=new THREE.Mesh(new THREE.SphereGeometry(34,40,16,0,TAU,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0x7fb4ff,transparent:true,opacity:.13,side:THREE.DoubleSide,depthWrite:false}));const dg=new THREE.Group();dg.add(dm);placeOnPlan(dg,pd,0,0,-1);dg.visible=false;world.add(dg);buildViews.dome={g:dg};}
   for(const o of sp.outposts){const cl=pd.cells[o.cell],v=outpostModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:o.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
     const lb=makeLabel('Außenlager');lb.position.set(0,4.8,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews[o.key]=v;
-    const rl=(sp.blvl&&sp.blvl.roh)||0,siloTop=4.25*(1+.2*rl),curve=pipeCurve(pd,toDir(cl,-2.4,0,pd.R),basePlanDir(pd,BLD.roh.pos[0]-1.2,BLD.roh.pos[1]),siloTop);const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.min(400,curve.points.length*3),.17,6,false),L.metal);
+    const rl=(sp.blvl&&sp.blvl.roh)||0,siloTop=4.25*(1+.2*rl),curve=pipeCurve(pd,toDir(cl,-.9,0,pd.R),basePlanDir(pd,BLD.roh.pos[0]-1.2,BLD.roh.pos[1]),siloTop,3.72);const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.min(400,curve.points.length*3),.17,6,false),L.metal);
     const pg=new THREE.Group();pg.add(tube);const flow=[];for(let k=0;k<6;k++){const m=new THREE.Mesh(Sph(.2,8,6),L.mint);m.visible=false;pg.add(m);flow.push(m);}world.add(pg);buildViews[o.key+'p']={g:pg,curve,flow,len:curve.getLength()};}
   for(const r of sp.rigs||[]){const cl=pd.cells[r.cell],v=r.bag?baggerModel(L):rigModel(L);v.g.traverse(n=>{n.userData.pick={type:'cell',id:r.cell};});orient(v.g,cl.c,vsc(cl.e2,-1),pd.R,0);
     const lb=makeLabel(r.bag?'Erzbagger':'Bohrturm');lb.position.set(0,r.bag?6:8.2,0);v.g.add(lb);world.add(v.g);pickables.push(v.g);buildViews['r'+r.cell]=v;}
