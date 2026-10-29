@@ -456,7 +456,7 @@ const UPG=[
   {id:'bcap',loc:1,cat:'Förderbänder',name:'Größere Paletten',base:180,grow:1.8,max:8,val:l=>1+0.3*l,show:v=>'×'+dec(v,1),label:'Kapazität pro Paket',stage:2},
   {id:'beff',loc:1,cat:'Förderbänder',name:'Leichtlaufrollen',base:150,grow:1.7,max:6,val:l=>Math.pow(.85,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
   {id:'pvol',loc:1,cat:'Maschinen',name:'Größere Presskammer',base:500,grow:1.8,max:7,val:l=>1+l,show:v=>v+' Bricks pro Hub',label:'Volumen der Staubpresse',stage:2},
-  {id:'pspeed',loc:1,cat:'Maschinen',name:'Hochdruckpresse',base:400,grow:1.75,max:10,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Tempo der Staubpresse',stage:2},
+  {id:'pspeed',hide:1,loc:1,cat:'Maschinen',name:'Hochdruckpresse',base:400,grow:1.75,max:10,val:l=>1+0.35*l,show:v=>'×'+dec(v,2),label:'Tempo der Staubpresse',stage:2},
   {id:'mspeed',loc:1,cat:'Maschinen',name:'Hydraulik-Tuning',base:300,grow:1.85,max:10,val:l=>1+0.2*l,show:v=>'×'+dec(v,1),label:'Verarbeitungstempo',stage:2},
   {id:'mcap',loc:1,cat:'Maschinen',name:'Größere Puffer',base:250,grow:1.8,max:8,val:l=>1+0.4*l,show:v=>'×'+dec(v,1),label:'Ein-/Ausgangskapazität',stage:2},
   {id:'meff',loc:1,cat:'Maschinen',name:'Wärmerückgewinnung',base:350,grow:1.8,max:6,val:l=>Math.pow(.86,l),show:v=>'×'+dec(v,2),label:'Energieverbrauch',stage:2},
@@ -809,7 +809,7 @@ const pressable=(sp,m)=>(m==='staub'&&sp.plan.pressStaub)||(m==='metall'&&sp.pla
 const smeltOn=sp=>!!(sp.plan.smelt&&sp.bld.schmelze);
 const machIn=M=>sumObj(M.in),machOut=M=>sumObj(M.out);
 /* Gebäudestufen: once a building's own upgrades are maxed it can grow another level (bigger, faster, more room) */
-const BLV_REQ={presse:['mspeed','pspeed','pvol'],schmelze:['mspeed','mcap'],raff:['mspeed','mcap'],u1:['urate','ubuf'],u2:['urate','ubuf'],u3:['urate','ubuf'],roh:['rohcap'],prod:['prodcap'],sell:['sellcap'],energy:['energy','ecap']};
+const BLV_REQ={presse:['mspeed','pvol'],schmelze:['mspeed','mcap'],raff:['mspeed','mcap'],u1:['urate','ubuf'],u2:['urate','ubuf'],u3:['urate','ubuf'],roh:['rohcap'],prod:['prodcap'],sell:['sellcap'],energy:['energy','ecap']};
 const blvl=(id,pid)=>{const sp=S.planets[pid||CUR||S.planet];return(sp&&sp.blvl&&sp.blvl[id])||0;};
 const blMax=()=>3+expN();
 const blF=id=>1+(MACH[id]?.5:id==='energy'?.3:.4)*blvl(id);
@@ -864,8 +864,8 @@ function machStep(sp,id,dt,f){
     if(M.cur<0){M.status=machOut(M)+1>machOutCap(id)?'Ausgang voll':D.rec.every(rc=>rc.plan&&!sp.plan[rc.plan])?'Pausiert (Plan aus)':'Wartet auf Material';return;}}
   const rc=D.rec[M.cur];
   if(f<.05){M.status='Keine Energie';return;}
-  M.prog+=dt*uv('mspeed')*(id==='presse'?uv('pspeed'):1)*blF(id)*f*(sp.mm||1);M.status='Arbeitet';
-  if(M.prog>=rc.t){const bt=Math.max(1,Math.min(M.bat||1,Math.floor((M.in[rc.in]+1e-6)/rc.n)));M.in[rc.in]-=rc.n*bt;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k*bt;M.cur=-1;M.prog=0;M.flash=1;M.bat=1;
+  M.prog+=dt*uv('mspeed')*blF(id)*f*(sp.mm||1);M.status='Arbeitet';
+  if(M.prog>=rc.t){const bt=Math.max(1,Math.min(M.bat||1,Math.floor((M.in[rc.in]+1e-6)/rc.n)));M.in[rc.in]-=rc.n*bt;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k*bt;M.made=(M.made||0)+rc.k*bt;M.lastOut=rc.out;M.cur=-1;M.prog=0;M.flash=1;M.bat=1;
     sp.stats.value+=Math.max(0,MATS[rc.out].v*rc.k-MATS[rc.in].v*rc.n)*bt*(sp.pv||1);
     if(rc.out==='barren')S.stats.barren+=rc.k*bt;if(rc.out.endsWith('Brick'))S.stats.bricks+=rc.k*bt;}
 }
@@ -2083,7 +2083,7 @@ const SEC={
 function machSec(id){const D=MACH[id],B0=BLD[id];
   return '<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+D.rec.map(rc=>rc.n+' '+MATS[rc.in].name+' → '+rc.k+' '+MATS[rc.out].name+' ('+dec(rc.t,1)+' s · Wert '+fmt(MATS[rc.in].v*rc.n*pvM())+' → '+fmt(MATS[rc.out].v*rc.k*pvM())+' Cr)').join('<br>')+'<br>Energie: '+dec(D.energy,1)+'/s während der Arbeit.</p>'+
   '<dl class="kv"><dt>Status</dt><dd data-b="'+bind(()=>SP().mach[id].status||'–')+'"></dd><dt>Eingang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].in)+' / '+fmt(machInCap(id)))+'"></dd><dt>Ausgang</dt><dd data-b="'+bind(()=>matList(SP().mach[id].out)+' / '+fmt(machOutCap(id)))+'"></dd></dl>'+
-  '<div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];return M.cur>=0?M.prog/D.rec[M.cur].t*100:0;})+'" style="background:var(--credit)"></i></div>'+(id==='presse'?upgRow('pvol')+upgRow('pspeed'):'')+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
+  '<dl class="kv"><dt>Höchstleistung</dt><dd data-b="'+bind(()=>{const rc=D.rec[0],per=rc.t/(uv('mspeed')*blF(id));return fmt(60/per*rc.n*machBatch(id))+' '+MATS[rc.in].name+' pro Minute'+(machBatch(id)>1?' · '+machBatch(id)+' Chargen pro Hub':'');})+'"></dd></dl><div class="bar big-bar"><i data-w="'+bind(()=>{const M=SP().mach[id];if(M.cur<0)return 0;const per=D.rec[M.cur].t/(uv('mspeed')*blF(id));return per<1.2?100:M.prog/D.rec[M.cur].t*100;})+'" style="background:var(--credit)"></i></div>'+(id==='presse'?upgRow('pvol'):'')+upgRow('mspeed')+upgRow('mcap')+upgRow('meff')+upgRow('mqual')+'</section>';}
 function handRow(id){return '<div class="row"><div class="row-main"><div class="row-t">Sammelbehälter hier entladen</div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().hand))+' / '+fmt(handCap())+' E im Behälter')+'"></div></div><button class="buy" data-act="unhand" data-id="'+id+'" data-en="'+bind(()=>sumObj(SP().hand)>=.05)+'">Entladen</button></div>';}
 function stationSec(id){const B0=BLD[id];
   return handRow(id)+'<section class="sec"><h3>'+B0.name+'</h3><p class="note">'+B0.desc+' Fahrzeuge laden hier ihren Tank ab, das Material läuft über das Förderband weiter.</p><dl class="kv"><dt>Andockplätze</dt><dd data-b="'+bind(()=>SP().st[id].docks.filter(x=>x).length+' belegt von '+stDocks(id))+'"></dd><dt>Puffer</dt><dd data-b="'+bind(()=>fmt(sumObj(SP().st[id].buf))+' / '+fmt(stBuf(id)))+'"></dd><dt>Entladetempo</dt><dd>'+dec(B0.st.rate*uv('urate'),1)+' E/s</dd><dt>Passend für</dt><dd>'+Object.keys(VT).filter(t=>B0.st.acc.includes(VT[t].size)).map(t=>VT[t].name).join(', ')+'</dd><dt>In der Warteschlange</dt><dd data-b="'+bind(()=>String(SP().veh.filter(v=>v.sid===id&&v.status==='Wartet auf Andockplatz').length))+'"></dd></dl>'+upgRow('urate')+upgRow('ubuf')+(SP().stage>=3?upgRow('udock'):'')+'</section>';}
@@ -2603,7 +2603,11 @@ function updateVisuals(dt,t){
   if(bvv.prod&&bvv.prod.fills){const f=Math.min(1,prodSum(sp)/prodCap());bvv.prod.fills.forEach((m,i)=>{m.visible=f>i/4+.01;});}
   for(const s of STATIONS)if(bvv[s]&&bvv[s].fill){const f=Math.min(1,sumObj(sp.st[s].buf)/stBuf(s));bvv[s].fill.scale.y=Math.max(.05,f*3);
     bvv[s].docks.forEach((m,k)=>{m.emissiveIntensity=k>=stDocks(s)?0:sp.st[s].docks[k]?.9+.3*Math.sin(t*8):.15;});}
-  if(bvv.presse&&bvv.presse.piston){const M=sp.mach.presse,ph=M.cur>=0?(M.prog*3)%1:0;bvv.presse.piston.position.y=2.2-Math.max(0,Math.sin(ph*Math.PI));bvv.presse.plate.visible=M.cur>=0;if(M.flash){M.flash=0;emit3(basePlanDir(pd,BLD.presse.pos[0],BLD.presse.pos[1]),R+1.2,0xcfc3ad,6,1.6,1.5);}}
+  /* the press always strokes at a calm pace (one hub every 1.6 s); a fast press shows more bricks per stroke instead of a frantic piston */
+  if(bvv.presse&&bvv.presse.piston){const P=bvv.presse,M=sp.mach.presse,on=M.cur>=0||(M.made||0)>0;M.flash=0;
+    if(on||(P.vph||0)%1>.02){const before=(P.vph||0)%1;P.vph=(P.vph||0)+dt/1.6;const ph=P.vph%1;
+      if(before<.5&&ph>=.5&&(M.made||0)>=1){emit3(basePlanDir(pd,BLD.presse.pos[0],BLD.presse.pos[1]),R+1.2,0xcfc3ad,4+Math.min(12,M.made|0),1.6,1.5);if(!mapMode)floatText3(basePlanDir(pd,BLD.presse.pos[0],BLD.presse.pos[1]),4,'+'+fmt(M.made)+' '+MATS[M.lastOut||'staubBrick'].name,'mat');M.made=0;}
+      P.piston.position.y=2.2-Math.sin(ph*Math.PI);}P.plate.visible=on;}
   if(bvv.schmelze&&bvv.schmelze.glow){const M=sp.mach.schmelze;bvv.schmelze.glow.emissiveIntensity=M.cur>=0?1.2+.6*Math.sin(t*9):.25;if(M.cur>=0&&Math.random()<dt*6)emit3(basePlanDir(pd,BLD.schmelze.pos[0]-.9,BLD.schmelze.pos[1]),R+5,0x8a8f99,1,.3,1.6);if(M.flash){M.flash=0;SFX.coin();}}
   if(bvv.raff&&bvv.raff.rings){const on=sp.mach.raff.cur>=0;bvv.raff.rings.forEach((r,i)=>{r.rotation.z+=dt*(on?2+i:.2);r.material.emissiveIntensity=on?.9:.2;});}
   if(bvv.energy&&bvv.energy.reactor)bvv.energy.reactor.emissiveIntensity=.3+1.1*(sp.energy/energyCap(sp))*(.8+.2*Math.sin(t*4));
@@ -2653,6 +2657,8 @@ function startCam(){const pd=planetData(S.planet),st=pd.cells[pd.start];cam.d=vn
 function migrate(){
   if((S.qv||1)<2){if(S.quest>=1)S.quest++;S.qv=2;}
   if(S.qv<3){if(S.quest>=6)S.quest++;S.qv=3;}
+  {let back=0;for(const pid in S.planets){const sp=S.planets[pid],l=(sp.upg&&sp.upg.pspeed)||0;if(!l)continue;const u=UP.pspeed;for(let i=0;i<l;i++)back+=u.base*Math.pow(u.grow,i)*PLANETS[pid].diff;sp.upg.pspeed=0;}
+    if(back>0){S.credits+=Math.round(back);setTimeout(()=>{try{toast('Hochdruckpresse entfällt – Hydraulik-Tuning (Tempo) und Größere Presskammer (Menge) übernehmen. Erstattet: '+fmt(back)+' Cr','good');}catch(e){}},3500);}}
   if(Object.keys(S.done||{}).length&&!S.hintRig){S.hintRig=1;setTimeout(()=>{try{toast('Neu: Tiefenabbau! Auf komplett sauberen Planeten baust du jetzt Bohrtürme – Basis → Tiefenabbau','good');}catch(e){}},4500);}
   if(S.layout!==3){for(const pid in S.planets){const pd=planetData(pid),sp=S.planets[pid];if(!sp.owned.includes(pd.start))sp.owned.push(pd.start);
       for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload')v.mode='toUnload';v.sid=null;v.d=basePlanDir(pd,2.5,13);}for(const st of STATIONS)sp.st[st].docks=[];}

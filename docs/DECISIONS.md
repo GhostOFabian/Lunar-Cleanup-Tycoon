@@ -135,3 +135,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 
 ## v5.5
 - Presse-Volumen als Chargen pro Hub (ganzzahlig, damit Bricks Stückware bleiben) statt kontinuierlicher Menge; Puffer wachsen mit, sonst passt eine große Charge nicht hinein.
+
+## v5.6
+- Animation von der Simulation entkoppelt: die Presse hebt sich in festem Takt und zeigt die Menge pro Hub – schnell ist sie trotzdem, sie wirkt nur nicht hektisch.
+- Pro Wirkung genau ein Upgrade: Tempo = Hydraulik-Tuning, Menge = Größere Presskammer; die doppelte Hochdruckpresse entfällt mit voller Erstattung.

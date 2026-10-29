@@ -142,7 +142,7 @@ with game() as (pg, errs):
       const nb=pd.cells[r.cell].nb.find(id=>pd.cells[id].kind!=='base');w.act.delete(nb);const a=t.activate('moon',nb,null,true,'dust');t.dirtyAt(a,0,0,8,.95);const s0=a.sum;r.buf={};for(let i=0;i<60;i++)t.rigStep('moon',sp,r,1,1);
       const m1=t.matsLib('moon'),m2=t.matsLib('mars');
       return {why0,f0,f1,c0,c1,ps,lv:r.lv,bag:r.bag,rate:rate1/rate0,swept:s0-(w.act.get(nb)?w.act.get(nb).sum:0),s0,col:[m1.acc[0],m2.acc[0]]}}""")
-    show('press/building level/bagger/colours', r); check(r['why0'] != '' and r['f1'] > r['f0'] and r['c1'] > r['c0'] and r['ps'] > 1 and r['lv'] == 5 and r['bag'] == 1 and abs(r['rate'] - 2.5) < .01 and r['swept'] > r['s0'] * .5 and r['col'][0] != r['col'][1], 'press upgrade / building levels / Erzbagger / planet colours')
+    show('press/building level/bagger/colours', r); check(r['why0'] != '' and r['f1'] > r['f0'] and r['c1'] > r['c0'] and r['lv'] == 5 and r['bag'] == 1 and abs(r['rate'] - 2.5) < .01 and r['swept'] > r['s0'] * .5 and r['col'][0] != r['col'][1], 'press upgrade / building levels / Erzbagger / planet colours')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,M=sp.mach.presse;const run=l=>{sp.upg.pvol=l;M.in={staub:1e3};M.out={staubBrick:0,metallBrick:0};M.cur=-1;M.prog=0;sp.energy=1e4;let made=0;
         for(let i=0;i<120;i++){const b0=M.out.staubBrick;t.machStep(sp,'presse',.25,1);made+=Math.max(0,M.out.staubBrick-b0);M.out.staubBrick=0;M.out.metallBrick=0;M.in.staub=1e3;}return made;};
       const a=run(0),b=run(4);sp.upg.pvol=0;return {a,b}}""")
@@ -158,7 +158,7 @@ with game() as (pg, errs):
         pg.wait_for_timeout(250)
     r = E("()=>({ok:window.__ok,busy0:false,done:!__t.offRun,secs:window.__rep&&window.__rep.secs,gain:__t.S.credits-window.__c0,track:__t.TRACK===null})")
     show('async offline', r); check(r['ok'] and r['done'] and r['secs'] == 7200 and r['track'], 'async offline simulation')
-    s1 = E("()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');let id=-1;for(const c of pd.cells)if(c.kind!=='base'&&w.clean[c.id]){id=c.id;break;}w.act.delete(id);const a=t.activate('moon',id,null,true,'crystal');a.saveDirty=true;t.dirtyAt(a,0,0,6,.9);__t.save();return {dt:id+':'+a.dustType,n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
+    s1 = E("()=>{const t=__t,w=t.W.moon,pd=t.planetData('moon');let id=-1;for(const c of pd.cells)if(c.kind!=='base'&&w.clean[c.id]){id=c.id;break;}w.act.delete(id);const a=t.activate('moon',id,null,true,'crystal');a.saveDirty=true;t.dirtyAt(a,0,0,6,.9);t.S.planets.moon.upg.pspeed=3;__t.save();return {ps:3,cr:Math.round(t.S.credits),dt:id+':'+a.dustType,n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length}}")
     E("""()=>{const t=__t;if(!t.S.planets.mars){t.S.planets.mars=t.freshPlanet('mars');t.initRuntime('mars');}t.travelTo('mars');}""")
     for _ in range(40):
         pg.wait_for_timeout(200)
@@ -170,8 +170,8 @@ with game() as (pg, errs):
         pg.wait_for_timeout(200)
         if not E("()=>!!__t.travelFx"): break
     pg.reload(); pg.wait_for_timeout(1200)
-    s2 = E("()=>({dt:(()=>{for(const[id,a]of __t.W.moon.act)if(a.dustType==='crystal')return id+':crystal';return 'none';})(),n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
-    show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'] and s1['dt'] == s2['dt'], 'save/load roundtrip')
+    s2 = E("()=>({ps:__t.S.planets.moon.upg.pspeed||0,cr:Math.round(__t.S.credits),dt:(()=>{for(const[id,a]of __t.W.moon.act)if(a.dustType==='crystal')return id+':crystal';return 'none';})(),n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
+    show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'] and s1['dt'] == s2['dt'] and s2['ps'] == 0 and s2['cr'] > s1['cr'], 'save/load roundtrip')
 
     for e in errs[:20]:
         print(e)
