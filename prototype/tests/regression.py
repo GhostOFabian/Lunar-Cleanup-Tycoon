@@ -154,6 +154,11 @@ with game() as (pg, errs):
       for(let i=0;i<1200;i++){o.buf={staub:t.stBuf(o.key)};sp.dayT=t.dayLen('moon')*.25;t.simStep('moon',.5,false);let n=0;for(const v of sp.veh)if(v.sid===o.key&&(v.mode==='unload'||v.mode==='queue')){n++;v._st=(v._st||0)+.5;maxT=Math.max(maxT,v._st);}else v._st=0;stuck=Math.max(stuck,n);}
       return {stuck,maxT}}""")
     show('vehicles leave a full outpost', r); check(r.get('skip') or r['maxT'] <= 15, 'vehicles camp at a full outpost')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.credits+=1e9;sp.spec=null;const p0=t.specF('price','moon');t.setSpec('trade');const p1=t.specF('price','moon');const c0=t.S.credits;t.setSpec('ind');const paid=c0-t.S.credits;
+      const m1=t.specF('mach','moon');sp.spec='trade';sp.flowB=1;sp.sellBuf={staubBrick:10};sp.order={m:'barren'};const cv=t.cargoValue('moon',sp);
+      t.newWorkOrder('moon',sp);const w=sp.wo,d0=sp.woDone||0;t.woCount('moon',sp,w.m,w.n,false);
+      return {p0,p1,paid,m1,flow:cv.flow,spec:cv.spec,done:(sp.woDone||0)-d0,next:!!sp.wo&&sp.wo.got===0}}""")
+    show('specialisation / flow bonus / work orders', r); check(r['p0'] == 1 and abs(r['p1'] - 1.3) < 1e-9 and r['paid'] > 0 and r['m1'] > 1.29 and abs(r['flow'] - 1.3) < 1e-9 and r['spec'] > 1.29 and r['done'] == 1 and r['next'], 'v6 long-term systems')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

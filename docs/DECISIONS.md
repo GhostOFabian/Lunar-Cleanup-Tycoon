@@ -150,3 +150,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 
 ## v5.9
 - Fahrzeuge meiden volle Entladeziele zeitweise, statt angedockt zu warten – sie sollen nur dort stehen, wo sie wirklich abladen können (Wunsch des Spielers).
+
+## v6.0
+- Langzeitmotivation über drei kleine, verbundene Systeme statt neuer Inhalte (Ausrichtung, Betriebsbonus, Werksaufträge) – Ursache war fehlende Entscheidung, nicht fehlender Inhalt (Analyse in `docs/LANGZEIT.md`).
+- Kein Abbau bestehender Vorteile: globale Technik bleibt global, der Betriebsbonus kann nur steigen oder auf den Grundwert fallen, Werksaufträge zählen normale Raketenverkäufe.
+- Planetenmärkte und ausbaubarer Sturmschild bewusst zurückgestellt (verschieben das Preisgefüge bzw. entwerten erworbenen Fortschritt).

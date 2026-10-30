@@ -53,6 +53,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 37. **Größen prüfen und Bänder anpassen**, wenn Gebäudestufen steigen; **Außenlager-Pipeline geht neben das Rohstofflager** und pumpt scheinbar nicht hinein. → v5.7.
 38. **Pumpen der Pipeline upgradebar** machen – das Außenlager ist immer zu schnell voll. → v5.8.
 39. Fahrzeuge **stehen fest am Außenlager**, statt weiterzufahren; die **Pipeline sitzt neben dem Außenlager** statt darin. → v5.9.
+40. Ausführlicher Auftrag „Gameplay, Progression und Langzeitmotivation verbessern“ (Analyse, Maßnahmenplan, risikoarme Umsetzung, Spielstände erhalten). → v6.0, siehe `docs/LANGZEIT.md`.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

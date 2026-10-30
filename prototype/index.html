@@ -576,7 +576,7 @@ function expCard(pid){const sp=S.planets[pid],n=expN(pid),why=expWhy(pid);
   return '<div class="row-d">'+(n?'Ausbaustufe '+n+' · ':'')+'Höchste Basisstufe erreicht.</div><div class="row-t" style="margin-top:8px">Ausbaustufe '+(n+1)+'</div><div class="row-d">+2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, alle Anlagen-Upgrades dieses Planeten 2 Stufen höher. Es gibt kein Ende – jede Stufe kostet mehr.</div>'+
     (S.done[pid]&&sp.stage>=5?'<div class="bar"><i data-w="'+bind(()=>Math.min(1,(SP().deep||0)/expNeed(S.planet))*100)+'"></i></div><div class="row-d" data-b="'+bind(()=>fmt(Math.min(SP().deep||0,expNeed(S.planet)))+' / '+fmt(expNeed(S.planet))+' E aus der Tiefe')+'"></div>':'<div class="row-d"><b>'+why+'</b></div>')+
     '<button class="buy wide" data-act="buyexp" data-en="'+bind(()=>!expWhy(S.planet)&&S.credits>=expCost(S.planet))+'">Ausbauen · '+cr(expCost(pid))+'</button>';}
-const rohCap=()=>uv('rohcap')*expF()*blF('roh'),prodCap=()=>uv('prodcap')*expF()*blF('prod');
+const rohCap=()=>uv('rohcap')*expF()*blF('roh')*specF('store'),prodCap=()=>uv('prodcap')*expF()*blF('prod')*specF('store');
 const rohSum=sp=>RAW.reduce((a,k)=>a+sp.roh[k],0);
 const prodSum=sp=>PRODS.reduce((a,k)=>a+sp.prod[k],0);
 const anyPort=()=>{for(const k in S.planets)if(S.planets[k].bld.port)return true;return false;};
@@ -615,7 +615,7 @@ function freshPlanet(pid){
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
   return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
-    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},blvl:{},nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
+    plan:{pressStaub:true,pressMetall:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},blvl:{},spec:null,flowB:0,wo:null,woDone:0,nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
 function freshSave(){return{v:2,layout:3,qv:3,ach:{},maxStage:1,locMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
 
@@ -865,7 +865,7 @@ function machStep(sp,id,dt,f){
     if(M.cur<0){M.status=machOut(M)+1>machOutCap(id)?'Ausgang voll':D.rec.every(rc=>rc.plan&&!sp.plan[rc.plan])?'Pausiert (Plan aus)':'Wartet auf Material';return;}}
   const rc=D.rec[M.cur];
   if(f<.05){M.status='Keine Energie';return;}
-  M.prog+=dt*uv('mspeed')*blF(id)*f*(sp.mm||1);M.status='Arbeitet';
+  M.prog+=dt*uv('mspeed')*blF(id)*specF('mach')*f*(sp.mm||1);M.status='Arbeitet';
   if(M.prog>=rc.t){const bt=Math.max(1,Math.min(M.bat||1,Math.floor((M.in[rc.in]+1e-6)/rc.n)));M.in[rc.in]-=rc.n*bt;if(M.in[rc.in]<1e-6)M.in[rc.in]=0;M.out[rc.out]=(M.out[rc.out]||0)+rc.k*bt;M.made=(M.made||0)+rc.k*bt;M.lastOut=rc.out;M.cur=-1;M.prog=0;M.flash=1;M.bat=1;
     sp.stats.value+=Math.max(0,MATS[rc.out].v*rc.k-MATS[rc.in].v*rc.n)*bt*(sp.pv||1);
     if(rc.out==='barren')S.stats.barren+=rc.k*bt;if(rc.out.endsWith('Brick'))S.stats.bricks+=rc.k*bt;}
@@ -954,7 +954,7 @@ const approachPos=s=>[BLD[s].pos[0]+6.4,BLD[s].pos[1]];
 function parkPos(sp,v){const i=sp.veh.indexOf(v);return[19+(i%4)*1.8,13+Math.floor(i/4)*1.8];}
 function vehStep(pid,sp,v,dt,f,live){
   const T=VT[v.type],pd=planetData(pid),R=pd.R,w=W[pid];
-  const bf=T.batt&&v.bat!=null&&v.bat<=0?.3:1,spd=T.speed*uv('vspeed')*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1))*bf;
+  const bf=T.batt&&v.bat!=null&&v.bat<=0?.3:1,spd=T.speed*uv('vspeed')*specF('veh',pid)*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1))*bf;
   const tank=sumObj(v.tank),cap=tankCap(v);v.busy=false;v.charging=false;if(v.avoidT>0)v.avoidT-=dt;
   switch(v.mode){
     case 'seek':{
@@ -982,7 +982,7 @@ function vehStep(pid,sp,v,dt,f,live){
       if(v.mode==='drive'){v.status='Fährt zum Einsatz';const dl=toLocal(a.cl,v.d,R);if(arrived||Math.hypot(dl[0],dl[1])<a.cl.H*.9)v.mode='clean';break;}
       const tn=Math.min(4,team.filter(o=>o.mode==='clean').length);v.status=tn>1?'Reinigt im Team ('+tn+')':'Reinigt';v.ph=(v.ph||0)+dt*4;
       const loc=toLocal(a.cl,v.d,R),wg=arrived?.4:0;
-      const k=1-Math.exp(-T.power*VEH_BUFF*homeF(v,pid)*uv('vpower')*powF(pid)*cleanMul()*(1+.1*Math.max(0,tn-1))*bf*Math.max(.25,f)*dt*(arrived?1:.5)/(a.D.hard*a.kind.hard));
+      const k=1-Math.exp(-T.power*VEH_BUFF*homeF(v,pid)*uv('vpower')*specF('veh',pid)*powF(pid)*cleanMul()*(1+.1*Math.max(0,tn-1))*bf*Math.max(.25,f)*dt*(arrived?1:.5)/(a.D.hard*a.kind.hard));
       const rem=cleanAt(a,loc[0]+Math.cos(v.ph)*wg,loc[1]+Math.sin(v.ph)*wg,T.radius*uv('vradius'),k,live);
       if(rem>0){const amt=rem/a.cl.nIn*a.amt,m2=rem/a.cl.nIn*cellArea(a.cl);v.tank[a.D.mat]=(v.tank[a.D.mat]||0)+amt;v.coll=(v.coll||0)+amt;sp.stats.value+=amt*MATS[a.D.mat].v*pvM(pid);sp.stats.cleanedM2+=m2;
         if(TRACK){const t=TRACK.p[pid];t.area+=m2;t.mats[a.D.mat]=(t.mats[a.D.mat]||0)+amt;}}
@@ -1083,7 +1083,7 @@ const rigMax=sp=>2+2*sp.stage+2*(sp.exp||0);
 const rigCost=pid=>Math.round(3000*PLANETS[pid].diff*Math.pow(1.45,(S.planets[pid].rigs||[]).length));
 const rigMat=(pid,id)=>DIRT[planetData(pid).cells[id].type].mat;
 const RIG_MAXLV=5;
-const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate')*(1+.25*expN(pid))*(1+.3*(r.lv||0))*(r.bag?2.5:1);
+const rigRate=(pid,r)=>RIG.base*rigRich(pid,r.cell)*uv('rigrate')*(1+.25*expN(pid))*(1+.3*(r.lv||0))*(r.bag?2.5:1)*specF('rig',pid);
 const rigBuf=r=>r.bag?600:RIG.buf;
 const rigUpCost=(pid,r)=>Math.round(2500*PLANETS[pid].diff*Math.pow(1.9,r.lv||0));
 const bagCost=pid=>Math.round(60000*PLANETS[pid].diff);
@@ -1222,13 +1222,46 @@ const rawRoute=(sp,m)=>(m==='staub'||m==='metall')?!!(sp.bld.presse&&pressable(s
 const endGood=(sp,m)=>!rawRoute(sp,m)?m:m==='staub'?'staubBrick':m==='metall'?(smeltOn(sp)?'barren':'metallBrick'):m==='kristall'?'reinkristall':'polymer';
 function planetRaws(pid){const s=new Set();for(const[t]of PLANETS[pid].types)s.add(DIRT[t].mat);return RAW.filter(m=>s.has(m));}
 function newOrder(pid,sp){const opts=[...new Set(planetRaws(pid).map(m=>endGood(sp,m)))];let m=opts[(Math.random()*opts.length)|0]||'staub';if(sp.order&&opts.length>1&&m===sp.order.m)m=opts[(opts.indexOf(m)+1)%opts.length];sp.order={m};}
+/* ===== v6.0 long-term play: three small systems that connect what already exists =====
+   1) Ausrichtung – one strategic focus per planet (Bergbau / Industrie / Handel), each planet favours one of them.
+   2) Betriebsbonus – a planet whose production runs without red bottlenecks earns up to +30 % on its rocket sales.
+   3) Werksaufträge – one standing production order per planet for an end product; finishing them raises the planet's reputation. */
+const SPEC={
+  mine:{name:'Bergbau',ico:'⛏',desc:'Fahrzeuge reinigen und fahren schneller, Bohrtürme fördern mehr.',veh:.25,rig:.3},
+  ind:{name:'Industrie',ico:'⚙',desc:'Maschinen arbeiten schneller, Roh- und Produktlager sind größer.',mach:.3,store:.3},
+  trade:{name:'Handel',ico:'⇪',desc:'Höhere Verkaufspreise, die Rakete ist schneller zurück.',price:.2,rocket:.3}};
+const SPEC_FIT={moon:'trade',mars:'mine',europa:'ind',titan:'ind',io:'mine',venus:'trade',ganymed:'ind',enceladus:'mine',triton:'mine',pluto:'trade'};
+const SPEC_WHY={moon:'kurze Wege, viel Verkehr – ein Handelsplatz',mars:'viel neuer Staub durch Stürme',europa:'Eisstürme bremsen die Bänder – große Lager und schnelle Maschinen fangen das ab',titan:'Säureregen bremst Maschinen',io:'Vulkane bringen ständig neues Material',venus:'150 % Solarstrom, teure Ware',ganymed:'Magnetstürme legen Bänder lahm – Puffer zählen',enceladus:'Geysire liefern 2,5× Staub',triton:'Kryostürme halbieren das Fahrzeugtempo',pluto:'wertvollste Ware im System'};
+const specOf=pid=>{const sp=S.planets[pid||CUR||S.planet];return sp&&sp.spec||null;};
+const specF=(key,pid)=>{pid=pid||CUR||S.planet;const s=specOf(pid);if(!s||!SPEC[s][key])return 1;return 1+SPEC[s][key]*(SPEC_FIT[pid]===s?1.5:1);};
+const specCost=pid=>Math.round(3000*PLANETS[pid].diff);
+function setSpec(id){const pid=S.planet,sp=SP();if(!SPEC[id]||sp.spec===id)return;if(gs(sp)<3)return fail('Ab Basisstufe 3');const c=sp.spec?specCost(pid):0;if(S.credits<c)return fail(lacks(c));
+  S.credits-=c;sp.spec=id;SFX.unlock();toast(PLANETS[pid].name+' ist jetzt auf '+SPEC[id].name+' ausgerichtet'+(SPEC_FIT[pid]===id?' – passt perfekt (×1,5)':''),'good');updateHUD();save();}
+function specSec(pid){const sp=S.planets[pid];if(gs(sp)<3)return '<section class="sec"><h3>Ausrichtung</h3><p class="note">Ab Basisstufe 3 gibst du jedem Planeten eine Ausrichtung: Bergbau, Industrie oder Handel.</p></section>';
+  let h='<section class="sec"><h3>Ausrichtung</h3><p class="note">Eine Ausrichtung pro Planet. '+PLANETS[pid].name+' passt am besten zu <b>'+SPEC[SPEC_FIT[pid]].name+'</b> ('+SPEC_WHY[pid]+') – dort wirkt sie 1,5-mal so stark. '+(sp.spec?'Wechseln kostet '+fmt(specCost(pid))+' Cr.':'Die erste Wahl ist kostenlos.')+'</p>';
+  for(const id in SPEC){const S0=SPEC[id],fit=SPEC_FIT[pid]===id,k=fit?1.5:1,eff=Object.keys(S0).filter(x=>typeof S0[x]==='number').map(x=>'+'+Math.round(S0[x]*k*100)+' % '+({veh:'Fahrzeuge',rig:'Bohrtürme',mach:'Maschinen',store:'Lager',price:'Preise',rocket:'Raketentempo'}[x])).join(', ');
+    h+='<div class="row"><div class="row-main"><div class="row-t">'+S0.ico+' '+S0.name+(fit?' <span class="lvl">passt zu '+PLANETS[pid].name+'</span>':'')+'</div><div class="row-d">'+S0.desc+' '+eff+'.</div></div>'+(sp.spec===id?'<span class="pill ok">Aktiv</span>':'<button class="buy'+(sp.spec?' alt':'')+'" data-act="spec" data-id="'+id+'">'+(sp.spec?cr(specCost(pid)):'Wählen')+'</button>')+'</div>';}
+  return h+'</section>';}
+/* Betriebsbonus: grows while the planet's traffic light stays green (10 min to full), holds on yellow, falls on red (2 min) */
+const flowBonus=pid=>1+.3*((S.planets[pid||CUR||S.planet]||{}).flowB||0);
+function flowTick(pid,sp,dt){if(gs(sp)<2||!sp.bld.sell)return;sp.fbT=(sp.fbT||0)+dt;if(sp.fbT<5)return;const st=sp.fbT;sp.fbT=0;const lv=flowLevel(flowReport(pid));
+  const b=sp.flowB||0;sp.flowB=lv===0?Math.min(1,b+st/600):lv===2?Math.max(0,b-st/120):b;sp.flowLv=lv;}
+/* Werksaufträge */
+function newWorkOrder(pid,sp){const L=sp.woDone||0,goods=[...new Set(planetRaws(pid).map(m=>endGood(sp,m)))],prev=sp.wo&&sp.wo.m;let opts=goods.filter(m=>m!==prev);if(!opts.length)opts=goods;
+  const m=opts[(Math.random()*opts.length)|0]||'staub',V=2500*PLANETS[pid].diff*Math.pow(1.55,L),n=Math.max(MATS[m].raw?20:3,Math.round(V/Math.max(.01,matValue(m,pid))));sp.wo={m,n,got:0,r:Math.round(V*.8)};}
+const woRep=pid=>1+.02*Math.min(25,(S.planets[pid||CUR||S.planet]||{}).woDone||0);
+function woCount(pid,sp,m,u,live){if(gs(sp)<2)return;if(!sp.wo)newWorkOrder(pid,sp);const w=sp.wo;if(m!==w.m)return;w.got+=u;if(w.got<w.n)return;
+  sp.woDone=(sp.woDone||0)+1;S.ctr.wo=(S.ctr.wo||0)+1;earn(w.r,false);if(TRACK)TRACK.credits=TRACK.credits;else if(live&&pid===S.planet)toast('Werksauftrag '+(PLANETS[pid].name)+' erfüllt · +'+fmt(w.r)+' Cr · Ruf +2 % auf alle Preise hier','good');newWorkOrder(pid,sp);}
+function woSec(pid){const sp=S.planets[pid];if(gs(sp)<2)return '';if(!sp.wo)newWorkOrder(pid,sp);const w=sp.wo;
+  return '<section class="sec"><h3>Werksauftrag '+onP(pid)+'</h3><div class="row"><div class="row-main"><div class="row-t" data-b="'+bind(()=>{const ww=SP().wo;return ww?'Liefere '+fmt(ww.n)+' '+MATS[ww.m].name+' per Rakete':'';})+'"></div><div class="row-d" data-b="'+bind(()=>{const ww=SP().wo;return ww?fmt(Math.min(ww.got,ww.n))+' / '+fmt(ww.n)+' · Belohnung '+fmt(ww.r)+' Cr · erfüllt: '+(SP().woDone||0)+' (Ruf +'+Math.round((woRep()-1)*100)+' %)':'';})+'"></div><div class="bar"><i data-w="'+bind(()=>{const ww=SP().wo;return ww?Math.min(1,ww.got/ww.n)*100:0;})+'"></i></div></div><button class="buy alt" data-act="go" data-id="production">Produktion</button></div>'+
+    '<p class="note">Jeder erfüllte Auftrag bringt dauerhaft +2 % auf alle Preise dieses Planeten (bis +50 %). Stell den Produktionsplan so ein, dass die gesuchte Ware entsteht – der nächste Auftrag ist größer.</p></section>';}
 function cargoValue(pid,sp){if(!sp.order)newOrder(pid,sp);let base=0,bonus=0,kinds=0;
   for(const m in sp.sellBuf){const u=sp.sellBuf[m];if(u<=1e-6)continue;kinds++;const v=u*matValue(m,pid);base+=v;if(m===sp.order.m)bonus+=v*(ORDER_BONUS-1);}
-  const mix=Math.min(1.4,1+.08*Math.max(0,kinds-1));return{base,order:bonus,mix,kinds,total:(base+bonus)*mix};}
+  const mix=Math.min(1.4,1+.08*Math.max(0,kinds-1)),fb=flowBonus(pid),sx=specF('price',pid)*woRep(pid);return{base,order:bonus,mix,kinds,flow:fb,spec:sx,total:(base+bonus)*mix*fb*sx};}
 function sellStep(pid,sp,dt,live){if(!sp.bld.sell)return;if(!sp.order)newOrder(pid,sp);if(sp.rk>0){sp.rk=Math.max(0,sp.rk-dt);return;}
   const tot=sumObj(sp.sellBuf);if(tot<=1e-6){sp.rkGo=0;return;}if(tot<sellCap()*.98&&!sp.rkGo)return;const man=!!sp.rkGo;sp.rkGo=0;
-  const cv=cargoValue(pid,sp),val=cv.total;for(const m in sp.sellBuf){const u=sp.sellBuf[m];if(u>0)countSold(m,u);}sp.sellBuf={};const om=sp.order.m;newOrder(pid,sp);
-  earn(val,true);sp.stats.sold+=val;S.stats.sold+=val;S.ctr.rockets=(S.ctr.rockets||0)+1;sp.nRockets=(sp.nRockets||0)+1;sp.rk=rocketTime();sp.rkN=(sp.rkN||0)+1;
+  const cv=cargoValue(pid,sp),val=cv.total;for(const m in sp.sellBuf){const u=sp.sellBuf[m];if(u>0){countSold(m,u);woCount(pid,sp,m,u,live);}}sp.sellBuf={};const om=sp.order.m;newOrder(pid,sp);
+  earn(val,true);sp.stats.sold+=val;S.stats.sold+=val;S.ctr.rockets=(S.ctr.rockets||0)+1;sp.nRockets=(sp.nRockets||0)+1;sp.rk=rocketTime()/specF('rocket',pid);sp.rkN=(sp.rkN||0)+1;
   if(TRACK){TRACK.p[pid].sold+=val;TRACK.p[pid].rockets=(TRACK.p[pid].rockets||0)+1;}
   else if(live&&pid===S.planet&&world){floatText3(basePlanDir(planetData(pid),BLD.sell.pos[0],BLD.sell.pos[1]),5,'+'+fmt(val)+' Cr','big');SFX.rocket();
     if(man)toast('Rakete gestartet · +'+fmt(val)+' Cr'+(cv.order>0?' · Auftrag '+MATS[om].name+' erfüllt':'')+(cv.mix>1.001?' · Mischfracht +'+Math.round((cv.mix-1)*100)+' %':''),'good');}}
@@ -1266,6 +1299,7 @@ function simStep0(pid,dt,live){
   for(const v of sp.veh)if(v.drone!=null&&!sp.drones.some(dr=>dr.tgt===v.id&&dr.id===v.drone&&sp.bld.hangar))v.drone=null;
   for(const o of sp.outposts)outpostStep(pid,sp,o,dt,f);
   for(const r of sp.rigs||[])rigStep(pid,sp,r,dt,f);
+  flowTick(pid,sp,dt);
   sp.noStation=noSt;
   const sub=dt>.3?Math.ceil(dt/.25):1,sdt=dt/sub;let any=false;
   for(let s=0;s<sub;s++){for(const b of BELTS)if(beltStep(sp,b,sdt,f))any=true;for(const m in MACH)machStep(sp,m,sdt,f);}
@@ -2072,7 +2106,7 @@ const SEC={
     for(const m of RAW)h+='<dt>'+MATS[m].name+'</dt><dd data-b="'+bind(()=>fmt(SP().roh[m])+' · Wert '+fmt(SP().roh[m]*matValue(m))+' Cr')+'"></dd>';return h+'</dl>'+upgRow('rohcap')+'</section>';},
   prod(){let h='<section class="sec"><h3>Produktlager</h3><div class="bar big-bar"><i data-w="'+bind(()=>prodSum(SP())/prodCap()*100)+'" style="background:var(--prod)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(prodSum(SP()))+' von '+fmt(prodCap())+' Stück')+'"></div><dl class="kv">';
     for(const m of PRODS)h+='<dt>'+MATS[m].name+'</dt><dd data-b="'+bind(()=>fmt(SP().prod[m])+' · je '+fmt(matValue(m))+' Cr')+'"></dd>';return h+'</dl>'+upgRow('prodcap')+'</section>';},
-  sell(){const sp0=SP(),auto=gs(sp0)>=2;let h='<section class="sec"><h3>Rakete</h3>'+(auto?'<p class="note">Förderbänder bringen markierte Waren aus Rohstoff- und Produktlager in den Frachtraum. <b>Erst wenn er voll ist, startet die Rakete</b> und verkauft alles. Die Waren laufen von klein nach groß: Rohwaren, die eine Maschine hier veredeln kann, kommen nicht in den Frachtraum – nur Endprodukte (oder Rohwaren ohne Maschine). Jede Rakete hat einen <b>Frachtauftrag</b> für eines der Endprodukte (+60 %) und zahlt für gemischte Ladung bis zu +40 % mehr. Ist ein Lager fast voll, geht der Überschuss mit – so staut sich nichts.</p><div class="bar big-bar"><i data-w="'+bind(()=>sumObj(SP().sellBuf)/sellCap()*100)+'" style="background:var(--credit)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().sellBuf))+' / '+fmt(sellCap())+' E im Frachtraum · '+(SP().rk>0?'Rakete unterwegs, zurück in '+Math.ceil(SP().rk)+' s':'Rakete wartet'))+'"></div><dl class="kv"><dt>Wert der Ladung</dt><dd data-b="'+bind(()=>{const c=cargoValue(S.planet,SP());return fmt(c.total)+' Cr'+(c.total>c.base+.5?' (Grundwert '+fmt(c.base)+')':'');})+'"></dd><dt>Frachtauftrag</dt><dd data-b="'+bind(()=>{const sp=SP();if(!sp.order)newOrder(S.planet,sp);return MATS[sp.order.m].name+' +'+Math.round((ORDER_BONUS-1)*100)+' %';})+'"></dd><dt>Mischfracht</dt><dd data-b="'+bind(()=>{const c=cargoValue(S.planet,SP());return c.kinds+' Warensorten · +'+Math.round((c.mix-1)*100)+' %';})+'"></dd><dt>Ladung</dt><dd data-b="'+bind(()=>matList(SP().sellBuf))+'"></dd></dl>'+
+  sell(){const sp0=SP(),auto=gs(sp0)>=2;let h='<section class="sec"><h3>Rakete</h3>'+(auto?'<p class="note">Förderbänder bringen markierte Waren aus Rohstoff- und Produktlager in den Frachtraum. <b>Erst wenn er voll ist, startet die Rakete</b> und verkauft alles. Die Waren laufen von klein nach groß: Rohwaren, die eine Maschine hier veredeln kann, kommen nicht in den Frachtraum – nur Endprodukte (oder Rohwaren ohne Maschine). Jede Rakete hat einen <b>Frachtauftrag</b> für eines der Endprodukte (+60 %) und zahlt für gemischte Ladung bis zu +40 % mehr. Ist ein Lager fast voll, geht der Überschuss mit – so staut sich nichts.</p><div class="bar big-bar"><i data-w="'+bind(()=>sumObj(SP().sellBuf)/sellCap()*100)+'" style="background:var(--credit)"></i></div><div class="row-d" data-b="'+bind(()=>fmt(sumObj(SP().sellBuf))+' / '+fmt(sellCap())+' E im Frachtraum · '+(SP().rk>0?'Rakete unterwegs, zurück in '+Math.ceil(SP().rk)+' s':'Rakete wartet'))+'"></div><dl class="kv"><dt>Wert der Ladung</dt><dd data-b="'+bind(()=>{const c=cargoValue(S.planet,SP());return fmt(c.total)+' Cr'+(c.total>c.base+.5?' (Grundwert '+fmt(c.base)+')':'');})+'"></dd><dt>Frachtauftrag</dt><dd data-b="'+bind(()=>{const sp=SP();if(!sp.order)newOrder(S.planet,sp);return MATS[sp.order.m].name+' +'+Math.round((ORDER_BONUS-1)*100)+' %';})+'"></dd><dt>Mischfracht</dt><dd data-b="'+bind(()=>{const c=cargoValue(S.planet,SP());return c.kinds+' Warensorten · +'+Math.round((c.mix-1)*100)+' %';})+'"></dd><dt>Betriebsbonus</dt><dd data-b="'+bind(()=>'+'+Math.round((flowBonus()-1)*100)+' % · '+(SP().flowLv===2?'sinkt – Engpass beheben':SP().flowLv===1?'hält – gelbe Ampel':'steigt, solange die Ampel grün ist'))+'"></dd><dt>Ausrichtung und Ruf</dt><dd data-b="'+bind(()=>'×'+dec(specF('price')*woRep(),2))+'"></dd><dt>Ladung</dt><dd data-b="'+bind(()=>matList(SP().sellBuf))+'"></dd></dl>'+
       '<div class="row"><div class="row-main"><div class="row-t">Frachtauftrag automatisch bedienen</div><div class="row-d">Ist der Auftrag eine Rohware ohne Maschine hier, schickt das Band sie laufend zur Rakete. Endprodukte kommen ohnehin.</div></div><button class="buy '+(SP().autoOrder!==false?'alt':'off')+'" data-act="autoorder">'+(SP().autoOrder!==false?'An':'Aus')+'</button></div>'+
       '<div class="btns"><button class="buy alt" data-act="rkgo" data-en="'+bind(()=>!(SP().rk>0)&&sumObj(SP().sellBuf)>0)+'"><span data-b="'+bind(()=>'Jetzt starten · '+fmt(cargoValue(S.planet,SP()).total)+' Cr')+'">Jetzt starten</span></button></div>'+upgRow('sellcap')+upgRow('rspeed'):'<p class="note">Ab Basisstufe 2 verbinden Förderbänder die Lager mit der Rakete – dann verkauft sie automatisch.</p>')+'</section><section class="sec"><h3>Waren</h3><p class="note">Rohwaren werden veredelt, solange eine Maschine sie verarbeiten kann – nur sonst gehen sie zur Rakete. Bei Produkten schickt „Band an“ die Ware zur Rakete. Direkt verkaufen geht jederzeit.</p><div class="row"><div class="row-main"><div class="row-t">Alles verkaufen</div><div class="row-d" data-b="'+bind(()=>'Wert: '+fmt(RAW.reduce((a,m)=>a+SP().roh[m]*matValue(m),0)+PRODS.reduce((a,m)=>a+Math.floor(SP().prod[m]+1e-9)*matValue(m),0))+' Cr')+'"></div></div><button class="buy" data-act="sellall">Verkaufen</button></div>';
     for(const m of RAW.concat(PRODS)){if((m==='chemie'||m==='polymer')&&S.planet==='moon')continue;
@@ -2160,7 +2194,7 @@ function renderSheet(){
     h+=(gs(sp)>=2?upgRow('bspeed')+upgRow('bcap')+upgRow('beff'):'')+'</section>';}
   else if(kind==='base'){k=PLANETS[pid].name;t='Basis';const next=STAGES[sp.stage];
     h+='<div class="stage"><div class="row-d">Basisstufe '+sp.stage+' von '+STAGES.length+'</div><div class="row-t">'+STAGES[sp.stage-1].name+'</div>'+(next?'<div class="row-d">Nächste Stufe: <b>'+next.name+'</b><br>'+next.txt+'</div><button class="buy wide" data-act="stage" data-en="'+bind(()=>S.credits>=stageCost(SP()))+'">Ausbauen · '+cr(stageCost(sp))+'</button>':expCard(pid))+'</div>';
-    h+=rigBaseSec(pid);
+    h+=specSec(pid)+rigBaseSec(pid);
     h+='<section class="sec"><h3>Erschließung</h3><p class="note">Parzellen musst du nicht freischalten: Jede verschmutzte Parzelle direkt neben einer sauberen ist sofort reinigbar – von dir und von deinen Fahrzeugen. Die Flotte arbeitet sich so selbstständig von der Basis nach außen, auch offline. Gerade reinigbar: <b>'+W[pid].front.size+'</b> Parzellen.</p></section>';
     h+='<section class="sec"><h3>Gebäude</h3>'+BORDER.map(buildRow).join('')+'</section>';}
   else if(kind==='building'){const id=arg,B0=BLD[id];k=sp.bld[id]?'Gebäude':'Bauplatz';t=B0.name;
@@ -2228,7 +2262,7 @@ const ACT={
   research(d){startResearch(d.id);},travel(d){travelTo(d.id);return 'keep';},unlock(d){unlockPlanet(d.id);return 'keep';},
 flyto(d){focusCell(+d.id);closeSheet();return 'keep';},go(d){openSheet(d.id);return 'keep';},
   sound(){S.sound=!S.sound;if(!S.sound)scrub(0);},
-  buydrone(){buyDrone();},buybl(d){buyBl(d.id);},rigup(d){rigUp(+d.id);},rigbag(d){rigToBagger(+d.id);},claimpg(d){claimPg(d.id);},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
+  buydrone(){buyDrone();},spec(d){setSpec(d.id);},buybl(d){buyBl(d.id);},rigup(d){rigUp(+d.id);},rigbag(d){rigToBagger(+d.id);},claimpg(d){claimPg(d.id);},buyexp(){buyExp();},buildrig(d){buildRig(+d.id);},buycart(){buyCart();},cartsheet(){openSheet('cart');return 'keep';},cartload(){loadCart();},cartcall(){const c=SP().cart;if(c&&c.mode==='park'){c.call=1;}else if(c&&c.mode==='back'&&sumObj(c.tank)<.05){c.mode='park';c.call=1;}},claimach(d){claimAch(d.id);},questgo(){const q=QUESTS[S.quest];closeSheet();if(q)setTimeout(()=>q.go(),250);return 'keep';},unhand(d){unloadHand(d.id);},buylift(){buyLifter();},shield(){const sp=SP();sp.shield=!sp.shield;toast(sp.shield?'Sturmschild an':'Sturmschild aus');},
   claim(d){claimDaily(+d.id);},prestige(d,el){if(!el.dataset.arm){el.dataset.arm='1';el.textContent='Wirklich neu starten? Nochmal tippen';return 'keep';}doPrestige();return 'keep';},buildout(d){buildOutpost(+d.id);},
   autoorder(){const sp=SP();sp.autoOrder=sp.autoOrder===false;toast(sp.autoOrder!==false?'Frachtauftrag wird automatisch bedient':'Frachtauftrag nicht mehr automatisch');},
   autodump(){const sp=SP();sp.autoDump=!sp.autoDump;toast(sp.autoDump?'Verkaufsautomat an – volle Lager werden verkauft':'Verkaufsautomat aus');},
@@ -2406,6 +2440,7 @@ const ACH=[
   {id:'deep',name:'Tiefenförderung',unit:'E aus der Tiefe',v:()=>S.ctr.deep||0,t:[1e3,1e4,1e5,1e6,1e7]},
   {id:'exp',name:'Ausbaumeister',unit:'höchste Ausbaustufe',v:()=>Math.max(0,...Object.values(S.planets).map(sp=>sp.exp||0)),t:[1,3,5,10,20]},
   {id:'pgoals',name:'Planetenkenner',unit:'Planetenziele geschafft',v:()=>S.ctr.pg||0,t:[5,25,60,120,200]},
+  {id:'wo',name:'Lieferant',unit:'Werksaufträge erfüllt',v:()=>S.ctr.wo||0,t:[1,5,20,60,150]},
   {id:'star',name:'Sternensammler',unit:'Sternenstaub',v:()=>S.star||0,t:[1,10,50,200]},
 ];
 /* ---- Planetenziele: every planet has its own goal list (cleaning, base, fleet, rockets, hazards, its specialist, energy, deep mining, expansion) ---- */
@@ -2453,7 +2488,7 @@ function claimAch(id){const a=ACH.find(x=>x.id===id);if(!a)return;S.ach=S.ach||{
 function goalsHTML(){const q=QUESTS[S.quest];let h='<section class="sec"><h3>Aktuelles Ziel</h3>';
   if(q)h+='<div class="row"><div class="row-main"><div class="row-t">'+q.t+'</div><div class="row-d">Ziel '+(S.quest+1)+' von '+QUESTS.length+' · Belohnung '+fmt(q.r)+' Cr</div><div class="bar"><i data-w="'+bind(()=>{const qq=QUESTS[S.quest];return qq?clamp(qq.p(),0,1)*100:100;})+'"></i></div></div><button class="buy alt" data-act="questgo">Hinführen</button></div>';
   else h+='<p class="note">Alle Hauptziele geschafft – stark! Die Erfolge unten laufen weiter.</p>';
-  h+='</section>'+pgHTML(S.planet)+'<section class="sec"><h3>Erfolge</h3>';
+  h+='</section>'+woSec(S.planet)+pgHTML(S.planet)+'<section class="sec"><h3>Erfolge</h3>';
   const rank=a=>{const g=achGot(a),c=(S.ach||{})[a.id]||0;return g>c?0:c>=a.t.length?2:1;};
   for(const a of ACH.slice().sort((x,y)=>rank(x)-rank(y))){const got=achGot(a),cl=(S.ach||{})[a.id]||0,next=a.t[Math.min(cl,a.t.length-1)],all=cl>=a.t.length,can=got>cl;
     h+='<div class="row"><div class="row-main"><div class="row-t">'+a.name+'<span class="lvl">Stufe '+cl+'/'+a.t.length+'</span></div><div class="row-d" data-b="'+bind(()=>{const v=a.v();return all?'Alle Stufen geschafft · '+fmt(v)+' '+a.unit:fmt(Math.min(v,next))+' / '+fmt(next)+' '+a.unit;})+'"></div>'+(all?'':'<div class="bar"><i data-w="'+bind(()=>Math.min(1,a.v()/next)*100)+'"></i></div>')+'</div>'+
@@ -2484,7 +2519,7 @@ function updateHUD(){
   if(hzS&&sp.hzOn>0){const fx=[];if(hzS.veh)fx.push('Fahrzeuge −'+Math.round((1-hzS.veh)*100)+' %');if(hzS.belt)fx.push('Bänder −'+Math.round((1-hzS.belt)*100)+' %');if(hzS.mach)fx.push('Maschinen −'+Math.round((1-hzS.mach)*100)+' %');if(hzS.solar)fx.push('Solar −'+Math.round((1-hzS.solar)*100)+' %');if(hzS.dust)fx.push(dec(hzS.dust,0)+'× Staub');
     hb.hidden=false;hb.textContent=hzS.name+(sp.shOn?' · Schild hält 80 % ab':' · '+fx.join(' · '))+' · noch '+Math.ceil(sp.hzOn)+' s';}
   else if(hzS&&hzS.every-(sp.hzT||0)<=30){hb.hidden=false;hb.textContent='⚠ '+hzS.name+' in '+Math.ceil(hzS.every-(sp.hzT||0))+' s'+(S.research.done.shield?(sp.shield?' · Schild bereit':' · Tippen: Schild einschalten'):' · Tippen für Infos');}else hb.hidden=true;
-  {const fc=$('#flowChip'),show=gs(sp)>=2&&(sp.veh.length||sp.bld.presse)&&!mapMode;fc.hidden=!show;if(show){const r=flowReport(pid),lv=flowLevel(r),worst=r.filter(n=>n.lvl===lv&&lv>0)[0];$('#flowDot').className='l'+lv;$('#flowTxt').textContent=lv===0?'Produktion läuft':(lv===2?'Stau: ':'Engpass: ')+worst.name+' – '+worst.why.split(' – ')[0].split('.')[0];}}
+  {const fc=$('#flowChip'),show=gs(sp)>=2&&(sp.veh.length||sp.bld.presse)&&!mapMode;fc.hidden=!show;if(show){const r=flowReport(pid),lv=flowLevel(r),worst=r.filter(n=>n.lvl===lv&&lv>0)[0];$('#flowDot').className='l'+lv;$('#flowTxt').textContent=lv===0?'Produktion läuft'+((sp.flowB||0)>.01?' · Bonus +'+Math.round(sp.flowB*30)+' %':''):(lv===2?'Stau: ':'Engpass: ')+worst.name+' – '+worst.why.split(' – ')[0].split('.')[0];}}
   {const hs=sumObj(sp.hand),hc=handCap(),hb=$('#handBtn');hb.hidden=mapMode;$('#handTxt').textContent=fmt(hs)+'/'+fmt(hc);$('#handBar').style.width=Math.min(100,hs/hc*100).toFixed(1)+'%';hb.classList.toggle('full',hs>=hc-.5);hb.classList.toggle('cart',cartReady());hb.setAttribute('aria-label',cartReady()?'Sammelbehälter in den Sammelwagen leeren':'Sammelbehälter entladen');}
   const dn=dailyReady();$('#dailyBadge').hidden=!dn;$('#dailyBadge').textContent=dn;
   const q=QUESTS[S.quest],qb=$('#quest');

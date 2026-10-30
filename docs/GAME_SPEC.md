@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v5.9)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.0)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -178,6 +178,9 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 - Größere Presskammer (`pvol`, lokal, ab v5.5): bis zu `1 + Stufe` Chargen pro Hub (max. 8), nur so viele wie Material und Ausgangsplatz erlauben; Ein- und Ausgangspuffer der Presse × Chargenzahl.
 - Bohrturm-Stufe `r.lv` 0–5: +30 % je Stufe, Kosten `2 500 × diff × 1,9^lv`. Auf Stufe 5 Umbau zum Erzbagger (`r.bag`, `60 000 × diff`): ×2,5 Förderung, alle Planetenrohstoffe zu gleichen Teilen, Lager 600 E, räumt Meteoritenstaub auf eigener und Nachbarparzellen (6 %/s).
 - Planetenfarben `PCOL[pid]` = [Akzent, Zweitfarbe]: Akzent ersetzt Gelb an Gebäuden und Fahrzeugen, Weiß wird 16 % zum Akzent getönt, Industriesauger und Sammelwagen in der Zweitfarbe, Spezialfahrzeuge 35 % zum Akzent gemischt.
+
+## 9h. Ausrichtung, Betriebsbonus, Werksaufträge (ab v6.0)
+Siehe `docs/LANGZEIT.md`, Abschnitt 4 (Zahlen und Formeln).
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.
