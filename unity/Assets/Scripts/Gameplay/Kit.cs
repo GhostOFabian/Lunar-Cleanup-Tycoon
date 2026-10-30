@@ -87,25 +87,20 @@ namespace LunarCleanup.Gameplay
                 case "hq": Spawn("space/hangar_largeA", t, D, y0, 0, acc); Spawn("space/satelliteDish", t, D * .22f, new Vector3(fp * .45f, Top(t.GetChild(t.childCount - 1).gameObject) + .1f, fp * .2f), 30, acc); break;
                 case "roh": RawStore(t, fp, acc); break;
                 case "prod": Spawn("space/hangar_smallA", t, D, y0, 0, acc); break;
-                case "u1": Spawn("factory/hopper-square", t, D * .75f, y0, 0, acc); break;
-                case "u2": Spawn("factory/hopper-high-square", t, D * .7f, y0, 0, acc); Spawn("space/supports_low", t, D * .4f, new Vector3(fp * .6f, .14f, 0), 0, acc); break;
-                case "u3": Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(-fp * .35f, .14f, 0), 0, acc); Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(fp * .35f, .14f, 0), 0, acc);
-                    // Verbindungsbau zwischen den beiden Trichtern: hier docken die Bänder an
-                    MeshKit.Box(t, MeshKit.Mat(Hex("#d9dee6"), .3f, .55f), new Vector3(0, 1.5f, 0), new Vector3(fp * .75f, 2.7f, fp * 1.1f)); MeshKit.Box(t, MeshKit.Mat(acc, .35f, .55f), new Vector3(0, 2.75f, 0), new Vector3(fp * .78f, .22f, fp * 1.13f)); MeshKit.Box(t, MeshKit.Mat(Hex("#3a414d"), .4f, .35f), new Vector3(0, 2.95f, 0), new Vector3(fp * .85f, .16f, fp * 1.2f));
-                    break;
+                case "u1": case "u2": case "u3": StationHouse(t, fp, acc, id); break; // Gruben an den Andockplätzen setzt WorldView.AddPits
                 case "presse":
                     { var mc = Spawn("factory/machine-fortified", t, D * .8f, y0, 0, acc); float top = Top(mc); var p = Spawn("factory/piston-round", t, D * .3f, new Vector3(0, top, 0), 0, acc); if (p) { bp.piston = p.transform; bp.pistonY = top; } }
                     break;
-                case "schmelze": Spawn("factory/machine", t, D * .75f, new Vector3(-fp * .15f, .14f, 0), 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(fp * .55f, .14f, fp * .3f), 0, acc, fp * 1.6f); break;
-                case "raff": Spawn("space/machine_barrelLarge", t, D * .7f, y0, 0, acc); Spawn("space/chimney", t, 0, new Vector3(fp * .6f, .14f, -fp * .4f), 0, acc, fp * 1.3f); break;
+                case "schmelze": { var m = Spawn("factory/machine", t, D * .75f, new Vector3(-fp * .15f, .14f, 0), 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(-fp * .15f, Top(m), 0), 0, acc, fp * .9f); } break; // Schornstein auf dem Dach – Bänder kommen seitlich frei heran
+                case "raff": { var m = Spawn("space/machine_barrelLarge", t, D * .7f, y0, 0, acc); Spawn("space/chimney", t, 0, new Vector3(0, Top(m), 0), 0, acc, fp * .8f); } break;
                 case "energy": Spawn("space/machine_generatorLarge", t, D * .85f, y0, 0, acc); break;
                 case "research": { var d = Spawn("space/satelliteDish_large", t, D * .9f, y0, 0, acc); if (d) bp.spin = d.transform; } break;
                 case "werkstatt": Spawn("space/hangar_roundA", t, D, y0, 0, acc); break;
                 case "hangar": Spawn("space/hangar_roundGlass", t, D, y0, 0, acc); break;
                 case "lifter": Spawn("space/hangar_largeB", t, D, y0, 90, acc); break;
                 case "rtg": Spawn("space/machine_generator", t, D * .8f, y0, 0, acc); break;
-                case "geo": Spawn("space/structure_closed", t, D * .6f, y0, 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(fp * .5f, .14f, 0), 0, acc, fp * 1.8f); break;
-                case "reactor": Spawn("space/machine_barrelLarge", t, D * .9f, y0, 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(fp * .65f, .14f, fp * .5f), 0, acc, fp * 2f); break;
+                case "geo": { var m = Spawn("space/structure_closed", t, D * .6f, y0, 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(0, Top(m), 0), 0, acc, fp * 1.1f); } break;
+                case "reactor": { var m = Spawn("space/machine_barrelLarge", t, D * .9f, y0, 0, acc); Spawn("space/chimney_detailed", t, 0, new Vector3(0, Top(m), 0), 0, acc, fp * 1.1f); } break;
                 case "sell":
                 case "port":
                     Spawn("space/platform_large", t, D * .95f, y0, 0, acc);
@@ -161,6 +156,33 @@ namespace LunarCleanup.Gameplay
             MeshKit.Ball(t, MeshKit.Glow(Hex("#6ff2d2"), 3f), new Vector3(0, -.35f, .9f), .14f);
             return dp;
         }
+        /// <summary>Entladestation: Sammelbunker in der Mitte (dort starten die Bänder), Steuerkabine, Lichtmast.</summary>
+        static void StationHouse(Transform t, float fp, Color acc, string id)
+        {
+            var wall = MeshKit.Mat(Hex("#d9dee6"), .3f, .55f); var roof = MeshKit.Mat(Hex("#3a414d"), .4f, .35f); var accM = MeshKit.Mat(acc, .35f, .55f); var steel = MeshKit.Mat(Hex("#8a93a3"), .7f, .5f);
+            float y0 = .14f, w = fp * (id == "u3" ? .4f : .34f), h = id == "u1" ? 2.2f : id == "u2" ? 2.6f : 3.1f;
+            MeshKit.Box(t, MeshKit.Mat(Hex("#6b717c"), .05f, .2f), new Vector3(0, y0 + .06f, 0), new Vector3(fp * 1.5f, .12f, fp * 1.5f));
+            MeshKit.Box(t, wall, new Vector3(0, y0 + h / 2, 0), new Vector3(w * 2, h, w * 2));
+            MeshKit.Box(t, accM, new Vector3(0, y0 + h - .25f, 0), new Vector3(w * 2 + .04f, .24f, w * 2 + .04f));
+            MeshKit.Box(t, roof, new Vector3(0, y0 + h + .1f, 0), new Vector3(w * 2 + .3f, .2f, w * 2 + .3f));
+            // Trichteraufsatz auf dem Dach (Bunker-Optik)
+            MeshKit.Cyl(t, steel, new Vector3(0, y0 + h + .55f, 0), w * .85f, w * .45f, .7f, 4, new Vector3(0, 45, 0));
+            for (int k = 0; k < 4; k++) MeshKit.Box(t, roof, Quaternion.Euler(0, k * 90, 0) * new Vector3(w + .02f, y0 + h * .45f, 0), new Vector3(.05f, h * .7f, .08f), new Vector3(0, k * 90, 0)); // Kanten-Lisenen
+            MeshKit.Cyl(t, steel, new Vector3(-w - .3f, y0 + 1.6f, -w - .3f), .05f, .06f, 3.2f, 8); MeshKit.Ball(t, MeshKit.Glow(Hex("#ffd27a"), 2f), new Vector3(-w - .3f, y0 + 3.25f, -w - .3f), .22f);
+        }
+        /// <summary>Abkippgrube mit gelb-schwarzer Kante und Schurre zum Bunker. pos = lokal (y = 0), toCenter = Richtung zum Bunker.</summary>
+        public static void Pit(Transform t, Vector3 pos, Vector3 toCenter, float houseW)
+        {
+            var steel = MeshKit.Mat(Hex("#8a93a3"), .7f, .5f); var dark = MeshKit.Mat(Hex("#101318"), 0, .1f); var warn = MeshKit.Mat(Hex("#ffbf4d"), .25f, .45f); var blk = MeshKit.Mat(Hex("#22262c"), .2f, .3f);
+            float yaw = Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg; var g = new GameObject("Grube"); g.transform.SetParent(t, false); g.transform.localPosition = pos; g.transform.localRotation = Quaternion.Euler(0, yaw, 0); var p = g.transform;
+            MeshKit.Cyl(p, steel, new Vector3(0, .75f, 0), .95f, .35f, 1.0f, 4, new Vector3(0, 45, 0));    // Trichter
+            MeshKit.Cyl(p, dark, new Vector3(0, 1.2f, 0), .82f, .55f, .12f, 4, new Vector3(0, 45, 0));    // Öffnung
+            for (int k = 0; k < 4; k++) { var e = Quaternion.Euler(0, k * 90, 0); MeshKit.Box(p, k % 2 == 0 ? warn : blk, e * new Vector3(0, 1.27f, .67f), new Vector3(1.4f, .08f, .1f), new Vector3(0, k * 90, 0)); }
+            foreach (float sx in new[] { -.55f, .55f }) foreach (float sz in new[] { -.55f, .55f }) MeshKit.Box(p, blk, new Vector3(sx, .3f, sz), new Vector3(.12f, .6f, .12f));
+            float L = Mathf.Max(.2f, toCenter.magnitude - houseW - .2f); // Schurre bis an die Bunkerwand
+            MeshKit.Box(p, steel, new Vector3(0, .65f, L / 2 + .2f), new Vector3(.5f, .3f, L + .4f), new Vector3(-12, 0, 0));
+        }
+        public static float HouseW(string id, float fp) => fp * (id == "u3" ? .4f : .34f);
         /// <summary>Rohstofflager: Annahmehalle mit flachen Wänden (dort docken die Bänder an) und vier Silotürmen an den Ecken,
         /// oben verbunden durch Laufstege und einen Becherelevator.</summary>
         static void RawStore(Transform t, float fp, Color acc)

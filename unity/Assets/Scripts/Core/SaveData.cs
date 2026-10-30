@@ -6,12 +6,13 @@ using UnityEngine;
 namespace LunarCleanup.Core
 {
     [Serializable] public class KV { public string k; public int v; }
-    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts; public float handM2; }
+    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts, crystals; public float handM2; }
 
     [Serializable] public class StSave { public string id; public float[] buf; public int[] docks = new int[0]; public int cell = -1, dc = -1; [NonSerialized] public bool busy; }
-    [Serializable] public class VehSave { public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT; }
+    [Serializable] public class VehSave { public int cr = -1; public float crT; public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT, driveT, skipT; [NonSerialized] public int skipCell = -1; }
     [Serializable] public class DroneSave { public int id; public Vector3 d; public string mode = "idle", sid = "", tk = "v", tko = ""; public float[] tank; public int tgt = -1; public float wt; [NonSerialized] public bool busy; }
     [Serializable] public class LifterSave { public int id; public Vector3 d; public string mode = "idle"; public int veh = -1, cell = -1; }
+    [Serializable] public class CrystalSave { public int id, cell, t, claim = -1; public float x, y, g; }
     [Serializable] public class RigSave { public int cell, lv, claim = -1, dc = -1, fixedN; public float[] buf; public bool bag; public float mined, faultT; public string faultK = ""; [NonSerialized] public bool busy; }
     [Serializable] public class ActSave { public int id; public float sum; public string grid; }
     [Serializable] public class BeltSave { public string id; public List<float> s = new List<float>(); public List<int> m = new List<int>(); public List<float> a = new List<float>(); }
@@ -43,6 +44,7 @@ namespace LunarCleanup.Core
         public List<StSave> outposts = new List<StSave>();
         public List<LifterSave> lifters = new List<LifterSave>();
         public List<RigSave> rigs = new List<RigSave>();
+        public List<CrystalSave> crystals = new List<CrystalSave>(); public float crT; public int crN; // Leuchtkristalle (wachsen nach)
         public float deep;
         public int nextDrone = 1;
     }

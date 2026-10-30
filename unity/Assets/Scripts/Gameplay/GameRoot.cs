@@ -249,6 +249,7 @@ namespace LunarCleanup.Gameplay
         void Tap(Vector2 pos)
         {
             if (!Hit(pos, out var dir)) return; var ps = Game.Cur; var pl = ps.pd.PlanLocal(dir);
+            { CrystalSave bc = null; float cd0 = 2.2f; foreach (var cx in ps.sv.crystals) { float d = ps.pd.Arc(dir, Game.CrystalDir(ps, cx)); if (d < cd0) { cd0 = d; bc = cx; } } if (bc != null) { Game.HarvestCrystal(bc.id); return; } } // Leuchtkristall antippen = ernten
             string best = null; float bd = 1e9f;
             foreach (var id in ps.bld) { if (!ps.lay.pos.ContainsKey(id)) continue; float d = (ps.lay.pos[id] - pl).magnitude; if (d < GameData.Bld[id].fp + .6f && d < bd) { bd = d; best = id; } }
             if (best != null) { hud.OpenSheet("building", best); return; }

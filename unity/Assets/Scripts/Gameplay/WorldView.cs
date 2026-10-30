@@ -19,8 +19,8 @@ namespace LunarCleanup.Gameplay
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
-        public static float NightF; public static bool MapMode; ParticleSystem stormPs; ParticleSystem.Particle[] stormP; Vector3[] stormSt; float stormI, flash; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun; Color amb0, amb1, amb2; float sunI0;
-        float rocketT = -1;
+        public static float NightF; public static bool MapMode; ParticleSystem stormPs; ParticleSystem.Particle[] stormP; Vector3[] stormSt; float stormI, flash; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun, starLight; Color amb0, amb1, amb2; float sunI0;
+        float rocketT = -1, landT = -1;
         Mesh itemMesh;
         readonly Dictionary<int, Material> itemMat = new Dictionary<int, Material>();
         readonly Dictionary<int, List<Matrix4x4>> itemMx = new Dictionary<int, List<Matrix4x4>>();
@@ -57,6 +57,7 @@ namespace LunarCleanup.Gameplay
                 if (ps.bld.Contains(id))
                 {
                     var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], yaw); blds[id] = bp;
+                    if (B.st != null && (id == "u1" || id == "u2" || id == "u3")) for (int k = 0; k < B.st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; var lp = bp.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; Kit.Pit(bp.root.transform, lp, -new Vector3(lp.x, 0, lp.z), Kit.HouseW(id, B.fp)); }
                 }
                 else if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "")
                 {
@@ -76,7 +77,7 @@ namespace LunarCleanup.Gameplay
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
                 MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             }
-            foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
+            PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
             BuildOutposts(); BuildRigs();
             builtVersion = ps.baseVersion;
         }
@@ -179,44 +180,47 @@ namespace LunarCleanup.Gameplay
 
         /// <summary>Bandhöhe über dem Boden: so hoch, dass Rahmen und Stützen komplett unter dem Band liegen.</summary>
         public static float BeltDeck(BeltDef b) => b.h + .55f;
-        const float BW = .55f; // halbe Bandbreite
+        const float BW = .42f; // halbe Bandbreite
 
         /// <summary>Förderband als durchgehendes Profil entlang der Kurve: Lauffläche, Seitenbanden, Rahmen – alles folgt exakt derselben Linie.</summary>
         void BuildBelt(BeltDef b)
         {
-            var rp0 = b.rp; int n0 = rp0.Length; if (n0 < 2) return; var cum0 = new float[n0]; for (int i = 1; i < n0; i++) cum0[i] = cum0[i - 1] + (rp0[i] - rp0[i - 1]).magnitude; beltCum[b.id] = cum0;
+            if (b.rp.Length < 2) return; var V = Vis(b); var rp0 = V.rp; int n0 = rp0.Length; var cum0 = V.cum; beltCum[b.id] = cum0; // Bänder laufen auf der geglätteten Linie
             // Band endet genau an der Gebäudewand: Strahlen (Bandmitte + beide Banden, zwei Höhen) gegen die echte Modelloberfläche
             float L0 = cum0[n0 - 1], s0 = 0, s1 = L0, H0 = BeltDeck(b);
             float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp * .92f : 0;
-            bool w0 = WallHit(b.from, rp0, cum0, H0, false, out float h0), w1 = WallHit(b.to, rp0, cum0, H0, true, out float h1);
+            System.Func<float, float> LF = q => Lift(b.id, q);
+            bool w0 = WallHit(b.from, rp0, cum0, q => H0 + LF(q), false, out float h0), w1 = WallHit(b.to, rp0, cum0, q => H0 + LF(q), true, out float h1);
             if (w0) s0 = h0 + .02f; else for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= Edge(b.from)) { s0 = q; break; } }
             if (w1) s1 = h1 - .02f; else for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= Edge(b.to)) { s1 = q; break; } }
             if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
+            bool m1 = mergeEnd.TryGetValue(b.id, out float mE), m0 = mergeStart.TryGetValue(b.id, out float mS);
+            if (m1) { s1 = Mathf.Min(s1, mE + .45f); w1 = true; } if (m0) { s0 = Mathf.Max(s0, mS - .45f); w0 = true; } // Weiche: mündet seitlich auf das andere Band
             // Kein Wandtreffer (Lücke im Modell oder zu niedrig): überdachter Zulauf bis in die Gebäudemitte, vorne ein Anschlussrahmen
-            if (!w0) Tunnel(rp0, cum0, Mathf.Max(0, s0 - GameData.Bld[b.from].fp), s0 + .25f, H0);
-            if (!w1) Tunnel(rp0, cum0, s1 - .25f, Mathf.Min(L0, s1 + GameData.Bld[b.to].fp), H0);
-            Port(rp0, cum0, s0, H0, false, true); Port(rp0, cum0, s1, H0, true, true); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
+            if (!w0 && !m0) Tunnel(rp0, cum0, Mathf.Max(0, s0 - GameData.Bld[b.from].fp), s0 + .25f, H0 + LF(s0));
+            if (!w1 && !m1) Tunnel(rp0, cum0, s1 - .25f, Mathf.Min(L0, s1 + GameData.Bld[b.to].fp), H0 + LF(s1));
+            if (!m0) Port(rp0, cum0, s0, H0 + LF(s0), false, true); if (!m1) Port(rp0, cum0, s1, H0 + LF(s1), true, true); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
             if (!w0 || !w1) Debug.Log("Lunar Cleanup: Band " + b.id + " ohne Wandtreffer bei " + (!w0 ? b.from + " (" + TrisOf(b.from).Count / 3 + " Dreiecke) " : "") + (!w1 ? b.to + " (" + TrisOf(b.to).Count / 3 + " Dreiecke)" : ""));
             beltTrim[b.id] = new Vector2(s0, s1);
             var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
             float H = BeltDeck(b);
             // Lauffläche (Textur läuft mit)
-            var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true);
+            var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true, LF, s0);
             var go = new GameObject(b.id); go.transform.SetParent(beltRoot, false); go.AddComponent<MeshFilter>().sharedMesh = deck;
             var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", BeltTex()); m.SetFloat("_Smoothness", .3f); m.SetFloat("_Metallic", .2f);
             go.AddComponent<MeshRenderer>().sharedMaterial = m; beltMats.Add(m);
             var rail = MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var frame = MeshKit.Mat(GameData.Hex("#2f3540"), .6f, .45f);
             // Seitenbanden: liegen genau an den Bandkanten und folgen jeder Kurve
-            AddPart(Extrude(rp, cum, Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false), gold, "Bande links");
-            AddPart(Extrude(rp, cum, Box2(BW, BW + .09f, H - .06f, H + .2f), true, false), gold, "Bande rechts");
+            AddPart(Extrude(rp, cum, Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande links");
+            AddPart(Extrude(rp, cum, Box2(BW, BW + .09f, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande rechts");
             // Rahmen unter dem Band
-            AddPart(Extrude(rp, cum, Box2(-BW - .06f, BW + .06f, H - .32f, H - .02f), true, false), frame, "Rahmen");
+            AddPart(Extrude(rp, cum, Box2(-BW - .06f, BW + .06f, H - .32f, H - .02f), true, false, LF, s0), frame, "Rahmen");
             // Stützen: enden unter dem Rahmen, nie im Band
-            var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); float L = cum[n - 1], top = H - .32f;
+            var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); float L = cum[n - 1];
             for (float s = 1f; s < L - .6f; s += 3f)
             {
-                var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
-                if (UnderBelt(b, p, H, BW + .35f)) continue; // keine Stütze in einem tiefer liegenden Band (Kreuzung)
+                var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x); float top = H + LF(s0 + s) - .32f;
+                if (UnderBelt(b, p, H + LF(s0 + s), BW + .35f)) continue; // keine Stütze in einem tiefer liegenden Band (Kreuzung)
                 foreach (float sd in new[] { -1f, 1f })
                 {
                     var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var g = MeshKit.Cyl(beltRoot, post, Vector3.zero, .06f, .07f, top, 8); g.transform.position = d * (pd.R + top / 2); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
@@ -228,7 +232,7 @@ namespace LunarCleanup.Gameplay
             foreach (int e in new[] { 0, n - 1 })
             {
                 var tan = (e == 0 ? rp[1] - rp[0] : rp[n - 1] - rp[n - 2]).normalized; var d = pd.PlanDir(rp[e]);
-                var r = MeshKit.Cyl(beltRoot, rail, Vector3.zero, .16f, .16f, BW * 2 + .04f, 14); r.transform.position = d * (pd.R + H - .14f); r.transform.rotation = Quaternion.LookRotation(Tangent(d, tan), d) * Quaternion.Euler(0, 0, 90);
+                var r = MeshKit.Cyl(beltRoot, rail, Vector3.zero, .16f, .16f, BW * 2 + .04f, 14); r.transform.position = d * (pd.R + H + LF(e == 0 ? s0 : s1) - .14f); r.transform.rotation = Quaternion.LookRotation(Tangent(d, tan), d) * Quaternion.Euler(0, 0, 90);
             }
         }
         readonly Dictionary<string, Vector2> beltTrim = new Dictionary<string, Vector2>();
@@ -250,9 +254,10 @@ namespace LunarCleanup.Gameplay
                     for (float s = s0 + .1f; s < s1 - .1f && !hit; s += .25f)
                     {
                         float sb = Mathf.Min(s + .25f, s1 - .1f); var pa = PointAt(rp, cum, s, out var ta); var pb = PointAt(rp, cum, sb, out _); var na = new Vector2(-ta.y, ta.x);
+                        float la = Lift(kv.Key, s), lb = Lift(kv.Key, sb);
                         foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { H - .3f, H - .05f, H + .18f })
                             {
-                                var A = pd.PlanDir(pa + na * side) * (pd.R + h); var B = pd.PlanDir(pb + na * side) * (pd.R + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
+                                var A = pd.PlanDir(pa + na * side) * (pd.R + h + la); var B = pd.PlanDir(pb + na * side) * (pd.R + h + lb); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
                                 for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) hit = true;
                             }
                         if (hit) out_.Add(nm + ": läuft bei " + s.ToString("0.0") + " m durch " + id);
@@ -261,7 +266,7 @@ namespace LunarCleanup.Gameplay
                     for (float s = 1f; s < (s1 - s0) - .6f && !hit; s += 3f)
                     {
                         var p = PointAt(rp, cum, s0 + s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
-                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var A = d * (pd.R + H - .32f); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= H - .32f) hit = true; }
+                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); float top = H + Lift(kv.Key, s0 + s) - .32f; var A = d * (pd.R + top); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= top - .35f) hit = true; } // Bodenplatten zählen nicht
                         if (hit) out_.Add(nm + ": Stütze bei " + (s0 + s).ToString("0.0") + " m steht in " + id);
                     }
                 }
@@ -270,8 +275,8 @@ namespace LunarCleanup.Gameplay
             var keys = new List<string>(beltInfo.Keys);
             for (int x = 0; x < keys.Count; x++) for (int y = x + 1; y < keys.Count; y++)
                 {
-                    var A = beltInfo[keys[x]]; var B = beltInfo[keys[y]]; if (Mathf.Abs(A.H - B.H) > .62f) continue; /* Profil: Bandkante +0,2 m, Rahmen −0,32 m */ bool clash = false; float at = 0;
-                    for (float s = A.s0 + .8f; s < A.s1 - .8f && !clash; s += .5f) { var pa = PointAt(A.rp, A.cum, s, out _); for (float u = B.s0 + .8f; u < B.s1 - .8f; u += .5f) if ((PointAt(B.rp, B.cum, u, out _) - pa).magnitude < BW * 2 + .15f) { clash = true; at = s; break; } }
+                    var A = beltInfo[keys[x]]; var B = beltInfo[keys[y]]; bool clash = false; float at = 0; // Profil: Bandkante +0,2 m, Rahmen −0,32 m
+                    for (float s = A.s0 + .8f; s < A.s1 - .8f && !clash; s += .5f) { var pa = PointAt(A.rp, A.cum, s, out _); float ha = A.H + Lift(keys[x], s); for (float u = B.s0 + .8f; u < B.s1 - .8f; u += .5f) if ((PointAt(B.rp, B.cum, u, out _) - pa).magnitude < BW * 2 + .15f && Mathf.Abs(B.H + Lift(keys[y], u) - ha) < .62f) { clash = true; at = s; break; } }
                     if (clash) out_.Add("Bänder " + keys[x] + " und " + keys[y] + " überschneiden sich (bei " + at.ToString("0.0") + " m)");
                 }
             // Modelle: ragen sie über ihre Grundfläche hinaus oder berühren sie sich?
@@ -305,16 +310,17 @@ namespace LunarCleanup.Gameplay
             t = Vector3.Dot(e2, r) * inv; return t >= 0;
         }
         /// <summary>Wo trifft das Band (von der Mitte her) auf die Wand des Gebäudes? Liefert die Bandposition s.</summary>
-        bool WallHit(string id, Vector2[] rp, float[] cum, float H, bool atEnd, out float sHit)
+        bool WallHit(string id, Vector2[] rp, float[] cum, System.Func<float, float> Hs, bool atEnd, out float sHit)
         {
             sHit = 0; var T = TrisOf(id); if (T.Count == 0) return false; float L = cum[cum.Length - 1], st = .25f;
             for (int k = 0; k < 400; k++)
             {
                 float sa = atEnd ? L * .5f + k * st : L * .5f - k * st, sb = atEnd ? sa + st : sa - st; if (atEnd ? sa >= L : sa <= 0) break; sb = Mathf.Clamp(sb, 0, L);
                 var pa = PointAt(rp, cum, sa, out var ta); var pb = PointAt(rp, cum, sb, out _); var na = new Vector2(-ta.y, ta.x); float best = 2;
-                foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { H - .05f, H + .18f })
+                float H = Hs(sa), Hb = Hs(sb);
+                foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { -.3f, -.05f, .18f })
                     {
-                        var A = pd.PlanDir(pa + na * side) * (pd.R + h); var B = pd.PlanDir(pb + na * side) * (pd.R + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
+                        var A = pd.PlanDir(pa + na * side) * (pd.R + H + h); var B = pd.PlanDir(pb + na * side) * (pd.R + Hb + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
                         for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) best = Mathf.Min(best, t / len);
                     }
                 if (best <= 1) { sHit = sa + (sb - sa) * best; return true; }
@@ -352,11 +358,77 @@ namespace LunarCleanup.Gameplay
             AddPart(Extrude(sp, c, Box2(-BW - .25f, BW + .25f, H - .42f, H + .58f), true, false), MeshKit.Mat(GameData.Hex("#aeb5c0"), .5f, .5f), "Zulauf");
             AddPart(Extrude(sp, c, Box2(-BW - .27f, BW + .27f, H + .5f, H + .62f), true, false), MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f), "Zulauf Dach");
         }
+        // ---------- Brücken: kreuzen/berühren sich zwei Bänder auf gleicher Höhe, steigt das spätere Band darüber ----------
+        readonly Dictionary<string, List<Vector3>> bridges = new Dictionary<string, List<Vector3>>(); // x = von s, y = bis s, z = Anhebung
+        public float Lift(string id, float s)
+        {
+            if (!bridges.TryGetValue(id, out var L)) return 0; float best = 0;
+            foreach (var w in L) { float k = s < w.x ? Mathf.SmoothStep(0, 1, 1 - (w.x - s) / 3f) : s > w.y ? Mathf.SmoothStep(0, 1, 1 - (s - w.y) / 3f) : 1; best = Mathf.Max(best, w.z * Mathf.Clamp01(k)); }
+            return best;
+        }
+        // Zusammenführung: laufen zwei Bänder zum selben Gebäude (oder kommen vom selben) und berühren sich kurz davor,
+        // mündet das spätere seitlich auf das andere (Weiche) statt daneben ineinander zu laufen.
+        readonly Dictionary<string, float> mergeEnd = new Dictionary<string, float>(), mergeStart = new Dictionary<string, float>();
+        readonly Dictionary<string, (Vector2[] rp, float[] cum, float k)> vis = new Dictionary<string, (Vector2[], float[], float)>();
+        /// <summary>Geglättete Bandlinie (größere Kurvenradien, keine Selbstüberlappung in engen Kurven). k = Längenverhältnis zur Logiklinie.</summary>
+        (Vector2[] rp, float[] cum, float k) Vis(BeltDef b)
+        {
+            if (vis.TryGetValue(b.id, out var v)) return v;
+            var p = new List<Vector2>(b.rp);
+            for (int it = 0; it < 3; it++) { var q = new List<Vector2> { p[0] }; for (int i = 0; i < p.Count - 1; i++) { q.Add(Vector2.Lerp(p[i], p[i + 1], .25f)); q.Add(Vector2.Lerp(p[i], p[i + 1], .75f)); } q.Add(p[p.Count - 1]); p = q; }
+            // die ersten/letzten 1,5 m bleiben gerade (Anschluss an die Gebäudewand)
+            var arr = p.ToArray(); var c = new float[arr.Length]; for (int i = 1; i < arr.Length; i++) c[i] = c[i - 1] + (arr[i] - arr[i - 1]).magnitude;
+            float L0 = 0; for (int i = 1; i < b.rp.Length; i++) L0 += (b.rp[i] - b.rp[i - 1]).magnitude;
+            v = (arr, c, c[c.Length - 1] / Mathf.Max(.01f, L0)); vis[b.id] = v; return v;
+        }
+        void PlanBridges()
+        {
+            bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear(); var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x)).ToList();
+            var smp = new Dictionary<string, List<(float s, Vector2 p)>>(); var len = new Dictionary<string, float>();
+            foreach (var b in live)
+            {
+                var V = Vis(b); var l = new List<(float, Vector2)>(); var q = V.rp;
+                float zf = GameData.Bld[b.from].fp * .75f, zt = GameData.Bld[b.to].fp * .75f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
+                for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((V.cum[i - 1] + u, p)); } }
+                smp[b.id] = l; len[b.id] = V.cum[V.cum.Length - 1];
+            }
+            for (int j = 0; j < live.Count; j++)
+            {
+                var B = live[j]; float HB = BeltDeck(B); var marks = new List<(float u, float amt)>();
+                for (int i = 0; i < j; i++)
+                {
+                    var A = live[i]; float HA0 = BeltDeck(A); var mine = new List<(float u, float s)>();
+                    foreach (var (u, q) in smp[B.id])
+                        foreach (var (s, p) in smp[A.id])
+                        {
+                            if ((p - q).magnitude >= BW * 2 + .3f) continue; float HA = HA0 + Lift(A.id, s); if (Mathf.Abs(HA - HB) >= .62f) continue;
+                            mine.Add((u, s)); marks.Add((u, HA + 1.0f - HB)); break;
+                        }
+                    if (mine.Count == 0) continue;
+                    float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
+                    // gleiches Ziel und Berührung erst kurz davor → Weiche
+                    if (A.to == B.to && uMax > len[B.id] - 6 && !mergeEnd.ContainsKey(A.id)) { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
+                    else if (A.from == B.from && uMin < 6 && !mergeStart.ContainsKey(A.id)) { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
+                }
+                if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
+                void Flush() { float x = a0 - .5f, y = a1 + .5f; if (x < 4) x = -100; if (y > len[B.id] - 4) y = 1e4f; res.Add(new Vector3(x, y, am)); }
+                for (int k = 1; k < marks.Count; k++) { if (marks[k].u - a1 > 1.5f) { Flush(); a0 = marks[k].u; am = 0; } a1 = marks[k].u; am = Mathf.Max(am, marks[k].amt); }
+                Flush(); bridges[B.id] = res;
+            }
+        }
         static float SegDist(Vector2 q, Vector2 a, Vector2 c) { var d = c - a; float l2 = d.sqrMagnitude; float t = l2 > 0 ? Mathf.Clamp01(Vector2.Dot(q - a, d) / l2) : 0; return (q - (a + d * t)).magnitude; }
         /// <summary>Liegt unter Punkt p (Plan) ein anderes, tieferes Band?</summary>
         bool UnderBelt(BeltDef me, Vector2 p, float H, float r)
         {
-            foreach (var o in ps.lay.belts) { if (o.id == me.id || !Game.BeltLive(ps, o) || BeltDeck(o) > H - .3f) continue; var q = o.rp; for (int i = 1; i < q.Length; i++) if (SegDist(p, q[i - 1], q[i]) < r) return true; }
+            foreach (var o in ps.lay.belts)
+            {
+                if (o.id == me.id || !Game.BeltLive(ps, o)) continue; var q = Vis(o).rp; float c = 0;
+                for (int i = 1; i < q.Length; i++)
+                {
+                    var d = q[i] - q[i - 1]; float l = d.magnitude; float t = l > 0 ? Mathf.Clamp01(Vector2.Dot(p - q[i - 1], d) / (l * l)) : 0;
+                    if ((p - (q[i - 1] + d * t)).magnitude < r && BeltDeck(o) + Lift(o.id, c + t * l) < H - .3f) return true; c += l;
+                }
+            }
             return false;
         }
         static Vector2[] SubPath(Vector2[] rp, float[] cum, float s0, float s1)
@@ -367,7 +439,7 @@ namespace LunarCleanup.Gameplay
         static Vector2[] Box2(float x0, float x1, float y0, float y1) => new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y1), new Vector2(x0, y1) };
         void AddPart(Mesh mesh, Material mat, string name) { var g = new GameObject(name); g.transform.SetParent(beltRoot, false); g.AddComponent<MeshFilter>().sharedMesh = mesh; g.AddComponent<MeshRenderer>().sharedMaterial = mat; }
         /// <summary>Zieht ein Querschnitt-Profil (x = seitlich, y = Höhe) entlang der Bandlinie. closed = geschlossener Körper mit Endkappen.</summary>
-        Mesh Extrude(Vector2[] rp, float[] cum, Vector2[] prof, bool closed, bool uvAlong)
+        Mesh Extrude(Vector2[] rp, float[] cum, Vector2[] prof, bool closed, bool uvAlong, System.Func<float, float> lift = null, float sOff = 0)
         {
             int n = rp.Length, k = prof.Length; var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
             var frames = new (Vector3 o, Vector3 side, Vector3 up)[n];
@@ -385,7 +457,7 @@ namespace LunarCleanup.Gameplay
                 for (int i = 0; i < n; i++)
                 {
                     var f = frames[i];
-                    v.Add(f.o + f.side * p0.x + f.up * p0.y); v.Add(f.o + f.side * p1.x + f.up * p1.y);
+                    float lh = lift != null ? lift(cum[i] + sOff) : 0; v.Add(f.o + f.side * p0.x + f.up * (p0.y + lh)); v.Add(f.o + f.side * p1.x + f.up * (p1.y + lh));
                     float along = cum[i] / 1.2f; uv.Add(uvAlong ? new Vector2(0, along) : new Vector2(0, cum[i])); uv.Add(uvAlong ? new Vector2(1, along) : new Vector2(1, cum[i]));
                 }
                 for (int i = 0; i < n - 1; i++) { int a = b0 + i * 2; t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
@@ -393,7 +465,7 @@ namespace LunarCleanup.Gameplay
             if (closed)
                 foreach (int e in new[] { 0, n - 1 })
                 {
-                    var f = frames[e]; int c0 = v.Count; foreach (var p in prof) { v.Add(f.o + f.side * p.x + f.up * p.y); uv.Add(Vector2.zero); }
+                    var f = frames[e]; int c0 = v.Count; float le = lift != null ? lift(cum[e] + sOff) : 0; foreach (var p in prof) { v.Add(f.o + f.side * p.x + f.up * (p.y + le)); uv.Add(Vector2.zero); }
                     for (int j = 1; j < k - 1; j++) t.AddRange(new[] { c0, c0 + j, c0 + j + 1 });
                 }
             var mesh = new Mesh { name = "Band", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 }; mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
@@ -419,17 +491,22 @@ namespace LunarCleanup.Gameplay
         void BuildSky()
         {
             var th = ps.P.theme; var cam = Camera.main;
-            if (cam) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = th.sky; }
+            var sky = SpaceSky.For(ps.pid, ps.P);
+            if (cam) { cam.clearFlags = CameraClearFlags.Skybox; cam.backgroundColor = th.sky; } RenderSettings.skybox = sky.mat;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = th.hemiSky * th.hemiI * 1.1f; RenderSettings.ambientEquatorColor = Color.Lerp(th.hemiSky, th.hemiGround, .5f) * th.hemiI * .8f; RenderSettings.ambientGroundColor = th.hemiGround * th.hemiI * .7f;
+            // Umgebungslicht leicht in den Nebelfarben des Himmels getönt
+            RenderSettings.ambientSkyColor = Color.Lerp(th.hemiSky, sky.neb1, .3f) * th.hemiI * 1.15f; RenderSettings.ambientEquatorColor = Color.Lerp(Color.Lerp(th.hemiSky, th.hemiGround, .5f), sky.neb2, .25f) * th.hemiI * .85f; RenderSettings.ambientGroundColor = Color.Lerp(th.hemiGround, sky.neb2, .2f) * th.hemiI * .7f;
             amb0 = RenderSettings.ambientSkyColor; amb1 = RenderSettings.ambientEquatorColor; amb2 = RenderSettings.ambientGroundColor;
             RenderSettings.fog = false;
             sun = FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional);
             if (!sun) { var lg = new GameObject("Sonne"); sun = lg.AddComponent<Light>(); sun.type = LightType.Directional; }
             sun.color = th.sun; sunI0 = th.sunI * 1.15f; sun.intensity = sunI0; sun.shadows = LightShadows.Soft; sun.shadowStrength = .85f;
+            // Sternlicht: zweites, farbiges Licht aus Richtung des hellsten Nebels – auch die Nachtseite bleibt sichtbar
+            if (!starLight) { var sl = new GameObject("Sternlicht"); sl.transform.SetParent(skyRoot.parent, false); starLight = sl.AddComponent<Light>(); starLight.type = LightType.Directional; starLight.shadows = LightShadows.None; }
+            starLight.color = Color.Lerp(sky.neb1, Color.white, .45f); starLight.intensity = .28f; starLight.transform.rotation = Quaternion.LookRotation(-sky.nebDir);
             UpdateSun();
-            // Sterne
-            int nS = Mathf.Max(300, th.stars); var v = new List<Vector3>(); var col = new List<Color>(); var t = new List<int>(); var r = new System.Random(7);
+            // Sterne (zusätzlich zum Himmelsbild: wenige funkelnde Punkte davor)
+            int nS = 160; var v = new List<Vector3>(); var col = new List<Color>(); var t = new List<int>(); var r = new System.Random(7);
             for (int i = 0; i < nS; i++)
             {
                 var d = new Vector3((float)r.NextDouble() * 2 - 1, (float)r.NextDouble() * 2 - 1, (float)r.NextDouble() * 2 - 1).normalized; var p = d * 1800;
@@ -529,7 +606,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
@@ -557,9 +634,9 @@ namespace LunarCleanup.Gameplay
                 foreach (var it in items)
                 {
                     float sp = it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1]; if (beltTrim.TryGetValue(b.id, out var tr) && (sp < tr.x - .2f || sp > tr.y + .2f)) continue; // im Gebäude: unsichtbar
-                    var p = PointAt(b.rp, cum, sp, out var tan); var d = pd.PlanDir(p);
+                    var p = PointAt(Vis(b).rp, cum, sp, out var tan); var d = pd.PlanDir(p);
                     var M = GameData.Mats[it.m]; Vector3 sc = M.shape == "brick" ? new Vector3(.3f, .2f, .5f) : M.shape == "ingot" ? new Vector3(.22f, .16f, .55f) : M.shape == "gem" ? new Vector3(.3f, .3f, .3f) : M.shape == "barrel" ? new Vector3(.32f, .4f, .32f) : new Vector3(.42f, .34f, .42f);
-                    var mx = Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + .02f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
+                    var mx = Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + Lift(b.id, sp) + .02f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
                     if (!itemMx.TryGetValue(it.m, out var list)) { list = new List<Matrix4x4>(); itemMx[it.m] = list; }
                     list.Add(mx);
                 }
@@ -625,6 +702,38 @@ namespace LunarCleanup.Gameplay
             foreach (var id in lifters.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(lifters[id].root); lifters.Remove(id); liftAlt.Remove(id); }
         }
 
+        // ---------- Leuchtkristalle ----------
+        readonly Dictionary<int, (GameObject go, Material glow, int t)> crys = new Dictionary<int, (GameObject, Material, int)>(); string crysFor;
+        Material[] crMat, crPool;
+        void SyncCrystals()
+        {
+            if (crysFor != ps.pid) { foreach (var c in crys.Values) if (c.go) Destroy(c.go); crys.Clear(); crysFor = ps.pid; }
+            if (crMat == null)
+            {
+                int n = Game.CrystalTypes.Length; crMat = new Material[n]; crPool = new Material[n];
+                for (int i = 0; i < n; i++) { var col = GameData.Hex(Game.CrystalTypes[i].col); crMat[i] = MeshKit.Mat(col * .55f, .1f, .95f, col * 2.2f); var pm = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); pm.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(pm, true); pm.SetFloat("_Cull", 0); pm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, .55f)); crPool[i] = pm; }
+            }
+            var alive = new HashSet<int>();
+            foreach (var c in ps.sv.crystals)
+            {
+                alive.Add(c.id);
+                if (!crys.TryGetValue(c.id, out var cv))
+                {
+                    var g = new GameObject("Leuchtkristall"); g.transform.SetParent(vehRoot, false); var d = Game.CrystalDir(ps, c);
+                    g.transform.position = pd.Surf(d); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d)) * Quaternion.Euler(0, c.id * 47 % 360, 0);
+                    // Kristallbüschel: ein großer Mittelkristall und 6 schräge Spitzen auf einem dunklen Gesteinssockel
+                    MeshKit.Cyl(g.transform, MeshKit.Mat(GameData.Hex("#3a3632"), 0, .15f), new Vector3(0, .08f, 0), .45f, .6f, .2f, 7);
+                    MeshKit.Cyl(g.transform, crMat[c.t], new Vector3(0, .8f, 0), 0, .26f, 1.5f, 6);
+                    for (int k = 0; k < 6; k++) { float tilt = 22 + (c.id * 13 + k * 29) % 24, len = .6f + ((c.id + k * 7) % 5) * .12f; var rot = Quaternion.Euler(0, k * 60 + c.id * 11, 0) * Quaternion.Euler(tilt, 0, 0); MeshKit.Cyl(g.transform, crMat[c.t], rot * new Vector3(0, len / 2, 0) + rot * Vector3.forward * .1f, 0, .14f, len, 5, rot.eulerAngles); }
+                    MeshKit.Part(g.transform, MeshKit.Quad, crPool[c.t], new Vector3(0, .05f, 0), new Vector3(4.5f, 4.5f, 1), new Vector3(90, 0, 0)).name = "Schein";
+                    cv = (g, crMat[c.t], c.t); crys[c.id] = cv;
+                }
+                float s = (.35f + .95f * c.g) * 1.5f; cv.go.transform.localScale = Vector3.one * s * (1 + .03f * Mathf.Sin(Time.time * 2 + c.id));
+            }
+            foreach (var id in crys.Keys.Where(k => !alive.Contains(k)).ToList()) { if (crys[id].go) { EmitDust(crys[id].go.transform.position.normalized, GameData.Hex(Game.CrystalTypes[crys[id].t].col), 18); Destroy(crys[id].go); } crys.Remove(id); }
+            // leichtes Pulsieren der Leuchtkraft
+            for (int i = 0; i < crMat.Length; i++) crMat[i].SetColor("_EmissionColor", GameData.Hex(Game.CrystalTypes[i].col) * (1.8f + .6f * Mathf.Sin(Time.time * 1.7f + i)));
+        }
         void SyncDrones()
         {
             var alive = new HashSet<int>();
@@ -669,9 +778,16 @@ namespace LunarCleanup.Gameplay
                     rocketT += Time.deltaTime; float h = rocketT < .5f ? 0 : Mathf.Pow(rocketT - .5f, 2.2f) * 14;
                     sl.rocket.localPosition = new Vector3(0, sl.rocketY + h, 0);
                     if (rocketT < 3.5f && Random.value < .9f) EmitDust(sl.rocket.position.normalized, new Color(1, .7f, .35f), 3);
-                    if (rocketT > 4) { rocketT = -1; sl.rocket.localPosition = new Vector3(0, -6, 0); }
+                    if (rocketT > 4) { rocketT = -1; landT = 0; sl.rocket.localPosition = new Vector3(0, sl.rocketY + 70, 0); }
                 }
-                else if (sl.rocket.localPosition.y < sl.rocketY) sl.rocket.localPosition = Vector3.MoveTowards(sl.rocket.localPosition, new Vector3(0, sl.rocketY, 0), Time.deltaTime * 3);
+                else if (landT >= 0)
+                {
+                    // Landung: kommt von oben zurück, bremst mit Triebwerksfeuer ab und setzt sanft auf der Plattform auf
+                    landT += Time.deltaTime; float k = Mathf.Clamp01((landT - 2f) / 5f); float h = 70 * Mathf.Pow(1 - k, 2.4f);
+                    sl.rocket.localPosition = new Vector3(0, sl.rocketY + h, 0); sl.rocket.gameObject.SetActive(landT > 2f);
+                    if (landT > 2f && h < 14 && h > .05f && Random.value < .8f) EmitDust(sl.rocket.position.normalized, new Color(1, .7f, .35f), 2);
+                    if (k >= 1) { landT = -1; sl.rocket.localPosition = new Vector3(0, sl.rocketY, 0); }
+                }
             }
         }
     }

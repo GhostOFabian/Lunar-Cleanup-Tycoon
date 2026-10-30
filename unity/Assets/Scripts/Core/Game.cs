@@ -152,6 +152,7 @@ namespace LunarCleanup.Core
             string old = PlayerPrefs.GetString(Key, "");
             if (!string.IsNullOrEmpty(old)) PlayerPrefs.SetString(Key + "-bak", old);
             PlayerPrefs.SetString(Key, json); PlayerPrefs.Save();
+            if (!TestMode) Platform.MaybeUpload(json, S.lastActive); // Konto-Speicher (Google Play Spiele / Game Center), sobald verbunden
         }
 
         static SaveData Load()
@@ -623,14 +624,60 @@ namespace LunarCleanup.Core
                 int crowd = 0; foreach (var o in ps.sv.veh) if (o != v && o.cell == kv.Key && (o.mode == "drive" || o.mode == "clean")) crowd++;
                 if (crowd >= (a.K.tier > 0 ? 4 : 3)) continue;
                 float left = a.sum / a.cl.nIn, team = crowd > 0 && left > .35f ? -6 * Math.Min(crowd, 2) - (a.K.hard > 1.3f ? 6 : 0) : crowd * 14;
-                float sc = pd.Arc(v.d, a.cl.c) + team - (v.last == kv.Key ? 8 : 0); if (sc < bs) { bs = sc; best = kv.Key; }
+                if (kv.Key == v.skipCell && v.skipT > 0) continue;
+                float sc = pd.Arc(v.d, a.cl.c) + team - (v.last == kv.Key ? 8 : 0) + Spread(ps, v, kv.Key); if (sc < bs) { bs = sc; best = kv.Key; }
             }
             foreach (int id in ps.front)
             {
                 if (ps.act.ContainsKey(id)) continue; var cl = pd.cells[id]; if (GameData.Kinds[cl.kind].tier > T.tier || (cl.Wet && !T.fly)) continue;
-                float sc = pd.Arc(v.d, cl.c) + 6 - (GameData.Kinds[cl.kind].key == "rich" ? 6 : 0); if (sc < bs) { bs = sc; best = id; }
+                if (id == v.skipCell && v.skipT > 0) continue;
+                float sc = pd.Arc(v.d, cl.c) + 6 - (GameData.Kinds[cl.kind].key == "rich" ? 6 : 0) + Spread(ps, v, id); if (sc < bs) { bs = sc; best = id; }
             }
             return best;
+        }
+        /// <summary>Fahrzeuge verteilen sich: Parzellen in der Nähe anderer Einsätze werden etwas unattraktiver (nicht alle auf einem Fleck).</summary>
+        // ---------- Leuchtkristalle: wachsen auf sauberen Parzellen nach, von Hand (antippen) oder von Fahrzeugen abbaubar ----------
+        public static readonly (string name, string col, float mul, float w)[] CrystalTypes =
+            { ("Lumenkristall", "#5ff0ff", 1f, .38f), ("Glutkristall", "#ff8a3a", 1.3f, .24f), ("Amethyst", "#b07bff", 1.7f, .18f), ("Smaragd", "#3fe58a", 2.3f, .13f), ("Goldkristall", "#ffd23f", 3.5f, .07f) };
+        public const float CR_GROW = 240, CR_EVERY = 45;
+        public static int CrystalMax(PState ps) => Mathf.Clamp(ps.pd.N / 22, 6, 80);
+        public static float CrystalYield(CrystalSave c) => 10 * CrystalTypes[c.t].mul * (.3f + .7f * c.g);
+        public static Vector3 CrystalDir(PState ps, CrystalSave c) => ps.pd.ToDir(ps.pd.cells[c.cell], c.x, c.y);
+        static void CrystalStep(PState ps, float dt)
+        {
+            var sv = ps.sv; if (sv.crystals == null) sv.crystals = new List<CrystalSave>(); foreach (var c in sv.crystals) if (c.g < 1) c.g = Mathf.Min(1, c.g + dt / CR_GROW);
+            sv.crT += dt; if (sv.crT < CR_EVERY) return; sv.crT -= CR_EVERY; if (sv.crystals.Count >= CrystalMax(ps)) return;
+            var rnd = new System.Random(ps.pid.GetHashCode() ^ (sv.crN * 7919 + 17)); var pd = ps.pd;
+            for (int tr = 0; tr < 40; tr++)
+            {
+                int id = rnd.Next(pd.N); var cl = pd.cells[id];
+                if (cl.IsBase || cl.ring < 3 || cl.Wet || !ps.clean[id] || sv.rigs.Any(r => r.cell == id) || sv.outposts.Any(o => o.cell == id) || sv.crystals.Any(c => c.cell == id)) continue;
+                double r = rnd.NextDouble(); int t = 0; for (float acc = 0; t < CrystalTypes.Length - 1; t++) { acc += CrystalTypes[t].w; if (r < acc) break; }
+                float a = (float)rnd.NextDouble() * 6.283f, rr = (float)rnd.NextDouble() * cl.H * .5f;
+                sv.crystals.Add(new CrystalSave { id = ++sv.crN, cell = id, t = t, x = Mathf.Cos(a) * rr, y = Mathf.Sin(a) * rr, g = 0 }); if (TestMode && !Offline) Debug.Log("Lunar Cleanup: Kristall gewachsen auf " + ps.pid + " – jetzt " + sv.crystals.Count); return;
+            }
+            sv.crN++;
+        }
+        static bool PickCrystal(PState ps, VehSave v)
+        {
+            float room = TankCap(ps, v) - Sum(v.tank); if (room < 3) return false; CrystalSave best = null; float bs = 1e9f;
+            foreach (var c in ps.sv.crystals) { if (c.claim >= 0 && ps.sv.veh.Any(o => o.id == c.claim && o.cr == c.id) || c.g < 1f) continue; if (!GameData.Veh[v.type].fly && ps.pd.cells[c.cell].Wet) continue; float d = ps.pd.Arc(v.d, CrystalDir(ps, c)) - c.g * 10; if (d < bs) { bs = d; best = c; } }
+            if (best == null) return false; best.claim = v.id; v.cr = best.id; v.mode = "toCrystal"; return true;
+        }
+        /// <summary>Kristall von Hand ernten (antippen).</summary>
+        public static bool HarvestCrystal(int id)
+        {
+            var ps = Cur; var c = ps.sv.crystals.Find(x => x.id == id); if (c == null) return false;
+            if (c.g < .35f) { Toast(CrystalTypes[c.t].name + " wächst noch (" + Mathf.RoundToInt(c.g * 100) + " %)"); return false; }
+            float room = HandCap() - Sum(ps.sv.hand); if (room < .5f) { Toast("Behälter voll – erst entladen", "bad"); return false; }
+            float amt = Mathf.Min(CrystalYield(c), room); ps.sv.hand[GameData.MatIx["kristall"]] += amt; ps.sv.crystals.Remove(c); S.stats.crystals++;
+            FloatTxt(CrystalDir(ps, c), "+" + Mathf.RoundToInt(amt) + " " + CrystalTypes[c.t].name, "good"); return true;
+        }
+        static float Spread(PState ps, VehSave v, int cell)
+        {
+            float p = 0; var c = ps.pd.cells[cell].c;
+            foreach (var o in ps.sv.veh) { if (o == v || o.cell < 0 || o.cell == cell || (o.mode != "drive" && o.mode != "clean")) continue; float d = ps.pd.Arc(ps.pd.cells[o.cell].c, c); if (d < 16) p += 9 * (1 - d / 16); }
+            return p;
         }
         static int PickGridTarget(PState ps, Act a, VehSave v)
         {
@@ -667,9 +714,11 @@ namespace LunarCleanup.Core
             {
                 case "seek":
                     {
+                        if (v.skipT > 0) v.skipT -= dt; v.driveT = 0;
                         if (tank >= cap * .98f || BattLow(ps, v)) { v.mode = "toUnload"; break; }
                         { var rg = PickRig(ps, v, false); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } }
                         int c = ChooseCell(ps, v);
+                        if (c < 0 && PickCrystal(ps, v)) break; // keine Reinigungsarbeit: Leuchtkristalle abbauen
                         if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } if (IdleJob(ps, v)) break; NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
                         if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
@@ -682,7 +731,13 @@ namespace LunarCleanup.Core
                         if (v.ti < 0 || a.grid[v.ti] < .05f) { v.ti = PickGridTarget(ps, a, v); if (v.ti < 0) { v.mode = "seek"; break; } }
                         var gdir = pd.GridDir(a.cl, v.ti);
                         bool arrived = v.mode == "drive" ? NavMove(ps, v, gdir, spd * dt, v.id) : a.cl.ring <= 4 ? NavMove(ps, v, gdir, spd * dt * .6f, v.id) : MoveDir(ref v.d, gdir, spd * dt * .6f, pd.R);
-                        if (v.mode == "drive") { var dl = pd.ToLocal(a.cl, v.d); if (arrived || dl.magnitude < a.cl.H * .9f) v.mode = "clean"; break; }
+                        if (v.mode == "drive")
+                        {
+                            var dl = pd.ToLocal(a.cl, v.d); if (arrived || dl.magnitude < a.cl.H * .9f) { v.mode = "clean"; v.driveT = 0; break; }
+                            // hängt ein Fahrzeug fest (kommt nicht an), sucht es sich eine andere Parzelle
+                            v.driveT += dt; if (v.driveT > 60 + pd.Arc(v.d, a.cl.c) / Mathf.Max(.5f, spd) * 2) { v.skipCell = v.cell; v.skipT = 120; v.driveT = 0; v.mode = "seek"; v.cell = -1; }
+                            break;
+                        }
                         v.ph += dt * 4; var loc = pd.ToLocal(a.cl, v.d); float wg = arrived ? .4f : 0;
                         float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
                         float rem = CleanAt(ps, a, loc.x + Mathf.Cos(v.ph) * wg, loc.y + Mathf.Sin(v.ph) * wg, T.radius * Uv("vradius", ps), k);
@@ -718,6 +773,19 @@ namespace LunarCleanup.Core
                     }
                 case "wait":
                     if (v.drone < 0) v.mode = tank >= cap * .98f ? "toUnload" : "seek"; break;
+                case "toCrystal":
+                    {
+                        var cr = ps.sv.crystals.Find(x => x.id == v.cr); if (cr == null || cr.claim != v.id) { v.cr = -1; v.mode = "seek"; break; }
+                        v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, CrystalDir(ps, cr), spd * dt, v.id) || pd.Arc(v.d, CrystalDir(ps, cr)) < 1.4f) { v.mode = "mineCr"; v.crT = 0; }
+                        break;
+                    }
+                case "mineCr":
+                    {
+                        var cr = ps.sv.crystals.Find(x => x.id == v.cr); if (cr == null) { v.cr = -1; v.mode = "seek"; break; }
+                        v.busy = true; v.crT += dt; if (v.crT < 3.5f) break;
+                        float amt = Mathf.Min(CrystalYield(cr), cap - tank); v.tank[GameData.MatIx["kristall"]] += Mathf.Max(0, amt); ps.sv.crystals.Remove(cr); v.cr = -1; S.stats.crystals++;
+                        FloatTxt(CrystalDir(ps, cr), "+" + Mathf.RoundToInt(amt) + " " + CrystalTypes[cr.t].name, "good"); v.mode = tank + amt >= cap * .9f ? "toUnload" : "seek"; break;
+                    }
                 case "toRig": { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r == null || r.claim != v.id) { v.rig = -1; v.mode = "seek"; break; } v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, RigDock(ps, r), spd * dt, v.id)) v.mode = "rigload"; break; }
                 case "rigload":
                     {
@@ -1105,7 +1173,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
+            switch (v.mode) { case "toCrystal": return "Fährt zu einem Leuchtkristall"; case "mineCr": return "Baut einen Leuchtkristall ab"; case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
@@ -1422,6 +1490,7 @@ namespace LunarCleanup.Core
             foreach (var v in ps.sv.veh.ToArray()) VehStep(ps, v, dt, f);
             if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
+            CrystalStep(ps, dt);
             foreach (var r in ps.sv.rigs) { RigStep(ps, r, dt, f); if (r.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == r.dc && d.tk == "r" && d.tgt == r.cell && (d.mode == "out" || d.mode == "load")))) r.dc = -1; }
             foreach (var o in ps.sv.outposts) { OutpostStep(ps, o, dt, f); if (o.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == o.dc && d.tk == "o" && d.tko == o.id && (d.mode == "out" || d.mode == "load")))) o.dc = -1; }
             foreach (var v in ps.sv.veh) if (v.drone >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.tgt == v.id && d.id == v.drone))) v.drone = -1;
