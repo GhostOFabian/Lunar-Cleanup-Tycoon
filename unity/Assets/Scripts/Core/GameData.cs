@@ -1,4 +1,5 @@
 // Alle Spieldaten – 1:1 aus dem Browser-Prototyp exportiert (Resources/Data/gamedata.json, erzeugt mit tools/export_unity_data.py).
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -46,6 +47,8 @@ namespace LunarCleanup.Core
         public static int[] Raw;   // Rohstoffe (Mat-Index)
         public static int[] Prods; // Produkte (Mat-Index)
         public const int GRID = 32;
+        public static float SolarPeak = 2.6f;
+        public static Dictionary<string, float> DayLen = new Dictionary<string, float>(), Geof = new Dictionary<string, float>();
         public const float DONE = 0.03f;
 
         public static void Load()
@@ -87,6 +90,10 @@ namespace LunarCleanup.Core
                 Bld[kv.Key] = b;
             }
             BOrder = ToStrings(J.G(root, "border")); Stations = ToStrings(J.G(root, "stations"));
+            DayLen.Clear(); Geof.Clear();
+            var dl = J.G(root, "daylen"); if (dl != null) foreach (var kv in J.O(dl)) DayLen[kv.Key] = Convert.ToSingle(kv.Value);
+            var gf = J.G(root, "geof"); if (gf != null) foreach (var kv in J.O(gf)) Geof[kv.Key] = Convert.ToSingle(kv.Value);
+            SolarPeak = J.F(J.G(root, "consts"), "SOLAR_PEAK", 2.6f);
             foreach (var kv in J.O(J.G(root, "mach"))) Mach[kv.Key] = new Vector3(J.F(kv.Value, "energy"), J.F(kv.Value, "inCap"), J.F(kv.Value, "outCap"));
             foreach (var kv in J.O(J.G(root, "lines")))
             {

@@ -16,7 +16,7 @@ namespace LunarCleanup.Gameplay
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
-        ParticleSystem dust; Light sun;
+        public static float NightF; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun; Color amb0, amb1, amb2; float sunI0;
         float rocketT = -1;
         Mesh itemMesh;
         readonly Dictionary<int, Material> itemMat = new Dictionary<int, Material>();
@@ -59,7 +59,19 @@ namespace LunarCleanup.Gameplay
                     var s = Models.Site(B.fp); s.transform.SetParent(baseRoot, false); Place(s.transform, ps.lay.pos[id], yaw);
                 }
             }
-            // Laternen an den Ecken der Basis
+            // Laternen: warmes Licht an den wichtigsten Gebäuden, leuchtet nur nachts
+            lamps.Clear(); if (!lampHead) lampHead = MeshKit.Mat(new Color(.2f, .18f, .12f), 0, .3f, new Color(1f, .78f, .45f));
+            foreach (var id in new[] { "hq", "roh", "u1", "u2", "u3", "prod", "presse", "sell", "werkstatt", "schmelze" })
+            {
+                if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 6) continue;
+                var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f);
+                var post = new GameObject("Laterne"); post.transform.SetParent(baseRoot, false); Place(post.transform, off, 0);
+                MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8);
+                MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
+                var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
+                var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
+                MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
+            }
             foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
             builtVersion = ps.baseVersion;
         }
@@ -120,11 +132,12 @@ namespace LunarCleanup.Gameplay
             if (cam) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = th.sky; }
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = th.hemiSky * th.hemiI * 1.1f; RenderSettings.ambientEquatorColor = Color.Lerp(th.hemiSky, th.hemiGround, .5f) * th.hemiI * .8f; RenderSettings.ambientGroundColor = th.hemiGround * th.hemiI * .7f;
+            amb0 = RenderSettings.ambientSkyColor; amb1 = RenderSettings.ambientEquatorColor; amb2 = RenderSettings.ambientGroundColor;
             RenderSettings.fog = false;
             sun = FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional);
             if (!sun) { var lg = new GameObject("Sonne"); sun = lg.AddComponent<Light>(); sun.type = LightType.Directional; }
-            sun.color = th.sun; sun.intensity = th.sunI * 1.15f; sun.shadows = LightShadows.Soft; sun.shadowStrength = .85f;
-            var bc = pd.cells[pd.baseCell].c; var sd = (bc + pd.cells[pd.baseCell].e1 * .55f + pd.cells[pd.baseCell].e2 * .35f).normalized; sun.transform.rotation = Quaternion.LookRotation(-sd);
+            sun.color = th.sun; sunI0 = th.sunI * 1.15f; sun.intensity = sunI0; sun.shadows = LightShadows.Soft; sun.shadowStrength = .85f;
+            UpdateSun();
             // Sterne
             int nS = Mathf.Max(300, th.stars); var v = new List<Vector3>(); var col = new List<Color>(); var t = new List<int>(); var r = new System.Random(7);
             for (int i = 0; i < nS; i++)
@@ -185,8 +198,23 @@ namespace LunarCleanup.Gameplay
             if (ps == null) return;
             if (builtFor != Game.S.planet) return;
             if (ps.baseVersion != builtVersion) BuildBase();
-            foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
-            DrawItems(); SyncVehicles(); SyncCart(); AnimateBuildings();
+            foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
+            UpdateSun(); DrawItems(); SyncVehicles(); SyncCart(); AnimateBuildings();
+        }
+
+        /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
+        void UpdateSun()
+        {
+            if (!sun) return; var sd = Game.SunDir(ps); sun.transform.rotation = Quaternion.LookRotation(-sd);
+            var cam = Camera.main; var cd = cam ? cam.transform.position.normalized : pd.cells[pd.baseCell].c;
+            float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-.14f, .3f, Vector3.Dot(sd, cd)));
+            sun.intensity = sunI0; float a = .34f + .66f * k;
+            RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
+            NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
+            foreach (var L in lamps) if (L) L.intensity = 2.2f * nf;
+            if (lampHead) lampHead.SetColor("_EmissionColor", new Color(1f, .78f, .45f) * (.1f + 2.2f * nf));
+            foreach (var vp in vehs.Values) if (vp.head) vp.head.intensity = 3f * nf;
+            if (poolMat) poolMat.SetColor("_BaseColor", new Color(1f, .78f, .5f, .5f * nf)); if (beamMat) beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, .45f * nf));
         }
 
         void DrawItems()
@@ -219,7 +247,7 @@ namespace LunarCleanup.Gameplay
             foreach (var v in ps.sv.veh)
             {
                 alive.Add(v.id);
-                if (!vehs.TryGetValue(v.id, out var vp)) { vp = Models.Vehicle(GameData.Veh[v.type], acc); vp.root.transform.SetParent(vehRoot, false); vp.root.transform.position = v.d * pd.R; vehs[v.id] = vp; }
+                if (!vehs.TryGetValue(v.id, out var vp)) { vp = Models.Vehicle(GameData.Veh[v.type], acc); vp.root.transform.SetParent(vehRoot, false); vp.root.transform.position = v.d * pd.R; AddHeadlight(vp); vehs[v.id] = vp; }
                 var tr = vp.root.transform; var target = v.d * pd.R; var mv = target - tr.position; var up = v.d;
                 var fwd = mv - up * Vector3.Dot(mv, up);
                 Quaternion rot = fwd.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up);
@@ -229,6 +257,21 @@ namespace LunarCleanup.Gameplay
                 if (v.mode == "clean" && Random.value < Time.deltaTime * 12) EmitDust(v.d, GameData.Dirt[pd.cells[v.cell >= 0 ? v.cell : 0].type].lightC, 2);
             }
             foreach (var id in vehs.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(vehs[id].root); vehs.Remove(id); }
+        }
+
+        Material PoolMat()
+        {
+            if (poolMat) return poolMat; poolMat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); poolMat.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(poolMat, true); poolMat.SetFloat("_Cull", 0); poolMat.SetColor("_BaseColor", new Color(1f, .78f, .5f, 0)); return poolMat;
+        }
+        Material BeamMat()
+        {
+            if (beamMat) return beamMat; beamMat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); beamMat.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(beamMat, true); beamMat.SetFloat("_Cull", 0); beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, 0)); return beamMat;
+        }
+        void AddHeadlight(Models.VehicleParts vp)
+        {
+            MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
+            var lg = new GameObject("Scheinwerfer"); lg.transform.SetParent(vp.root.transform, false); lg.transform.localPosition = new Vector3(0, 1.1f, .9f); lg.transform.localRotation = Quaternion.Euler(28, 0, 0);
+            var L = lg.AddComponent<Light>(); L.type = LightType.Spot; L.range = 11; L.spotAngle = 70; L.innerSpotAngle = 35; L.color = new Color(.85f, .92f, 1f); L.intensity = 0; L.shadows = LightShadows.None; vp.head = L;
         }
 
         void SyncCart()

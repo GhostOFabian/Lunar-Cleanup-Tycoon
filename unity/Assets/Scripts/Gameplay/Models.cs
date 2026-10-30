@@ -161,7 +161,7 @@ namespace LunarCleanup.Gameplay
             return g;
         }
 
-        public class VehicleParts { public GameObject root; public Transform[] wheels; public Transform tool; }
+        public class VehicleParts { public GameObject root; public Transform[] wheels; public Transform tool; public Light head; public Material headMat; }
 
         public static VehicleParts Vehicle(VehDef T, Color acc)
         {

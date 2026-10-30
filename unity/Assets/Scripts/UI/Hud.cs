@@ -19,6 +19,7 @@ namespace LunarCleanup.UI
         RectTransform root, sheetPanel, sheetContent, toastBox, floatLayer;
         TextMeshProUGUI credits, rate, pname, pprog, goalKick, goalText, goalReward, handTxt, sheetKick, sheetTitle, offlineTxt;
         RectTransform goalFill, handFill; Image handImg, pdot; GameObject sheetGo, offlineGo, goalGo;
+        readonly List<Action> liveLabels = new List<Action>(); Action lowWarn;
         readonly List<(TextMeshProUGUI v, RectTransform fill, Func<string> val, Func<float> f)> meters = new List<(TextMeshProUGUI, RectTransform, Func<string>, Func<float>)>();
         readonly Dictionary<string, Image> navIcons = new Dictionary<string, Image>(); readonly Dictionary<string, TextMeshProUGUI> navTxt = new Dictionary<string, TextMeshProUGUI>();
         readonly List<Action> binders = new List<Action>();
@@ -56,16 +57,19 @@ namespace LunarCleanup.UI
             // Anzeigen
             var mr = UiKit.Rt(root, "Anzeigen").Anchor(0, 1, 1, 1, 12, -104, 12, 68);
             var hl = mr.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 8; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+            Meter(mr, "ENERGIE", new Color(1f, .85f, .3f), () => Game.Fmt(Game.Cur.sv.energy), () => Game.Cur.sv.energy / Game.EnergyCap(Game.Cur),
+                () => Game.IsDay(Game.Cur) ? "TAG" : "NACHT", () => OpenSheet("energy"));
             Meter(mr, "ROH", Pal.Clean, () => Game.Fmt(Game.RohSum(Game.Cur)) + "/" + Game.Fmt(Game.RohCap(Game.Cur)), () => Game.RohSum(Game.Cur) / Game.RohCap(Game.Cur));
             Meter(mr, "PROD", Pal.Prod, () => Game.Cur.bld.Contains("prod") ? Game.Fmt(Game.ProdSum(Game.Cur)) + "/" + Game.Fmt(Game.ProdCap(Game.Cur)) : "–", () => Game.ProdSum(Game.Cur) / Game.ProdCap(Game.Cur));
-            Meter(mr, "RAKETE", Pal.Credit, () => Game.Cur.sv.rk > 0 ? "fliegt" : Game.Fmt(Game.Sum(Game.Cur.sv.sellBuf)) + "/" + Game.Fmt(Game.SellCap(Game.Cur)), () => Game.Cur.sv.rk > 0 ? 1 - Game.Cur.sv.rk / Game.RocketTime(Game.Cur) : Game.Sum(Game.Cur.sv.sellBuf) / Game.SellCap(Game.Cur));
         }
-        void Meter(Transform p, string label, Color col, Func<string> val, Func<float> f)
+        void Meter(Transform p, string label, Color col, Func<string> val, Func<float> f, Func<string> labelLive = null, Action click = null)
         {
-            var m = UiKit.Glass(p, label, Pal.Glass, 12); var l = UiKit.Text(m.transform, "Name", label, 9, Pal.Ink2, true); l.rectTransform.Anchor(0, 0, .45f, 1, 10, 0, 0, 0); l.characterSpacing = 8; l.alignment = TextAlignmentOptions.MidlineLeft;
+            Component m = click != null ? (Component)UiKit.Btn(p, label, click, Pal.Glass, 12) : UiKit.Glass(p, label, Pal.Glass, 12); var l = UiKit.Text(m.transform, "Name", label, 9, Pal.Ink2, true); l.rectTransform.Anchor(0, 0, .45f, 1, 10, 0, 0, 0); l.characterSpacing = 8; l.alignment = TextAlignmentOptions.MidlineLeft;
             var v = UiKit.Text(m.transform, "Wert", "", 11.5f, Pal.Ink, true); v.rectTransform.Anchor(.3f, 0, 1, 1, 0, 0, 10, 0); v.alignment = TextAlignmentOptions.MidlineRight; v.textWrappingMode = TextWrappingModes.NoWrap;
             var bar = UiKit.Bar(m.transform, "Balken", col, out var fill, 3); bar.Anchor(0, 0, 1, 0, 10, 4, 10, -7);
             meters.Add((v, fill, val, f));
+            if (labelLive != null) { var lo = l; liveLabels.Add(() => { string t = labelLive(); lo.text = t; lo.color = t == "NACHT" ? new Color(.62f, .71f, 1f) : Pal.Ink2; }); }
+            if (lowWarn == null && label == "ENERGIE") { var img = m.GetComponent<Image>(); lowWarn = () => img.color = Game.Cur.ef < .99f && (Game.Cur.sv.veh.Count > 0 || Game.Cur.bld.Contains("presse")) ? new Color(.35f, .1f, .1f, .9f) : Pal.Glass; }
         }
 
         // ---------- Zielkarte ----------
@@ -205,6 +209,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean, tot = ps.pd.cells.Count(x => !x.IsBase); pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke();
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
             int q = Game.S.quest; bool has = q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(has && !SheetOpen);

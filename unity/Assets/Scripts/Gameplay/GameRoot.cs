@@ -24,11 +24,16 @@ namespace LunarCleanup.Gameplay
         // Eingabe
         enum Mode { None, Wipe, Pan, Ui }
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
-        GameObject brush; Vector3 lastWipe; bool hasLastWipe;
+        GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe;
 
         void Awake()
         {
             Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
+            if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
+            {
+                urp.maxAdditionalLightsCount = 8;
+                try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }
+            } // Laternen, Scheinwerfer, Saugkopf bei Nacht
             EnhancedTouchSupport.Enable();
             Game.Init(); MeshKit.Init();
             cam = Camera.main; if (!cam) { var cg = new GameObject("Main Camera"); cg.tag = "MainCamera"; cam = cg.AddComponent<Camera>(); }
@@ -52,6 +57,7 @@ namespace LunarCleanup.Gameplay
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnRocket += (p, v) => world.LaunchRocket();
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
+            { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 3.2f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 9; brushLight.color = new Color(.75f, 1f, .92f); brushLight.intensity = 0; }
             BuildPlanet();
         }
         void OnDestroy() { Game.OnPlanetChanged -= BuildPlanet; Game.OnFloat -= OnFloat; }
@@ -99,12 +105,13 @@ namespace LunarCleanup.Gameplay
         }
 
 #if UNITY_EDITOR
-        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % säubern.
+        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % säubern, F9 Vierteltag vorspulen.
         void DevKeys()
         {
             var kb = Keyboard.current; if (kb == null) return;
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
+            if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(.81f);
             if (kb.f7Key.wasPressedThisFrame && !offlineRunning) StartCoroutine(Offline(8 * 3600));
         }
@@ -173,7 +180,7 @@ namespace LunarCleanup.Gameplay
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
-                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = dir * (Game.Cur.pd.R + .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r);
+                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = dir * (Game.Cur.pd.R + .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 2.4f * Mathf.Clamp01((WorldView.NightF - .2f) / .6f);
                         if (amt > 0 && Random.value < .6f) { int c = Game.Cur.pd.CellOf(dir); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, 3); }
                     }
                 }

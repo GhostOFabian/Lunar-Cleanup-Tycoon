@@ -21,6 +21,7 @@ namespace LunarCleanup.UI
                 case "upgrades": title = "Upgrades"; Upgrades(h); break;
                 case "planets": title = "Planeten"; Planets(h); break;
                 case "goals": title = "Ziele"; Goals(h); break;
+                case "energy": title = "Energie"; Energy(h); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -51,7 +52,7 @@ namespace LunarCleanup.UI
             if (ps.sv.veh.Count > 0)
             {
                 h.Section("Im Einsatz");
-                foreach (var v in ps.sv.veh) { var vv = v; h.Row(GameData.Veh[v.type].name + " #" + v.id, () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank"))); }
+                foreach (var v in ps.sv.veh) { var vv = v; h.Row(GameData.Veh[v.type].name + " #" + v.id, () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + (GameData.Veh[vv.type].batt > 0 ? " · Akku " + Mathf.RoundToInt((vv.bat < 0 ? 1 : vv.bat / Game.BattCap(ps, vv)) * 100) + " %" : "")); }
             }
             h.Section("Upgrades für Fahrzeuge");
             foreach (var u in GameData.Upg.Where(x => x.cat == "Fahrzeuge" && UpVisible(x))) UpRow(h, u.id);
@@ -149,6 +150,24 @@ namespace LunarCleanup.UI
             h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Forschung, Drohnen, Außenlager, weitere Planeten).");
         }
 
+        static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
+        static string FmtTime(float s) { int t = Mathf.Max(0, Mathf.CeilToInt(s)); return t >= 60 ? t / 60 + " min " + (t % 60).ToString("00") + " s" : t + " s"; }
+        static void Energy(Hud h)
+        {
+            var P = ps.P;
+            h.Section("Energie");
+            h.Note("Fahrzeuge, Maschinen und Bänder brauchen Strom" + (P.energy > 1 ? " – auf dem " + P.name + " das " + Dec(P.energy, 1) + "-fache" : "") + ". Reicht er nicht, läuft alles langsamer.");
+            h.Row("Speicher", () => Game.Fmt(ps.sv.energy) + " / " + Game.Fmt(Game.EnergyCap(ps)) + " gespeichert · Produktion " + Dec(Game.EnergyProd(ps), 1) + "/s · Verbrauch " + Dec(ps.demand, 1) + "/s" + (ps.ef < .99f ? " · reicht nicht" : ""));
+            h.Row("Tageszeit", () => (Game.IsDay(ps) ? "Tag" : "Nacht") + " · noch " + FmtTime(Game.DayLeft(ps)));
+            h.Row("Solar", () => Dec(Game.SolarProd(ps), 1) + "/s · Sonne " + Mathf.RoundToInt(ps.solar * 100) + " %");
+            h.Row("Radioisotopen", () => ps.bld.Contains("rtg") ? "10/s" : "–");
+            float gf = Game.GeoF(ps.pid);
+            h.Row("Geothermie", () => ps.bld.Contains("geo") ? Dec(30 * gf, 0) + "/s" : gf > 0 ? "möglich: " + Dec(30 * gf, 0) + "/s" : "keine Erdwärme");
+            h.Row("Kernreaktor", () => ps.bld.Contains("reactor") ? "150/s" : "–");
+            UpRow(h, "energy"); if (UpVisible(GameData.Up["ecap"])) UpRow(h, "ecap");
+            h.Note("Solarfelder liefern nur tagsüber. Nachts laufen Maschinen aus dem Speicher (Akkupark), Akku-Fahrzeuge aus ihrem Akku – oder du baust Radioisotopen-Generator (Stufe 3), Geothermie (Stufe 4) und Kernreaktor (Stufe 5), die rund um die Uhr liefern.");
+        }
+
         static float resetT;
         static void Settings(Hud h)
         {
@@ -157,13 +176,14 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.1. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Energie, Tag und Nacht, Stürme, Forschung, Drohnen, Außenlager, Tiefenabbau.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.1. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Forschung, Drohnen, Außenlager, Tiefenabbau.");
         }
 
         static void Building(Hud h, string id)
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
+            if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "hq") { Base(h); return; }
             if (id == "werkstatt") { Vehicles(h); return; }
         }
