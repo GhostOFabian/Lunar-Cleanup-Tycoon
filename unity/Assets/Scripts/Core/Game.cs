@@ -10,11 +10,13 @@ namespace LunarCleanup.Core
     public class Act { public Cell cl; public float[] grid; public float sum, amt; public DirtDef D; public KindDef K; }
     public class BeltItem { public float s; public int m; public float a; }
 
+    public class LqNav { public int to = -2; public bool free; public List<int> p; public int i, k; }
     public class PState
     {
         public PlanetSave sv; public PlanetData pd; public PlanetDef P; public LayoutDef lay; public LineDef line;
         public bool[] clean, paid; public int nClean;
         public Dictionary<int, Act> act = new Dictionary<int, Act>();
+        public Dictionary<int, LqNav> lqnav = new Dictionary<int, LqNav>(); // Umwege um Seen (nicht gespeichert)
         public HashSet<int> front = new HashSet<int>();
         public HashSet<string> bld = new HashSet<string>();
         public Dictionary<string, int> upg = new Dictionary<string, int>();
@@ -607,7 +609,7 @@ namespace LunarCleanup.Core
             var T = GameData.Veh[v.type]; int best = -1; float bs = 1e9f; var pd = ps.pd;
             foreach (var kv in ps.act)
             {
-                var a = kv.Value; if (a.K.tier > T.tier || a.sum < a.cl.nIn * GameData.DONE) continue;
+                var a = kv.Value; if (a.K.tier > T.tier || a.sum < a.cl.nIn * GameData.DONE || (a.cl.Wet && !T.fly)) continue;
                 int crowd = 0; foreach (var o in ps.sv.veh) if (o != v && o.cell == kv.Key && (o.mode == "drive" || o.mode == "clean")) crowd++;
                 if (crowd >= (a.K.tier > 0 ? 4 : 3)) continue;
                 float left = a.sum / a.cl.nIn, team = crowd > 0 && left > .35f ? -6 * Math.Min(crowd, 2) - (a.K.hard > 1.3f ? 6 : 0) : crowd * 14;
@@ -615,7 +617,7 @@ namespace LunarCleanup.Core
             }
             foreach (int id in ps.front)
             {
-                if (ps.act.ContainsKey(id)) continue; var cl = pd.cells[id]; if (GameData.Kinds[cl.kind].tier > T.tier) continue;
+                if (ps.act.ContainsKey(id)) continue; var cl = pd.cells[id]; if (GameData.Kinds[cl.kind].tier > T.tier || (cl.Wet && !T.fly)) continue;
                 float sc = pd.Arc(v.d, cl.c) + 6 - (GameData.Kinds[cl.kind].key == "rich" ? 6 : 0); if (sc < bs) { bs = sc; best = id; }
             }
             return best;
@@ -821,6 +823,7 @@ namespace LunarCleanup.Core
             var cl = ps.pd.cells[id];
             if (!IsDone(ps.pid)) return "Erst wenn " + ps.P.name + " komplett sauber ist";
             if (cl.IsBase || !ps.clean[id]) return "Nur auf sauberen Parzellen außerhalb der Basis"; if (cl.ring < 2) return "Zu nah an der Basis";
+            if (cl.Wet) return "Nicht auf " + GameData.Liq[cl.liq].name;
             if (ps.sv.rigs.Any(r => r.cell == id)) return "Hier steht schon ein Bohrturm"; if (ps.sv.outposts.Any(o => o.cell == id)) return "Hier steht ein Außenlager";
             if (OutpostSites(ps.pid).Contains(id)) return "Dieser Platz ist für ein Außenlager reserviert";
             if (ps.sv.rigs.Count >= RigMax(ps)) return "Höchstens " + RigMax(ps) + " Bohrtürme auf Basisstufe " + ps.sv.stage + (ps.sv.stage < 5 ? " – die nächste Stufe erlaubt 2 mehr" : "");
@@ -1103,7 +1106,40 @@ namespace LunarCleanup.Core
             var w = (t - d * c).normalized; float a = step / R; d = (d * Mathf.Cos(a) + w * Mathf.Sin(a)).normalized; return ang * R - step < .35f;
         }
         static bool NavMove(PState ps, CartSave c, Vector3 t, float step, int id) { var d = c.d; bool r = NavMoveD(ps, ref d, t, step, -999); c.d = d; return r; }
-        static bool NavMove(PState ps, VehSave v, Vector3 t, float step, int id) { var d = v.d; bool r = NavMoveD(ps, ref d, t, step, id); v.d = d; return r; }
+        static bool NavMove(PState ps, VehSave v, Vector3 t, float step, int id) { var d = v.d; bool r = NavMoveD(ps, ref d, t, step, GameData.Veh[v.type].fly ? -2000 - id : id); v.d = d; return r; }
+
+        // ---------- Seen (Wasser, Lava, Säure, Methan): Bodenfahrzeuge fahren außen herum – genau wie im Browser ----------
+        static bool LiqClear(PlanetData pd, Vector3 a, Vector3 b, int ign)
+        {
+            int n = Mathf.Max(2, Mathf.CeilToInt(pd.Arc(a, b) / .5f)); var sd = Vector3.Cross(a, b - a).normalized / pd.R; int g = -1, g1 = -1, g2 = -1;
+            for (int i = 1; i <= n; i++)
+            {
+                float q = i / (float)n; var p = (a * (1 - q) + b * q).normalized;
+                g = pd.CellOf(p, g); if (pd.cells[g].Wet && g != ign) return false;
+                g1 = pd.CellOf((p + sd * .9f).normalized, g1); if (pd.cells[g1].Wet && g1 != ign) return false;
+                g2 = pd.CellOf((p - sd * .9f).normalized, g2); if (pd.cells[g2].Wet && g2 != ign) return false;
+            }
+            return true;
+        }
+        static List<int> LiqPath(PlanetData pd, int from, int to)
+        {
+            if (from == to) return new List<int> { to }; var prev = new int[pd.N]; for (int i = 0; i < prev.Length; i++) prev[i] = -1; prev[from] = from; var q = new List<int> { from }; int h = 0;
+            while (h < q.Count) { int a = q[h++]; if (a == to) break; foreach (int b in pd.cells[a].nb) if (prev[b] < 0 && (!pd.cells[b].Wet || b == to)) { prev[b] = a; q.Add(b); } }
+            if (prev[to] < 0) return null; var p = new List<int>(); for (int c = to; c != from; c = prev[c]) p.Add(c); p.Reverse(); return p;
+        }
+        static bool LiqDetour(PState ps, int id, Vector3 d, Vector3 t, out Vector3 goal)
+        {
+            goal = t; if (!GameData.PLiq.ContainsKey(ps.pid)) return false; var pd = ps.pd;
+            if (!ps.lqnav.TryGetValue(id, out var L)) { L = new LqNav(); ps.lqnav[id] = L; }
+            int tc = pd.CellOf(t, L.to >= 0 ? L.to : -1);
+            if (L.to != tc) { L.to = tc; L.p = null; L.free = false; }
+            if (L.free) return false;
+            if (L.p == null) { if (LiqClear(pd, d, t, tc)) { L.free = true; return false; } L.p = LiqPath(pd, pd.CellOf(d), tc); L.i = 0; L.k = 0; if (L.p == null) { L.free = true; return false; } }
+            if ((L.k++) % 12 == 0) for (int k = Math.Min(L.p.Count - 1, L.i + 6); k > L.i; k--) if (LiqClear(pd, d, pd.cells[L.p[k]].c, tc)) { L.i = k; break; }
+            float dg = pd.Arc(d, pd.cells[L.p[L.i]].c); if (dg < .4f || (dg < 2 && (L.i + 1 >= L.p.Count || LiqClear(pd, d, pd.cells[L.p[L.i + 1]].c, tc)))) L.i++;
+            if (L.i >= L.p.Count) { L.p = null; L.free = true; return false; }
+            goal = pd.cells[L.p[L.i]].c; return true;
+        }
 
         const float ZONE = 31; const int NN = 66, NOFF = 33;
         static float SegD(Vector2 q, Vector2 a, Vector2 c) { float dx = c.x - a.x, dy = c.y - a.y, l2 = dx * dx + dy * dy; if (l2 == 0) l2 = 1; float t = Mathf.Clamp01(((q.x - a.x) * dx + (q.y - a.y) * dy) / l2); return Mathf.Sqrt((q.x - a.x - dx * t) * (q.x - a.x - dx * t) + (q.y - a.y - dy * t) * (q.y - a.y - dy * t)); }
@@ -1168,6 +1204,7 @@ namespace LunarCleanup.Core
                     float ang = aa + Mathf.Sign(da) * Mathf.Min(Mathf.Abs(da), .5f), rr = Mathf.Max(ZONE + 2, Mathf.Min(ra, ZONE + 6));
                     MoveDir(ref d, pd.PlanDir(Mathf.Cos(ang) * rr, Mathf.Sin(ang) * rr), step, pd.R); return false;
                 }
+                if (id >= 0 && LiqDetour(ps, id, d, t, out var lg)) { MoveDir(ref d, lg, step, pd.R); return false; }
                 return MoveDir(ref d, t, step, pd.R);
             }
             var g = NavGrid(ps); string tk = Mathf.Round(b.x * 2) + "," + Mathf.Round(b.y * 2);

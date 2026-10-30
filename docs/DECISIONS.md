@@ -188,3 +188,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Test-Tasten im Editor wirken nur im Testmodus mit eigenem Spielstand (`…-v1-test`), damit der echte Spielstand nie verändert wird.
 - `rigRich` im Prototyp: Ergebnis jetzt vorzeichenlos (0,6–1,6), vorher konnten durch `^` negative Werte entstehen.
 - 30.10.2026: Planetengröße wächst jetzt mit jedem Planeten (freq 5,7,9 … 24, also 252 bis 5.762 Parzellen). Die Reihenfolge bleibt (Entfernung/Schwierigkeit). Bereits begonnene Planeten behalten ihre alte Größe (`sp.freq`, alte Werte in `OLD_FREQ`), damit kein Spielstand kaputtgeht.
+- 30.10.2026: Flüssige Flächen (Wasser, Lava, Säure, Methan) auf 11 Planeten, nur ab Ring 5 und nie auf dem Außenlager-Ring; jede Zelle wird nur geflutet, wenn alles Land erreichbar bleibt. Bodenfahrzeuge planen einen Umweg über Nachbarzellen; reinigen können sie nur Schwebefahrzeuge (neu: Schwebereiniger, Basisstufe 3; Magnetgleiter) oder die Hand.

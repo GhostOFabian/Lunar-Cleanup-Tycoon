@@ -152,6 +152,7 @@ namespace LunarCleanup.UI
             {
                 var P = GameData.Planets[pid]; bool have = Game.P.ContainsKey(pid), cur = Game.S.planet == pid; string key = pid;
                 string dirt = string.Join(", ", P.types.Select(t => GameData.Dirt[t.Key].name));
+                if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand";}
                 int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = nP.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("de-DE")) + " Parzellen";
                 if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
                 else if (have) h.Row(P.name, () => Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => "Reisen", () => true, () => { Game.Travel(key); h.CloseSheet(); }, false);

@@ -139,6 +139,14 @@ namespace LunarCleanup.Gameplay
                         Color cleanC = Color.Lerp(Color.Lerp(c1, c0, .5f + .5f * nz), c2, Mathf.Clamp01(nz2 - .55f) * 1.5f);
                         Color dirtC = Color.Lerp(D.darkC, D.baseC, .5f + .5f * nz); if (nz2 > .45f) dirtC = Color.Lerp(dirtC, D.lightC, (nz2 - .45f) * 1.6f);
                         dirtC *= kindTint; dirtC *= .92f + .16f * Noise(x * 5.3f, y * 5.3f, 3);
+                        if (cl.Wet)
+                        {
+                            // See: Wellenmuster in der Farbe der Flüssigkeit, hellerer Uferstreifen, Schmutz schwimmt als Film darauf
+                            var L = GameData.Liq[cl.liq]; float wv = .5f + .5f * Mathf.Sin(x * 1.7f + nz * 3f) * Mathf.Sin(y * 1.3f - nz2 * 2f);
+                            Color liqC = Color.Lerp(L.deep, L.col, .35f + .5f * wv + .15f * nz2); float shore = Mathf.Clamp01(1 - (ed - edgeW) / (H * .12f));
+                            if (wv > .88f) liqC = Color.Lerp(liqC, Color.white, (wv - .88f) * 2.5f); // Glanzlichter auf den Wellen
+                            cleanC = Color.Lerp(liqC, cleanC, shore * .8f); dirtC = Color.Lerp(liqC, dirtC, .38f);
+                        }
                         col = Color.Lerp(cleanC, dirtC, g);
                         if (ed < edgeW) col = clean ? Color.Lerp(col, CleanLine, .8f) : front ? Color.Lerp(col, FrontLine, .7f) : col * .72f;
                     }

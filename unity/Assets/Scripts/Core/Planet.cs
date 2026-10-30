@@ -10,7 +10,8 @@ namespace LunarCleanup.Core
 {
     public class Cell
     {
-        public int id, ring, type, kind, chunk;
+        public int id, ring, type, kind, chunk, liq = -1; // liq: Index in GameData.Liq, -1 = festes Land
+        public bool Wet => liq >= 0;
         public Vector3 c, e1, e2;
         public Vector2[] poly;
         public float H, cs;
@@ -119,7 +120,7 @@ namespace LunarCleanup.Core
             int baseKind = GameData.Kinds.FindIndex(k => k.key == "base");
             for (int i = 0; i < NV && i < CD.N; i++)
             {
-                var cl = pd.cells[i]; cl.type = CD.type[i]; cl.kind = CD.kind[i]; cl.ring = CD.ring[i];
+                var cl = pd.cells[i]; cl.type = CD.type[i]; cl.kind = CD.kind[i]; cl.ring = CD.ring[i]; cl.liq = CD.liq != null && i < CD.liq.Length ? CD.liq[i] : -1;
                 float best = -2; for (int f = 0; f < pd.faceCenters.Length; f++) { float d = Vector3.Dot(cl.c, pd.faceCenters[f]); if (d > best) { best = d; cl.chunk = f; } }
             }
             if (baseKind != 0) Debug.LogWarning("Lunar Cleanup: Art 'base' ist nicht Index 0");

@@ -133,10 +133,11 @@ namespace LunarCleanup.Gameplay
         {
             if (!Has("space/rover")) return null;
             var vp = new Models.VehicleParts(); var g = new GameObject(T.name); vp.root = g; var t = g.transform; vp.wheels = new Transform[0];
-            string m = T.key == "staubi" || T.key == "buggy" ? "space/rover" : T.key == "sauger" ? "space/craft_miner" : T.key == "truck" ? "space/craft_cargoA" : "space/craft_cargoB";
+            string m = T.fly ? "space/craft_speederA" : T.key == "staubi" || T.key == "buggy" ? "space/rover" : T.key == "sauger" ? "space/craft_miner" : T.key == "truck" ? "space/craft_cargoA" : "space/craft_cargoB";
             float len = T.key == "staubi" ? 1.3f : T.key == "buggy" ? 2f : T.size == "m" ? 3f : T.size == "l" ? 4.2f : 2.4f;
             Color body = T.key == "staubi" ? Hex("#d9dee6") : T.key == "buggy" ? Hex("#ffbf4d") : T.key == "sauger" ? Hex("#58cdb4") : T.key == "truck" ? Hex("#e2553a") : acc;
-            var model = Spawn(m, t, len, new Vector3(0, m.Contains("craft") ? .35f : 0, 0), 0, body); if (!model) { Object.Destroy(g); return null; }
+            if (T.fly) body = T.key == "schwebe" ? Hex("#6fe0ff") : Hex("#b79cff");
+            var model = Spawn(m, t, len, new Vector3(0, T.fly ? 1.1f : m.Contains("craft") ? .35f : 0, 0), 0, body); // Schwebefahrzeuge fliegen über Seen if (!model) { Object.Destroy(g); return null; }
             // Saugdüse vorne (dreht sich beim Reinigen)
             vp.tool = MeshKit.Cyl(t, MeshKit.Mat(Hex("#8a93a3"), .8f, .6f), new Vector3(0, .22f, len * .52f), .16f * len / 2, .16f * len / 2, len * .7f, 12, new Vector3(0, 0, 90)).transform;
             return vp;
