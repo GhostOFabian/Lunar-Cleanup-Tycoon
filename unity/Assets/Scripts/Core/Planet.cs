@@ -31,10 +31,12 @@ namespace LunarCleanup.Core
 
         static readonly Dictionary<string, PlanetData> Cache = new Dictionary<string, PlanetData>();
 
-        public static PlanetData Get(string pid)
+        /// <summary>Planetendaten in der Größe, die der Spielstand für diesen Planeten festhält (alte Stände behalten ihre alte Größe).</summary>
+        public static PlanetData Get(string pid) => GetKey(pid, GameData.SizeKey(pid, Game.FreqOf(pid)));
+        public static PlanetData GetKey(string pid, string key)
         {
-            if (Cache.TryGetValue(pid, out var pd)) return pd;
-            pd = Build(pid); Cache[pid] = pd; return pd;
+            if (Cache.TryGetValue(key, out var pd)) return pd;
+            pd = Build(pid, key); Cache[key] = pd; return pd;
         }
 
         // ---------- Vektorrechnung in double, damit die Zellreihenfolge exakt wie im Browser entsteht ----------
@@ -48,9 +50,9 @@ namespace LunarCleanup.Core
         static long Rnd(double v) => (long)Math.Floor(v + 0.5); // wie Math.round in JavaScript
         static Vector3 F(V v) => new Vector3((float)v.x, (float)v.y, (float)v.z);
 
-        static PlanetData Build(string pid)
+        static PlanetData Build(string pid, string sizeKey)
         {
-            var P = GameData.Planets[pid]; var CD = GameData.Cells[pid]; int n = P.freq;
+            var P = GameData.Planets[pid]; var CD = GameData.Cells[sizeKey]; int n = CD.freq > 0 ? CD.freq : P.freq;
             double t = (1 + Math.Sqrt(5)) / 2;
             var IV = new[] { new V(-1, t, 0), new V(1, t, 0), new V(-1, -t, 0), new V(1, -t, 0), new V(0, -1, t), new V(0, 1, t), new V(0, -1, -t), new V(0, 1, -t), new V(t, 0, -1), new V(t, 0, 1), new V(-t, 0, -1), new V(-t, 0, 1) }.Select(Norm).ToArray();
             int[][] IF = { new[] { 0, 11, 5 }, new[] { 0, 5, 1 }, new[] { 0, 1, 7 }, new[] { 0, 7, 10 }, new[] { 0, 10, 11 }, new[] { 1, 5, 9 }, new[] { 5, 11, 4 }, new[] { 11, 10, 2 }, new[] { 10, 7, 6 }, new[] { 7, 1, 8 }, new[] { 3, 9, 4 }, new[] { 3, 4, 2 }, new[] { 3, 2, 6 }, new[] { 3, 6, 8 }, new[] { 3, 8, 9 }, new[] { 4, 9, 5 }, new[] { 2, 4, 11 }, new[] { 6, 2, 10 }, new[] { 8, 6, 7 }, new[] { 9, 8, 1 } };

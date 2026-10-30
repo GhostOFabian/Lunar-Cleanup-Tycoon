@@ -241,6 +241,9 @@ with game() as (pg, errs):
         if not E("()=>!!__t.travelFx"): break
     pg.reload(); pg.wait_for_timeout(1200)
     s2 = E("()=>({ps:__t.S.planets.moon.upg.pspeed||0,cr:Math.round(__t.S.credits),dt:(()=>{for(const[id,a]of __t.W.moon.act)if(a.dustType==='crystal')return id+':crystal';return 'none';})(),n:__t.W.moon.clean.reduce((a,b)=>a+b,0),d:__t.S.planets.moon.drones.length,o:__t.S.planets.moon.outposts.length})")
+    r = E("""()=>{const t=__t,o=JSON.parse(t.serialize());const e=t.freshPlanet('europa');delete e.freq;o.planets.europa=JSON.parse(JSON.stringify(e));delete o.planets.moon.freq;
+      const b=t.normalizeSave(o);return {eu:b.planets.europa.freq,moon:b.planets.moon.freq,ctx:t.FREQ_CTX===null,list:t.PORDER.map(p=>t.PLANETS[p].freq)}}""")
+    show('planet size migration', r); check(r['eu'] == 10 and r['moon'] == 5 and r['ctx'] and all(a < b for a, b in zip(r['list'], r['list'][1:])), 'old planets must keep their size; new sizes increase')
     show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'] and s1['dt'] == s2['dt'] and s2['ps'] == 0 and s2['cr'] > s1['cr'], 'save/load roundtrip')
 
     for e in errs[:20]:

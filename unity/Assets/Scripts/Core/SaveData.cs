@@ -22,6 +22,7 @@ namespace LunarCleanup.Core
     public class PlanetSave
     {
         public string pid;
+        public int freq; // Planetengröße (0 = Stand vor v6.4 → alte Größe)
         public int stage = 1, techF, nextVeh = 1, nRockets;
         public List<string> bld = new List<string>();
         public List<KV> upg = new List<KV>();

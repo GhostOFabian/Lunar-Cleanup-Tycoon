@@ -14,7 +14,7 @@ html = open(SRC, encoding='utf-8').read()
 hook = "try{boot();}"
 if html.count(hook) != 1:
     sys.exit('boot hook not found exactly once')
-html = html.replace(hook, "Math.random=(s=>()=>{s=(s*16807)%2147483647;return s/2147483647})(12345);window.__ss=v=>{stroke=v};window.__t=new Proxy({},{get(_,k){return eval(k)}});" + hook)
+html = html.replace(hook, "Math.random=(s=>()=>{s=(s*16807)%2147483647;return s/2147483647})(12345);window.__ss=v=>{stroke=v};window.__setFreqCtx=v=>{FREQ_CTX=v};window.__t=new Proxy({},{get(_,k){return eval(k)}});" + hook)
 open(OUT, 'w', encoding='utf-8').write(html)
 
 # syntax check of the inline game script (the last <script> without src)

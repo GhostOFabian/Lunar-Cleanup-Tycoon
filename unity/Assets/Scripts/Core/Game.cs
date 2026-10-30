@@ -64,12 +64,14 @@ namespace LunarCleanup.Core
             if (!P.ContainsKey(S.planet)) S.planet = "moon";
         }
 
+        /// <summary>Größe eines Planeten: wie im Spielstand festgehalten, sonst die aktuelle Größe.</summary>
+        public static int FreqOf(string pid) { var sv = S?.planets?.Find(p => p.pid == pid); if (sv != null && sv.freq > 0) return sv.freq; return GameData.Planets.TryGetValue(pid, out var P) ? P.freq : 0; }
         static SaveData Fresh() { var s = new SaveData(); s.planets.Add(NewPlanet("moon")); s.lastActive = Now(); return s; }
         public static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         static PlanetSave NewPlanet(string pid)
         {
-            var ps = new PlanetSave { pid = pid };
+            var ps = new PlanetSave { pid = pid, freq = GameData.Planets[pid].freq };
             foreach (var id in GameData.BOrder) { var B = GameData.Bld[id]; if (B.auto && B.stage <= 1) ps.bld.Add(id); }
             return ps;
         }
@@ -78,7 +80,9 @@ namespace LunarCleanup.Core
 
         static PState Attach(PlanetSave sv)
         {
-            var ps = new PState { sv = sv, pd = PlanetData.Get(sv.pid), P = GameData.Planets[sv.pid], lay = GameData.Layouts[sv.pid], line = GameData.Lines[sv.pid] };
+            if (sv.freq <= 0) sv.freq = GameData.OldFreq.TryGetValue(sv.pid, out int of) ? of : GameData.Planets[sv.pid].freq;
+            string sk = GameData.SizeKey(sv.pid, sv.freq);
+            var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = GameData.Layouts[sk], line = GameData.Lines[sv.pid] };
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
             foreach (var b in sv.bld) ps.bld.Add(b);

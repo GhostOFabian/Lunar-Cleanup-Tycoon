@@ -18,7 +18,7 @@ namespace LunarCleanup.Core
     public class LayoutDef { public Dictionary<string, Vector2> pos = new Dictionary<string, Vector2>(); public Dictionary<string, float> yaw = new Dictionary<string, float>(); public Vector2 shop, start, park; public List<BeltDef> belts = new List<BeltDef>(); }
     public class Recipe { public int inp, outp, k; public float n, t; public string plan; }
     public class LineDef { public Dictionary<string, string> names = new Dictionary<string, string>(); public List<Recipe> presse = new List<Recipe>(), schmelze = new List<Recipe>(), raff = new List<Recipe>(); public List<Recipe> Of(string id) => id == "presse" ? presse : id == "schmelze" ? schmelze : raff; }
-    public class CellsDef { public int N, baseCell, start; public float R; public int[] type, kind, ring; public Vector3 c0, c7; }
+    public class CellsDef { public int N, baseCell, start, freq; public float R; public int[] type, kind, ring; public Vector3 c0, c7; }
     public class Theme { public Color sky, hemiSky, hemiGround, sun, dust, glow; public float hemiI, sunI, glowOp; public Color[] clean, baseC; public int stars; public bool hasGlow; public string giant; }
     public class StormDef { public string name; public float every, dur, veh = 1, belt = 1, mach = 1, solar = 1, dust = 1, rad = 1; }
     public class PlanetDef
@@ -44,6 +44,10 @@ namespace LunarCleanup.Core
         public static Dictionary<string, LineDef> Lines = new Dictionary<string, LineDef>();
         public static Dictionary<string, LayoutDef> Layouts = new Dictionary<string, LayoutDef>();
         public static Dictionary<string, CellsDef> Cells = new Dictionary<string, CellsDef>();
+        /// <summary>Planetengrößen vor v6.4 – begonnene Planeten aus alten Spielständen behalten diese Größe.</summary>
+        public static Dictionary<string, int> OldFreq = new Dictionary<string, int>();
+        /// <summary>Schlüssel für Zellen/Layout einer Planetengröße: "mars" (aktuelle Größe) oder "europa@10" (alte Größe).</summary>
+        public static string SizeKey(string pid, int freq) { if (freq <= 0 || !Planets.ContainsKey(pid) || freq == Planets[pid].freq) return pid; var k = pid + "@" + freq; return Cells.ContainsKey(k) && Layouts.ContainsKey(k) ? k : pid; }
         public static List<QuestDef> Quests = new List<QuestDef>();
         public static int[] Raw;   // Rohstoffe (Mat-Index)
         public static int[] Prods; // Produkte (Mat-Index)
@@ -65,6 +69,7 @@ namespace LunarCleanup.Core
             var ta = Resources.Load<TextAsset>("Data/gamedata");
             var root = MiniJson.Parse(ta.text);
             POrder = ToStrings(J.G(root, "porder"));
+            OldFreq.Clear(); var of = J.O(J.G(root, "oldFreq")); if (of != null) foreach (var p in of) OldFreq[p.Key] = Convert.ToInt32(p.Value);
             foreach (var kv in J.O(J.G(root, "mats")))
             {
                 var o = kv.Value; var m = new MatDef { key = kv.Key, name = J.S(o, "name"), shape = J.S(o, "shape", "crate"), v = J.F(o, "v"), raw = J.B(o, "raw"), col = Hex(J.S(o, "col", "#ffffff")), index = Mats.Count };
@@ -134,7 +139,7 @@ namespace LunarCleanup.Core
             foreach (var kv in J.O(J.G(root, "cells")))
             {
                 var o = kv.Value;
-                Cells[kv.Key] = new CellsDef { N = J.I(o, "N"), R = J.F(o, "R"), baseCell = J.I(o, "base"), start = J.I(o, "start"), type = Ints(J.G(o, "type")), kind = Ints(J.G(o, "kind")), ring = Ints(J.G(o, "ring")), c0 = V3(J.G(o, "c0")), c7 = V3(J.G(o, "c7")) };
+                Cells[kv.Key] = new CellsDef { freq = J.I(o, "freq"), N = J.I(o, "N"), R = J.F(o, "R"), baseCell = J.I(o, "base"), start = J.I(o, "start"), type = Ints(J.G(o, "type")), kind = Ints(J.G(o, "kind")), ring = Ints(J.G(o, "ring")), c0 = V3(J.G(o, "c0")), c7 = V3(J.G(o, "c7")) };
             }
             foreach (var kv in J.O(J.G(root, "planets")))
             {

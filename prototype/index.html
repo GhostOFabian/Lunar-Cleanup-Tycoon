@@ -348,35 +348,35 @@ const PLANETS={
     hz:{name:'Staubstürme',desc:'1,5× Energiebedarf. Staubstürme: Fahrzeuge langsamer, Solarstrom halbiert, viel neuer Staub.',dust:1.3,storm:{name:'Staubsturm',every:240,dur:45,veh:.6,solar:.5,dust:3}},
     types:[['reddust',.45],['rust',.35],['sludge',.20]],start:'reddust',
     theme:{sky:0x120807,hemi:[0xffd8bc,0x4a2418,.6],sun:[0xffe2c6,1.15],clean:['#ecdccc','#cfb79f','#f8ede2'],base:['#5a4038','#6d4d42'],dust:0xd08a5c,stars:900,glow:0xff8a50,giant:'phobos'}},
-  europa:{name:'Europa',sub:'Eismond des Jupiter',freq:10,diff:5,energy:1.8,realR:'1.561 km',col:['#f2f8ff','#7aa3cf'],unlockCost:140000,
+  europa:{name:'Europa',sub:'Eismond des Jupiter',freq:9,diff:5,energy:1.8,realR:'1.561 km',col:['#f2f8ff','#7aa3cf'],unlockCost:140000,
     types:[['ice',.45],['frozen',.35],['icecr',.20]],start:'ice',
     hz:{name:'Kälte und Eisstürme',desc:'1,8× Energiebedarf. Eisstürme halbieren das Tempo der Förderbänder.',storm:{name:'Eissturm',every:300,dur:40,belt:.5,veh:.8,dust:2}},
     theme:{sky:0x04060c,hemi:[0xd8ecff,0x203040,.6],sun:[0xeef6ff,1.15],clean:['#e6f0f8','#c4d6e6','#ffffff'],base:['#4a5a6e','#5d6f86'],dust:0xd8ecff,stars:1400,glow:0x9fd0ff,giant:'jupiter'}},
-  titan:{name:'Titan',sub:'Saturnmond mit Methanseen',freq:12,diff:10,energy:1.6,realR:'2.575 km',col:['#f0c070','#7c4f22'],unlockCost:450000,
+  titan:{name:'Titan',sub:'Saturnmond mit Methanseen',freq:10,diff:10,energy:1.6,realR:'2.575 km',col:['#f0c070','#7c4f22'],unlockCost:450000,
     types:[['methane',.45],['organic',.3],['waste',.25]],start:'methane',
     hz:{name:'Säureregen',desc:'Schwache Sonne (70 %). Säureregen bremst die Maschinen und bringt viel Schlamm.',solar:.7,storm:{name:'Säureregen',every:260,dur:50,mach:.5,dust:2.5}},
     theme:{sky:0x2a1a08,hemi:[0xffd8a0,0x3a2410,.65],sun:[0xffd090,.95],clean:['#e8d6b8','#c8b090','#f6ead6'],base:['#5a4a38','#6e5c46'],dust:0xd09a5a,stars:150,glow:0xff9a3a,glowOp:.24,giant:'saturn'}},
-  io:{name:'Io',sub:'Vulkanmond des Jupiter',freq:13,diff:22,energy:1.7,realR:'1.822 km',col:['#f8e070','#9a5a18'],unlockCost:1400000,
+  io:{name:'Io',sub:'Vulkanmond des Jupiter',freq:11,diff:22,energy:1.7,realR:'1.822 km',col:['#f8e070','#9a5a18'],unlockCost:1400000,
     types:[['lava',.45],['vscrap',.3],['sulfur',.25]],start:'lava',
     hz:{name:'Vulkanausbrüche',desc:'Ausbrüche überziehen gereinigte Flächen mit viel neuem Lavastaub.',dust:1.6,storm:{name:'Vulkanausbruch',every:200,dur:30,dust:6,solar:.7}},
     theme:{sky:0x0a0604,hemi:[0xfff0b0,0x3a2a10,.6],sun:[0xfff0d0,1.2],clean:['#efe6c0','#d6c890','#fffbe6'],base:['#5a4e30','#6e6040'],dust:0xe0c040,stars:1200,glow:0xffd060,giant:'jupiter'}},
-  venus:{name:'Venus',sub:'Glutheiße Wolkenwelt',freq:14,diff:45,energy:2.4,realR:'6.052 km',col:['#fff0b8','#b08030'],unlockCost:4200000,
+  venus:{name:'Venus',sub:'Glutheiße Wolkenwelt',freq:12,diff:45,energy:2.4,realR:'6.052 km',col:['#fff0b8','#b08030'],unlockCost:4200000,
     types:[['basalt',.45],['acid',.3],['hscrap',.25]],start:'basalt',
     hz:{name:'Glühende Hitze',desc:'2,4× Energiebedarf, aber 150 % Solarstrom. Säurestürme bremsen Fahrzeuge.',solar:1.5,storm:{name:'Säuresturm',every:280,dur:45,veh:.55,mach:.8}},
     theme:{sky:0x3a2e10,hemi:[0xfff0b0,0x5a4010,.7],sun:[0xfff0c0,1.1],clean:['#f0e6c8','#d8c8a0','#fff8e6'],base:['#6a5a3a','#7e6c48'],dust:0xd8c070,stars:0,glow:0xffe080,glowOp:.32}},
-  ganymed:{name:'Ganymed',sub:'Größter Mond des Sonnensystems',freq:15,diff:90,energy:1.8,realR:'2.634 km',col:['#e8e4dc','#6a6458'],unlockCost:12000000,
+  ganymed:{name:'Ganymed',sub:'Größter Mond des Sonnensystems',freq:13,diff:90,energy:1.8,realR:'2.634 km',col:['#e8e4dc','#6a6458'],unlockCost:12000000,
     types:[['icedust',.45],['wreck',.33],['vein',.22]],start:'icedust',
     hz:{name:'Magnetstürme',desc:'Magnetstürme legen die Förderbänder fast lahm und bremsen Maschinen.',storm:{name:'Magnetsturm',every:220,dur:50,belt:.3,mach:.7}},
     theme:{sky:0x05070c,hemi:[0xd0dcff,0x2a2a30,.55],sun:[0xf6f4ff,1.15],clean:['#e2e0dc','#c4c0b8','#f8f6f2'],base:['#4e5258','#62666e'],dust:0xc8c4b8,stars:1500,glow:null,giant:'jupiter'}},
-  enceladus:{name:'Enceladus',sub:'Eisgeysire des Saturn',freq:16,diff:180,energy:2,realR:'252 km',col:['#ffffff','#9ab8d0'],unlockCost:34000000,
+  enceladus:{name:'Enceladus',sub:'Eisgeysire des Saturn',freq:14,diff:180,energy:2,realR:'252 km',col:['#ffffff','#9ab8d0'],unlockCost:34000000,
     types:[['salt',.45],['probe',.33],['geysir',.22]],start:'salt',
     hz:{name:'Geysire',desc:'Ständige Geysire bringen 2,5× so viel neuen Staub. Nur 60 % Solarstrom.',dust:2.5,solar:.6,storm:{name:'Geysirausbruch',every:180,dur:30,dust:5}},
     theme:{sky:0x05070c,hemi:[0xe8f4ff,0x30383e,.65],sun:[0xffffff,1.2],clean:['#f4f8fc','#d6e2ec','#ffffff'],base:['#4a5868','#5e6e80'],dust:0xf0f8ff,stars:1500,glow:0xc8e8ff,giant:'saturn'}},
-  triton:{name:'Triton',sub:'Rückläufiger Mond des Neptun',freq:17,diff:360,energy:2.2,realR:'1.353 km',col:['#f8e0e8','#8a7080'],unlockCost:96000000,
+  triton:{name:'Triton',sub:'Rückläufiger Mond des Neptun',freq:15,diff:360,energy:2.2,realR:'1.353 km',col:['#f8e0e8','#8a7080'],unlockCost:96000000,
     types:[['n2ice',.4],['cryo',.33],['colony',.27]],start:'n2ice',
     hz:{name:'Kryostürme',desc:'Halber Solarstrom. Kryostürme halbieren das Fahrzeugtempo.',solar:.5,storm:{name:'Kryosturm',every:200,dur:60,veh:.5,belt:.7}},
     theme:{sky:0x06050a,hemi:[0xffe0ea,0x302830,.6],sun:[0xfff0f4,1.05],clean:['#f0e4e8','#d4c4cc','#fff8fa'],base:['#544a56','#685c6a'],dust:0xe8c8d0,stars:1700,glow:0xc0d0ff,giant:'neptune'}},
-  pluto:{name:'Pluto',sub:'Zwergplanet am Rand',freq:18,diff:700,energy:2.4,realR:'1.188 km',col:['#f0d8c0','#6a4a30'],unlockCost:270000000,
+  pluto:{name:'Pluto',sub:'Zwergplanet am Rand',freq:16,diff:700,energy:2.4,realR:'1.188 km',col:['#f0d8c0','#6a4a30'],unlockCost:270000000,
     types:[['tholin',.45],['expo',.3],['ch4ice',.25]],start:'tholin',
     hz:{name:'Ewige Dämmerung',desc:'Nur 35 % Solarstrom – Energie ist der Engpass. Tholinstürme bremsen Fahrzeuge.',solar:.35,dust:1.4,storm:{name:'Tholinsturm',every:300,dur:45,veh:.7,dust:3}},
     theme:{sky:0x040405,hemi:[0xffe0c8,0x2a2018,.5],sun:[0xfff0e0,.85],clean:['#ece0d0','#cdbfae','#faf4ec'],base:['#4a4038','#5e5248'],dust:0xd8b090,stars:2200,glow:0x8aa0d0,giant:'charon'}},
@@ -409,42 +409,45 @@ Object.assign(DIRT,{
   polash:{name:'Neutronenstaub',mat:'staub',a:1.3,hard:4,base:'#4a4e52',dark:'#2e3236',light:'#a0ffb0',deb:'rock',map:'#5e6266',sfx:700},
 });
 Object.assign(PLANETS,{
-  eris:{name:'Eris',sub:'Eiskalter Zwergplanet',freq:15,diff:1400,energy:2.4,realR:'1.163 km',col:['#f4f4fa','#8a8a9a'],unlockCost:750000000,
+  eris:{name:'Eris',sub:'Eiskalter Zwergplanet',freq:17,diff:1400,energy:2.4,realR:'1.163 km',col:['#f4f4fa','#8a8a9a'],unlockCost:750000000,
     types:[['erisdust',.42],['erisfrost',.3],['erisscrap',.28]],start:'erisdust',
     hz:{name:'Eisnebel',desc:'Nur 30 % Solarstrom. Eisnebel bremsen Fahrzeuge und Bänder.',solar:.3,storm:{name:'Eisnebel',every:260,dur:50,veh:.7,belt:.6}},
     theme:{sky:0x030306,hemi:[0xe8ecff,0x2a2a34,.5],sun:[0xf4f6ff,.8],clean:['#eceef4','#cdd0da','#ffffff'],base:['#4a4e5a','#5e626e'],dust:0xe0e4ee,stars:2400,glow:0xb8c8ff,giant:'dysnomia'}},
-  sedna:{name:'Sedna',sub:'Roter Wanderer der Oortschen Wolke',freq:14,diff:2800,energy:2.4,realR:'≈ 500 km',col:['#f0a090','#6a2a20'],unlockCost:2100000000,
+  sedna:{name:'Sedna',sub:'Roter Wanderer der Oortschen Wolke',freq:18,diff:2800,energy:2.4,realR:'≈ 500 km',col:['#f0a090','#6a2a20'],unlockCost:2100000000,
     types:[['sednatholin',.42],['sednaice',.3],['sednawreck',.28]],start:'sednatholin',
     hz:{name:'Tiefe Kälte',desc:'Nur 25 % Solarstrom. Kältewellen bremsen die Maschinen auf die Hälfte.',solar:.25,storm:{name:'Kältewelle',every:240,dur:55,mach:.5,veh:.8}},
     theme:{sky:0x060304,hemi:[0xffd0c8,0x301a18,.5],sun:[0xffe8e0,.75],clean:['#ecd8d4','#d0b4ae','#fff2ee'],base:['#523a36','#664a46'],dust:0xd88a7a,stars:2600,glow:0xff8a7a}},
-  proxima:{name:'Proxima b',sub:'Erster Exoplanet · roter Zwerg',freq:17,diff:5600,energy:2,realR:'≈ 7.200 km',col:['#e89a6a','#5a2a1a'],unlockCost:6000000000,
+  proxima:{name:'Proxima b',sub:'Erster Exoplanet · roter Zwerg',freq:19,diff:5600,energy:2,realR:'≈ 7.200 km',col:['#e89a6a','#5a2a1a'],unlockCost:6000000000,
     types:[['proxdust',.42],['proxore',.28],['proxscrap',.3]],start:'proxdust',
     hz:{name:'Sternenflares',desc:'Leichte Strahlung: Fahrzeuge verschleißen schneller, Bohrtürme stören öfter. Flares stören die Elektronik und bringen Staub.',rad:.4,solar:1.2,storm:{name:'Flare',every:200,dur:35,veh:.6,mach:.7,dust:3,rad:3}},
     theme:{sky:0x120604,hemi:[0xffc8a0,0x3a1a10,.6],sun:[0xffb080,1.1],clean:['#ecd8c8','#cfb4a0','#faeee4'],base:['#5a4034','#6e5244'],dust:0xd8906a,stars:1400,glow:0xff7a4a,giant:'reddwarf'}},
-  trappist:{name:'Trappist-1e',sub:'Ozeanwelt mit sieben Geschwistern',freq:16,diff:11000,energy:1.8,realR:'≈ 5.800 km',col:['#8ad0f0','#1a4a6a'],unlockCost:17000000000,
+  trappist:{name:'Trappist-1e',sub:'Ozeanwelt mit sieben Geschwistern',freq:20,diff:11000,energy:1.8,realR:'≈ 5.800 km',col:['#8ad0f0','#1a4a6a'],unlockCost:17000000000,
     types:[['trapice',.36],['trapalgae',.36],['trapwreck',.28]],start:'trapalgae',
     hz:{name:'Gezeitenstürme',desc:'Gezeitenstürme legen die Bänder fast lahm und bringen viel Algenschlamm.',dust:1.5,storm:{name:'Gezeitensturm',every:220,dur:45,belt:.4,dust:4}},
     theme:{sky:0x08060e,hemi:[0xd0e8ff,0x1a2a3a,.6],sun:[0xffc0a0,1],clean:['#d8e8ee','#b4ccd6','#f2fafc'],base:['#3e5260','#506676'],dust:0x8ab8c8,stars:1600,glow:0x7ac8ff,giant:'trappist'}},
-  kepler:{name:'Kepler-22b',sub:'Feuchte Supererde',freq:19,diff:22000,energy:1.8,realR:'≈ 15.000 km',col:['#9ac87a','#2a4a1a'],unlockCost:48000000000,
+  kepler:{name:'Kepler-22b',sub:'Feuchte Supererde',freq:21,diff:22000,energy:1.8,realR:'≈ 15.000 km',col:['#9ac87a','#2a4a1a'],unlockCost:48000000000,
     types:[['kepmud',.4],['kepsilt',.34],['kepscrap',.26]],start:'kepsilt',
     hz:{name:'Monsun',desc:'Dauerregen bringt doppelt so viel neuen Schlamm. Der Monsun bremst Fahrzeuge stark.',dust:2,storm:{name:'Monsun',every:240,dur:60,veh:.45,dust:3}},
     theme:{sky:0x0a1018,hemi:[0xe0f0d8,0x1a2a18,.65],sun:[0xfff4d8,1.1],clean:['#dfe6d4','#c0ccb0','#f6faee'],base:['#44523a','#56664a'],dust:0x8a9a6a,stars:500,glow:0x9ad08a}},
-  cancri:{name:'55 Cancri e',sub:'Glühende Diamantwelt',freq:15,diff:45000,energy:3,realR:'≈ 12.000 km',col:['#ffb060','#3a1a10'],unlockCost:135000000000,
+  cancri:{name:'55 Cancri e',sub:'Glühende Diamantwelt',freq:22,diff:45000,energy:3,realR:'≈ 12.000 km',col:['#ffb060','#3a1a10'],unlockCost:135000000000,
     types:[['cncdiam',.3],['cncash',.42],['cncslag',.28]],start:'cncash',
     hz:{name:'Glutwelt',desc:'3× Energiebedarf, aber 200 % Solarstrom. Glutstürme überhitzen Maschinen und Bohrtürme.',solar:2,storm:{name:'Glutsturm',every:220,dur:40,mach:.5,veh:.7}},
     theme:{sky:0x1a0804,hemi:[0xffd0a0,0x4a1a08,.7],sun:[0xffe0b0,1.25],clean:['#e8d8cc','#c8b0a0','#f8eee6'],base:['#5a3a2e','#6e4a3c'],dust:0x6a5a50,stars:300,glow:0xff8a3a,glowOp:.3,giant:'sunclose'}},
-  gliese:{name:'Gliese 1214 b',sub:'Dampfwelt unter Hochdruck',freq:18,diff:90000,energy:2.2,realR:'≈ 17.000 km',col:['#a0c8d8','#2a4a5a'],unlockCost:380000000000,
+  gliese:{name:'Gliese 1214 b',sub:'Dampfwelt unter Hochdruck',freq:23,diff:90000,energy:2.2,realR:'≈ 17.000 km',col:['#a0c8d8','#2a4a5a'],unlockCost:380000000000,
     types:[['glsteam',.4],['glice',.32],['glwreck',.28]],start:'glsteam',
     hz:{name:'Dampfdruck',desc:'Dichter Dampf: nur 40 % Solarstrom. Druckwellen bremsen Fahrzeuge, Bänder und Maschinen.',solar:.4,storm:{name:'Druckwelle',every:240,dur:45,veh:.6,belt:.6,mach:.7}},
     theme:{sky:0x0c1418,hemi:[0xd8eef4,0x22323a,.7],sun:[0xf0f4f4,.85],clean:['#d8e2e6','#b8c8ce','#f0f6f8'],base:['#405058','#52646c'],dust:0xa8c8d0,stars:200,glow:0x9ad8e8,glowOp:.3,giant:'reddwarf'}},
-  poltergeist:{name:'Poltergeist',sub:'Pulsarplanet · extrem verstrahlt',freq:16,diff:180000,energy:2.6,realR:'≈ 11.000 km',col:['#a8ff9a','#1a3a1a'],unlockCost:1100000000000,
+  poltergeist:{name:'Poltergeist',sub:'Pulsarplanet · extrem verstrahlt',freq:24,diff:180000,energy:2.6,realR:'≈ 11.000 km',col:['#a8ff9a','#1a3a1a'],unlockCost:1100000000000,
     types:[['polore',.34],['polslag',.32],['polash',.34]],start:'polash',
     hz:{name:'Pulsarstrahlung',desc:'Extrem verstrahlt: Fahrzeuge verschleißen bis zu 4× schneller, Bohrtürme und Erzbagger stören oft. Strahlenschutz hilft. Strahlungsstöße alle 3 Minuten.',rad:1,solar:.2,storm:{name:'Strahlungsstoß',every:180,dur:40,veh:.5,mach:.6,belt:.7,solar:.5,rad:3}},
     theme:{sky:0x020804,hemi:[0xc8ffd0,0x10241a,.55],sun:[0xe8fff0,.7],clean:['#d4e4d6','#b0c8b4','#eef8f0'],base:['#34463a','#44584a'],dust:0x7ac88a,stars:2000,glow:0x6aff7a,glowOp:.3,giant:'pulsar'}},
 });
 const PORDER=['moon','mars','europa','titan','io','venus','ganymed','enceladus','triton','pluto','eris','sedna','proxima','trappist','kepler','cancri','gliese','poltergeist'];
 for(const t in DIRT){const D=DIRT[t];if(D.amt==null)D.amt=Math.round(D.a*100);}
-const cellCount=pid=>10*PLANETS[pid].freq*PLANETS[pid].freq+2;
+// Planetengröße: seit v6.4 wird jeder Planet größer (freq). Bereits begonnene Planeten behalten ihre alte Größe (sp.freq), damit kein Spielstand kaputtgeht.
+const OLD_FREQ={moon:5,mars:7,europa:10,titan:12,io:13,venus:14,ganymed:15,enceladus:16,triton:17,pluto:18,eris:15,sedna:14,proxima:17,trappist:16,kepler:19,cancri:15,gliese:18,poltergeist:16};let FREQ_CTX=null;
+const pfreq=pid=>{const sp=(FREQ_CTX||(typeof S!=='undefined'&&S&&S.planets)||{})[pid];return sp&&sp.freq||PLANETS[pid].freq;};
+const cellCount=pid=>{const f=pfreq(pid);return 10*f*f+2;};
 const VT={
   staubi:{name:'Staubi',batt:110,stage:2,cost:150,speed:3.2,radius:.8,power:1.4,tank:15,energy:.3,tier:0,size:'s',desc:'Mini-Saugroboter aus Version 1. Winziger Tank.'},
   buggy:{name:'Reinigungsbuggy',batt:140,stage:2,cost:180,speed:4.4,radius:1.0,power:1.8,tank:40,energy:.5,tier:1,size:'s',desc:'Günstig, kleiner Tank, ideal für frühe Parzellen.'},
@@ -571,10 +574,10 @@ for(const id in BLD)LAY_MOON.pos[id]=BLD[id].pos.slice();
 let ACTL='moon';
 /* the generated layout is always the same; it is kept in the browser only to save the computing time on the next start */
 const LAYV='lct-layout-2-';
-function layoutOf(pid){if(pid==='moon'||!PLANETS[pid])return LAY_MOON;if(LAY[pid])return LAY[pid];let L=null;
-  try{const j=localStorage.getItem(LAYV+pid);if(j){const o=JSON.parse(j);L={pos:o.pos,yaw:o.yaw,shop:o.shop,start:o.start,park:o.park,phi:o.phi,belts:LAY_MOON.belts.map((b0,i)=>{const q=o.belts[i],b=Object.assign({},b0,q);b.rp=roundPath(b.path,1.4);let Lb=0;for(let k=1;k<b.rp.length;k++)Lb+=Math.hypot(b.rp[k][0]-b.rp[k-1][0],b.rp[k][1]-b.rp[k-1][1]);b.L=Lb;return b;})};}}catch(e){L=null;}
-  if(!L||!L.pos||Object.keys(BLD).some(id=>!L.pos[id])){L=genLayout(pid);if(!L.fallback)try{localStorage.setItem(LAYV+pid,JSON.stringify({pos:L.pos,yaw:L.yaw,shop:L.shop,start:L.start,park:L.park,phi:L.phi,belts:L.belts.map(b=>({path:b.path,h:b.h,port0:b.port0,port1:b.port1}))}));}catch(e){}}
-  return LAY[pid]=L;}
+function layoutOf(pid){if(pid==='moon'||!PLANETS[pid])return LAY_MOON;const FQ=pfreq(pid),LK=pid+'@'+FQ,LS=LAYV+pid+(FQ===OLD_FREQ[pid]?'':'@'+FQ);if(LAY[LK])return LAY[LK];let L=null;
+  try{const j=localStorage.getItem(LS);if(j){const o=JSON.parse(j);L={pos:o.pos,yaw:o.yaw,shop:o.shop,start:o.start,park:o.park,phi:o.phi,belts:LAY_MOON.belts.map((b0,i)=>{const q=o.belts[i],b=Object.assign({},b0,q);b.rp=roundPath(b.path,1.4);let Lb=0;for(let k=1;k<b.rp.length;k++)Lb+=Math.hypot(b.rp[k][0]-b.rp[k-1][0],b.rp[k][1]-b.rp[k-1][1]);b.L=Lb;return b;})};}}catch(e){L=null;}
+  if(!L||!L.pos||Object.keys(BLD).some(id=>!L.pos[id])){L=genLayout(pid);if(!L.fallback)try{localStorage.setItem(LS,JSON.stringify({pos:L.pos,yaw:L.yaw,shop:L.shop,start:L.start,park:L.park,phi:L.phi,belts:L.belts.map(b=>({path:b.path,h:b.h,port0:b.port0,port1:b.port1}))}));}catch(e){}}
+  return LAY[LK]=L;}
 function applyLayout(pid){if(ACTL===pid)return;const L=layoutOf(pid);for(const id in BLD){BLD[id].pos=L.pos[id];BLD[id].yaw=L.yaw[id]||0;}BELTS.length=0;for(const b of L.belts)BELTS.push(b);ACTL=pid;}
 function withLayout(pid,f){const o=ACTL;applyLayout(pid);try{return f();}finally{applyLayout(o);}}
 const GM={h:.5,off:32,N:129};
@@ -741,8 +744,8 @@ function geodesic(n){
 }
 const PD={};
 function planetData(pid){
-  if(PD[pid])return PD[pid];
-  const P=PLANETS[pid],g=geodesic(P.freq),N=g.cells.length,R=Math.sqrt(N*140/(4*Math.PI)),r=rng(P.freq*7919+11);
+  const FQ=pfreq(pid),PK=pid+'@'+FQ;if(PD[PK])return PD[PK];
+  const P=PLANETS[pid],g=geodesic(FQ),N=g.cells.length,R=Math.sqrt(N*140/(4*Math.PI)),r=rng(FQ*7919+11);
   const cells=g.cells.map((cl,i)=>{
     const c=cl.c,e1=vnorm(vsub(cl.corners[0],vsc(c,vdot(cl.corners[0],c)))),e2=vcross(c,e1);
     const poly=cl.corners.map(p=>{const t=R/vdot(p,c);return[vdot(p,e1)*t,vdot(p,e2)*t];});
@@ -772,7 +775,7 @@ function planetData(pid){
   let start=-1;{let bd2=-2;const dirS=vnorm(vadd(cells[base].c,vsc(cells[base].e2,-.5)));for(const cl of cells)if(cl.ring===3){const d=vdot(cl.c,dirS);if(d>bd2){bd2=d;start=cl.id;}}}
   cells[start].type=P.start;cells[start].kind='normal';
   for(const cl of cells){let best=0,bdot=-2;g.faceCenters.forEach((f,k)=>{const d=vdot(cl.c,f);if(d>bdot){bdot=d;best=k;}});cl.chunk=best;}
-  return PD[pid]={pid,R,N,cells,base,start};
+  return PD[PK]={pid,R,N,cells,base,start,freq:FQ};
 }
 const PLAN=1; // base plan scale
 function toDir(cl,x,y,R){return vnorm(vadd(vsc(cl.c,R),vadd(vsc(cl.e1,x),vsc(cl.e2,y))));}
@@ -845,7 +848,7 @@ function freshPlanet(pid){
   const mach={};for(const m in MACH)mach[m]={in:{},out:{},cur:-1,prog:0};
   const belts={};for(const b of BELTS)belts[b.id]=[];
   const roh={},prod={},auto={};RAW.forEach(k=>roh[k]=0);PRODS.forEach(k=>prod[k]=0);RAW.concat(PRODS).forEach(k=>auto[k]=!MATS[k].raw);
-  return{stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
+  return{freq:pd.freq,stage:1,owned,clean:'',paid:'',act:{},bld:{hq:1,roh:1,sell:1},veh:[],st,mach,belts,roh,prod,energy:60,
     plan:{pressStaub:true,pressMetall:true,press_kristall:true,press_chemie:true,press_isotop:true,smelt:true,refine:true},auto,stats:{value:0,sold:0,cleanedM2:0},nextVeh:1,jam:{},drones:[],nextDrone:1,outposts:[],rigs:[],exp:0,deep:0,pg:{},blvl:{},spec:null,flowB:0,wo:null,woDone:0,nRockets:0,nDust:0,upg:{},sellBuf:{},rk:0,lifters:[],hand:{}};
 }
 function freshSave(){return{v:2,layout:3,qv:3,ach:{},maxStage:1,locMig:1,techMig:1,done:{},star:0,prestiges:0,arte:0,finds:{},ctr:{sold:{},cells:0},daily:null,handAcc:0,life:{earned:0},credits:0,upg:{},research:{done:{},active:null},planet:'moon',quest:0,stats:{sold:0,earned:0,bricks:0,barren:0,play:0},sound:true,resBoost:0,lastActive:Date.now(),planets:{moon:freshPlanet('moon')}};}
@@ -974,10 +977,11 @@ function save(){
   catch(e){if(Date.now()-saveFailT>60000){saveFailT=Date.now();try{toast(CLOUD.ok?'Lokales Speichern fehlgeschlagen – der Cloud-Spielstand läuft weiter':'Speichern fehlgeschlagen. Sichere deinen Stand unter Einstellungen → Spielstand exportieren','bad');}catch(_){}}}
   cloudPush(json,false);
 }
-function normalizeSave(o){
+function normalizeSave(o){try{return normalizeSave0(o);}finally{FREQ_CTX=null;}}
+function normalizeSave0(o){
   if(!o||o.v!==2||!o.planets||!o.planets.moon)return null;
   const b=freshSave();Object.assign(b,o);b.locMig=o.locMig?1:0;b.techMig=o.techMig?1:0;b.qv=o.qv||1;b.life=Object.assign({earned:o.stats&&o.stats.earned||0},o.life||{});b.ctr=Object.assign({sold:{},cells:0},o.ctr||{});b.upg=o.upg||{};b.research=Object.assign({done:{},active:null},o.research||{});b.stats=Object.assign(freshSave().stats,o.stats||{});
-  for(const pid in b.planets){if(!PLANETS[pid]){delete b.planets[pid];continue;}const sp=b.planets[pid],f=freshPlanet(pid);for(const k in f)if(sp[k]===undefined||sp[k]===null)sp[k]=f[k];
+  FREQ_CTX=b.planets;for(const pid in b.planets){if(!PLANETS[pid]){delete b.planets[pid];continue;}const sp=b.planets[pid];if(!sp.freq)sp.freq=OLD_FREQ[pid]||PLANETS[pid].freq;const f=freshPlanet(pid);for(const k in f)if(sp[k]===undefined||sp[k]===null)sp[k]=f[k];
     for(const k in f.st)if(!sp.st[k])sp.st[k]=f.st[k];for(const k in f.mach)if(!sp.mach[k])sp.mach[k]=f.mach[k];for(const k in f.belts)if(!sp.belts[k])sp.belts[k]=[];
     RAW.forEach(k=>{if(sp.roh[k]==null)sp.roh[k]=0;});PRODS.forEach(k=>{if(sp.prod[k]==null)sp.prod[k]=0;});for(const k in f.plan)if(sp.plan[k]==null)sp.plan[k]=true;for(const k in f.auto)if(sp.auto[k]==null)sp.auto[k]=f.auto[k];}
   if(!b.planets[b.planet])b.planet='moon';
@@ -2041,7 +2045,7 @@ function buildWorld(pid){
   scene.background=new THREE.Color(th.sky);
   hemi.color.setHex(th.hemi[0]);hemi.groundColor.setHex(th.hemi[1]);hemi.intensity=th.hemi[2];sun.color.setHex(th.sun[0]);sun.intensity=th.sun[1];
   for(const a of W[pid].act.values())if(a.maskStale)syncMask(a);
-  bv.VL=matsLib(pid);SUBL=PLANETS[pid].freq<=7?3:2;
+  bv.VL=matsLib(pid);SUBL=pfreq(pid)<=7?3:2;
   buildSky(pid);buildPlanetMeshes(pid);buildDebris(pid);buildBase(pid);
   for(const a of W[pid].act.values()){a.mesh=null;buildActiveMesh(pid,a);}
   const mm=new THREE.BufferGeometry();mm.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*64),3));mm.setAttribute('color',new THREE.BufferAttribute(new Float32Array(3*64),3));
