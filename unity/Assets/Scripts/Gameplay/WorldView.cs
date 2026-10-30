@@ -87,7 +87,11 @@ namespace LunarCleanup.Gameplay
             rigViews.Clear();
             foreach (var r in ps.sv.rigs)
             {
-                var cl = pd.cells[r.cell]; var bp = Models.Rig(r.bag, ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = pd.Surf(cl.c); bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                var cl = pd.cells[r.cell]; var bp = Models.Rig(r.bag, ps.P.col0); bp.root.transform.SetParent(baseRoot, false);
+                // Fundament: steht auf dem höchsten Geländepunkt unter dem Bohrturm und reicht bis unter den tiefsten – keine Hügel ragen durch die Plattform
+                float hmax = pd.Height(cl.c), hmin = hmax; for (int k = 0; k < 16; k++) foreach (float rr in new[] { 1.8f, 3.5f }) { float a = k * Mathf.PI / 8; float h = pd.Height(pd.ToDir(cl, Mathf.Cos(a) * rr, Mathf.Sin(a) * rr)); hmax = Mathf.Max(hmax, h); hmin = Mathf.Min(hmin, h); }
+                bp.root.transform.position = cl.c * (pd.R + hmax);
+                if (hmax - hmin > .02f) { float dep = hmax - hmin + .3f; MeshKit.Cyl(bp.root.transform, MeshKit.Mat(GameData.Hex("#6b717c"), .05f, .2f), new Vector3(0, -dep / 2 + .02f, 0), 3.4f, 3.6f, dep, 28); } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
                 rigViews.Add((bp, r));
             }
         }
@@ -143,12 +147,12 @@ namespace LunarCleanup.Gameplay
                     var bp = Models.Outpost(ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = pd.Surf(d); bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, d);
                     // Pipeline unterirdisch: kommt seitlich aus dem Pumpenhaus, läuft unter der Oberfläche (sichtbar als Trasse mit Schachtdeckeln)
                     // und steigt erst neben dem Rohstofflager wieder auf, wo sie seitlich in den Silo-Sockel führt.
-                    var pump = pd.ToDir(cl, 2.5f, -2.2f); var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
+                    var otr = bp.root.transform; var pump = otr.TransformPoint(new Vector3(-2.2f, 0, 2.5f)).normalized; var pumpWall = otr.TransformPoint(new Vector3(-2.2f, 0, 1.6f)).normalized; /* Pumpenhaus-Vorderwand im Modell */ var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
                     var pl = pd.PlanLocal(pump); var toOut = (pl.magnitude > 1e3f ? Vector2.right : pl - roh); if (toOut.sqrMagnitude < 1e-4f) toOut = Vector2.right; toOut.Normalize();
-                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f));
+                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f)); { var A = pd.PlanDir(roh + toOut * (rfp + .9f)) * (pd.R + 1.1f); var B = pd.PlanDir(roh) * (pd.R + 1.1f); var D = B - A; float len = D.magnitude, best = 2; D /= len; var T = TrisOf("roh"); for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float tt) && tt <= len) best = Mathf.Min(best, tt / len); if (best <= 1) wall = (A + (B - A) * best).normalized; } // Rohr endet genau an der Wand des Rohstofflagers
                     var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(GameData.Hex("#2b2f36"), .1f, .2f);
                     var lampM = new Material(MeshKit.Glow(GameData.Hex("#6ff2d2"), 1.5f));
-                    Riser(pump, pd.ToDir(cl, 1.6f, -2.2f), steel); Riser(inlet, wall, steel);
+                    Riser(pump, pumpWall, steel); Riser(inlet, wall, steel);
                     Trench(pump, inlet, dark, steel, lampM); pipeLamps.Add((lampM, o));
                 }
                 else if (Game.ResDone("outpost") || Game.ResDone("drones"))
@@ -188,6 +192,7 @@ namespace LunarCleanup.Gameplay
             if (w1) s1 = h1 - .02f; else for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= Edge(b.to)) { s1 = q; break; } }
             if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
             Port(rp0, cum0, s0, H0, false, w0); Port(rp0, cum0, s1, H0, true, w1);
+            if (!w0 || !w1) Debug.Log("Lunar Cleanup: Band " + b.id + " ohne Wandtreffer bei " + (!w0 ? b.from + " (" + TrisOf(b.from).Count / 3 + " Dreiecke) " : "") + (!w1 ? b.to + " (" + TrisOf(b.to).Count / 3 + " Dreiecke)" : ""));
             beltTrim[b.id] = new Vector2(s0, s1);
             var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
             float H = BeltDeck(b);
@@ -464,6 +469,7 @@ namespace LunarCleanup.Gameplay
             var cam = Camera.main; var cd = cam ? cam.transform.position.normalized : pd.cells[pd.baseCell].c;
             float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-.14f, .3f, Vector3.Dot(sd, cd)));
             sun.intensity = sunI0; float a = .34f + .66f * k;
+            sun.shadowStrength = .85f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.12f, .45f, Vector3.Dot(sd, cd))); // tiefe Sonne: keine meterlangen Schattenstreifen über den Planeten
             RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
             foreach (var L in lamps) if (L) L.intensity = 2.2f * nf;

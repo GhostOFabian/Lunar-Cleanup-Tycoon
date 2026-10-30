@@ -78,3 +78,10 @@
 - Planetengröße wächst mit jedem Ziel (Browser + Unity); begonnene Planeten behalten ihre alte Größe.
 - Seen aus Wasser/Lava/Säure/Methan auf 11 Planeten (Browser + Unity): Bodenfahrzeuge fahren außen herum, Schwebereiniger und Magnetgleiter reinigen sie. Neuer Regressionstest „liquids“.
 - Gelände in Unity: sanfte Hügel und Meteoritenkrater außerhalb der Basis; Fahrzeuge, Drohnen, Außenlager, Bohrtürme und Deko stehen auf dem Gelände, Bodenfahrzeuge neigen sich mit.
+
+## Unity 0.10.1 (30.10.2026)
+- Förderbänder enden exakt an der Modellwand: Strahltest gegen die echten Dreiecke (Bandmitte + beide Banden, zwei Höhen); dort sitzt ein Anschlussrahmen mit dunkler Öffnung. Kenney-Modelle werden dafür lesbar importiert (Editor/KenneyImport.cs).
+- Verkaufsstation mit rundem Ladeterminal-Sockel (Bänder laufen hinein, Rakete steht oben).
+- Neues Rohstofflager (Annahmehalle + 4 Silotürme, Laufstege, Elevator) und neues Außenlager (Pumpenhaus, 2 Tanks, Rohrverteiler, Lichtmast, Landefeld). Pipeline kommt am Pumpenhaus seitlich heraus und endet genau an der Lagerwand.
+- Fehler behoben: dunkler Planetenkern verdeckte Täler/Krater (Kern jetzt 4 m tiefer); Krater-Deko entfernt (echte Krater im Gelände); Schatten verblassen bei tiefer Sonne; Bohrtürme bekommen ein Fundament am Hang.
+- Zoom per Tastatur: R/Numpad+ näher, F/Numpad− weiter weg.

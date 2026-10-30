@@ -41,7 +41,7 @@ namespace LunarCleanup.Gameplay
                 ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.dirty = false;
             }
             // Planetenkugel darunter, damit zwischen den Platten nie Lücken sichtbar werden
-            var core = MeshKit.Ball(transform, MeshKit.Mat(th.baseC[0] * .5f, 0, .1f), Vector3.zero, pd.R * 2 - .08f); core.name = "Kern";
+            var core = MeshKit.Ball(transform, MeshKit.Mat(th.baseC[0] * .5f, 0, .1f), Vector3.zero, (pd.R - 4f) * 2); core.name = "Kern"; // tief genug unter Tälern und Kratern
         }
 
         Mesh BuildMesh(List<int> ids, int per)

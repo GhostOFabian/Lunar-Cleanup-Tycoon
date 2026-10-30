@@ -106,7 +106,13 @@ namespace LunarCleanup.Gameplay
                 case "sell":
                 case "port":
                     Spawn("space/platform_large", t, D * .95f, y0, 0, acc);
-                    { var pl = t.GetChild(t.childCount - 1).gameObject; float top = Top(pl); var r = Rocket(t, fp * (id == "port" ? 2.2f : 1.7f), acc); r.transform.localPosition = new Vector3(0, top, 0); bp.rocket = r.transform; bp.rocketY = top; }
+                    { var pl = t.GetChild(t.childCount - 1).gameObject; float top = Top(pl);
+                        // Ladeterminal: runder Sockel, in den die Bänder hineinlaufen; die Rakete steht oben drauf
+                        float ph = 2.0f, pr = fp * .62f; var wallM = MeshKit.Mat(Hex("#d9dee6"), .3f, .55f); var darkM = MeshKit.Mat(Hex("#2a3039"), .5f, .4f);
+                        MeshKit.Cyl(t, wallM, new Vector3(0, top + ph / 2, 0), pr, pr + .15f, ph, 36); MeshKit.Cyl(t, MeshKit.Mat(acc, .35f, .55f), new Vector3(0, top + ph - .25f, 0), pr + .03f, pr + .03f, .22f, 36);
+                        MeshKit.Cyl(t, darkM, new Vector3(0, top + ph + .05f, 0), pr - .3f, pr + .05f, .1f, 36);
+                        for (int k = 0; k < 8; k++) MeshKit.Box(t, darkM, Quaternion.Euler(0, k * 45, 0) * new Vector3(0, top + .9f, pr + .07f), new Vector3(.5f, .9f, .06f), new Vector3(0, k * 45, 0));
+                        top += ph + .1f; var r = Rocket(t, fp * (id == "port" ? 2.2f : 1.7f), acc); r.transform.localPosition = new Vector3(0, top, 0); bp.rocket = r.transform; bp.rocketY = top; }
                     break;
                 default: Object.Destroy(g); return null;
             }
@@ -247,14 +253,14 @@ namespace LunarCleanup.Gameplay
         /// <summary>Krater, Felsen und Meteoritenbrocken auf der Oberfläche (nur Deko).</summary>
         public static void Decorate(Transform parent, PlanetData pd, int seed, int count, Color rockTint)
         {
-            if (!Has("space/crater")) return; var r = new System.Random(seed); string[] deco = { "space/crater", "space/craterLarge", "space/rock_largeA", "space/rock_largeB", "space/rocks_smallA", "space/rocks_smallB", "space/meteor_detailed", "space/rock_crystals" };
+            if (!Has("space/crater")) return; var r = new System.Random(seed); string[] deco = { "space/rock_largeA", "space/rock_largeB", "space/rocks_smallA", "space/rocks_smallB", "space/meteor_detailed", "space/rock_crystals" };
             for (int i = 0; i < count; i++)
             {
                 var cl = pd.cells[r.Next(pd.N)]; if (cl.IsBase || cl.ring <= 2) continue;
                 float a = (float)r.NextDouble() * Mathf.PI * 2, d = (float)r.NextDouble() * cl.H * .8f; var dir = pd.ToDir(cl, Mathf.Cos(a) * d, Mathf.Sin(a) * d);
                 string m = deco[r.Next(deco.Length)]; bool crater = m.Contains("crater"); float s = crater ? 3 + (float)r.NextDouble() * 6 : .6f + (float)r.NextDouble() * 1.6f;
                 var go = Spawn(m, parent, s, Vector3.zero, (float)r.NextDouble() * 360, rockTint); if (!go) continue;
-                go.transform.position = pd.Surf(dir, -(crater ? .05f : .1f)); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
+                go.transform.position = pd.Surf(dir, -(crater ? .05f : .1f)); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(dir)) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
             }
         }
     }

@@ -99,7 +99,7 @@ namespace LunarCleanup.Gameplay
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             HandleInput(dt);
-            var kbd = Keyboard.current; if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); }
+            var kbd = Keyboard.current; if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
 #if UNITY_EDITOR
             DevKeys();
 #endif
