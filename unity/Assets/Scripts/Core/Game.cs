@@ -101,6 +101,7 @@ namespace LunarCleanup.Core
             }
             foreach (var v in sv.veh) { v.tank = Arr(v.tank); if (v.d.sqrMagnitude < .5f) v.d = ps.pd.PlanDir(ps.lay.start); }
             if (sv.outposts == null) sv.outposts = new List<StSave>(); foreach (var o in sv.outposts) { o.buf = Arr(o.buf); if (o.docks == null) o.docks = new int[0]; ps.st[o.id] = o; }
+            if (sv.lifters == null) sv.lifters = new List<LifterSave>(); foreach (var L in sv.lifters) if (L.d.sqrMagnitude < .5f) L.d = ps.pd.PlanDir(ps.lay.start);
             if (sv.drones == null) sv.drones = new List<DroneSave>(); foreach (var dr in sv.drones) { dr.tank = Arr(dr.tank); if (dr.d.sqrMagnitude < .5f) dr.d = ps.lay.pos.ContainsKey("hangar") ? ps.pd.PlanDir(ps.lay.pos["hangar"]) : ps.pd.PlanDir(ps.lay.start); }
             if (sv.cart.owned && sv.cart.d.sqrMagnitude < .5f) sv.cart.d = ps.pd.PlanDir(ps.lay.start);
             CalcFront(ps);
@@ -384,7 +385,6 @@ namespace LunarCleanup.Core
             var B = GameData.Bld[id]; if (ps.bld.Contains(id)) return "Steht schon";
             if (Gs(ps) < B.stage) return "Erst Basisstufe " + B.stage;
             if (!string.IsNullOrEmpty(B.research) && !ResDone(B.research)) return "Erst erforschen: " + (GameData.Res.Find(r => r.id == B.research)?.name ?? B.research);
-            if (id == "lifter") return "Folgt in der Unity-Version";
             if (B.geo && GeoF(ps.pid) <= 0) return "Hier gibt es keine nutzbare Erdwärme";
             return "";
         }
@@ -645,7 +645,7 @@ namespace LunarCleanup.Core
                         if (tank >= cap * .98f || BattLow(ps, v)) { v.mode = "toUnload"; break; }
                         int c = ChooseCell(ps, v);
                         if (c < 0) { if (tank > .5f) { v.mode = "toUnload"; break; } NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
-                        if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; v.mode = "drive"; break;
+                        if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
                 case "drive":
                 case "clean":
@@ -692,6 +692,9 @@ namespace LunarCleanup.Core
                     }
                 case "wait":
                     if (v.drone < 0) v.mode = tank >= cap * .98f ? "toUnload" : "seek"; break;
+                case "liftwait":
+                case "lifted":
+                    if (v.lift < 0 || !ps.sv.lifters.Any(l => l.id == v.lift && l.veh == v.id)) { v.lift = -1; v.mode = "drive"; } break;
                 default: v.mode = "seek"; break;
             }
         }
@@ -732,6 +735,45 @@ namespace LunarCleanup.Core
             for (int m = 0; m < NM; m++) { float x = o.buf[m] * k; o.buf[m] -= x; ps.sv.roh[m] += x; } o.busy = true;
         }
         public static string OutpostStatus(PState ps, StSave o) => Sum(o.buf) <= .001f ? "Bereit" : RohCap(ps) - RohSum(ps) <= .01f ? "Rohstofflager voll" : "Pumpt zur Basis";
+
+        // ================= Lastdrohnen =================
+        public static double LiftCost(PState ps) => Math.Round(30000 * ps.P.diff * Math.Pow(1.6, ps.sv.lifters.Count));
+        public static Vector3 LifterDir(PState ps) => ps.pd.PlanDir(ps.lay.pos["lifter"]);
+        public static bool BuyLifter()
+        {
+            var ps = Cur; if (!ps.bld.Contains("lifter")) return Fail("Erst den Schwerlast-Hangar bauen"); if (ps.sv.lifters.Count >= GameData.LiftMax) return Fail("Der Hangar ist voll");
+            double c = LiftCost(ps); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c;
+            ps.sv.lifters.Add(new LifterSave { id = ps.sv.lifters.Count == 0 ? 1 : ps.sv.lifters.Max(l => l.id) + 1, d = LifterDir(ps) }); Toast("Lastdrohne startklar", "good"); return true;
+        }
+        static bool RequestLift(PState ps, VehSave v, int cell)
+        {
+            if (!ps.bld.Contains("lifter") || GameData.Veh[v.type].size == "s") return false; if (ps.pd.Arc(v.d, ps.pd.cells[cell].c) < GameData.LiftMinDist) return false;
+            var L = ps.sv.lifters.Find(l => l.mode == "idle"); if (L == null) return false; L.mode = "fetch"; L.veh = v.id; L.cell = cell; v.lift = L.id; v.mode = "liftwait"; return true;
+        }
+        static void LifterStep(PState ps, LifterSave L, float dt, float f)
+        {
+            var pd = ps.pd; float R = pd.R, spd = GameData.LiftSpeed * Uv("dspeed", ps) * Mathf.Max(.25f, f) * ps.vm; var v = L.veh >= 0 ? ps.sv.veh.Find(x => x.id == L.veh) : null;
+            switch (L.mode)
+            {
+                case "idle": MoveDir(ref L.d, LifterDir(ps), spd * dt, R); break;
+                case "fetch": if (v == null || v.lift != L.id) { L.mode = "back"; L.veh = -1; break; } if (MoveDir(ref L.d, v.d, spd * dt, R)) { L.mode = "carry"; v.mode = "lifted"; } break;
+                case "carry":
+                    {
+                        if (v == null || v.lift != L.id) { L.mode = "back"; L.veh = -1; break; }
+                        bool arr = MoveDir(ref L.d, pd.cells[L.cell].c, spd * dt, R); v.d = L.d;
+                        if (arr) { S.stats.airlifts++; v.lift = -1; v.cell = L.cell; v.ti = -1; v.mode = "drive"; ps.vnav.Remove(v.id); L.veh = -1; L.mode = "back"; }
+                        break;
+                    }
+                case "back": if (MoveDir(ref L.d, LifterDir(ps), spd * dt, R)) L.mode = "idle"; break;
+                default: L.mode = "idle"; break;
+            }
+        }
+        public static string LifterStatus(PState ps, LifterSave L)
+        {
+            var v = L.veh >= 0 ? ps.sv.veh.Find(x => x.id == L.veh) : null;
+            switch (L.mode) { case "fetch": return v != null ? "Holt " + GameData.Veh[v.type].name + " #" + v.id : "Fliegt los"; case "carry": return v != null ? "Fliegt " + GameData.Veh[v.type].name + " zur Parzelle" : "Fliegt"; case "back": return "Fliegt zurück"; }
+            return "Bereit im Hangar";
+        }
 
         // ================= Drohnen =================
         public static float DroneCap(PState ps) => GameData.DroneCap0 * Uv("dcap", ps);
@@ -836,7 +878,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; }
+            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; }
             return v.mode;
         }
 
@@ -963,7 +1005,7 @@ namespace LunarCleanup.Core
         static bool HasVeh(string t) => P.Values.Any(p => p.sv.veh.Any(v => v.type == t));
         static float GateP(string a, string b) => P.ContainsKey(b) ? 1 : P.ContainsKey(a) ? Mathf.Min(.99f, CleanPct(P[a]) / .8f) : 0;
         static float StartProg() { var m = Moon; return m.act.TryGetValue(m.pd.start, out var a) ? Progress(a) : m.clean[m.pd.start] ? 1 : 0; }
-        public static int QuestsSupported = 33;
+        public static int QuestsSupported = 43;
         public static float QuestProgress(int q)
         {
             var m = Moon; Func<string, bool> any = id => P.Values.Any(p => p.bld.Contains(id));
@@ -1001,6 +1043,16 @@ namespace LunarCleanup.Core
                 case 30: return HasVeh("lavapanzer") ? 1 : 0;
                 case 31: return ResDone("nuclear") ? 1 : 0;
                 case 32: return any("reactor") ? 1 : 0;
+                case 33: return P.Values.Any(p => p.sv.lifters.Count > 0) ? 1 : ResDone("airlift") ? .5f : 0;
+                case 34: return GateP("io", "venus");
+                case 35: return DoneCount() > 0 ? 1 : P.Values.Max(p => CleanPct(p));
+                case 36: return GateP("venus", "ganymed");
+                case 37: return HasVeh("magnetgleiter") ? 1 : 0;
+                case 38: return GateP("ganymed", "enceladus");
+                case 39: return GateP("enceladus", "triton");
+                case 40: return HasVeh("kryokoloss") ? 1 : 0;
+                case 41: return GateP("triton", "pluto");
+                case 42: return P.ContainsKey("pluto") ? CleanPct(P["pluto"]) / .8f : 0;
                 case 15: return ResDone("drones") ? 1 : S.resAct == "drones" ? S.resT / 300 : 0;
             }
             return 0;
@@ -1087,7 +1139,7 @@ namespace LunarCleanup.Core
             var sv = ps.sv; var storm = StormStep(ps, dt); sv.dayT = DayT(ps) + dt; ps.solar = ps.P.solar * (storm?.solar ?? 1) * DayF(ps);
             float demand = 0, vE = Uv("veff", ps) * (ResDone("motor") ? .7f : 1);
             foreach (var v in sv.veh) { var T = GameData.Veh[v.type]; if (T.batt > 0) { if (v.charging) demand += T.energy * 2.5f * vE; } else if (v.busy) demand += T.energy * vE; }
-            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4; foreach (var o in sv.outposts) if (o.busy) demand += .2f;
+            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4; foreach (var L in sv.lifters) if (L.mode != "idle") demand += 2 * vE; foreach (var o in sv.outposts) if (o.busy) demand += .2f;
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach[m].cur >= 0) demand += GameData.Mach[m].x * Uv("meff", ps);
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && ps.belts[b.id].Count > 0) demand += .1f * Uv("beff", ps);
             ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps);
@@ -1108,6 +1160,7 @@ namespace LunarCleanup.Core
             CartStep(ps, dt);
             foreach (var v in ps.sv.veh) VehStep(ps, v, dt, f);
             if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
+            if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
             foreach (var o in ps.sv.outposts) { OutpostStep(ps, o, dt, f); if (o.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == o.dc && d.tk == "o" && d.tko == o.id && (d.mode == "out" || d.mode == "load")))) o.dc = -1; }
             foreach (var v in ps.sv.veh) if (v.drone >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.tgt == v.id && d.id == v.drone))) v.drone = -1;
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;

@@ -14,6 +14,7 @@ namespace LunarCleanup.Gameplay
         readonly Dictionary<string, Models.BuildingParts> blds = new Dictionary<string, Models.BuildingParts>();
         readonly Dictionary<int, Models.VehicleParts> vehs = new Dictionary<int, Models.VehicleParts>();
         readonly Dictionary<int, Models.DroneParts> drones = new Dictionary<int, Models.DroneParts>(); readonly Dictionary<int, float> droneAlt = new Dictionary<int, float>();
+        readonly Dictionary<int, Models.DroneParts> lifters = new Dictionary<int, Models.DroneParts>(); readonly Dictionary<int, float> liftAlt = new Dictionary<int, float>();
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
@@ -27,7 +28,7 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
-            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
+            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm();
             itemMesh = MeshKit.Cube;
@@ -270,7 +271,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (l, o) in pipes) if (l) { var c = o.busy ? Color.Lerp(GameData.Hex("#8a93a3"), GameData.Hex("#6ff2d2"), .5f + .5f * Mathf.Sin(Time.time * 6)) : GameData.Hex("#8a93a3"); l.startColor = l.endColor = c; }
-            UpdateSun(); UpdateStorm(); DrawItems(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
+            UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
@@ -319,7 +320,8 @@ namespace LunarCleanup.Gameplay
             {
                 alive.Add(v.id);
                 if (!vehs.TryGetValue(v.id, out var vp)) { vp = Models.Vehicle(GameData.Veh[v.type], acc); vp.root.transform.SetParent(vehRoot, false); vp.root.transform.position = v.d * pd.R; AddHeadlight(vp); vehs[v.id] = vp; }
-                var tr = vp.root.transform; var target = v.d * pd.R; var mv = target - tr.position; var up = v.d;
+                float air = v.mode == "lifted" && liftAlt.TryGetValue(v.lift, out var la) ? Mathf.Max(0, la - 2.8f) : 0;
+                var tr = vp.root.transform; var target = v.d * (pd.R + air); var mv = target - tr.position; var up = v.d;
                 var fwd = mv - up * Vector3.Dot(mv, up);
                 Quaternion rot = fwd.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up);
                 tr.position = target; tr.rotation = Quaternion.Slerp(tr.rotation, rot, 1 - Mathf.Exp(-8 * Time.deltaTime));
@@ -343,6 +345,24 @@ namespace LunarCleanup.Gameplay
             MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             var lg = new GameObject("Scheinwerfer"); lg.transform.SetParent(vp.root.transform, false); lg.transform.localPosition = new Vector3(0, 1.1f, .9f); lg.transform.localRotation = Quaternion.Euler(28, 0, 0);
             var L = lg.AddComponent<Light>(); L.type = LightType.Spot; L.range = 11; L.spotAngle = 70; L.innerSpotAngle = 35; L.color = new Color(.85f, .92f, 1f); L.intensity = 0; L.shadows = LightShadows.None; vp.head = L;
+        }
+
+        void SyncLifters()
+        {
+            var alive = new HashSet<int>();
+            foreach (var L in ps.sv.lifters)
+            {
+                alive.Add(L.id);
+                if (!lifters.TryGetValue(L.id, out var dp)) { dp = Models.Drone(GameData.Hex("#ffbf4d")); dp.root.name = "Lastdrohne"; dp.root.transform.localScale = Vector3.one * 2.1f; dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = L.d * (pd.R + 3); lifters[L.id] = dp; liftAlt[L.id] = 3; }
+                float goal = L.mode == "idle" ? 3f : L.mode == "fetch" && ps.pd.Arc(L.d, ps.sv.veh.Find(x => x.id == L.veh)?.d ?? L.d) < 6 ? 4.2f : 14f;
+                if (L.mode == "carry" && ps.sv.veh.Find(x => x.id == L.veh) is VehSave cv && ps.pd.Arc(L.d, ps.pd.cells[L.cell].c) < 8) goal = 4.2f;
+                float alt = Mathf.Lerp(liftAlt[L.id], goal, 1 - Mathf.Exp(-2f * Time.deltaTime)); liftAlt[L.id] = alt;
+                var tr = dp.root.transform; var target = L.d * (pd.R + alt); var mv = target - tr.position; var up = L.d; var fwd = mv - up * Vector3.Dot(mv, up);
+                tr.rotation = Quaternion.Slerp(tr.rotation, fwd.sqrMagnitude > 1e-5f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up), 1 - Mathf.Exp(-4 * Time.deltaTime));
+                tr.position = target; foreach (var r in dp.rotors) r.Rotate(Vector3.up, (L.mode != "idle" ? 1800 : 240) * Time.deltaTime, Space.Self);
+                if (dp.cargo) dp.cargo.gameObject.SetActive(false);
+            }
+            foreach (var id in lifters.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(lifters[id].root); lifters.Remove(id); liftAlt.Remove(id); }
         }
 
         void SyncDrones()

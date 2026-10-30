@@ -153,7 +153,7 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Lastdrohnen, Tiefenabbau, Neustart mit Sternenstaub).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub, Tiefenabbau).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
@@ -213,6 +213,17 @@ namespace LunarCleanup.UI
             h.Note("Solarfelder liefern nur tagsüber. Nachts laufen Maschinen aus dem Speicher (Akkupark), Akku-Fahrzeuge aus ihrem Akku – oder du baust Radioisotopen-Generator (Stufe 3), Geothermie (Stufe 4) und Kernreaktor (Stufe 5), die rund um die Uhr liefern.");
         }
 
+        static void Lifter(Hud h)
+        {
+            h.Section("Schwerlast-Hangar");
+            h.Note("Sucht sich ein Industriesauger, Truck oder Spezialfahrzeug eine Parzelle, die weiter als " + GameData.LiftMinDist.ToString("0") + " m entfernt ist, holt eine Lastdrohne die Maschine ab und fliegt sie direkt hin. Kleine Fahrzeuge fahren selbst.");
+            h.Row("Lastdrohne kaufen", () => ps.sv.lifters.Count + " von " + GameData.LiftMax + " · " + Dec(GameData.LiftSpeed * Game.Uv("dspeed"), 1) + " m/s",
+                () => ps.sv.lifters.Count >= GameData.LiftMax ? "Voll" : Cr(Game.LiftCost(ps)), () => ps.sv.lifters.Count < GameData.LiftMax && Game.S.credits >= Game.LiftCost(ps), () => Game.BuyLifter());
+            h.Row("Eingeflogene Fahrzeuge", () => Game.S.stats.airlifts + " insgesamt");
+            foreach (var L in ps.sv.lifters) { var l = L; h.Row("Lastdrohne #" + l.id, () => Game.LifterStatus(ps, l)); }
+            if (UpVisible(GameData.Up["dspeed"])) UpRow(h, "dspeed");
+        }
+
         static void Hangar(Hud h)
         {
             h.Section("Drohnenhangar");
@@ -250,7 +261,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.6. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Lastdrohnen, Tiefenabbau, Fahrzeugverschleiß, Strahlung, Sternenstaub.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.7. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Tiefenabbau, Fahrzeugverschleiß, Strahlung, Sternenstaub.");
         }
 
         static void Building(Hud h, string id)
@@ -260,6 +271,7 @@ namespace LunarCleanup.UI
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "research") { Research(h); return; }
             if (id == "hangar") { Hangar(h); return; }
+            if (id == "lifter") { Lifter(h); return; }
             if (id == "hq") { Base(h); return; }
             if (id == "werkstatt") { Vehicles(h); return; }
         }
