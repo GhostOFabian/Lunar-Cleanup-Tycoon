@@ -119,6 +119,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f11Key.wasPressedThisFrame && preview == null) StartCoroutine(CheckAllBases());
+            if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);

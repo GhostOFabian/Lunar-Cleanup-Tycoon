@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace LunarCleanup.Gameplay
 {
-    public class WorldView : MonoBehaviour
+    public partial class WorldView : MonoBehaviour
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { beltTex = null; NightF = 0; MapMode = false; }
         PState ps; PlanetData pd;
@@ -56,7 +56,7 @@ namespace LunarCleanup.Gameplay
                 var B = GameData.Bld[id]; if (!ps.lay.pos.ContainsKey(id)) continue; float yaw = ps.lay.yaw.TryGetValue(id, out var y) ? y : 0;
                 if (ps.bld.Contains(id))
                 {
-                    var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], yaw); blds[id] = bp;
+                    var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], Mathf.Round(yaw / (Mathf.PI / 2)) * (Mathf.PI / 2)); blds[id] = bp; // Modelle achsparallel: Bänder treffen gerade Flächen
                     if (B.st != null && (id == "u1" || id == "u2" || id == "u3")) for (int k = 0; k < B.st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; var lp = bp.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; Kit.Pit(bp.root.transform, lp, -new Vector3(lp.x, 0, lp.z), Kit.HouseW(id, B.fp)); }
                 }
                 else if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "")
@@ -77,7 +77,7 @@ namespace LunarCleanup.Gameplay
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
                 MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             }
-            PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
+            RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
             BuildOutposts(); BuildRigs();
             builtVersion = ps.baseVersion;
         }
@@ -108,6 +108,12 @@ namespace LunarCleanup.Gameplay
         }
         readonly List<(LineRenderer l, StSave o)> pipes = new List<(LineRenderer, StSave)>(); readonly List<(Material m, StSave o)> pipeLamps = new List<(Material, StSave)>();
         /// <summary>Senkrechtes Rohrstück aus dem Boden mit Bogen, das seitlich in die Gebäudewand führt.</summary>
+        /// <summary>Revisionsdeckel am Boden, wo die unterirdische Leitung unter einem Gebäude verschwindet.</summary>
+        void Inlet(Vector3 at, Material steel)
+        {
+            var c = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .42f, .46f, .07f, 18); c.transform.position = pd.Surf(at, .03f); c.transform.rotation = Quaternion.FromToRotation(Vector3.up, at);
+            var g = MeshKit.Cyl(baseRoot, MeshKit.Mat(GameData.Hex("#ffbf4d"), .3f, .5f), Vector3.zero, .5f, .5f, .03f, 18); g.transform.position = pd.Surf(at, .015f); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, at);
+        }
         void Riser(Vector3 at, Vector3 wallAt, Material steel)
         {
             float h = 1.1f; var up = at; var p0 = at * (pd.R - .2f); var p1 = at * (pd.R + h);
@@ -151,11 +157,12 @@ namespace LunarCleanup.Gameplay
                     // und steigt erst neben dem Rohstofflager wieder auf, wo sie seitlich in den Silo-Sockel führt.
                     var otr = bp.root.transform; var pump = otr.TransformPoint(new Vector3(-2.2f, 0, 2.5f)).normalized; var pumpWall = otr.TransformPoint(new Vector3(-2.2f, 0, 1.6f)).normalized; /* Pumpenhaus-Vorderwand im Modell */ var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
                     var pl = pd.PlanLocal(pump); var toOut = (pl.magnitude > 1e3f ? Vector2.right : pl - roh); if (toOut.sqrMagnitude < 1e-4f) toOut = Vector2.right; toOut.Normalize();
-                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f)); { var A = pd.PlanDir(roh + toOut * (rfp + .9f)) * (pd.R + 1.1f); var B = pd.PlanDir(roh) * (pd.R + 1.1f); var D = B - A; float len = D.magnitude, best = 2; D /= len; var T = TrisOf("roh"); for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float tt) && tt <= len) best = Mathf.Min(best, tt / len); if (best <= 1) wall = (A + (B - A) * best).normalized; else pipeMiss++; } // Rohr endet genau an der Wand des Rohstofflagers
+                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f)); { var A = pd.PlanDir(roh + toOut * (rfp + .9f)) * (pd.R + .22f); var B = pd.PlanDir(roh) * (pd.R + .22f); var D = B - A; float len = D.magnitude, best = 2; D /= len; var T = TrisOf("roh"); for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float tt) && tt <= len) best = Mathf.Min(best, tt / len); if (best <= 1) wall = (A + (B - A) * best).normalized; else pipeMiss++; } // Rohr endet genau an der Wand des Rohstofflagers
                     var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(GameData.Hex("#2b2f36"), .1f, .2f);
                     var lampM = new Material(MeshKit.Glow(GameData.Hex("#6ff2d2"), 1.5f));
-                    Riser(pump, pumpWall, steel); Riser(inlet, wall, steel);
-                    Trench(pump, inlet, dark, steel, lampM); pipeLamps.Add((lampM, o));
+                    // Pipeline unsichtbar: läuft unter der Erde bis direkt an Pumpenhaus und Lagersockel und taucht dort von unten ein (nur Revisionsdeckel sichtbar)
+                    Inlet(pumpWall, steel); Inlet(wall, steel);
+                    Trench(pumpWall, wall, dark, steel, lampM); pipeLamps.Add((lampM, o));
                 }
                 else if (Game.ResDone("outpost") || Game.ResDone("drones"))
                 {
@@ -374,6 +381,7 @@ namespace LunarCleanup.Gameplay
         (Vector2[] rp, float[] cum, float k) Vis(BeltDef b)
         {
             if (vis.TryGetValue(b.id, out var v)) return v;
+            if (routed.TryGetValue(b.id, out var rr)) { var c0 = new float[rr.Length]; for (int i = 1; i < rr.Length; i++) c0[i] = c0[i - 1] + (rr[i] - rr[i - 1]).magnitude; float Lr = 0; for (int i = 1; i < b.rp.Length; i++) Lr += (b.rp[i] - b.rp[i - 1]).magnitude; v = (rr, c0, c0[c0.Length - 1] / Mathf.Max(.01f, Lr)); vis[b.id] = v; return v; }
             var p = new List<Vector2>(b.rp);
             for (int it = 0; it < 3; it++) { var q = new List<Vector2> { p[0] }; for (int i = 0; i < p.Count - 1; i++) { q.Add(Vector2.Lerp(p[i], p[i + 1], .25f)); q.Add(Vector2.Lerp(p[i], p[i + 1], .75f)); } q.Add(p[p.Count - 1]); p = q; }
             // die ersten/letzten 1,5 m bleiben gerade (Anschluss an die Gebäudewand)

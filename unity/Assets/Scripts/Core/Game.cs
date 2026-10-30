@@ -252,6 +252,18 @@ namespace LunarCleanup.Core
             a.sum = 0; ps.dirtyCells.Add(id); int m = a.D.mat; float room = RohCap(ps) - RohSum(ps); if (room > 0) ps.sv.roh[m] += Mathf.Min(room, a.amt);
         }
         /// <summary>Nur für Tests im Editor: reinigt Welle für Welle die Grenze, bis der Anteil erreicht ist.</summary>
+        /// <summary>Testmodus: aktuellen Planeten komplett ausbauen – Basisstufe, alle Gebäude, alle Upgrades, alle Forschungen, alle Außenlager, Fahrzeuge bis zum Platzlimit.</summary>
+        public static void DevMaxOut()
+        {
+            if (!TestMode) return; var ps = Cur; S.credits += 1e15;
+            foreach (var r in GameData.Res) if (!S.resDone.Contains(r.id)) S.resDone.Add(r.id);
+            ps.sv.stage = GameData.Stages.Count;
+            foreach (var id in GameData.BOrder) if (ps.lay.pos.ContainsKey(id) && !ps.bld.Contains(id)) ps.bld.Add(id);
+            foreach (var u in GameData.Upg) { if (u.loc) ps.upg[u.id] = u.max; else GUpg[u.id] = u.max; }
+            foreach (int c in OutpostSites(ps.pid)) if (!ps.sv.outposts.Any(o => o.cell == c)) { var o = new StSave { id = "o" + c, cell = c, buf = new float[NM] }; ps.sv.outposts.Add(o); ps.st[o.id] = o; }
+            for (int round = 0; round < 40; round++) { bool any = false; foreach (var t in GameData.VehOrder) if (VehWhy(ps, t) == "") { BuyVehicle(t); any = true; } if (!any) break; }
+            ps.baseVersion++; Toast("Testmodus: " + ps.P.name + " ist komplett ausgebaut", "good");
+        }
         public static void DevCleanTo(float frac)
         {
             var ps = Cur; int guard = 0;
@@ -658,10 +670,10 @@ namespace LunarCleanup.Core
             }
             sv.crN++;
         }
-        static bool PickCrystal(PState ps, VehSave v)
+        static bool PickCrystal(PState ps, VehSave v, float maxDist = 1e9f)
         {
             float room = TankCap(ps, v) - Sum(v.tank); if (room < 3) return false; CrystalSave best = null; float bs = 1e9f;
-            foreach (var c in ps.sv.crystals) { if (c.claim >= 0 && ps.sv.veh.Any(o => o.id == c.claim && o.cr == c.id) || c.g < 1f) continue; if (!GameData.Veh[v.type].fly && ps.pd.cells[c.cell].Wet) continue; float d = ps.pd.Arc(v.d, CrystalDir(ps, c)) - c.g * 10; if (d < bs) { bs = d; best = c; } }
+            foreach (var c in ps.sv.crystals) { if (c.claim >= 0 && ps.sv.veh.Any(o => o.id == c.claim && o.cr == c.id) || c.g < 1f) continue; if (!GameData.Veh[v.type].fly && ps.pd.cells[c.cell].Wet) continue; float d = ps.pd.Arc(v.d, CrystalDir(ps, c)) - c.g * 10; if (d + c.g * 10 > maxDist) continue; if (d < bs) { bs = d; best = c; } }
             if (best == null) return false; best.claim = v.id; v.cr = best.id; v.mode = "toCrystal"; return true;
         }
         /// <summary>Kristall von Hand ernten (antippen).</summary>
@@ -717,6 +729,7 @@ namespace LunarCleanup.Core
                         if (v.skipT > 0) v.skipT -= dt; v.driveT = 0;
                         if (tank >= cap * .98f || BattLow(ps, v)) { v.mode = "toUnload"; break; }
                         { var rg = PickRig(ps, v, false); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } }
+                        if (PickCrystal(ps, v, 25f)) break; // reifer Kristall in der Nähe: kurz mitnehmen
                         int c = ChooseCell(ps, v);
                         if (c < 0 && PickCrystal(ps, v)) break; // keine Reinigungsarbeit: Leuchtkristalle abbauen
                         if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } if (IdleJob(ps, v)) break; NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
