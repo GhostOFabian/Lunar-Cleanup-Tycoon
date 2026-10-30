@@ -27,6 +27,9 @@ namespace LunarCleanup.EditorTools
             PlayerSettings.WebGL.dataCaching = true;
             PlayerSettings.defaultWebScreenWidth = 540; PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.runInBackground = true;
+            PlayerSettings.stripEngineCode = false; // sonst fehlen z. B. Collider-Klassen (Meldung „SphereCollider doesn't exist“)
+            // Ein Paket im Projekt benutzt embind (Fehler "undefined symbol _embind_register_class") – Bibliothek beim Linken mitnehmen
+            PlayerSettings.WebGL.emscriptenArgs = "-lembind -sERROR_ON_UNDEFINED_SYMBOLS=0"; // KI-Paket (nur Editor) bringt embind-Code mit, den das Spiel nicht benutzt
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL) EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
             var opt = new BuildPlayerOptions
             {

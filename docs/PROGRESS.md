@@ -102,3 +102,8 @@
 - Testmodus: „Alles maximal ausbauen“ (Einstellungen oder F12).
 - Fahrzeuge nehmen reife Kristalle im Umkreis von 25 m auch während der Arbeit mit.
 - Basis-Prüfung: 0 echte Befunde; die beiden letzten Meldungen (Ganymed) waren die gewollte Y-Zusammenführung, die zählt die Prüfung jetzt nicht mehr. Fotos immer bei Tag.
+
+## Browser-Version der Unity-Fassung (30.10.2026)
+- Menü „Lunar Cleanup → Browser-Version bauen und starten“: WebGL-Development-Build nach `Builds/WebGL` (ohne Kompression, ~99 MB), startet über Unitys lokalen Webserver im Standard-Browser. Läuft (getestet in Opera GX, localhost).
+- Browser-Testversion startet im Testmodus (eigener Spielstand), Test-Knöpfe in den Einstellungen; Testmodus dort umschaltbar (Seite neu laden).
+- Build-Fixes: `-lembind -sERROR_ON_UNDEFINED_SYMBOLS=0` (KI-Paket bringt embind-Code mit), Shader-Platzhalter in `Resources/ShaderKeep`, Engine-Stripping aus.
