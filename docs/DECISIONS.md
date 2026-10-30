@@ -155,3 +155,10 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Langzeitmotivation über drei kleine, verbundene Systeme statt neuer Inhalte (Ausrichtung, Betriebsbonus, Werksaufträge) – Ursache war fehlende Entscheidung, nicht fehlender Inhalt (Analyse in `docs/LANGZEIT.md`).
 - Kein Abbau bestehender Vorteile: globale Technik bleibt global, der Betriebsbonus kann nur steigen oder auf den Grundwert fallen, Werksaufträge zählen normale Raketenverkäufe.
 - Planetenmärkte und ausbaubarer Sturmschild bewusst zurückgestellt (verschieben das Preisgefüge bzw. entwerten erworbenen Fortschritt).
+
+## v6.1
+- Außenlager-Plätze werden aus der Basisgeometrie berechnet, nicht gespeichert – so sind sie auf allen Ständen gleich und alte Außenlager außerhalb bleiben erhalten (keine Zwangsverschiebung).
+- 80 %-Mechanik als Bonus (Druckbetrieb, Volllast), nicht als Strafe – ein volles Lager arbeitet schneller ab, statt zu blockieren.
+- Totalschaden nur live und nur nach Warnung; offline wird nie ein Fahrzeug zerstört, damit Idle-Fortschritt sicher bleibt. Offline laufen Verschleiß und Reparatur trotzdem in `simStep`.
+- Störungen beheben sich automatisch (Techniker), damit Offline-Produktion nicht dauerhaft steht; sofortige Behebung ist ein bezahlter Komfort.
+- Wegfindung fällt nie mehr auf eine gerade Linie zurück; ohne Pfad wird um die Basis herum gefahren.

@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.0)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.1)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -181,6 +181,14 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 
 ## 9h. Ausrichtung, Betriebsbonus, Werksaufträge (ab v6.0)
 Siehe `docs/LANGZEIT.md`, Abschnitt 4 (Zahlen und Formeln).
+
+## 9i. Außenlager-Plätze, Wartung, Störungen, sichtbare Stürme (ab v6.1)
+- **Außenlager-Plätze** (`outpostSites`, `isSite`): genau 4 je Planet auf dem Ring `round(maxRing·0,45)` (min 4), je einer in den vier Richtungen der Basis. Deterministisch aus der Planetengeometrie, immer gleich. Leere Plätze tragen ein Sechseck mit 6 Pfosten („Außenlager / Platz“). Außenlager nur dort (`outpostWhy`), Bohrtürme/Erzbagger dort nicht (`rigWhy`). Alte Außenlager außerhalb bleiben bestehen.
+- **Kapazität** 1 500 × Upgrade `obuf` (1 + 0,6·Stufe, max 12) × Ausbaustufen. **Ab 80 % Füllung**: Druckbetrieb, Pipeline-Tempo × (1 + (Füllung − 0,8)/0,2), max ×2. Rohlager ab 80 %: Volllast, Maschinen bis +25 %.
+- **Drohnen** wählen Ziele mit echtem Bestand: Fahrzeuge (wie bisher), Außenlager ≥ 80 % ihrer Ladung und ≥ 50 % Füllung, Bohrtürme mit genug Lager. Jedes Ziel wird reserviert (`dc`), verwaiste Reservierungen werden freigegeben. Abgabe immer an einer Entladestation.
+- **Verschleiß** (ab Technikstufe 3): steigt beim Fahren, Lebensdauer 3 h × Upgrade `vdur` (1 + 0,35·Stufe). Ab 85 %: −20 % Tempo. Bei 100 % oder zufällig ab 80 %: Panne (Stillstand). Werkstatt: Reparatur 20 s × (1 + 0,5·Reparaturen), Kosten 25 % des Fahrzeugpreises × (1 + Reparaturen), höchstens 2 Mal. Danach Austausch (85 % Preis, 15 % Schrottwert). Totalschaden nur live, nur nach 2 Reparaturen, nur nach 120 s Warnung; offline nie. Auto-Wartung ab 75 % (abschaltbar in der Werkstatt).
+- **Störungen** (`rigFault`): Chance pro s `1/2400 × (1 + 0,15·Stufe) × 1,3 (Erzbagger) × 4 (Sturm ohne Schild) / rcare`. Art: Überhitzung (häufiger auf Venus/Io), Verklemmung, Fehlfunktion, Sturmschaden. Stillstand, rotes Blinklicht, Rauch bei Hitze. Behebung automatisch nach 45 s (mit Werkstatt) bzw. 120 s, sofort für 12 % der Ausbaukosten.
+- **Stürme sichtbar** (`updStorm`, `STORM_LOOK`): Nebel und bis zu 1 400 Partikel in Planetenfarbe, 30 s vorher leicht, mit Schild abgeschwächt; im Kartenmodus und auf Reisen aus. Ampel zeigt Störungen, Pannen und aktive Stürme mit Wirkung.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

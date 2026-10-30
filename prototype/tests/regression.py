@@ -40,10 +40,14 @@ with game() as (pg, errs):
 
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.credits=1e8;t.buyStage();t.buyStage();
       for(const id of ['research','werkstatt','u2','u3','schmelze'])t.buildBuilding(id);t.S.research.done.drones=true;t.S.research.done.outpost=true;t.buyStage();t.buildBuilding('hangar');t.buyDrone();t.buyDrone();
-      t.buyVehicle('truck');const far=pd.cells.filter(c=>c.ring===6&&c.kind==='normal');for(const c of far.slice(0,3)){w.clean[c.id]=1;w.paid[c.id]=1;w.nClean++;}t.calcFront('moon');
+      t.buyVehicle('truck');const site=t.outpostSites('moon')[0],far=[pd.cells[site],...pd.cells[site].nb.map(i=>pd.cells[i])];for(const c of far.slice(0,3)){w.clean[c.id]=1;w.paid[c.id]=1;w.nClean++;}t.calcFront('moon');
       const why=t.outpostWhy('moon',far[0].id);t.buildOutpost(far[0].id);const tr=sp.veh.find(v=>v.type==='truck');tr.d=far[1].c.slice();tr.tank={metall:300};tr.mode='seek';
       let lifts=0;for(let i=0;i<1200;i++){t.simStep('moon',.25,false);}return {why,out:sp.outposts.length,drones:sp.drones.length,stage:sp.stage,droneLoad:sp.drones.map(d=>d.mode)}}""")
-    show('drones/outposts', r); check(r['why'] == '' and r['out'] == 1 and r['drones'] == 2, 'drones/outposts')
+    show('drones/outposts', r);
+    r2 = E("""()=>{const t=__t,pd=t.planetData('moon');const a=t.outpostSites('moon').slice();for(const k in t.SITES)delete t.SITES[k];const b=t.outpostSites('moon');const sp=t.S.planets.moon,w=t.W.moon;const non=pd.cells.find(c=>c.kind!=='base'&&c.ring>=5&&!b.includes(c.id));w.clean[non.id]=1;
+      return {a,b,n:new Set(b).size,ring:[...new Set(b.map(i=>pd.cells[i].ring))].length,non:t.outpostWhy('moon',non.id),rigOnSite:t.rigWhy('moon',b[1])}}""")
+    show('outpost sites', r2); check(r2['a'] == r2['b'] and r2['n'] == 4 and r2['ring'] == 1 and 'markierten' in r2['non'] and r2['rigOnSite'] != '', 'fixed outpost sites')
+    check(r['why'] == '' and r['out'] == 1 and r['drones'] == 2, 'drones/outposts')
 
     r = E("""()=>{const t=__t,pid='moon',sp=t.S.planets.moon,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];const nv=t.navGrid(pid);let bad=0,n=0;
       for(let i=0;i<3000;i++){t.simStep(pid,.25,false);for(const v of sp.veh){if(!(v.mode==='drive'||v.mode==='toUnload'))continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>30)continue;
@@ -134,7 +138,7 @@ with game() as (pg, errs):
       for(const r of sp.rigs||[])r.buf={staub:200};const hits={},dr={};let n=0;const ids=t.BORDER.filter(k=>sp.bld[k]);
       for(let i=0;i<4000;i++){sp.dayT=t.dayLen(pid)*.25;t.simStep(pid,.25,false);for(const d of sp.drones)dr[d.mode]=(dr[d.mode]||0)+1;
         for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
-          for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}}}return {n,hits,veh:sp.veh.length,dr}}""")
+          for(const k of ids){const B=t.BLD[k];if(B.st&&l[0]>B.pos[0]+.8)continue;if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;if(!window.__hl)window.__hl=[];if(window.__hl.length<6)window.__hl.push([v.type,v.sid,l.map(x=>+x.toFixed(1)),v.nav&&v.nav.wp.length,v.nav&&v.nav.i]);}}}}return {n,hits,veh:sp.veh.length,dr,hl:window.__hl}}""")
     show('full base: inside buildings + drones', r); check(sum(r['hits'].values()) <= 3 and r['dr'].get('stdrop', 0) > 0, 'full base: vehicles inside buildings or drones never deliver to stations')
     r = E("""()=>{const t=__t,sp=t.S.planets.moon,pd=t.planetData('moon'),w=t.W.moon;t.S.credits+=1e13;
       const why0=t.blWhy('presse');for(const u of t.BLV_REQ.presse)sp.upg[u]=t.upMax(u);const f0=t.blF('presse'),c0=t.machInCap('presse');t.buyBl('presse');const f1=t.blF('presse'),c1=t.machInCap('presse');
@@ -159,6 +163,21 @@ with game() as (pg, errs):
       t.newWorkOrder('moon',sp);const w=sp.wo,d0=sp.woDone||0;t.woCount('moon',sp,w.m,w.n,false);
       return {p0,p1,paid,m1,flow:cv.flow,spec:cv.spec,done:(sp.woDone||0)-d0,next:!!sp.wo&&sp.wo.got===0}}""")
     show('specialisation / flow bonus / work orders', r); check(r['p0'] == 1 and abs(r['p1'] - 1.3) < 1e-9 and r['paid'] > 0 and r['m1'] > 1.29 and abs(r['flow'] - 1.3) < 1e-9 and r['spec'] > 1.29 and r['done'] == 1 and r['next'], 'v6 long-term systems')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;if(!sp.outposts.length||!sp.bld.hangar)return {skip:1};const o=sp.outposts[0];for(const v of sp.veh)v.tank={};
+      const kinds={};let moved=0;for(let i=0;i<1600;i++){o.buf={staub:t.stBuf(o.key)*.9};for(const r of sp.rigs||[])r.buf={metall:t.rigBuf(r)*.9};sp.dayT=t.dayLen('moon')*.25;t.simStep('moon',.25,false);for(const d of sp.drones){if(d.mode==='load'&&d.tk)kinds[d.tk]=(kinds[d.tk]||0)+1;}}
+      return {kinds,drones:sp.drones.length}}""")
+    show('drone pick-up points', r); check(r.get('skip') or r['kinds'].get('o', 0) > 0, 'drones collect from outposts')
+    r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.credits+=1e12;t.S.maxStage=5;sp.stage=5;if(!sp.bld.werkstatt)t.buildBuilding('werkstatt');sp.autoMaint=false;const v=sp.veh[0];
+      v.wear=1.01;v.mode='seek';t.vehStep('moon',sp,v,.1,1,false);const broke=v.mode;const reps=[];
+      for(let k=0;k<3;k++){v.wear=1.01;v.mode='broken';const ok=t.sendToShop('moon',sp,v,true);for(let i=0;i<4000&&(v.mode==='toShop'||v.mode==='repair');i++){sp.dayT=t.dayLen('moon')*.25;t.vehStep('moon',sp,v,.25,1,false);}reps.push([ok,v.rep,+(v.wear||0).toFixed(2),v.mode]);}
+      const n0=sp.veh.length;v.wear=1.2;v.mode='broken';for(let i=0;i<200;i++)t.vehWear('moon',sp,v,1,false);const offlineKept=sp.veh.length===n0;
+      t.replaceVeh('moon',sp,v,true);const fresh=[v.rep,v.wear];sp.autoMaint=true;
+      // rig fault
+      for(const c of t.planetData('moon').cells)if(c.kind!=='base')t.W.moon.clean[c.id]=1;t.S.done.moon=1;if(!(sp.rigs||[]).length)t.buildRig(-1);const rg=sp.rigs[0];rg.buf={};rg.fault={k:'jam',t:5};const b0=rg.mined||0;sp.energy=1e4;
+      for(let i=0;i<4;i++)t.rigStep('moon',sp,rg,1,1);const stopped=(rg.mined||0)===b0&&!!rg.fault;t.rigStep('moon',sp,rg,2,1);const auto=!rg.fault;rg.fault={k:'heat',t:99};const c0=t.S.credits;t.fixFault(rg.cell);
+      const manual=!rg.fault&&t.S.credits<c0;sp.hzOn=0;
+      return {broke,reps,offlineKept,fresh,stopped,auto,manual}}""")
+    show('maintenance / repairs / faults', r); check(r['broke'] == 'broken' and r['reps'][0][1] == 1 and r['reps'][1][1] == 2 and r['reps'][2][0] is False and r['reps'][0][2] == 0 and r['offlineKept'] and r['fresh'] == [0, 0] and r['stopped'] and r['auto'] and r['manual'], 'vehicle maintenance / rig faults')
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')
