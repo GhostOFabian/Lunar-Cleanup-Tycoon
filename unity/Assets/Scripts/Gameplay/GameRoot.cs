@@ -19,7 +19,7 @@ namespace LunarCleanup.Gameplay
     {
         PlanetView planet; WorldView world; Hud hud; Camera cam;
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
-        const float TILT = 38f * Mathf.Deg2Rad;
+        float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
         enum Mode { None, Wipe, Pan, Ui }
@@ -99,6 +99,7 @@ namespace LunarCleanup.Gameplay
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             HandleInput(dt);
+            var kbd = Keyboard.current; if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); }
 #if UNITY_EDITOR
             DevKeys();
 #endif
@@ -138,6 +139,7 @@ namespace LunarCleanup.Gameplay
             var move = (-right * delta.x - north * delta.y) * mpp; float ang = move.magnitude / R; if (ang < 1e-7f) return;
             var axis = Vector3.Cross(cd, move.normalized); var q = Quaternion.AngleAxis(ang * Mathf.Rad2Deg, axis); cd = (q * cd).normalized; north = q * north;
         }
+        void Twist(float deg) { if (Mathf.Abs(deg) < 1e-4f) return; north = Quaternion.AngleAxis(deg, cd) * north; }
         void Zoom(float f) { float R = Game.Cur.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 2.6f); mapMode = altGoal > R * 1.5f; }
         public void FocusFront()
         {
@@ -159,12 +161,20 @@ namespace LunarCleanup.Gameplay
             if (touches.Count >= 2)
             {
                 var a = touches[0].screenPosition; var b = touches[1].screenPosition; float d = Vector2.Distance(a, b); var mid = (a + b) / 2;
-                if (mode != Mode.Pan || lastPinch <= 0) { if (mode == Mode.Wipe) EndWipe(); mode = Mode.Pan; lastPinch = d; lastPos = mid; moved = true; return; }
-                if (d > 1) Zoom(lastPinch / d); Pan(mid - lastPos); lastPinch = d; lastPos = mid; return;
+                float ang = Mathf.Atan2(b.y - a.y, b.x - a.x);
+                if (mode != Mode.Pan || lastPinch <= 0) { if (mode == Mode.Wipe) EndWipe(); mode = Mode.Pan; lastPinch = d; lastPos = mid; lastAng = ang; moved = true; return; }
+                // zwei Finger: zusammenziehen = Zoom, verschieben = Drehen über den Planeten, verdrehen = Blickrichtung drehen
+                if (d > 1) Zoom(lastPinch / d); Pan(mid - lastPos); Twist(Mathf.DeltaAngle(lastAng * Mathf.Rad2Deg, ang * Mathf.Rad2Deg)); lastPinch = d; lastPos = mid; lastAng = ang; return;
             }
             lastPinch = 0;
             bool pressed; Vector2 pos; int pid = -1;
             if (touches.Count == 1) { pressed = true; pos = touches[0].screenPosition; pid = touches[0].touchId; }
+            else if (Mouse.current != null && (Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed))
+            {
+                // PC: rechte/mittlere Maustaste ziehen = Blickrichtung drehen (links/rechts) und neigen (hoch/runter)
+                var mp = Mouse.current.position.ReadValue(); if (Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame) lastPos = mp;
+                var dm = mp - lastPos; Twist(-dm.x * .25f); TILT = Mathf.Clamp(TILT + dm.y * .004f, 0, 70 * Mathf.Deg2Rad); lastPos = mp; mode = Mode.None; return;
+            }
             else if (Mouse.current != null) { pressed = Mouse.current.leftButton.isPressed || Mouse.current.leftButton.wasPressedThisFrame; pos = Mouse.current.position.ReadValue(); float sc = Mouse.current.scroll.ReadValue().y; if (Mathf.Abs(sc) > .01f && !Hud.PointerOverUi()) Zoom(sc > 0 ? .88f : 1.14f); }
             else { pressed = false; pos = Vector2.zero; }
 

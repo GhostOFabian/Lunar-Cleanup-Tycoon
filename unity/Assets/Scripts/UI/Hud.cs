@@ -145,14 +145,16 @@ namespace LunarCleanup.UI
         public void OpenSheet(string kind, string arg = null)
         {
             if (kind == "clean") { CloseSheet(); return; }
-            sheetKind = kind; sheetArg = arg; sheetGo.SetActive(true); Rebuild();
+            sheetKind = kind; sheetArg = arg; lastKind = null; sheetGo.SetActive(true); Rebuild();
         }
-        public void CloseSheet() { sheetGo.SetActive(false); sheetKind = null; binders.Clear(); }
+        public void CloseSheet() { sheetGo.SetActive(false); sheetKind = null; lastKind = null; binders.Clear(); }
+        string lastKind, lastArg;
         public void Rebuild()
         {
+            var keep = sheetContent.anchoredPosition; bool same = lastKind == sheetKind && lastArg == sheetArg; lastKind = sheetKind; lastArg = sheetArg;
             binders.Clear(); foreach (Transform c in sheetContent) Destroy(c.gameObject);
             var ps = Game.Cur; sheetKick.text = ps.P.name; Sheets.Fill(this, sheetKind, sheetArg, out string title); sheetTitle.text = title;
-            sheetContent.anchoredPosition = Vector2.zero; Bind();
+            Canvas.ForceUpdateCanvases(); sheetContent.anchoredPosition = same ? keep : Vector2.zero; Bind(); // nach einem Kauf bleibt das Fenster an derselben Stelle
         }
 
         // ---------- Bausteine für Fenster ----------
