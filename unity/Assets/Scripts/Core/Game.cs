@@ -633,11 +633,12 @@ namespace LunarCleanup.Core
             string best = null; float bd = 1e9f;
             foreach (var s in GameData.Stations)
             {
-                if (!ps.bld.Contains(s) || !CanUse(v, s)) continue;
+                if (!ps.bld.Contains(s) || !CanUse(v, s) || (v.avoidT > 0 && v.avoid == s)) continue;
                 int crowd = ps.sv.veh.Count(o => o != v && o.sid == s && (o.mode == "toUnload" || o.mode == "queue" || o.mode == "unload")); int over = Math.Max(0, crowd - StDocks(ps, s) + 1);
                 float d = ps.pd.Arc(v.d, ps.pd.PlanDir(ps.lay.pos[s])) + Sum(ps.st[s].buf) / StBuf(ps, s) * 40 + over * 14; if (d < bd) { bd = d; best = s; }
             }
-            foreach (var o in ps.sv.outposts) { float fill = Sum(o.buf) / StBuf(ps, o.id); if (fill > .97f) continue; float d = ps.pd.Arc(v.d, StDir(ps, o.id, 'c')) + (fill > .8f ? 60 : 0); if (d < bd) { bd = d; best = o.id; } }
+            foreach (var o in ps.sv.outposts) { if (v.avoidT > 0 && v.avoid == o.id) continue; float fill = Sum(o.buf) / StBuf(ps, o.id); if (fill > .97f) continue; float d = ps.pd.Arc(v.d, StDir(ps, o.id, 'c')) + (fill > .8f ? 60 : 0); if (d < bd) { bd = d; best = o.id; } }
+            if (best == null && v.avoidT > 0 && HasSt(ps, v.avoid)) best = v.avoid;
             return best;
         }
         public static Vector2 ParkPos(PState ps, VehSave v) { int i = ps.sv.veh.IndexOf(v); return ps.lay.park + new Vector2((i % 4) * 1.8f, (i / 4) * 1.8f); }
@@ -645,7 +646,7 @@ namespace LunarCleanup.Core
         static void VehStep(PState ps, VehSave v, float dt, float f)
         {
             var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = (T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1) * (v.wear > .85f ? .8f : 1);
-            float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false;
+            float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false; if (v.avoidT > 0) v.avoidT -= dt;
             switch (v.mode)
             {
                 case "seek":
@@ -653,7 +654,7 @@ namespace LunarCleanup.Core
                         if (tank >= cap * .98f || BattLow(ps, v)) { v.mode = "toUnload"; break; }
                         { var rg = PickRig(ps, v, false); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } }
                         int c = ChooseCell(ps, v);
-                        if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
+                        if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } if (IdleJob(ps, v)) break; NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
                         if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
                 case "drive":
@@ -676,7 +677,7 @@ namespace LunarCleanup.Core
                     {
                         if (v.drone >= 0) { v.mode = "wait"; break; }
                         var s = ChooseStation(ps, v);
-                        if (s == null) { NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
+                        if (s == null) { v.mode = "toRoh"; break; } // keine passende Station: direkt ins Rohstofflager
                         v.sid = s; v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, StDir(ps, s, 'a'), spd * dt, v.id)) v.mode = "queue"; break;
                     }
                 case "queue":
@@ -684,7 +685,7 @@ namespace LunarCleanup.Core
                         var s = v.sid; if (!HasSt(ps, s)) { v.mode = "toUnload"; break; }
                         var st = ps.st[s]; int n = StDocks(ps, s); if (st.docks == null || st.docks.Length != n) { var nd = new int[n]; if (st.docks != null) Array.Copy(st.docks, nd, Math.Min(n, st.docks.Length)); st.docks = nd; }
                         int k = Array.IndexOf(st.docks, v.id); if (k < 0) { k = Array.IndexOf(st.docks, 0); if (k >= 0) st.docks[k] = v.id; }
-                        if (k < 0) { v.qT += dt; if (v.qT > 8) { v.qT = 0; v.sid = null; v.mode = "toUnload"; } break; }
+                        if (k < 0) { v.qT += dt; if (v.qT > 8) { v.qT = 0; v.avoid = s; v.avoidT = 25; v.sid = null; v.mode = "toUnload"; } break; }
                         v.qT = 0; v.busy = true; if (MoveDir(ref v.d, StDir(ps, s, 'd', k), spd * .6f * dt, pd.R)) v.mode = "unload"; break;
                     }
                 case "unload":
@@ -692,7 +693,7 @@ namespace LunarCleanup.Core
                         var s = v.sid; if (!HasSt(ps, s)) { v.mode = "toUnload"; break; }
                         var st = ps.st[s]; float free = StBuf(ps, s) - Sum(st.buf); bool charged = true;
                         if (T.batt > 0) { float bc = BattCap(ps, v), b0 = Bat(ps, v); if (b0 < bc) { v.bat = Mathf.Min(bc, b0 + bc / 16 * Uv("urate", ps) * Mathf.Max(.25f, f) * dt); v.charging = true; } else v.bat = b0; charged = v.bat >= bc * .97f; }
-                        if (free <= .01f && tank > .01f) { v.fullT += dt; if (v.fullT > 4 && !(v.charging && !charged)) { FreeDock(st, v); v.fullT = 0; v.sid = null; v.mode = "toUnload"; } break; }
+                        if (free <= .01f && tank > .01f) { v.fullT += dt; if (v.fullT > 4 && !(v.charging && !charged)) { FreeDock(st, v); v.fullT = 0; v.avoid = s; v.avoidT = 40; v.sid = null; v.mode = "toUnload"; } break; }
                         v.fullT = 0; float amt = Mathf.Min(StRate(s) * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = tank > 0 ? amt / tank : 0;
                         for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; st.buf[m] += x; }
                         if (Sum(v.tank) < .01f && !charged) { Array.Clear(v.tank, 0, NM); break; }
@@ -710,8 +711,28 @@ namespace LunarCleanup.Core
                         if (cap - Sum(v.tank) < .5f || Sum(r.buf) < .05f) { r.claim = -1; v.rig = -1; v.mode = Sum(v.tank) > .5f ? "toUnload" : "seek"; }
                         break;
                     }
-                case "broken": v.busy = false; break;
-                case "toShop": v.busy = true; if (NavMove(ps, v, pd.PlanDir(ps.lay.shop), T.speed * Uv("vspeed", ps) * .5f * dt, v.id)) { v.mode = "repair"; v.repT = VM_TIME * (1 + .5f * v.rep); } break;
+                case "toRoh":
+                    {
+                        if (ChooseStation(ps, v) != null) { v.mode = "toUnload"; break; }
+                        v.busy = true; BattUse(ps, v, dt); var dock = ps.lay.pos["roh"] + new Vector2(-GameData.Bld["roh"].fp - 1.6f, 0);
+                        if (NavMove(ps, v, pd.PlanDir(dock), spd * dt, v.id)) v.mode = "unloadRoh"; break;
+                    }
+                case "unloadRoh":
+                    {
+                        float free = RohCap(ps) - RohSum(ps); if (T.batt > 0) { float bc = BattCap(ps, v), b0 = Bat(ps, v); if (b0 < bc) { v.bat = Mathf.Min(bc, b0 + bc / 30 * Mathf.Max(.25f, f) * dt); v.charging = true; } }
+                        if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { if (v.coll >= 1) FloatTxt(pd.PlanDir(ps.lay.pos["roh"]), "+" + Fmt(v.coll) + " entladen", "mat"); v.coll = 0; v.mode = "seek"; } break; }
+                        if (free <= .01f) { v.fullT += dt; break; } v.fullT = 0;
+                        float amt = Mathf.Min(10 * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = amt / tank; for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; ps.sv.roh[m] += x; }
+                        break;
+                    }
+                case "fieldRepair":
+                    {
+                        v.repT -= dt; if (ps.bld.Contains("werkstatt") && v.rep < VM_REPS) { v.mode = "broken"; break; }
+                        if (v.repT <= 0) { v.wear = Mathf.Min(v.wear, .5f); v.mode = "seek"; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " hat sich notdürftig repariert – eine Roboterwerkstatt hält es länger in Schuss", ""); }
+                        break;
+                    }
+                case "broken": v.busy = false; if (!ps.bld.Contains("werkstatt")) { v.mode = "fieldRepair"; v.repT = 90; } break;
+                case "toShop": v.busy = true; if (NavMove(ps, v, pd.PlanDir(ps.lay.shop), T.speed * Uv("vspeed", ps) * .5f * dt, v.id)) { v.mode = "repair"; v.repT = VM_TIME * (1 + .5f * v.rep) * (v.repSlow ? 4 : 1); v.repSlow = false; } break;
                 case "repair": v.repT -= dt; if (v.repT <= 0) { v.wear = 0; v.rep++; v.mode = "seek"; v.doom = 0; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " repariert (" + v.rep + "/" + VM_REPS + ")", "good"); } break;
                 case "liftwait":
                 case "lifted":
@@ -756,7 +777,7 @@ namespace LunarCleanup.Core
                 if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " ist ausgefallen" + (ps.bld.Contains("werkstatt") && v.rep < VM_REPS ? " – ab in die Werkstatt" : ""), "bad");
             }
             bool auto = ps.sv.autoMaint;
-            if (auto && w >= .75f && v.rep < VM_REPS && (v.mode == "seek" || v.mode == "broken" || (v.mode == "drive" && Sum(v.tank) < 1))) SendToShop(ps, v, true);
+            if (auto && w >= .75f && v.rep < VM_REPS && (v.mode == "seek" || v.mode == "broken" || (v.mode == "drive" && Sum(v.tank) < 1))) { if (!SendToShop(ps, v, true) && v.mode == "broken" && ps.bld.Contains("werkstatt")) { v.mode = "toShop"; v.sid = null; v.cell = -1; v.repSlow = true; } }
             if (v.rep >= VM_REPS && w >= .75f && auto && (v.mode == "broken" || v.mode == "seek")) ReplaceVeh(ps, v, true);
             if (v.mode == "broken" && v.rep >= VM_REPS)
             {
@@ -1049,6 +1070,14 @@ namespace LunarCleanup.Core
             }
             return dr.mode;
         }
+        /// <summary>Kein Parzellen-Auftrag: statt herumzustehen erledigt das Fahrzeug Wartung, lädt den Akku oder bringt Restladung weg.</summary>
+        static bool IdleJob(PState ps, VehSave v)
+        {
+            if (ps.bld.Contains("werkstatt") && v.rep < VM_REPS && v.wear >= .5f && S.credits >= RepCost(ps, v)) { if (SendToShop(ps, v, true)) return true; }
+            if (GameData.Veh[v.type].batt > 0 && Bat(ps, v) < BattCap(ps, v) * .9f && ChooseStation(ps, v) != null) { v.mode = "toUnload"; return true; }
+            if (Sum(v.tank) > .05f) { v.mode = "toUnload"; return true; }
+            return false;
+        }
         static void FreeDock(StSave st, VehSave v) { if (st.docks == null) return; int k = Array.IndexOf(st.docks, v.id); if (k >= 0) st.docks[k] = 0; }
         public static string VehStatus(VehSave v)
         {
@@ -1059,7 +1088,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
+            switch (v.mode) { case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
