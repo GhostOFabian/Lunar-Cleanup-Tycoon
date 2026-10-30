@@ -1,0 +1,79 @@
+LUNAR CLEANUP TYCOON – WAS DU FÜR DIE HANDY-VERSIONEN BRAUCHST
+Stand: 30.10.2026 · Unity 6000.6.7f1 · Projekt: C:\Users\fabiw\Lunar Cleanup Tycoon
+
+======================================================================
+A) ANDROID (Test mit BlueStacks, ohne eigenes Android-Handy)
+======================================================================
+
+1. Unity-Modul "Android Build Support"  (kostenlos, ca. 5–8 GB)
+   - Unity Hub öffnen -> Installs -> bei 6000.6.7f1 auf das Zahnrad -> "Add modules"
+   - Haken setzen bei:
+       [x] Android Build Support
+           [x] OpenJDK
+           [x] Android SDK & NDK Tools
+   - Installieren. Danach Unity einmal neu starten.
+
+2. BlueStacks 5 (kostenlos)  -> https://www.bluestacks.com
+   - Beim Installieren eine Instanz mit Android 11 oder neuer (64-Bit) wählen.
+   - In BlueStacks: Einstellungen -> Erweitert -> "Android Debug Bridge (ADB)" EINSCHALTEN.
+     Dort steht eine Adresse wie 127.0.0.1:5555 – die brauche ich, damit Unity
+     das Spiel direkt in BlueStacks installieren kann.
+   - Einstellungen -> Grafik: "Vulkan" oder "OpenGL" ist beides ok.
+   - Hinweis: BlueStacks läuft auf deinem PC (Intel/AMD). Ich baue das Spiel deshalb
+     zusätzlich für x86-64 – dann läuft es in BlueStacks flüssig statt über Übersetzung.
+
+3. Erst später (wenn das Spiel in den Play Store soll):
+   - Google Play Console Konto: einmalig 25 US-$  -> https://play.google.com/console
+   - Google Play Spiele (Konto-Speicherstand): wird in der Play Console eingerichtet,
+     dazu das kostenlose Unity-Plugin "Google Play Games plugin for Unity" (lade ich nur
+     nach Rückfrage).
+   - In-App-Käufe: Unity-Paket "In-App Purchasing" (kostenlos). Echte Käufe testet man
+     über die "interne Testversion" in der Play Console.
+   - Ein Google-Konto in BlueStacks anmelden, wenn Google Play Spiele getestet werden soll.
+
+   Was ich dafür von dir brauche:
+   - Paketname (Vorschlag): com.fabian.lunarcleanup
+   - Ein Signatur-Schlüssel (Keystore) – lege ich in Unity an; DU vergibst das Passwort
+     und hebst es gut auf. Ohne diesen Schlüssel kann man später keine Updates
+     im Play Store veröffentlichen!
+
+======================================================================
+B) iOS (iPhone / iPad)
+======================================================================
+
+1. Ein Mac ist Pflicht (Apple erlaubt das Bauen nur mit Xcode auf macOS).
+   Möglichkeiten:
+   - eigener Mac (z. B. gebrauchter Mac mini mit Apple-Chip reicht völlig), oder
+   - Miet-Mac in der Cloud (z. B. MacinCloud, monatlich), oder
+   - Unity Build Automation (Unity Cloud baut die iOS-App für dich – kostet je nach Nutzung)
+
+2. Auf dem Mac:
+   - Unity Hub + Unity 6000.6.7f1 mit Modul "iOS Build Support"
+   - Xcode (kostenlos im Mac App Store, ca. 15 GB)
+
+3. Apple Developer Program: 99 €/Jahr  -> https://developer.apple.com/programs/
+   - Nötig für: Installieren auf echten Geräten über TestFlight, Game Center,
+     iCloud-Speicherstand, In-App-Käufe und App Store.
+   - Ohne Bezahlkonto geht nur der iOS-Simulator in Xcode (kein Game Center, keine Käufe).
+
+4. Testgerät: iPhone oder iPad (oder vorerst der Simulator auf dem Mac).
+
+======================================================================
+C) FÜR BEIDE STORES (später, vor der Veröffentlichung)
+======================================================================
+   - App-Name, Kurzbeschreibung, Screenshots
+   - App-Icon 1024 x 1024 Pixel (kann ich entwerfen)
+   - Datenschutzerklärung als Webseite (Pflicht, vor allem wegen Konto-Speicher und Käufen)
+   - Altersfreigabe-Fragebogen in beiden Stores ausfüllen
+
+======================================================================
+D) REIHENFOLGE, DIE ICH VORSCHLAGE
+======================================================================
+   1. Android Build Support installieren + BlueStacks mit ADB einrichten
+   2. Ich richte die Android-Einstellungen in Unity ein (Paketname, Icon, Hochformat,
+      ARM64 + x86-64, Grafik) und baue die erste APK
+   3. Test in BlueStacks: Touch (Maus = Finger), Zoom, Leistung, Speichern
+   4. Danach: Google Play Spiele + Käufe (braucht das Play-Console-Konto)
+   5. iOS erst, wenn ein Mac (oder Cloud-Build) zur Verfügung steht
+
+Downloads oder Käufe mache ich nie ohne deine Zustimmung.
