@@ -226,6 +226,15 @@ with game() as (pg, errs):
         if not E("()=>!!__t.travelFx"): break
     r = E("()=>({p:__t.S.planet,fx:!!__t.travelFx})")
     show('seamless travel', r); check(r['p'] == 'mars' and not r['fx'], 'seamless travel')
+    # v6.3: Mars has its own layout – full base, vehicles must unload at the turned stations without driving through buildings
+    r = E("""()=>{const t=__t,pid='mars',sp=t.S.planets.mars,pd=t.planetData(pid),R=pd.R,bc=pd.cells[pd.base];t.S.credits+=1e13;sp.stage=5;sp.techF=5;
+      for(const k of t.BORDER)if(!t.BLD[k].geo){t.S.research.done[t.BLD[k].research]=true;t.buildBuilding(k);}for(const ty of ['buggy','sauger','truck','buggy'])t.buyVehicle(ty);
+      const L=t.layoutOf(pid),hits={};let n=0,unl=0;const ids=t.BORDER.filter(k=>sp.bld[k]);const mv={};
+      for(let i=0;i<3000;i++){sp.dayT=t.dayLen(pid)*.25;sp.energy=1e5;t.simStep(pid,.25,false);
+        for(const v of sp.veh){mv[v.mode]=(mv[v.mode]||0)+1;if(v.mode==='unload')unl++;if(v.mode==='queue'||v.mode==='unload'||v.mode==='lifted'||v.mode==='liftwait')continue;const l=t.toLocal(bc,v.d,R);if(Math.hypot(l[0],l[1])>40)continue;n++;
+          t.withLayout(pid,()=>{for(const k of ids){const B=t.BLD[k];if(B.st){const y=B.yaw||0,ax=(l[0]-B.pos[0])*Math.cos(y)+(l[1]-B.pos[1])*Math.sin(y);if(ax>.8)continue;}if(Math.hypot(l[0]-B.pos[0],l[1]-B.pos[1])<B.fp-.4){const key=v.mode+'@'+k;hits[key]=(hits[key]||0)+1;}}});}}
+      return {n,hits,unl,mv,same:JSON.stringify(L.pos.roh)!==JSON.stringify(t.layoutOf('moon').pos.roh),yaw:+(L.yaw.u1||0).toFixed(2),made:sp.mach.presse.made||0,rk:sp.nRockets||0}}""")
+    show('mars layout: full base', r); check(sum(r['hits'].values()) <= 3 and r['unl'] > 0 and r['same'] and r['made'] > 0, 'own layout on Mars works (unload, production, no vehicles in buildings)')
     E("()=>{__t.travelTo('moon')}")
     for _ in range(40):
         pg.wait_for_timeout(200)

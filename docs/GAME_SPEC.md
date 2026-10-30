@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.2)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.3)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -198,6 +198,13 @@ Siehe `docs/LANGZEIT.md`, Abschnitt 4 (Zahlen und Formeln).
 - **Totalschaden offline**: nach 2 Reparaturen und 120 s Panne auch offline; die Rückkehr-Übersicht listet die Fahrzeuge.
 - **Drohnen**: Grundladung 160 (vorher 60), Ladebucht 12 Stufen à +50 %.
 - **Neue Planeten**: Eris (×1 400), Sedna (×2 800), Proxima b (×5 600), Trappist-1e (×11 000), Kepler-22b (×22 000), 55 Cancri e (×45 000), Gliese 1214 b (×90 000), Poltergeist (×180 000); Freischaltung jeweils ab 80 % des vorherigen.
+
+## 9k. Basis-Layout pro Planet (ab v6.3)
+- `layoutOf(pid)` liefert Positionen, Drehung der Stationen (`yaw`), Bänder, Werkstatt-Ausgang (`shop`), Startpunkt (`start`) und Parkplätze (`park`). Mond = Original. Andere Planeten: `genLayout(pid)` mit Zufall aus dem Planetennamen, bis zu 120 Versuche.
+- Aufbau: Entladeseite in zufälliger Richtung (Stationen in 13,5–17,5 m, Andockplätze zeigen nach außen), Rohstofflager davor, Presse, Schmelze, Raffinerie und Produktlager dahinter, Verkauf am Ende der Kette, übrige Gebäude frei verteilt (≥ 3,1 m Lücke). Vor jeder Station bleibt ein Anfahrtskorridor frei.
+- Bänder: Rasterwegsuche (0,5 m, 4 Richtungen, Kurvenstrafe), um Gebäude herum; kreuzt ein Band ein früheres, läuft es eine Ebene höher (Brücke).
+- Angenommen wird ein Layout nur, wenn es die Regeln des Layout-Tests erfüllt (Lücken, freie Andockplätze, Bänder nicht durch Gebäude, alles auf Basiszellen, alle Fahrziele von außen erreichbar, Platz für Werkstatt-Ausgang, Startpunkt und 12 Parkplätze).
+- `applyLayout`/`withLayout` schalten das aktive Layout um (in `simStep`, `flowReport`, `navGrid`, `lampSpots`, `buildBase` und zu Beginn jedes Frames). Das Ergebnis wird nur als Rechenzeit-Abkürzung im Browser zwischengespeichert, nicht im Spielstand.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.

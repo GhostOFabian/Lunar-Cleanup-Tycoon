@@ -169,3 +169,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Unterschiedliche Gebäudeanordnung pro Planet zurückgestellt: Positionen, Bänder, Laternen, Andockpunkte und Wegfindung hängen am gemeinsamen Layout; ein zweites Layout wäre ein eigener großer Schritt.
 - Fahrzeuge dürfen auch offline zerstört werden (Wunsch des Spielers); die Rückkehr-Übersicht meldet es.
 - Doppelbürsten-Pflicht pro Planet auf Stufe 2 begrenzt, weil die Stufen jetzt lokal gekauft werden.
+
+## v6.3
+- Layouts werden erzeugt statt von Hand gebaut: 17 Handlayouts mit Bändern wären fehleranfällig, der Generator nimmt nur Layouts an, die alle Layout-Regeln erfüllen. Der Mond bleibt beim bekannten Original.
+- Layout hängt nur am Planetennamen und steht nicht im Spielstand – alte Stände bekommen auf ihren Planeten (außer dem Mond) das neue Layout; Pakete auf Bändern und Fahrzeuge laufen ohne Umbau weiter.

@@ -56,6 +56,7 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 40. Ausführlicher Auftrag „Gameplay, Progression und Langzeitmotivation verbessern“ (Analyse, Maßnahmenplan, risikoarme Umsetzung, Spielstände erhalten). → v6.0, siehe `docs/LANGZEIT.md`.
 41. Ausführlicher Auftrag „Gameplay-Überarbeitung“: 4 feste Außenlager-Plätze, größere Außenlager mit Upgrade und 80 %-Mechanik, Drohnen holen überall ab, Fahrzeug-Lebensdauer mit max. 2 Reparaturen, Störungen bei Bohrtürmen/Baggern mit rotem Licht, sichtbare Naturereignisse. → v6.1.
 42. Fahrzeuge **dürfen offline zerstört werden** (mit Meldung); **Drohnen mehr Platz**; Upgrades von alten Planeten sollen nicht auf neue übertragen werden (sonst monoton) – Rückfrage: **pro Planet neu**; **8 weitere Planeten**, **andere Produktionen/Rezepte/Endprodukte je Planet**, ein **extrem verstrahlter Planet**. → v6.2.
+43. Jeder Planet soll **vom Aufbau anders aussehen**, nicht nur anders produzieren. → v6.3.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).

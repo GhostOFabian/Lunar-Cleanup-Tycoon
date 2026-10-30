@@ -559,6 +559,104 @@ function beltExtend(path,id,atStart){const B=BLD[id];if(!B)return path;const p=p
   return p;}
 for(const b of BELTS){b.port0=b.path[0].slice();b.port1=b.path[b.path.length-1].slice();b.path=beltExtend(beltExtend(b.path,b.from,true),b.to,false);}
 for(const b of BELTS){b.rp=roundPath(b.path,1.4);let L=0;for(let i=1;i<b.rp.length;i++)L+=Math.hypot(b.rp[i][0]-b.rp[i-1][0],b.rp[i][1]-b.rp[i-1][1]);b.L=L;}
+
+/* ===== v6.3: every planet has its own base layout =====
+   The Moon keeps the hand-made layout. Every other planet gets a layout generated from its name (always the same):
+   the unloading side points another way, the factory sits elsewhere, the outer buildings are spread differently,
+   and the belts are laid out by a path search around the buildings. A layout is only accepted if it passes the same
+   rules as the layout test (gaps, free docks, belts not through buildings, everything on base cells, all drive targets reachable). */
+for(const id in BLD)BLD[id].yaw=0;
+const LAY={},LAY_MOON={pos:{},yaw:{},belts:BELTS.slice(),shop:[13,-16.2],start:[2.5,13],park:[19,13]};
+for(const id in BLD)LAY_MOON.pos[id]=BLD[id].pos.slice();
+let ACTL='moon';
+/* the generated layout is always the same; it is kept in the browser only to save the computing time on the next start */
+const LAYV='lct-layout-2-';
+function layoutOf(pid){if(pid==='moon'||!PLANETS[pid])return LAY_MOON;if(LAY[pid])return LAY[pid];let L=null;
+  try{const j=localStorage.getItem(LAYV+pid);if(j){const o=JSON.parse(j);L={pos:o.pos,yaw:o.yaw,shop:o.shop,start:o.start,park:o.park,phi:o.phi,belts:LAY_MOON.belts.map((b0,i)=>{const q=o.belts[i],b=Object.assign({},b0,q);b.rp=roundPath(b.path,1.4);let Lb=0;for(let k=1;k<b.rp.length;k++)Lb+=Math.hypot(b.rp[k][0]-b.rp[k-1][0],b.rp[k][1]-b.rp[k-1][1]);b.L=Lb;return b;})};}}catch(e){L=null;}
+  if(!L||!L.pos||Object.keys(BLD).some(id=>!L.pos[id])){L=genLayout(pid);if(!L.fallback)try{localStorage.setItem(LAYV+pid,JSON.stringify({pos:L.pos,yaw:L.yaw,shop:L.shop,start:L.start,park:L.park,phi:L.phi,belts:L.belts.map(b=>({path:b.path,h:b.h,port0:b.port0,port1:b.port1}))}));}catch(e){}}
+  return LAY[pid]=L;}
+function applyLayout(pid){if(ACTL===pid)return;const L=layoutOf(pid);for(const id in BLD){BLD[id].pos=L.pos[id];BLD[id].yaw=L.yaw[id]||0;}BELTS.length=0;for(const b of L.belts)BELTS.push(b);ACTL=pid;}
+function withLayout(pid,f){const o=ACTL;applyLayout(pid);try{return f();}finally{applyLayout(o);}}
+const GM={h:.5,off:32,N:129};
+const gIdx=(x,y)=>{const i=Math.round((x+GM.off)/GM.h),j=Math.round((y+GM.off)/GM.h);return i<0||j<0||i>=GM.N||j>=GM.N?-1:j*GM.N+i;};
+const gPt=k=>[(k%GM.N)*GM.h-GM.off,((k/GM.N)|0)*GM.h-GM.off];
+function baseMask(pd){if(pd._bm)return pd._bm;const N=GM.N,m=new Uint8Array(N*N);let g=pd.base;
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=i*GM.h-GM.off,y=j*GM.h-GM.off;if(Math.hypot(x,y)>31)continue;g=cellOf(pd,basePlanDir(pd,x,y),g);m[j*N+i]=pd.cells[g].kind==='base'?1:0;}return pd._bm=m;}
+function genLayout(pid){const pd=planetData(pid);let seed=7;for(const ch of pid)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;const m=baseMask(pd);
+  for(let a=0;a<120;a++){const L=tryLayout(pd,m,rng(seed+a*7919));if(L){L.tries=a+1;return L;}}
+  return Object.assign({},LAY_MOON,{fallback:1});}
+function tryLayout(pd,m,r){
+  const onB=(x,y)=>{const k=gIdx(x,y);return k>=0&&m[k]===1;};
+  const phi=r()*TAU,ux=Math.cos(phi),uy=Math.sin(phi),P=(a,b)=>[ux*a-uy*b,uy*a+ux*b],ax=p=>p[0]*ux+p[1]*uy;
+  const pos={},yaw={},ids=[];for(const s of STATIONS)yaw[s]=phi;
+  const loc=(q,a,p)=>{const dx=p[0]-q[0],dy=p[1]-q[1];return[dx*Math.cos(a)+dy*Math.sin(a),-dx*Math.sin(a)+dy*Math.cos(a)];};
+  const front=(s,q,p,fp)=>{const l=loc(q,yaw[s],p);return l[0]>-1&&l[0]<9.5+fp&&Math.abs(l[1])<4.2+fp;};
+  const fits=(id,p,gap)=>{const B=BLD[id];if(Math.hypot(p[0],p[1])+B.fp>28.5)return false;if(!onB(p[0],p[1]))return false;
+    for(let k=0;k<8;k++){const a=k/8*TAU;if(!onB(p[0]+Math.cos(a)*(B.fp+.6),p[1]+Math.sin(a)*(B.fp+.6)))return false;}
+    for(const o of ids){const q=pos[o];if(Math.hypot(p[0]-q[0],p[1]-q[1])<B.fp+BLD[o].fp+gap)return false;
+      if(STATIONS.includes(o)&&front(o,q,p,B.fp))return false;if(STATIONS.includes(id)&&front(id,p,q,BLD[o].fp))return false;}
+    if(STATIONS.includes(id)){const a=P(1,0);for(const t of[2.6,6.4,9])if(!onB(p[0]+a[0]*t,p[1]+a[1]*t))return false;}
+    return true;};
+  const put=(id,gen,gap,tries)=>{for(let t=0;t<(tries||220);t++){const p=gen();if(p&&fits(id,p,gap||3.3)){pos[id]=p;ids.push(id);return true;}}return false;};
+  const near=(ref,d0,d1,amax)=>()=>{const q=pos[ref];for(let t=0;t<30;t++){const a=r()*TAU,d=d0+r()*(d1-d0),p=[q[0]+Math.cos(a)*d,q[1]+Math.sin(a)*d];if(ax(p)<=amax)return p;}return null;};
+  const lat=[-11,0,11];for(let i=2;i>0;i--){const j=(r()*(i+1))|0;[lat[i],lat[j]]=[lat[j],lat[i]];}
+  for(let i=0;i<3;i++)if(!put(STATIONS[i],()=>P(13.5+r()*4,lat[i]+(r()-.5)*3),3.6))return null;
+  if(!put('roh',()=>P(1+r()*6,(r()-.5)*12)))return null;
+  if(!put('presse',near('roh',7,11,ax(pos.roh)+1.5)))return null;
+  if(!put('schmelze',near('presse',7,11,ax(pos.presse)+2)))return null;
+  if(!put('raff',near('roh',8,13,ax(pos.roh)+1.5)))return null;
+  if(!put('prod',()=>{const c=[(pos.presse[0]+pos.schmelze[0]+pos.raff[0])/3,(pos.presse[1]+pos.schmelze[1]+pos.raff[1])/3],a=r()*TAU,d=r()*8;return[c[0]+Math.cos(a)*d,c[1]+Math.sin(a)*d];}))return null;
+  if(!put('sell',near('prod',8,14,ax(pos.prod)+3)))return null;
+  for(const id of['hq','energy','werkstatt','research','hangar','rtg','geo','reactor','lifter','port'])if(!put(id,()=>{const a=r()*TAU,d=5+r()*21;return[Math.cos(a)*d,Math.sin(a)*d];},3.1,400))return null;
+  /* belts: grid path search, 4 directions with a turn penalty; crossing an earlier belt is allowed but costly (it becomes a bridge) */
+  const N=GM.N,blk=new Uint8Array(N*N),occ=new Float32Array(N*N);
+  for(let k=0;k<N*N;k++){if(!m[k]){blk[k]=1;continue;}const p=gPt(k);for(const id of ids){const B=BLD[id],q=pos[id];if(Math.hypot(p[0]-q[0],p[1]-q[1])<B.fp+1.25){blk[k]=1;break;}
+      if(STATIONS.includes(id)){const l=loc(q,yaw[id],p);if(l[0]>0&&l[0]<9.5&&Math.abs(l[1])<4){blk[k]=1;break;}}}}
+  const ports=(id,tgt)=>{const B=BLD[id],q=pos[id],a0=Math.atan2(tgt[1]-q[1],tgt[0]-q[0]),out=[];
+    for(let k=0;k<8;k++){const a=k/8*TAU;if(STATIONS.includes(id)&&Math.cos(a-yaw[id])>.2)continue;const p=[q[0]+Math.cos(a)*(B.fp+1.5),q[1]+Math.sin(a)*(B.fp+1.5)],g=gIdx(p[0],p[1]);
+      if(g<0||!m[g])continue;let ok=true;for(const o of ids)if(o!==id&&Math.hypot(p[0]-pos[o][0],p[1]-pos[o][1])<BLD[o].fp+1.25)ok=false;if(!ok)continue;
+      const da=Math.abs(Math.atan2(Math.sin(a-a0),Math.cos(a-a0)))+(k%2?.5:0);out.push({a,p,g,da});}
+    return out.sort((x,y)=>x.da-y.da).slice(0,3);};
+  const S4=N*N*4,G=new Float32Array(S4),from=new Int32Array(S4);
+  const astar=(s,t)=>{G.fill(1e9);from.fill(-1);const heap=[],tx=t%N,ty=(t/N)|0,D=[[1,0],[0,1],[-1,0],[0,-1]];
+    const push=(f,k)=>{heap.push([f,k]);let i=heap.length-1;while(i>0){const pp=(i-1)>>1;if(heap[pp][0]<=heap[i][0])break;[heap[pp],heap[i]]=[heap[i],heap[pp]];i=pp;}};
+    const pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=2*i+1,rr=l+1;let mm=i;if(l<heap.length&&heap[l][0]<heap[mm][0])mm=l;if(rr<heap.length&&heap[rr][0]<heap[mm][0])mm=rr;if(mm===i)break;[heap[mm],heap[i]]=[heap[i],heap[mm]];i=mm;}}return top;};
+    for(let d=0;d<4;d++){G[s*4+d]=0;push(0,s*4+d);}let end=-1,it=0;
+    while(heap.length&&it++<200000){const[f,st]=pop();const c=st>>2,d=st&3;if(f>G[st]+Math.abs(c%N-tx)+Math.abs(((c/N)|0)-ty)+1e-3)continue;if(c===t){end=st;break;}
+      const x=c%N,y=(c/N)|0;for(let nd=0;nd<4;nd++){if(nd===((d+2)&3))continue;const nx=x+D[nd][0],ny=y+D[nd][1];if(nx<0||ny<0||nx>=N||ny>=N)continue;const n=ny*N+nx;if(blk[n]&&n!==t)continue;
+        const g2=G[st]+1+(nd!==d?9:0)+occ[n],ns=n*4+nd;if(g2<G[ns]){G[ns]=g2;from[ns]=st;push(g2+Math.abs(nx-tx)+Math.abs(ny-ty),ns);}}}
+    if(end<0)return null;const cells=[];for(let st=end;st>=0;st=from[st])cells.push(st>>2);cells.reverse();return{cells,cost:G[end]};};
+  const belts=[];
+  for(const b0 of LAY_MOON.belts){const A=pos[b0.from],Bq=pos[b0.to],pa=ports(b0.from,Bq),pb=ports(b0.to,A);let best=null;
+    const combos=[];for(const x of pa)for(const y of pb)if(x.g!==y.g)combos.push([x,y,x.da+y.da]);combos.sort((p,q)=>p[2]-q[2]);
+    for(const[x,y]of combos.slice(0,4)){const sv=blk[x.g],tv=blk[y.g];blk[x.g]=0;blk[y.g]=0;const res=astar(x.g,y.g);blk[x.g]=sv;blk[y.g]=tv;if(res&&(!best||res.cost<best.res.cost))best={x,y,res};if(best&&best.res.cost<1.6*Math.hypot(A[0]-Bq[0],A[1]-Bq[1])/GM.h+12)break;}
+    if(!best)return null;
+    const pts=best.res.cells.map(gPt),cor=[pts[0]];for(let i=1;i<pts.length-1;i++){const a=pts[i-1],b=pts[i],c=pts[i+1];if(Math.abs((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))>1e-6)cor.push(b);}cor.push(pts[pts.length-1]);
+    const FA=BLD[b0.from].fp,FB=BLD[b0.to].fp,ea=[A[0]+Math.cos(best.x.a)*FA,A[1]+Math.sin(best.x.a)*FA],eb=[Bq[0]+Math.cos(best.y.a)*FB,Bq[1]+Math.sin(best.y.a)*FB];
+    const path=[[A[0]+Math.cos(best.x.a)*FA*.38,A[1]+Math.sin(best.x.a)*FA*.38],...cor,[Bq[0]+Math.cos(best.y.a)*FB*.38,Bq[1]+Math.sin(best.y.a)*FB*.38]];
+    for(const c of best.res.cells){const p=gPt(c);for(let dj=-3;dj<=3;dj++)for(let di=-3;di<=3;di++){const k=gIdx(p[0]+di*GM.h,p[1]+dj*GM.h);if(k<0)continue;const dd=Math.hypot(di,dj)*GM.h;if(dd<.7)occ[k]=Math.max(occ[k],14);else if(dd<1.5)occ[k]=Math.max(occ[k],3);}}
+    const b=Object.assign({},b0,{path,port0:ea,port1:eb,h:.5});b.rp=roundPath(b.path,1.4);let Lb=0;for(let i=1;i<b.rp.length;i++)Lb+=Math.hypot(b.rp[i][0]-b.rp[i-1][0],b.rp[i][1]-b.rp[i-1][1]);b.L=Lb;belts.push(b);}
+  /* bridges: a belt that crosses an earlier one runs one level higher */
+  const X=(p1,p2,p3,p4)=>{const d=(p2[0]-p1[0])*(p4[1]-p3[1])-(p2[1]-p1[1])*(p4[0]-p3[0]);if(Math.abs(d)<1e-9)return false;const t=((p3[0]-p1[0])*(p4[1]-p3[1])-(p3[1]-p1[1])*(p4[0]-p3[0]))/d,u=((p3[0]-p1[0])*(p2[1]-p1[1])-(p3[1]-p1[1])*(p2[0]-p1[0]))/d;return t>0&&t<1&&u>0&&u<1;};
+  const cross=(a,b)=>{for(let i=0;i<a.path.length-1;i++)for(let j=0;j<b.path.length-1;j++)if(X(a.path[i],a.path[i+1],b.path[j],b.path[j+1]))return true;return false;};
+  for(let i=0;i<belts.length;i++){const used=new Set();for(let j=0;j<i;j++)if(cross(belts[i],belts[j]))used.add(belts[j].h);for(const h of[.5,1.6,2.7])if(!used.has(h)){belts[i].h=h;break;}}
+  /* checks of the layout test */
+  for(const b of belts){const Pp=b.rp;for(let i=0;i<Pp.length-1;i++)for(let k=0;k<=4;k++){const x=Pp[i][0]+(Pp[i+1][0]-Pp[i][0])*k/4,y=Pp[i][1]+(Pp[i+1][1]-Pp[i][1])*k/4;
+      if(!onB(x,y))return null;for(const id of ids){if(id===b.from||id===b.to)continue;if(Math.hypot(x-pos[id][0],y-pos[id][1])<BLD[id].fp+.85)return null;}}}
+  /* drive targets: same grid as the vehicles, filled from the outside */
+  const NN=NAV.N,ng=new Uint8Array(NN*NN);for(let j=0;j<NN;j++)for(let i=0;i<NN;i++){const q=[i-NAV.off+.5,j-NAV.off+.5];let bl=0;
+    for(const id of ids)if(Math.hypot(q[0]-pos[id][0],q[1]-pos[id][1])<BLD[id].fp+.9){bl=1;break;}
+    if(!bl)for(const b of belts){const Pp=b.rp;for(let k=0;k<Pp.length-1;k++)if(segD(q,Pp[k],Pp[k+1])<1.15){bl=1;break;}if(bl)break;}ng[j*NN+i]=bl;}
+  const reach=new Uint8Array(NN*NN),qq=[];for(let i=0;i<NN;i++)for(const k of[i,(NN-1)*NN+i,i*NN,i*NN+NN-1])if(!ng[k]&&!reach[k]){reach[k]=1;qq.push(k);}
+  while(qq.length){const c=qq.pop(),x=c%NN,y=(c/NN)|0;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=NN||ny>=NN)continue;const n=ny*NN+nx;if(!ng[n]&&!reach[n]){reach[n]=1;qq.push(n);}}}
+  const okPt=p=>{if(!onB(p[0],p[1]))return false;for(const o of[[0,0],[.5,0],[-.5,0],[0,.5],[0,-.5]]){const k=navIdx(p[0]+o[0],p[1]+o[1]);if(ng[k]||!reach[k])return false;}for(const id of ids)if(Math.hypot(p[0]-pos[id][0],p[1]-pos[id][1])<BLD[id].fp+1.4)return false;return true;};
+  for(const s of STATIONS){const a=P(1,0),q=pos[s];if(!okPt([q[0]+a[0]*6.4,q[1]+a[1]*6.4]))return null;}
+  const around=(c,rad)=>{const a0=Math.atan2(-c[1],-c[0]);for(let k=0;k<24;k++){const a=a0+(k%2?1:-1)*Math.ceil(k/2)*TAU/24,p=[c[0]+Math.cos(a)*rad,c[1]+Math.sin(a)*rad];if(okPt(p))return p;}return null;};
+  const shop=around(pos.werkstatt,BLD.werkstatt.fp+1.5),start=around(pos.hq,BLD.hq.fp+2.4);if(!shop||!start)return null;
+  let park=null;for(let d=10;d<=25&&!park;d+=1.5)for(let k=0;k<32&&!park;k++){const a=k/32*TAU,o=[Math.cos(a)*d,Math.sin(a)*d];let ok=true;
+    for(let i=0;i<12&&ok;i++){const p=[o[0]+(i%4)*1.8,o[1]+Math.floor(i/4)*1.8];if(!okPt(p)||Math.hypot(p[0]-shop[0],p[1]-shop[1])<2.5||Math.hypot(p[0]-start[0],p[1]-start[1])<2.5)ok=false;}if(ok)park=o;}
+  if(!park)return null;
+  return {pos,yaw,belts,shop,start,park,phi};}
 const STAGES=[
   {n:1,name:'Kleine Reinigungsstation',cost:0,txt:'Handgerät, kleines Rohstofflager, einfache Verkaufsstation.'},
   {n:2,name:'Industrielle Reinigung',cost:200,txt:'Produktlager, kleine Entladestation, Staubpresse, Förderbänder, Energiezentrale, Staubi und Buggy, Förderbänder zur Verkaufsrakete.'},
@@ -1019,7 +1117,7 @@ const vehLocked=ty=>VT[ty].planet&&!S.planets[VT[ty].planet];
 /* ---- base navigation: vehicles route around buildings and ground belts (grid A* in plan space) ---- */
 const NAV={zone:31,N:66,off:33};
 const segD=(q,a,c)=>{const dx=c[0]-a[0],dy=c[1]-a[1],l2=dx*dx+dy*dy||1,t=clamp(((q[0]-a[0])*dx+(q[1]-a[1])*dy)/l2,0,1);return Math.hypot(q[0]-a[0]-dx*t,q[1]-a[1]-dy*t);};
-function navGrid(pid){const sp=S.planets[pid],w=W[pid];const key=BORDER.filter(k=>sp.bld[k]).join(',')+'|'+gs(sp);
+function navGrid(pid){if(ACTL!==pid)return withLayout(pid,()=>navGrid(pid));const sp=S.planets[pid],w=W[pid];const key=BORDER.filter(k=>sp.bld[k]).join(',')+'|'+gs(sp);
   if(w.nav&&w.nav.key===key)return w.nav;const N=NAV.N,g=new Uint8Array(N*N);const blds=BORDER.filter(k=>sp.bld[k]).map(k=>BLD[k]),belts=BELTS.filter(b=>beltLive(sp,b));
   for(let j=0;j<N;j++)for(let i=0;i<N;i++){const q=[i-NAV.off+.5,j-NAV.off+.5];let bl=0;
     for(const B of blds)if(Math.hypot(q[0]-B.pos[0],q[1]-B.pos[1])<B.fp+.9){bl=1;break;}
@@ -1092,9 +1190,10 @@ function chooseStation(pid,sp,v){const pd=planetData(pid);let best=null,bd=1e9;c
     const d=arcDist(v.d,stDir(pid,s,'c'),pd.R)+sumObj(sp.st[s].buf)/stBuf(s)*40+over*14;if(d<bd){bd=d;best=s;}}
   for(const o of sp.outposts){if(o.key===avoid)continue;const fill=sumObj(o.buf)/stBuf(o.key);if(fill>.97)continue;const d=arcDist(v.d,stDir(pid,o.key,'c'),pd.R)+(fill>.8?60:0);if(d<bd){bd=d;best=o.key;}}
   if(!best&&avoid)best=avoid;return best;}
-const dockPos=(s,k)=>[BLD[s].pos[0]+2.6,BLD[s].pos[1]-(k-(BLD[s].st.docks-1)/2)*1.8];
-const approachPos=s=>[BLD[s].pos[0]+6.4,BLD[s].pos[1]];
-function parkPos(sp,v){const i=sp.veh.indexOf(v);return[19+(i%4)*1.8,13+Math.floor(i/4)*1.8];}
+const stLoc=(s,a,b)=>{const y=BLD[s].yaw||0,c=Math.cos(y),n=Math.sin(y);return[BLD[s].pos[0]+a*c-b*n,BLD[s].pos[1]+a*n+b*c];};
+const dockPos=(s,k)=>stLoc(s,2.6,-(k-(BLD[s].st.docks-1)/2)*1.8);
+const approachPos=s=>stLoc(s,6.4,0);
+function parkPos(sp,v){const i=sp.veh.indexOf(v),o=layoutOf(ACTL).park;return[o[0]+(i%4)*1.8,o[1]+Math.floor(i/4)*1.8];}
 function vehStep(pid,sp,v,dt,f,live){
   const T=VT[v.type],pd=planetData(pid),R=pd.R,w=W[pid];
   const bf=(T.batt&&v.bat!=null&&v.bat<=0?.3:1)*((v.wear||0)>.85?.8:1),spd=T.speed*uv('vspeed')*specF('veh',pid)*Math.max(.25,f)*(homeF(v,pid)>1?1:(sp.vm||1))*bf;
@@ -1171,7 +1270,7 @@ function vehStep(pid,sp,v,dt,f,live){
    ≥ 75 %: service due (yellow light), ≥ 85 %: 20 % slower, ≥ 100 % or a rare breakdown above 80 %: out of order (red light).
    The Roboterwerkstatt repairs a vehicle twice; after that it has to be replaced – unmaintained, it is eventually written off with a warning. ---- */
 const VMAINT={life:3*3600,reps:2,time:20,doom:120};
-const shopDir=(pid,sp)=>basePlanDir(planetData(pid),13,-16.2);
+const shopDir=(pid,sp)=>{const p=layoutOf(pid).shop;return basePlanDir(planetData(pid),p[0],p[1]);};
 const repCost=(pid,v)=>Math.round(VT[v.type].cost*PLANETS[pid].diff*.25*(1+(v.rep||0)));
 function sendToShop(pid,sp,v,auto){if(!sp.bld.werkstatt)return auto?false:fail('Erst eine Roboterwerkstatt bauen');if((v.rep||0)>=VMAINT.reps)return auto?false:fail('Schon zweimal repariert – ersetzen');
   if(v.mode==='toShop'||v.mode==='repair')return false;const c=repCost(pid,v);if(S.credits<c)return auto?false:fail(lacks(c));S.credits-=c;
@@ -1476,7 +1575,7 @@ function dumpStore(pid,raw,live){const sp=S.planets[pid],store=raw?sp.roh:sp.pro
   if(tot<=0)return;earn(tot,true);sp.stats.sold+=tot;S.stats.sold+=tot;sp.rocketDue=(sp.rocketDue||0)+tot;
   if(TRACK){TRACK.p[pid].sold+=tot;TRACK.p[pid].dumps=(TRACK.p[pid].dumps||0)+1;}else if(live&&pid===S.planet)toast('Verkaufsautomat: '+(raw?'Rohstofflager':'Produktlager')+' verkauft · +'+fmt(tot)+' Cr','good');}
 const meteorEvery=pid=>{const sp=S.planets[pid];return (S.done[pid]?Math.max(25,520/Math.sqrt(Math.max(1,W[pid].nClean))):Math.max(45,1000/Math.sqrt(Math.max(1,W[pid].nClean))))/(sp.dm||1);};
-function simStep(pid,dt,live){const o=CUR;CUR=pid;try{simStep0(pid,dt,live);}finally{CUR=o;}}
+function simStep(pid,dt,live){const o=CUR,ol=ACTL;CUR=pid;applyLayout(pid);try{simStep0(pid,dt,live);}finally{CUR=o;applyLayout(ol);}}
 function simStep0(pid,dt,live){
   const sp=S.planets[pid],w=W[pid];if(!sp||!w)return;
   const P=PLANETS[pid],hz=P.hz||{};let st=null;
@@ -1816,20 +1915,20 @@ function pipeCurve(pd,a,b,hEnd,hStart){const R=pd.R,bc=basePlanDir(pd,0,0),dist=
   if(hEnd!=null)pts.push(V3(vsc(b,R+hEnd)));if(hStart!=null)pts.unshift(V3(vsc(a,R+hStart)));
   return new THREE.CatmullRomCurve3(pts);}
 /* building frame: local +X = plan +x, local +Z = plan -y (so plan coordinates map consistently) */
-function placeOnPlan(obj,pd,x,y,lift){const d=basePlanDir(pd,x,y),fwd=vsc(pd.cells[pd.base].e2,-1);orient(obj,d,fwd,pd.R,lift);}
+function placeOnPlan(obj,pd,x,y,lift,yaw){const d=basePlanDir(pd,x,y),c=pd.cells[pd.base],fwd=yaw?vadd(vsc(c.e1,Math.sin(yaw)),vsc(c.e2,-Math.cos(yaw))):vsc(c.e2,-1);orient(obj,d,fwd,pd.R,lift);}
 /* how much a building may grow sideways without touching neighbours, foreign belts or the gates of its own belts */
 function growRoom(sp,id,g){g.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(g),hx=Math.max(.5,Math.max(-bb.min.x,bb.max.x)),hz=Math.max(.5,Math.max(-bb.min.z,bb.max.z)),hr=Math.max(hx,hz),B=BLD[id];let s=1.25;
   for(const k of BORDER){if(k===id||!sp.bld[k])continue;const o=BLD[k];s=Math.min(s,(Math.hypot(o.pos[0]-B.pos[0],o.pos[1]-B.pos[1])-o.fp-.5)/hr);}
   for(const b of BELTS){if(!beltLive(sp,b))continue;if(b.from===id||b.to===id){for(const q of[b.from===id?b.port0:b.port1]){const x=Math.abs(q[0]-B.pos[0]),z=Math.abs(q[1]-B.pos[1]);const sp0=Math.max((x-.25)/hx,(z-.25)/hz);if(sp0>=1)s=Math.min(s,sp0);}continue;}
     const P=b.rp;for(let i=0;i<P.length-1;i++)s=Math.min(s,(segD(B.pos,P[i],P[i+1])-.9)/hr);}
   return Math.max(1,s);}
-function buildBase(pid){
+function buildBase(pid){if(ACTL!==pid)return withLayout(pid,()=>buildBase(pid));
   const pd=planetData(pid),sp=S.planets[pid],L=matsLib(pid);buildViews={};
   for(const id of BORDER){const B=BLD[id];
     if(sp.bld[id]){const v=buildingModel(id,L),bl=(sp.blvl&&sp.blvl[id])||0;if(bl){const sx=Math.min(1+.07*bl,growRoom(sp,id,v.g)),bb=new THREE.Box3().setFromObject(v.g),top=bb.max.y,mh=.45+.38*bl;
       /* level badge: a short mast on the roof with one glowing marker per level – stays inside the building, never over belts */
       add(Cyl(.05,.05,mh,6),L.metal,0,top+mh/2,0,v.g,false);for(let k=0;k<bl;k++){const m=add(new THREE.OctahedronGeometry(.2),L.glow,0,top+.4+k*.38,0,v.g,false);m.scale.set(1,.7,1);}
-      v.g.scale.set(sx,1+.2*bl,sx);}v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0);world.add(v.g);pickables.push(v.g);
+      v.g.scale.set(sx,1+.2*bl,sx);}v.g.traverse(o=>{o.userData.pick={type:'building',id};});placeOnPlan(v.g,pd,B.pos[0],B.pos[1],0,B.yaw||0);world.add(v.g);pickables.push(v.g);
       const lb=makeLabel(B.name);lb.position.set(0,id==='port'?8:5.4,0);v.g.add(lb);buildViews[id]=v;
       if(STATIONS.includes(id)||MACH[id]||id==='roh'||id==='prod'||id==='sell'){v.lamp=new THREE.MeshBasicMaterial({color:0x3fe58a});add(Sph(.32,10,8),v.lamp,0,id==='raff'?6:id==='sell'?4.9:4.5,0,v.g,false);}}
     else if(gs(sp)>=B.stage){const g=new THREE.Group();
@@ -2054,14 +2153,14 @@ const LAMP={headM:new THREE.MeshStandardMaterial({color:0xfff1d6,emissive:0xffd0
 const BLIP=new THREE.SpriteMaterial({map:glowTex,color:0xff8a1f,transparent:true,opacity:0,depthWrite:false});
 const LAMPL=[];for(let i=0;i<6;i++){const l=new THREE.PointLight(0xffd59a,0,16,1.3);l.userData.on=0;scene.add(l);LAMPL.push(l);}
 let lampPos=[],lampT=1;
-function lampSpots(pid){const sp=S.planets[pid],blds=BORDER.filter(k=>sp.bld[k]),belts=BELTS.filter(b=>beltLive(sp,b)),out=[],ng=navGrid(pid).g,pd=planetData(pid);
-  const keep=[[2.5,13],[13,-16.2],[BLD.roh.pos[0]-2.6,BLD.roh.pos[1]+1.6]];
+function lampSpots(pid){if(ACTL!==pid)return withLayout(pid,()=>lampSpots(pid));const sp=S.planets[pid],blds=BORDER.filter(k=>sp.bld[k]),belts=BELTS.filter(b=>beltLive(sp,b)),out=[],ng=navGrid(pid).g,pd=planetData(pid);
+  const keep=[layoutOf(pid).start,layoutOf(pid).shop,[BLD.roh.pos[0]-2.6,BLD.roh.pos[1]+1.6]];
   for(const k of blds){const B=BLD[k],want=B.fp>=2.6?2:1,a0=Math.hypot(B.pos[0],B.pos[1])>4?Math.atan2(-B.pos[1],-B.pos[0]):-Math.PI/2;let n=0;const cands=[];
     /* flanking pairs: same offset left and right of the side that faces the base centre, tried from the front to the back */
     const offs=want===1?[0,.5,-.5,1,-1,1.6,-1.6,2.3,-2.3]:[.62,-.62,.95,-.95,1.3,-1.3,1.75,-1.75,2.3,-2.3];
     for(const rr of[B.fp+.3,B.fp+.12])for(const o of offs){const a=a0+o;cands.push([B.pos[0]+Math.cos(a)*rr,B.pos[1]+Math.sin(a)*rr,a]);}
     for(const p of cands){if(n>=want)break;
-      if(B.st&&Math.cos(p[2])>.25)continue;
+      if(B.st&&Math.cos(p[2]-(B.yaw||0))>.25)continue;
       if(pd.cells[cellOf(pd,basePlanDir(pd,p[0],p[1]),pd.base)].kind!=='base')continue;
       if([[0,0],[.4,0],[-.4,0],[0,.4],[0,-.4]].some(o=>!ng[navIdx(p[0]+o[0],p[1]+o[1])]))continue;
       if(out.some(o=>o[2]===k&&Math.abs(Math.atan2(Math.sin(o[3]-p[2]),Math.cos(o[3]-p[2])))<.9))continue;
@@ -2197,7 +2296,7 @@ function vehCost(t){const n=SP().veh.filter(v=>v.type===t).length;return Math.ro
 const cartCost=pid=>Math.round(120*Math.pow(PLANETS[pid].diff,.85));
 const cartCap=()=>handCap()*2;
 const cartSpeed=()=>uv('cartspd');
-const cartPark=pid=>{const sp=S.planets[pid],p=sp.bld.werkstatt?[13,-16.2]:[2.5,13];return basePlanDir(planetData(pid),p[0],p[1]);};
+const cartPark=pid=>{const sp=S.planets[pid],p=sp.bld.werkstatt?layoutOf(pid).shop:layoutOf(pid).start;return basePlanDir(planetData(pid),p[0],p[1]);};
 const cartDrop=(pid,id)=>{const p=approachPos(id);return basePlanDir(planetData(pid),p[0],p[1]);};
 const cartGoal=()=>handPosD||cam.d;
 function cartTargets(sp){const out=[];for(const s of STATIONS)if(sp.bld[s])out.push({id:s,name:BLD[s].name,free:stBuf(s)-sumObj(sp.st[s].buf)});out.push({id:'roh',name:'Rohstofflager',free:rohCap()-rohSum(sp)});return out;}
@@ -2255,7 +2354,7 @@ function cartModel(L){const g=new THREE.Group(),v={g,wheels:[]};const dk=mat(0x1
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});addHeadlights(v,g,.9,.55,.45);return v;}
 function buyVehicle(t){const sp=SP(),T=VT[t];if(gs(sp)<T.stage)return fail('Erst Basisstufe '+T.stage+' auf einem Planeten');if(vehLocked(t))return fail('Erst '+PLANETS[T.planet].name+' erreichen');
   if(sp.veh.length>=vehSlots(S.planet))return fail('Keine freien Fahrzeugplätze');const c=vehCost(t);if(S.credits<c)return fail(lacks(c));
-  S.credits-=c;const pd=planetData(S.planet),p0=sp.bld.werkstatt?[13,-16.2]:[2.5,13];
+  S.credits-=c;const pd=planetData(S.planet),p0=sp.bld.werkstatt?layoutOf(S.planet).shop:layoutOf(S.planet).start;
   sp.veh.push({id:sp.nextVeh++,type:t,d:basePlanDir(pd,p0[0],p0[1]),mode:'seek',cell:-1,ti:-1,tank:{},fix:null,status:'Startet'});
   syncVehicleViews();SFX.robot();toast(T.name+' ist einsatzbereit','good');
   if(!STATIONS.some(s=>sp.bld[s]&&BLD[s].st.acc.includes(T.size)))setTimeout(()=>toast('Achtung: keine passende Entladestation gebaut','bad'),900);save();}
@@ -2538,7 +2637,7 @@ const startProg=()=>{const a=moonW().act.get(planetData('moon').start);return a?
 const baseCount=()=>planetData('moon').cells.filter(c=>c.kind==='base').length;
 /* ---- production traffic light ---- */
 const LCOL=[0x3fe58a,0xffd23f,0xff4d3d];
-function flowReport(pid){const sp=S.planets[pid],out=[];const o=CUR;CUR=pid;try{
+function flowReport(pid){if(ACTL!==pid)return withLayout(pid,()=>flowReport(pid));const sp=S.planets[pid],out=[];const o=CUR;CUR=pid;try{
   const add=(id,name,lvl,why,fix)=>out.push({id,name,lvl,why,fix:fix||[]});const rf=rohSum(sp)/rohCap(),pf=prodSum(sp)/prodCap();
   if(sp.ef<.99&&(sp.veh.length||sp.bld.presse||(sp.rigs||[]).length)){const night=!dayInfo(pid,sp).day;add(sp.bld.energy?'energy':'hq','Energie',2,night?'Nacht und der Speicher ist leer – mehr Akkupark, Radioisotopen-Generator oder Kernreaktor.':'Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.',night?['ecap','energy']:['energy','ecap']);}
   {const fl=(sp.rigs||[]).filter(r=>r.fault).length;if(fl)add('roh','Störung',2,fl+(fl>1?' Bohrtürme/Erzbagger gestört':' Bohrturm/Erzbagger gestört')+' – Techniker sind unterwegs, oder sofort beheben (antippen). Kühlung & Wartung senkt das Risiko.',['rcare']);}
@@ -2759,7 +2858,7 @@ function updateHUD(){
   const ps=prodSum(sp),pc=prodCap();$('#mProd').hidden=!sp.bld.prod;$('#prodBar').style.width=Math.min(100,ps/pc*100).toFixed(1)+'%';$('#prodTxt').textContent=fmt(ps)+'/'+fmt(pc);$('#mProd').classList.toggle('full',ps>=pc-.5);
   $('#mats').innerHTML=RAW.concat(PRODS).filter(m=>(MATS[m].raw?sp.roh:sp.prod)[m]>=.5).map(m=>'<span><i style="background:'+MATS[m].col+'"></i>'+MATS[m].name+' '+fmt((MATS[m].raw?sp.roh:sp.prod)[m])+'</span>').join('');
   let c=0,o=0,tot=0;for(const cl of pd.cells){if(cl.kind==='base')continue;tot++;if(w.clean[cl.id])c++;if(w.owned[cl.id])o++;}
-  {const pn=$('#pname'),nm=PLANETS[pid].name;pn.textContent=nm;pn.style.whiteSpace='nowrap';pn.style.fontSize=nm.length>9?'.62em':nm.length>7?'.74em':'';}$('#pprog').textContent=c+'/'+tot+' Parzellen sauber · Stufe '+sp.stage;$('#pdot').style.background='radial-gradient(circle at 34% 30%,'+PLANETS[pid].col[0]+','+PLANETS[pid].col[1]+' 72%)';
+  {const pn=$('#pname'),nm=PLANETS[pid].name;pn.textContent=nm;pn.style.whiteSpace='nowrap';pn.style.fontSize=nm.length>9?'.56em':nm.length>7?'.7em':'';}$('#pprog').textContent=c+'/'+tot+' Parzellen sauber · Stufe '+sp.stage;$('#pdot').style.background='radial-gradient(circle at 34% 30%,'+PLANETS[pid].col[0]+','+PLANETS[pid].col[1]+' 72%)';
   const warns=[];if(sp.noStation)warns.push(sp.noStation+' Fahrzeug'+(sp.noStation>1?'e':'')+' ohne passende Entladestation');
   const waiting=sp.veh.filter(v=>v.status==='Station voll – wartet').length;if(waiting)warns.push(waiting+' Fahrzeug'+(waiting>1?'e warten':' wartet')+': Station voll');
   const noJob=sp.veh.filter(v=>v.status==='Kein Auftrag').length;if(noJob)warns.push(w.front.size?noJob+' ohne Auftrag – nichts erreichbar für diesen Fahrzeugtyp':'Planet sauber – '+noJob+' Fahrzeug'+(noJob>1?'e warten':' wartet')+' auf neuen Meteoritenstaub');
@@ -2957,7 +3056,7 @@ function setMapMode(on){mapMode=on;for(const c of chunks){c.mesh.visible=!on;c.m
 
 /* ===================== 13. Main loop + boot ===================== */
 let last=performance.now(),lastWall=Date.now(),bgAcc=0,hudAcc=0,saveAcc=0,rateAcc=0,T0=0,sheetAcc=0,scrubLvl=0,lastValue=0;
-function frame(now){
+function frame(now){applyLayout(S.planet);
   requestAnimationFrame(frame);
   if(offRun){lastWall=Date.now();last=now;return;}
   const wall=Date.now(),gap=(wall-lastWall)/1000;lastWall=wall;
@@ -2993,7 +3092,7 @@ function migrate(){
     if(back>0){S.credits+=Math.round(back);setTimeout(()=>{try{toast('Hochdruckpresse entfällt – Hydraulik-Tuning (Tempo) und Größere Presskammer (Menge) übernehmen. Erstattet: '+fmt(back)+' Cr','good');}catch(e){}},3500);}}
   if(Object.keys(S.done||{}).length&&!S.hintRig){S.hintRig=1;setTimeout(()=>{try{toast('Neu: Tiefenabbau! Auf komplett sauberen Planeten baust du jetzt Bohrtürme – Basis → Tiefenabbau','good');}catch(e){}},4500);}
   if(S.layout!==3){for(const pid in S.planets){const pd=planetData(pid),sp=S.planets[pid];if(!sp.owned.includes(pd.start))sp.owned.push(pd.start);
-      for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload')v.mode='toUnload';v.sid=null;v.d=basePlanDir(pd,2.5,13);}for(const st of STATIONS)sp.st[st].docks=[];}
+      for(const v of sp.veh){if(v.mode==='queue'||v.mode==='unload')v.mode='toUnload';v.sid=null;{const p=layoutOf(pid).start;v.d=basePlanDir(pd,p[0],p[1]);}}for(const st of STATIONS)sp.st[st].docks=[];}
     S.layout=3;}
   if(!S.locMig){for(const pid in S.planets){const sp=S.planets[pid];sp.upg=sp.upg||{};for(const u of UPG)if(u.loc&&S.upg[u.id])sp.upg[u.id]=S.upg[u.id];}S.locMig=1;}
   if(!S.maxStage){S.maxStage=1;for(const pid in S.planets)S.maxStage=Math.max(S.maxStage,S.planets[pid].stage);}
