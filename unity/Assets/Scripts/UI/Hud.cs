@@ -81,6 +81,21 @@ namespace LunarCleanup.UI
             goalText = UiKit.Text(b.transform, "Text", "", 14, Pal.Ink); goalText.rectTransform.Anchor(0, 0, 1, 1, 14, 14, 74, 24);
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
+            // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
+            var w = UiKit.Btn(root, "Warnung", () => OpenSheet(warnTarget), new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -228, 12, 196);
+            warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
+            warnGo.SetActive(false);
+        }
+        GameObject warnGo; Image warnImg; TextMeshProUGUI warnTxt; string warnTarget = "hazard";
+        void UpdateWarn(PState ps)
+        {
+            string t = null; var st = ps.P.storm;
+            if (st != null && Game.StormOn(ps)) { t = st.name + (ps.shOn ? " · Schild hält 80 % ab" : " · " + Game.StormFx(st)) + " · noch " + Mathf.CeilToInt(ps.sv.hzOn) + " s"; warnTarget = "hazard"; }
+            else if (st != null && Game.StormIn(ps) <= 30) { t = "Achtung: " + st.name + " in " + Mathf.CeilToInt(Game.StormIn(ps)) + " s" + (Game.ResDone("shield") ? (ps.sv.shield ? " · Schild bereit" : " · Tippen: Schild einschalten") : " · Tippen für Infos"); warnTarget = "hazard"; }
+            else if (ps.sv.veh.Count > 0 && !Game.PowOK(ps)) { t = "Fahrzeuge zu schwach für " + ps.P.name + " (nur 30 %): Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig"; warnTarget = "vehicles"; }
+            else if (ps.ef < .99f && (ps.sv.veh.Count > 0 || ps.bld.Contains("presse"))) { t = "Energie reicht nicht – alles läuft langsamer"; warnTarget = "energy"; }
+            warnGo.SetActive(t != null && !SheetOpen); if (t != null) warnTxt.text = t;
         }
 
         // ---------- unten ----------
@@ -209,7 +224,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean, tot = ps.pd.cells.Count(x => !x.IsBase); pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke();
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
             int q = Game.S.quest; bool has = q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(has && !SheetOpen);

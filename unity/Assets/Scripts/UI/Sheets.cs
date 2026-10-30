@@ -23,6 +23,7 @@ namespace LunarCleanup.UI
                 case "goals": title = "Ziele"; Goals(h); break;
                 case "energy": title = "Energie"; Energy(h); break;
                 case "research": title = "Forschung"; Research(h); break;
+                case "hazard": title = "Gefahren"; Hazard(h); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -149,16 +150,34 @@ namespace LunarCleanup.UI
             for (int i = 0; i < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count); i++)
             {
                 int q = i; var Q = GameData.Quests[i];
-                h.Row((q < Game.S.quest ? "✓ " : q == Game.S.quest ? "▶ " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
+                h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Außenlager, Stürme, Tiefenabbau).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Außenlager, Tiefenabbau, Lastdrohnen).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
         static string FmtTime(float s) { int t = Mathf.Max(0, Mathf.CeilToInt(s)); return t >= 60 ? t / 60 + " min " + (t % 60).ToString("00") + " s" : t + " s"; }
+        static void Hazard(Hud h)
+        {
+            var P = ps.P; var st = P.storm;
+            h.Section(string.IsNullOrEmpty(P.hzName) ? "Keine besonderen Gefahren" : P.hzName);
+            if (!string.IsNullOrEmpty(P.hzDesc)) h.Note(P.hzDesc);
+            if (st != null)
+            {
+                h.Row("Sturm", () => st.name + " · alle " + FmtTime(st.every) + " · Dauer " + FmtTime(st.dur));
+                h.Row("Nächster", () => Game.StormOn(ps) ? "tobt gerade · noch " + Mathf.CeilToInt(ps.sv.hzOn) + " s" : "in " + Mathf.CeilToInt(Game.StormIn(ps)) + " s");
+                h.Row("Wirkung", () => Game.StormFx(st));
+                h.Section("Sturmschild");
+                if (Game.ResDone("shield")) h.Row("Schild automatisch aktivieren", () => "Schwächt jeden Sturm um 80 %, kostet währenddessen 4 Energie/s. Gilt für diesen Planeten, auch offline.", () => ps.sv.shield ? "An" : "Aus", () => true, () => Game.ToggleShield(), false);
+                else h.Note("Erforsche den Sturmschild in der Forschungsstation, dann kannst du Stürme fast komplett abwehren.");
+            }
+            if (ps.sv.veh.Count > 0 || Game.PowReq(ps.pid) > 0) h.Row("Fahrzeugleistung", () => Game.PowOK(ps) ? "Deine Fahrzeuge sind stark genug für " + P.name : "Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig – sonst reinigen Fahrzeuge hier nur mit 30 %");
+        }
+
         static void Energy(Hud h)
         {
             var P = ps.P;
+            if (P.storm != null) h.BigButton("Gefahren & Sturmschild", null, () => h.OpenSheet("hazard"));
             h.Section("Energie");
             h.Note("Fahrzeuge, Maschinen und Bänder brauchen Strom" + (P.energy > 1 ? " – auf dem " + P.name + " das " + Dec(P.energy, 1) + "-fache" : "") + ". Reicht er nicht, läuft alles langsamer.");
             h.Row("Speicher", () => Game.Fmt(ps.sv.energy) + " / " + Game.Fmt(Game.EnergyCap(ps)) + " gespeichert · Produktion " + Dec(Game.EnergyProd(ps), 1) + "/s · Verbrauch " + Dec(ps.demand, 1) + "/s" + (ps.ef < .99f ? " · reicht nicht" : ""));
@@ -209,7 +228,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.3. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Außenlager, Tiefenabbau.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.5. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Außenlager, Tiefenabbau.");
         }
 
         static void Building(Hud h, string id)

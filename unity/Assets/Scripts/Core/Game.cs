@@ -26,7 +26,7 @@ namespace LunarCleanup.Core
         public int baseVersion;
         public bool[] navG; public string navKey; public Dictionary<long, List<Vector2>> navCache = new Dictionary<long, List<Vector2>>();
         public Dictionary<int, VehNav> vnav = new Dictionary<int, VehNav>();
-        public float ef = 1, solar = 1, demand, prodNow;
+        public float ef = 1, solar = 1, demand, prodNow, vm = 1, bm = 1, mm = 1; public bool shOn;
         public string pid => sv.pid;
     }
     public class VehNav { public string tk, nk; public List<Vector2> wp; public int i; public Vector2 s; }
@@ -477,7 +477,7 @@ namespace LunarCleanup.Core
         static bool BeltStep(PState ps, BeltDef b, float dt, float f)
         {
             if (!BeltLive(ps, b)) return false;
-            var items = ps.belts[b.id]; float L = b.L, v = BeltSpeed(ps) * Mathf.Max(.25f, f); bool moved = false;
+            var items = ps.belts[b.id]; float L = b.L, v = BeltSpeed(ps) * Mathf.Max(.25f, f) * ps.bm; bool moved = false;
             for (int i = 0; i < items.Count; i++) { var it = items[i]; float lim = i == 0 ? L : items[i - 1].s - BSP, ns = Mathf.Min(it.s + v * dt, lim); if (ns > it.s + 1e-4f) moved = true; if (ns > it.s) it.s = ns; }
             bool jam = false;
             while (items.Count > 0 && items[0].s >= L - 1e-3f) { var h = items[0]; if (BeltAccept(ps, b, h.m, h.a)) items.RemoveAt(0); else { jam = true; break; } }
@@ -511,7 +511,7 @@ namespace LunarCleanup.Core
             }
             var c = rec[M.cur];
             if (f < .05f) return;
-            M.prog += dt * Uv("mspeed", ps) * f;
+            M.prog += dt * Uv("mspeed", ps) * f * ps.mm;
             if (M.prog >= c.t)
             {
                 int bt = Math.Max(1, Math.Min(M.bat, (int)Math.Floor((M.inp[c.inp] + 1e-6f) / c.n)));
@@ -625,7 +625,7 @@ namespace LunarCleanup.Core
         static void VehStep(PState ps, VehSave v, float dt, float f)
         {
             var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1;
-            float spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false;
+            float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false;
             switch (v.mode)
             {
                 case "seek":
@@ -646,7 +646,7 @@ namespace LunarCleanup.Core
                         bool arrived = v.mode == "drive" ? NavMove(ps, v, gdir, spd * dt, v.id) : a.cl.ring <= 4 ? NavMove(ps, v, gdir, spd * dt * .6f, v.id) : MoveDir(ref v.d, gdir, spd * dt * .6f, pd.R);
                         if (v.mode == "drive") { var dl = pd.ToLocal(a.cl, v.d); if (arrived || dl.magnitude < a.cl.H * .9f) v.mode = "clean"; break; }
                         v.ph += dt * 4; var loc = pd.ToLocal(a.cl, v.d); float wg = arrived ? .4f : 0;
-                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * Uv("vpower", ps) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
+                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
                         float rem = CleanAt(ps, a, loc.x + Mathf.Cos(v.ph) * wg, loc.y + Mathf.Sin(v.ph) * wg, T.radius * Uv("vradius", ps), k);
                         if (rem > 0) { float amt = rem / a.cl.nIn * a.amt; v.tank[a.D.mat] += amt; v.coll += amt; }
                         v.last = v.cell; break;
@@ -701,7 +701,7 @@ namespace LunarCleanup.Core
         }
         static void DroneStep(PState ps, DroneSave dr, float dt, float f)
         {
-            var pd = ps.pd; float R = pd.R; var hd = HangarDir(ps); float spd = DroneSpeed(ps) * Mathf.Max(.25f, f), cap = DroneCap(ps), load = Sum(dr.tank); dr.busy = false;
+            var pd = ps.pd; float R = pd.R; var hd = HangarDir(ps); float spd = DroneSpeed(ps) * Mathf.Max(.25f, f) * ps.vm, cap = DroneCap(ps), load = Sum(dr.tank); dr.busy = false;
             VehSave Tgt() { var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null && v.drone == dr.id ? v : null; }
             switch (dr.mode)
             {
@@ -973,12 +973,42 @@ namespace LunarCleanup.Core
         static bool BattLow(PState ps, VehSave v) => GameData.Veh[v.type].batt > 0 && Bat(ps, v) < BattCap(ps, v) * .15f;
         static void BattUse(PState ps, VehSave v, float dt) { if (GameData.Veh[v.type].batt <= 0) return; v.bat = Mathf.Max(0, Bat(ps, v) - dt); }
 
+        // ================= Stürme =================
+        public static bool StormOn(PState ps) => ps.P.storm != null && ps.sv.hzOn > 0;
+        public static float StormIn(PState ps) => ps.P.storm == null ? -1 : Mathf.Max(0, ps.P.storm.every - ps.sv.hzT);
+        static StormDef StormStep(PState ps, float dt)
+        {
+            var st = ps.P.storm; var sv = ps.sv; StormDef cur = null;
+            if (st != null)
+            {
+                sv.hzT += dt;
+                if (sv.hzOn > 0) { sv.hzOn -= dt; cur = st; if (sv.hzOn <= 0) { sv.hzOn = 0; sv.hzT = 0; } }
+                else if (sv.hzT >= st.every) { sv.hzOn = st.dur; sv.hzT = 0; sv.hzWarned = false; cur = st; if (ps.pid == S.planet) Toast(st.name + " zieht auf!", "bad"); }
+                if (sv.hzOn <= 0 && !sv.hzWarned && st.every - sv.hzT <= 30) { sv.hzWarned = true; if (ps.pid == S.planet) Toast(st.name + " in 30 s" + (ResDone("shield") ? (sv.shield ? " – Sturmschild ist bereit" : " – Sturmschild einschalten?") : ""), "bad"); }
+            }
+            ps.shOn = cur != null && sv.shield && ResDone("shield") && sv.energy > 3;
+            if (ps.shOn) { float K(float x) => 1 - (1 - x) * .2f; cur = new StormDef { name = cur.name, veh = K(cur.veh), belt = K(cur.belt), mach = K(cur.mach), solar = cur.solar, dust = 1 + (cur.dust - 1) * .2f }; }
+            ps.vm = cur?.veh ?? 1; ps.bm = cur?.belt ?? 1; ps.mm = cur?.mach ?? 1;
+            return cur;
+        }
+        public static string StormFx(StormDef s)
+        {
+            var fx = new List<string>(); if (s.veh != 1) fx.Add("Fahrzeuge −" + Mathf.RoundToInt((1 - s.veh) * 100) + " %"); if (s.belt != 1) fx.Add("Bänder −" + Mathf.RoundToInt((1 - s.belt) * 100) + " %");
+            if (s.mach != 1) fx.Add("Maschinen −" + Mathf.RoundToInt((1 - s.mach) * 100) + " %"); if (s.solar != 1) fx.Add("Solar −" + Mathf.RoundToInt((1 - s.solar) * 100) + " %"); if (s.dust != 1) fx.Add(s.dust.ToString("0") + "× Staub");
+            return string.Join(" · ", fx);
+        }
+        public static bool ToggleShield() { var ps = Cur; if (!ResDone("shield")) return Fail("Erst den Sturmschild erforschen"); ps.sv.shield = !ps.sv.shield; Toast(ps.sv.shield ? "Sturmschild aktiv – schaltet sich bei Sturm ein" : "Sturmschild aus", ps.sv.shield ? "good" : ""); return true; }
+        // ================= Fahrzeugleistung pro Planet =================
+        public static int PowReq(string pid) { int i = Array.IndexOf(GameData.POrder, pid); return i >= 0 && i < GameData.PowReq.Length ? GameData.PowReq[i] : 0; }
+        public static bool PowOK(PState ps) => Lvl("vpower", ps) >= PowReq(ps.pid);
+        static float HomeF(PState ps, VehSave v) { var h = GameData.Veh[v.type].home; return h != null && Array.IndexOf(h, ps.pid) >= 0 ? 2.2f : 1; }
+
         static void EnergyStep(PState ps, float dt)
         {
-            var sv = ps.sv; sv.dayT = DayT(ps) + dt; ps.solar = ps.P.solar * DayF(ps);
+            var sv = ps.sv; var storm = StormStep(ps, dt); sv.dayT = DayT(ps) + dt; ps.solar = ps.P.solar * (storm?.solar ?? 1) * DayF(ps);
             float demand = 0, vE = Uv("veff", ps) * (ResDone("motor") ? .7f : 1);
             foreach (var v in sv.veh) { var T = GameData.Veh[v.type]; if (T.batt > 0) { if (v.charging) demand += T.energy * 2.5f * vE; } else if (v.busy) demand += T.energy * vE; }
-            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE;
+            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4;
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach[m].cur >= 0) demand += GameData.Mach[m].x * Uv("meff", ps);
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && ps.belts[b.id].Count > 0) demand += .1f * Uv("beff", ps);
             ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps);

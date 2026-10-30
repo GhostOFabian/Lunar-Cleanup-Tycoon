@@ -17,7 +17,7 @@ namespace LunarCleanup.Gameplay
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
-        public static float NightF; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun; Color amb0, amb1, amb2; float sunI0;
+        public static float NightF; public static bool MapMode; ParticleSystem stormPs; ParticleSystem.Particle[] stormP; Vector3[] stormSt; float stormI, flash; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun; Color amb0, amb1, amb2; float sunI0;
         float rocketT = -1;
         Mesh itemMesh;
         readonly Dictionary<int, Material> itemMat = new Dictionary<int, Material>();
@@ -29,7 +29,7 @@ namespace LunarCleanup.Gameplay
             foreach (Transform c in transform) Destroy(c.gameObject);
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
-            BuildSky(); BuildBase(); MakeDust();
+            BuildSky(); BuildBase(); MakeDust(); MakeStorm();
             itemMesh = MeshKit.Cube;
         }
         Transform New(string n) { var g = new GameObject(n); g.transform.SetParent(transform, false); return g.transform; }
@@ -178,6 +178,45 @@ namespace LunarCleanup.Gameplay
             }
         }
 
+        // ---------- sichtbares Wetter (wie im Browser: Teilchen um die Kamera, Nebel, Blitze) ----------
+        const int SFX_N = 1400;
+        void MakeStorm()
+        {
+            var g = new GameObject("Sturm"); g.transform.SetParent(transform, false); stormPs = g.AddComponent<ParticleSystem>();
+            var main = stormPs.main; main.loop = false; main.playOnAwake = false; main.maxParticles = SFX_N; main.simulationSpace = ParticleSystemSimulationSpace.World; main.startLifetime = 1e6f; main.startSpeed = 0;
+            var em = stormPs.emission; em.enabled = false; var sh = stormPs.shape; sh.enabled = false;
+            var pr = stormPs.GetComponent<ParticleSystemRenderer>(); var m = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); m.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(m, false); pr.sharedMaterial = m;
+            stormP = new ParticleSystem.Particle[SFX_N]; stormSt = new Vector3[SFX_N]; var r = new System.Random(3);
+            for (int i = 0; i < SFX_N; i++) stormSt[i] = new Vector3((float)r.NextDouble() * 2 - 1, (float)r.NextDouble() * 2 - 1, (float)r.NextDouble());
+            stormI = 0; flash = 0;
+        }
+        void UpdateStorm()
+        {
+            if (!stormPs) return; GameData.Storm.TryGetValue(ps.pid, out var L); var st = ps.P.storm; float dt = Time.deltaTime;
+            bool on = L != null && Game.StormOn(ps), soon = L != null && st != null && !on && Game.StormIn(ps) <= 30;
+            float tgt = MapMode ? 0 : Mathf.Max(on ? (ps.shOn ? .45f : 1) : soon ? .22f : 0, (L != null && L.rad ? .3f : 0));
+            stormI = Mathf.Lerp(stormI, tgt, 1 - Mathf.Exp(-1.5f * dt)); float I = stormI;
+            if (L == null || I < .01f) { RenderSettings.fog = false; if (stormPs.particleCount > 0) stormPs.Clear(); flash = 0; return; }
+            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogColor = L.fog; RenderSettings.fogDensity = L.dens * I * .9f;
+            var cam = Camera.main; if (!cam) return; var c = cam.transform.position.normalized; float camAlt = cam.transform.position.magnitude - pd.R;
+            var e1 = Vector3.Cross(c, Mathf.Abs(c.y) < .9f ? Vector3.up : Vector3.right).normalized; var e2 = Vector3.Cross(c, e1);
+            float S0 = Mathf.Max(25, camAlt * 1.6f), H = Mathf.Max(8, camAlt * .35f), R = pd.R; int n = Mathf.FloorToInt(SFX_N * Mathf.Min(1, .25f + I));
+            var col = L.col; col.a = .9f * I; float size = L.size * 2.4f * (1 + camAlt / 40) * .35f;
+            for (int i = 0; i < SFX_N; i++)
+            {
+                var s0 = stormSt[i]; float u = s0.x + L.wind * dt / S0 * (.7f + .6f * ((i * 7919) % 10) / 10f), h = s0.z - L.fall * dt / H; if (u > 1) u -= 2; if (h < 0) h += 1; if (h > 1) h -= 1; stormSt[i] = new Vector3(u, s0.y, h);
+                float wx = u * S0, wy = s0.y * S0; var d = (c + (e1 * wx + e2 * wy) / R).normalized;
+                stormP[i].position = d * (R + .3f + h * H); stormP[i].startSize = i < n ? size : 0; stormP[i].startColor = col; stormP[i].remainingLifetime = 1e5f; stormP[i].startLifetime = 1e6f;
+            }
+            stormPs.SetParticles(stormP, SFX_N);
+            if (L.lightning && (on || L.rad && Random.value < .04f) && Random.value < dt * .8f) flash = 1;
+            if (L.embers && on && Random.value < dt * 10) EmitDust((c + e1 * (Random.value - .5f) * S0 / R).normalized, Random.value < .5f ? new Color(1, .48f, .16f) : new Color(1, .69f, .3f), 2);
+            if (L.geysers && on && Random.value < dt * 1.2f) EmitDust((c + e1 * (Random.value - .5f) * S0 / R + e2 * (Random.value - .5f) * S0 / R).normalized, new Color(.92f, .96f, 1), 26);
+            if (L.rad && Random.value < dt * 3 * I) EmitDust((c + e1 * (Random.value - .5f) * S0 / R + e2 * (Random.value - .5f) * S0 / R).normalized, new Color(.49f, 1, .42f), 3);
+            flash = Mathf.Max(0, flash - dt * 5);
+            if (flash > 0) { var k = 1 + 2.2f * flash; RenderSettings.ambientSkyColor *= k; RenderSettings.ambientEquatorColor *= k; RenderSettings.ambientGroundColor *= k; }
+        }
+
         void MakeDust()
         {
             var g = new GameObject("Staub"); g.transform.SetParent(transform, false); dust = g.AddComponent<ParticleSystem>();
@@ -200,7 +239,7 @@ namespace LunarCleanup.Gameplay
             if (builtFor != Game.S.planet) return;
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
-            UpdateSun(); DrawItems(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
+            UpdateSun(); UpdateStorm(); DrawItems(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>

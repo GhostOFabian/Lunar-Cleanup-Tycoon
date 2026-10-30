@@ -100,18 +100,19 @@ namespace LunarCleanup.Gameplay
             if (!offlineRunning) Game.Step(dt);
             planet.Tick();
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam();
-            Game.CartGoal = cd;
+            Game.CartGoal = cd; WorldView.MapMode = mapMode;
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
 
 #if UNITY_EDITOR
-        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % säubern, F9 Vierteltag vorspulen.
+        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % säubern, F9 Vierteltag vorspulen, F10 Sturm in 25 s.
         void DevKeys()
         {
             var kb = Keyboard.current; if (kb == null) return;
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
+            if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(.81f);
             if (kb.f7Key.wasPressedThisFrame && !offlineRunning) StartCoroutine(Offline(8 * 3600));
         }

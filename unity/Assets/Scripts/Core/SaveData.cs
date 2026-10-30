@@ -31,7 +31,8 @@ namespace LunarCleanup.Core
         public List<BeltSave> belts = new List<BeltSave>();
         public List<MachSave> mach = new List<MachSave>();
         public float rk;
-        public float energy = 60, dayT = -1;
+        public float energy = 60, dayT = -1, hzT, hzOn;
+        public bool hzWarned, shield;
         public bool rkGo;
         public double soldP;
         public CartSave cart = new CartSave();
