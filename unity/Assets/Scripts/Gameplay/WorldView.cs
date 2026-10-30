@@ -282,7 +282,7 @@ namespace LunarCleanup.Gameplay
             var keys = new List<string>(beltInfo.Keys);
             for (int x = 0; x < keys.Count; x++) for (int y = x + 1; y < keys.Count; y++)
                 {
-                    var A = beltInfo[keys[x]]; var B = beltInfo[keys[y]]; bool clash = false; float at = 0; // Profil: Bandkante +0,2 m, Rahmen −0,32 m
+                    var A = beltInfo[keys[x]]; var B = beltInfo[keys[y]]; bool clash = false; float at = 0; if ((A.b.to == B.b.to && (mergeEnd.ContainsKey(keys[x]) || mergeEnd.ContainsKey(keys[y]))) || (A.b.from == B.b.from && (mergeStart.ContainsKey(keys[x]) || mergeStart.ContainsKey(keys[y])))) continue; /* gewollte Y-Zusammenführung */ // Profil: Bandkante +0,2 m, Rahmen −0,32 m
                     for (float s = A.s0 + .8f; s < A.s1 - .8f && !clash; s += .5f) { var pa = PointAt(A.rp, A.cum, s, out _); float ha = A.H + Lift(keys[x], s); for (float u = B.s0 + .8f; u < B.s1 - .8f; u += .5f) if ((PointAt(B.rp, B.cum, u, out _) - pa).magnitude < BW * 2 + .15f && Mathf.Abs(B.H + Lift(keys[y], u) - ha) < .62f) { clash = true; at = s; break; } }
                     if (clash) out_.Add("Bänder " + keys[x] + " und " + keys[y] + " überschneiden sich (bei " + at.ToString("0.0") + " m)");
                 }
@@ -396,7 +396,7 @@ namespace LunarCleanup.Gameplay
             foreach (var b in live)
             {
                 var V = Vis(b); var l = new List<(float, Vector2)>(); var q = V.rp;
-                float zf = GameData.Bld[b.from].fp * .5f, zt = GameData.Bld[b.to].fp * .5f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
+                float zf = GameData.Bld[b.from].fp * .35f, zt = GameData.Bld[b.to].fp * .35f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
                 for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((V.cum[i - 1] + u, p)); } }
                 smp[b.id] = l; len[b.id] = V.cum[V.cum.Length - 1];
             }
@@ -415,8 +415,8 @@ namespace LunarCleanup.Gameplay
                     if (mine.Count == 0) continue;
                     float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
                     // gleiches Ziel und Berührung erst kurz davor → Weiche
-                    if (A.to == B.to && uMax > len[B.id] - 6 && !mergeEnd.ContainsKey(A.id)) { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
-                    else if (A.from == B.from && uMin < 6) { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
+                    if (A.to == B.to) /* gleiches Ziel: an der ersten Berührung als Y aufs andere Band */ { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
+                    else if (A.from == B.from) /* gleiche Quelle: Abzweig nach der letzten Berührung */ { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
                 }
                 if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
                 void Flush() { float x = a0 - .5f, y = a1 + .5f; if (x < 4) x = -100; if (y > len[B.id] - 4) y = 1e4f; res.Add(new Vector3(x, y, am)); }

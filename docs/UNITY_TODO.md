@@ -1,6 +1,6 @@
 # Unity-Version – Was noch zu tun ist
 
-Stand: 30.10.2026 · Unity-Version 0.11 · Branch `claude/prototype-v3.5`
+Stand: 30.10.2026 · Unity-Version 0.12 · Branch `claude/prototype-v3.5`
 Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wird nach jedem Teil abgehakt.
 
 ## Fertig (in Unity getestet, im Editor)
@@ -16,6 +16,7 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 - [x] 0.10 Wünsche vom 30.10.: Bänder (Banden genau am Band, höher, enden an der Gebäudewand), Pipeline unterirdisch, schlauere Fahrzeuge (Werkstatt, nie dumm herumstehen), Planet in alle Richtungen drehen, Kenney-Modelle (CC0) für Gebäude/Fahrzeuge/Drohnen/Rakete/Deko, Upgrade-Fenster behält die Scrollposition, Planeten werden immer größer (252 → 5.762 Parzellen; alte Stände behalten ihre Größe), Seen aus Wasser/Lava/Säure/Methan mit Umwegen und Schwebereiniger, Hügel und Krater
 - [x] 0.10.1 Bandanschlüsse an der echten Modellwand, Ladeterminal an der Rakete, neues Rohstofflager und Außenlager
 - [x] 0.11 Basis-Prüfung (F11 im Testmodus, alle 18 Planeten + alte Größen, Bericht + Fotos in `BasisCheck/`), Brücken und Weichen für Bänder, glattere Kurven, Raketenlandung von oben, neue Entladestationen mit Abkippgruben, Fahrzeuge verteilen sich und lösen sich, wenn sie hängen, Leuchtkristalle (5 Farben, wachsen nach, Antippen oder Fahrzeuge), Weltraum-Himmel je Planet mit farbigem Sternlicht, Konto-Speicher- und Shop-Platzhalter, Zoom per Tastatur (R/F)
+- [x] 0.12 Bänder rechtwinklig aus geraden Flächen mit Y-Zusammenführungen, Pipeline unterirdisch, Test-Knopf „Alles maximal ausbauen“ (F12), Fahrzeuge sammeln Kristalle unterwegs
 - [x] Testmodus im Editor (Menü **Lunar Cleanup → Testmodus**): eigener Test-Spielstand, Test-Tasten F5–F10 nur dort
 
 ## Als Nächstes (in dieser Reihenfolge)

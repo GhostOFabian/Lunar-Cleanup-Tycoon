@@ -150,7 +150,7 @@ namespace LunarCleanup.Gameplay
                 foreach (var s in world.Notes) rep.AppendLine("  · " + s);
                 foreach (var (a, nm) in new[] { (95f, "oben"), (42f, "schraeg") })
                 {
-                    alt = altGoal = a; ApplyCam(); yield return null; yield return new WaitForEndOfFrame();
+                    alt = altGoal = a; WorldView.NightF = 0; ApplyCam(); yield return null; WorldView.NightF = 0; yield return null; yield return new WaitForEndOfFrame(); // Fotos immer bei Tag
                     ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_" + nm + ".png"), 2); yield return null; yield return null;
                 }
             }

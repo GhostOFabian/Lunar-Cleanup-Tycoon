@@ -15,7 +15,7 @@ namespace LunarCleanup.Gameplay
         const float GC = .5f; const int GN = 156; const float GOFF = GN * GC / 2; // Raster 0,5 m, ±39 m um die Basis
 
         struct Foot { public Vector2 min, max, c; public string id; }
-        struct Port { public string bid; public int face; public Vector2 p, n; }
+        struct BPort { public string bid; public int face; public Vector2 p, n; }
 
         void RouteBelts()
         {
@@ -41,11 +41,11 @@ namespace LunarCleanup.Gameplay
             foreach (var id in lampIds) { if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || nl >= 6) continue; nl++; var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f); Mark(off - Vector2.one * .4f, off + Vector2.one * .4f); }
             var used = new Dictionary<string, int>();            // belegte Port-Plätze je Gebäude/Fläche
             var occ = new Dictionary<int, List<(string from, string to)>>(); // Rasterzellen schon verlegter Bänder
-            var portOf = new Dictionary<string, (Port a, Port b)>();
+            var portOf = new Dictionary<string, (BPort a, BPort b)>();
             foreach (var b in live)
             {
                 if (!feet.TryGetValue(b.from, out var FA) || !feet.TryGetValue(b.to, out var FB)) continue;
-                var cands = new List<(Port a, Port b, bool shareA, bool shareB)>();
+                var cands = new List<(BPort a, BPort b, bool shareA, bool shareB)>();
                 // Y: denselben Port eines Bandes mit gleichem Ziel/gleicher Quelle mitbenutzen
                 foreach (var kv in portOf)
                 {
@@ -54,10 +54,10 @@ namespace LunarCleanup.Gameplay
                     if (o.from == b.from) foreach (var pb in Ports(FB, FA.c, b.to, used, 2)) cands.Add((kv.Value.a, pb, true, false));
                 }
                 foreach (var pa in Ports(FA, FB.c, b.from, used, 2)) foreach (var pb in Ports(FB, FA.c, b.to, used, 2)) cands.Add((pa, pb, false, false));
-                List<int> best = null; float bc = 1e9f; (Port a, Port b, bool, bool) bestC = default;
+                List<int> best = null; float bc = 1e9f; (BPort a, BPort b, bool, bool) bestC = default;
                 foreach (var cnd in cands)
                 {
-                    var path = AStar(cnd.a.p + cnd.a.n * 1.1f, cnd.a.n, cnd.b.p + cnd.b.n * 1.1f, -cnd.b.n, block, occ, b.from, b.to, out float cost);
+                    var path = AStar(cnd.a.p + cnd.a.n * 1.1f, cnd.a.n, cnd.b.p + cnd.b.n * 1.1f, -cnd.b.n, block, occ, cnd.shareA ? b.from : null, cnd.shareB ? b.to : null, out float cost); // mitlaufen nur, wenn wirklich ein Y entsteht
                     if (path != null && cost < bc) { bc = cost; best = path; bestC = cnd; }
                 }
                 if (best == null) continue;
@@ -65,7 +65,9 @@ namespace LunarCleanup.Gameplay
                 if (!bestC.Item3) used[A.bid + A.face] = used.TryGetValue(A.bid + A.face, out var ua) ? ua + 1 : 1;
                 if (!bestC.Item4) used[B.bid + B.face] = used.TryGetValue(B.bid + B.face, out var ub) ? ub + 1 : 1;
                 portOf[b.id] = (A, B);
-                foreach (int cell in best) { if (!occ.TryGetValue(cell, out var l)) { l = new List<(string, string)>(); occ[cell] = l; } l.Add((b.from, b.to)); }
+                // belegte Fläche: Bandzellen plus zwei Zellen ringsum (Bandbreite + Abstand), damit nichts eng nebeneinander läuft
+                var mark = new HashSet<int>(); foreach (int cell in best) { int cx = cell % GN, cy = cell / GN; for (int dy = -2; dy <= 2; dy++) for (int dx = -2; dx <= 2; dx++) { int x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < GN && y < GN) mark.Add(y * GN + x); } }
+                foreach (int cell in mark) { if (!occ.TryGetValue(cell, out var l)) { l = new List<(string, string)>(); occ[cell] = l; } l.Add((b.from, b.to)); }
                 // Ecken der Rasterlinie → Polylinie; davor/dahinter gerade aus der Fläche heraus und bis ins Gebäude (wird an der Wand gekappt)
                 var pts = new List<Vector2> { A.p - A.n * 1.6f, A.p };
                 var cor = Corners(best); foreach (var q in cor) pts.Add(q); pts.Add(B.p); pts.Add(B.p - B.n * 1.6f);
@@ -77,7 +79,7 @@ namespace LunarCleanup.Gameplay
         static Vector2 Cc(int x, int y) => new Vector2((x + .5f) * GC - GOFF, (y + .5f) * GC - GOFF);
 
         /// <summary>Port-Kandidaten: Flächen, die zum Ziel zeigen, je ein freier Platz (Mitte, dann ±1 m).</summary>
-        IEnumerable<Port> Ports(Foot f, Vector2 toward, string id, Dictionary<string, int> used, int nFaces)
+        IEnumerable<BPort> Ports(Foot f, Vector2 toward, string id, Dictionary<string, int> used, int nFaces)
         {
             var faces = new List<(int k, Vector2 n, float score)>();
             var dir = (toward - f.c).normalized;
@@ -98,7 +100,7 @@ namespace LunarCleanup.Gameplay
                 float slot = u == 0 ? 0 : (u % 2 == 1 ? 1 : -1) * Mathf.Ceil(u / 2f) * 1.25f; if (Mathf.Abs(slot) > half - .5f) slot = 0;
                 var mid = new Vector2(n.x > .5f ? f.max.x : n.x < -.5f ? f.min.x : (f.min.x + f.max.x) / 2, n.y > .5f ? f.max.y : n.y < -.5f ? f.min.y : (f.min.y + f.max.y) / 2);
                 var pp = mid + t * slot; if (Mathf.Abs(n.x) > .5f) pp.y = Cc(0, Ix(pp.y)).y; else pp.x = Cc(Ix(pp.x), 0).x; // quer zur Fläche aufs Raster
-                yield return new Port { bid = id, face = fc.k, p = pp, n = n };
+                yield return new BPort { bid = id, face = fc.k, p = pp, n = n };
             }
         }
 
@@ -124,7 +126,7 @@ namespace LunarCleanup.Gameplay
                     bool isGoal = nx == gx && ny == gy;
                     if (block[nc] && !isGoal && !(nx == sx && ny == sy)) continue;
                     float c = GC + (nd != d ? 3f : 0);
-                    if (occ.TryGetValue(nc, out var l)) { bool same = l.Any(o => o.Item2 == to || o.Item1 == from); c += same ? -GC * .45f : 2.5f; }
+                    if (occ.TryGetValue(nc, out var l)) { bool same = l.Any(o => (to != null && o.Item2 == to) || (from != null && o.Item1 == from)); c += same ? -GC * .45f : 2.5f; }
                     for (int k = 0; k < 4; k++) { int ax = nx + DX[k], ay = ny + DY[k]; if (ax >= 0 && ay >= 0 && ax < GN && ay < GN && block[ay * GN + ax]) { c += .4f; break; } }
                     int ns = nc * 4 + nd; float ng = gs[st] + c; if (ng >= gs[ns]) continue;
                     if (gs[ns] < 1e9f) open.Remove((gs[ns] + Mathf.Abs(nx - gx) * GC + Mathf.Abs(ny - gy) * GC, ns));

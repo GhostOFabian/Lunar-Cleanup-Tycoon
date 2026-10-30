@@ -95,3 +95,10 @@
 - Leuchtkristalle (5 Farben) wachsen auf sauberen Parzellen nach; antippen oder Fahrzeuge bauen sie ab (Kristallsplitter).
 - Weltraum-Himmel je Planet (Nebel, Milchstraße, Sterne, Galaxie) plus farbiges Sternlicht.
 - Platzhalter: Konto-Speicher (Google Play Spiele / Game Center) und Shop-Vorschau in den Einstellungen.
+
+## Unity 0.12 (30.10.2026)
+- Eigene Bandführung in Unity (WorldView.Routing.cs, nur Optik): Bänder starten/enden mittig an geraden Gebäudeflächen, A*-Raster 0,5 m, rechtwinklig mit runden 90°-Kurven, Abstand zu Gebäuden, Gruben, Laternen und anderen Bändern; Y-Zusammenführung/Abzweig bei gleichem Ziel/gleicher Quelle; Brücken bei Kreuzungen. Gebäude im Bild achsparallel.
+- Pipeline ganz unterirdisch: nur Revisionsdeckel an Pumpenhaus und Lagersockel.
+- Testmodus: „Alles maximal ausbauen“ (Einstellungen oder F12).
+- Fahrzeuge nehmen reife Kristalle im Umkreis von 25 m auch während der Arbeit mit.
+- Basis-Prüfung: 0 echte Befunde; die beiden letzten Meldungen (Ganymed) waren die gewollte Y-Zusammenführung, die zählt die Prüfung jetzt nicht mehr. Fotos immer bei Tag.
