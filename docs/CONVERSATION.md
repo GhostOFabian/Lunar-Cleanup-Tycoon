@@ -57,6 +57,8 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 41. Ausführlicher Auftrag „Gameplay-Überarbeitung“: 4 feste Außenlager-Plätze, größere Außenlager mit Upgrade und 80 %-Mechanik, Drohnen holen überall ab, Fahrzeug-Lebensdauer mit max. 2 Reparaturen, Störungen bei Bohrtürmen/Baggern mit rotem Licht, sichtbare Naturereignisse. → v6.1.
 42. Fahrzeuge **dürfen offline zerstört werden** (mit Meldung); **Drohnen mehr Platz**; Upgrades von alten Planeten sollen nicht auf neue übertragen werden (sonst monoton) – Rückfrage: **pro Planet neu**; **8 weitere Planeten**, **andere Produktionen/Rezepte/Endprodukte je Planet**, ein **extrem verstrahlter Planet**. → v6.2.
 43. Jeder Planet soll **vom Aufbau anders aussehen**, nicht nur anders produzieren. → v6.3.
+44. Unity: erst ein MonoBehaviour, dann „du legst alles in Unity für mich an“ (direkt auf seinem PC eingerichtet), dann **runde Planeten, gleiches Menü, gleiches Design, bessere Grafik und Modelle**.
+45. „Nutz meinen PC und bau alles in Unity so ein, dass ich später eine spielbare Version habe.“ → Unity-Version 0.1.
 
 ## Was der Spieler mag / nicht mag
 - Mag: sichtbaren Fortschritt, Automatisierung, die sich selbst trägt, mehrere Planeten parallel, klare Rückmeldungen (Farben, Ampel, Begründungen).
@@ -65,5 +67,5 @@ Zusammenfassung der Entwicklungs-Unterhaltung (Claude-App, 28.–29.10.2026), au
 
 ## Offene Ideen (noch nicht gebaut)
 - Balancing der späteren Planeten (Upgrade-Kosten im Verhältnis zu Planetenpreisen; Sternenstaub-Formel eventuell strenger).
-- Unity-Umsetzung.
+- Unity: restliche Systeme (Energie, Tag/Nacht, Stürme, Forschung, Drohnen, Außenlager, Tiefenabbau) und Handy-Build.
 - Echter Gerätetest der 3D-Optik (Rahmen, Kuppel, Drohnen, Pipelines, Raketenflug, Wegfindung) – headless nicht prüfbar.

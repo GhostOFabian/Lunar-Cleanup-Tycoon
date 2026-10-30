@@ -177,3 +177,10 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## Unity – erster Schritt
 - Auf Wunsch des Spielers zuerst ein einzelnes MonoBehaviour-Skript statt der vollen Ordner-Architektur; Logik steckt trotzdem in einer reinen `Simulation`-Klasse mit `Tick(dt)` (live und offline), damit sie später in die Systeme aus CLAUDE.md zerlegt werden kann.
 - Noch keine `.asmdef`: im Standard-Assembly findet Unity Input System, TextMeshPro und uGUI ohne Verweise – weniger Fehlerquellen beim ersten Einrichten.
+
+## Unity 0.1
+- Spieldaten werden aus dem Prototyp exportiert (`tools/export_unity_data.py` → `gamedata.json`), statt sie von Hand abzuschreiben – so bleiben Zahlen, Texte, Layouts und Parzellen 1:1 gleich.
+- Modelle prozedural im Code (keine gekauften Assets), Oberfläche zur Laufzeit gebaut mit 390×844 als Referenz (CSS-Pixel des Browsers 1:1), damit Abstände und Schriftgrößen wie im Browser sind.
+- Erst die Kernschleife bis zur Planetenreise portiert; spätere Systeme folgen, Ziele dahinter bleiben bis dahin ausgeblendet.
+- Test-Tasten nur im Editor (`#if UNITY_EDITOR`), keine sichtbaren Test-Knöpfe im Spiel.
+- Unity-Spielstand getrennt vom Browser-Spielstand (eigener Schlüssel), damit nichts verloren geht.
