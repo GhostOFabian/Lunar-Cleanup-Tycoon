@@ -202,7 +202,9 @@ namespace LunarCleanup.Gameplay
             string best = null; float bd = 1e9f;
             foreach (var id in ps.bld) { if (!ps.lay.pos.ContainsKey(id)) continue; float d = (ps.lay.pos[id] - pl).magnitude; if (d < GameData.Bld[id].fp + .6f && d < bd) { bd = d; best = id; } }
             if (best != null) { hud.OpenSheet("building", best); return; }
-            int c = ps.pd.CellOf(dir); string why = Game.FrontWhy(ps, c);
+            int c = ps.pd.CellOf(dir);
+            if (Game.OutpostSites(ps.pid).Contains(c) && (Game.ResDone("drones") || ps.sv.outposts.Any(o => o.cell == c))) { hud.OpenSheet("outpost", c.ToString()); return; }
+            string why = Game.FrontWhy(ps, c);
             if (why != "" && why != "Basisgelände" && !Game.Workable(ps, c)) Game.Toast(why);
         }
 

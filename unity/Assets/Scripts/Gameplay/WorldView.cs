@@ -74,7 +74,37 @@ namespace LunarCleanup.Gameplay
                 MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             }
             foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
+            BuildOutposts();
             builtVersion = ps.baseVersion;
+        }
+
+        readonly List<(LineRenderer l, StSave o)> pipes = new List<(LineRenderer, StSave)>();
+        void BuildOutposts()
+        {
+            pipes.Clear(); var sites = Game.OutpostSites(ps.pid);
+            foreach (int cid in sites)
+            {
+                var cl = pd.cells[cid]; var o = ps.sv.outposts.Find(x => x.cell == cid); var d = cl.c;
+                if (o != null)
+                {
+                    var bp = Models.Outpost(ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = d * pd.R; bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, d);
+                    // Pipeline auf Stelzen bis zum Rohstofflager
+                    var a = pd.ToDir(cl, 1.6f, -2.2f); var b = ps.lay.pos.ContainsKey("roh") ? pd.PlanDir(ps.lay.pos["roh"]) : pd.cells[pd.baseCell].c; float arc = pd.Arc(a, b); int n = Mathf.Max(8, Mathf.CeilToInt(arc / 2));
+                    var lg = new GameObject("Pipeline"); lg.transform.SetParent(baseRoot, false); var lr = lg.AddComponent<LineRenderer>(); lr.useWorldSpace = true; lr.positionCount = n + 1; lr.widthMultiplier = .42f; lr.numCapVertices = 4;
+                    lr.sharedMaterial = MeshKit.Unlit(GameData.Hex("#8a93a3")); lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    var post = MeshKit.Mat(GameData.Hex("#4a525e"), .5f, .4f);
+                    for (int i = 0; i <= n; i++)
+                    {
+                        var p = Vector3.Slerp(a, b, i / (float)n).normalized; float h = i == n ? 4.6f : 1.9f; lr.SetPosition(i, p * (pd.R + h));
+                        if (i % 3 == 1 && i < n - 1) { var pg = MeshKit.Cyl(baseRoot, post, Vector3.zero, .07f, .09f, 1.9f, 8); pg.transform.position = p * (pd.R + .95f); pg.transform.rotation = Quaternion.FromToRotation(Vector3.up, p); }
+                    }
+                    pipes.Add((lr, o));
+                }
+                else if (Game.ResDone("outpost") || Game.ResDone("drones"))
+                {
+                    var site = Models.Site(3.2f); site.transform.SetParent(baseRoot, false); site.transform.position = d * (pd.R + .02f); site.transform.rotation = Quaternion.LookRotation(cl.e1, d);
+                }
+            }
         }
 
         static Texture2D beltTex;
@@ -239,6 +269,7 @@ namespace LunarCleanup.Gameplay
             if (builtFor != Game.S.planet) return;
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
+            foreach (var (l, o) in pipes) if (l) { var c = o.busy ? Color.Lerp(GameData.Hex("#8a93a3"), GameData.Hex("#6ff2d2"), .5f + .5f * Mathf.Sin(Time.time * 6)) : GameData.Hex("#8a93a3"); l.startColor = l.endColor = c; }
             UpdateSun(); UpdateStorm(); DrawItems(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
         }
 

@@ -154,6 +154,21 @@ namespace LunarCleanup.Gameplay
         }
 
         /// <summary>Gelber Bauplatz für ein noch nicht gebautes Gebäude.</summary>
+        /// <summary>Außenlager: Silo mit Trichter, zwei Andockplätze, Pumpenhaus mit Pipeline-Anschluss.</summary>
+        public static BuildingParts Outpost(Color acc)
+        {
+            var bp = new BuildingParts(); var g = new GameObject("Außenlager"); bp.root = g; var t = g.transform;
+            Material W = M(Hex("#d9dee6"), .35f, .55f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
+            MeshKit.Cyl(t, Pad, new Vector3(0, .06f, 0), 4.2f, 4.4f, .12f, 32);
+            MeshKit.Cyl(t, W, new Vector3(-.8f, 2.4f, 0), 1.5f, 1.5f, 3.6f, 24); MeshKit.Cyl(t, A, new Vector3(-.8f, 4.4f, 0), .4f, 1.55f, .5f, 24);
+            MeshKit.Cyl(t, D, new Vector3(-.8f, .45f, 0), .7f, 1.4f, .8f, 24);
+            for (int i = 0; i < 4; i++) MeshKit.Box(t, D, new Vector3(-.8f + (i % 2 == 0 ? -1.2f : 1.2f), .9f, i < 2 ? -1.2f : 1.2f), new Vector3(.16f, 1.8f, .16f));
+            MeshKit.Box(t, A, new Vector3(1.6f, .7f, -2.2f), new Vector3(1.6f, 1.2f, 1.4f)); MeshKit.Cyl(t, D, new Vector3(1.6f, 1.6f, -2.2f), .25f, .25f, .6f, 10);
+            for (int k = 0; k < 2; k++) { MeshKit.Box(t, MeshKit.Glow(Hex("#6ff2d2"), 1.8f), new Vector3(2.9f, .14f, -(k - .5f) * 2), new Vector3(1.6f, .04f, .12f)); }
+            bp.lamp = MeshKit.Glow(Hex("#3fe58a"), 2.5f); MeshKit.Ball(t, bp.lamp == null ? A : bp.lamp, new Vector3(-.8f, 4.85f, 0), .32f);
+            return bp;
+        }
+
         public static GameObject Site(float fp)
         {
             var g = new GameObject("Bauplatz"); var t = g.transform; var gold = MeshKit.Glow(Hex("#ffbf4d"), 1.6f);

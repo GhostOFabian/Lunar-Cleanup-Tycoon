@@ -52,6 +52,7 @@ namespace LunarCleanup.Core
         public static List<ResDef> Res = new List<ResDef>();
         public class StormLook { public Color col, fog; public float size, wind, fall, dens; public bool lightning, embers, geysers, rad; }
         public static Dictionary<string, StormLook> Storm = new Dictionary<string, StormLook>(); public static int[] PowReq = new int[0];
+        public static int OutDocks = 2, OutMax = 4, OutMinRing = 4; public static float OutBuf = 1500, OutRate = 20, OutPipe = 8;
         public static int DroneMax = 8; public static float DroneCap0 = 160, DroneSpeed0 = 9, DroneRate = 45, DroneMinDist = 30;
         public static Dictionary<string, float> DayLen = new Dictionary<string, float>(), Geof = new Dictionary<string, float>();
         public const float DONE = 0.03f;
@@ -102,6 +103,7 @@ namespace LunarCleanup.Core
             SolarPeak = J.F(J.G(root, "consts"), "SOLAR_PEAK", 2.6f);
             Storm.Clear(); var sl = J.G(root, "stormLook"); if (sl != null) foreach (var kv in J.O(sl)) { var o = kv.Value; Storm[kv.Key] = new StormLook { col = IntC(J.I(o, "col")), fog = IntC(J.I(o, "fog")), size = J.F(o, "size"), wind = J.F(o, "wind"), fall = J.F(o, "fall"), dens = J.F(o, "dens"), lightning = J.I(o, "lightning") > 0, embers = J.I(o, "embers") > 0, geysers = J.I(o, "geysers") > 0, rad = J.I(o, "rad") > 0 }; }
             var pr = J.G(root, "powreq"); if (pr != null) { var l = J.A(pr); PowReq = new int[l.Count]; for (int i = 0; i < l.Count; i++) PowReq[i] = Convert.ToInt32(l[i]); }
+            var op = J.G(root, "outpost"); if (op != null) { OutDocks = J.I(op, "docks"); OutMax = J.I(op, "max"); OutMinRing = J.I(op, "minRing"); OutBuf = J.F(op, "buf"); OutRate = J.F(op, "rate"); OutPipe = J.F(op, "pipe"); }
             var dr = J.G(root, "drone"); if (dr != null) { DroneMax = J.I(dr, "max"); DroneCap0 = J.F(dr, "cap"); DroneSpeed0 = J.F(dr, "speed"); DroneRate = J.F(dr, "rate"); DroneMinDist = J.F(dr, "minDist"); }
             foreach (var kv in J.O(J.G(root, "mach"))) Mach[kv.Key] = new Vector3(J.F(kv.Value, "energy"), J.F(kv.Value, "inCap"), J.F(kv.Value, "outCap"));
             foreach (var kv in J.O(J.G(root, "lines")))

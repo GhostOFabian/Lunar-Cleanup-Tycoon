@@ -24,6 +24,7 @@ namespace LunarCleanup.UI
                 case "energy": title = "Energie"; Energy(h); break;
                 case "research": title = "Forschung"; Research(h); break;
                 case "hazard": title = "Gefahren"; Hazard(h); break;
+                case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -36,8 +37,8 @@ namespace LunarCleanup.UI
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
         }
         /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Verschleiß, Strahlung, Tiefenabbau, Außenlager), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
-        static readonly string[] NotPorted = { "vdur", "rshield", "rcare", "rigrate", "obuf", "pipe" };
-        static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res) && u.res != "outpost");
+        static readonly string[] NotPorted = { "vdur", "rshield", "rcare", "rigrate" };
+        static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
 
         static void Vehicles(Hud h)
         {
@@ -152,11 +153,32 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Außenlager, Tiefenabbau, Lastdrohnen).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Lastdrohnen, Tiefenabbau, Neustart mit Sternenstaub).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
         static string FmtTime(float s) { int t = Mathf.Max(0, Mathf.CeilToInt(s)); return t >= 60 ? t / 60 + " min " + (t % 60).ToString("00") + " s" : t + " s"; }
+        static void Outpost(Hud h, int cell)
+        {
+            var o = ps.sv.outposts.Find(x => x.cell == cell);
+            if (o != null)
+            {
+                h.Note("Entladestation weit draußen. Alle Fahrzeugtypen docken hier an, eine Pipeline pumpt alles ins Rohstofflager der Basis.");
+                h.Row("Status", () => Game.OutpostStatus(ps, o));
+                h.Row("Puffer", () => Game.Fmt(Game.Sum(o.buf)) + " / " + Game.Fmt(Game.StBuf(ps, o.id)));
+                h.Row("Andockplätze", () => (o.docks == null ? 0 : o.docks.Count(x => x != 0)) + " belegt von " + Game.StDocks(ps, o.id));
+                h.Row("Pipeline", () => { float pf = Game.PressF(Game.Sum(o.buf) / Game.StBuf(ps, o.id)); return Dec(Game.PipeRate(ps, o), 0) + " E/s" + (pf > 1.01f ? " · Druckbetrieb ×" + Dec(pf, 1) : ""); });
+                h.Note("Ab 80 % Füllung arbeitet die Pipeline im Druckbetrieb – bis doppelt so schnell. Drohnen holen volle Silos ab.");
+                foreach (var id in new[] { "obuf", "pipe", "urate", "udock" }) if (UpVisible(GameData.Up[id])) UpRow(h, id);
+                return;
+            }
+            h.Section("Außenlager-Platz");
+            if (!Game.ResDone("outpost")) { h.Note("Mit Außenlager-Logistik (Forschung) kannst du hier später ein Außenlager mit Pipeline zur Basis bauen."); return; }
+            h.Note("Einer von vier festen Plätzen rund um die Basis. Fahrzeuge, die hier draußen reinigen, entladen dann direkt hier – eine Pipeline pumpt alles zur Basis.");
+            h.Row("Außenlager bauen", () => { string w = Game.OutpostWhy(ps, cell); return (w != "" ? w + " · " : "") + ps.sv.outposts.Count + " von " + GameData.OutMax + " gebaut"; },
+                () => Cr(Game.OutpostCost(ps)), () => Game.OutpostWhy(ps, cell) == "" && Game.S.credits >= Game.OutpostCost(ps), () => Game.BuildOutpost(cell));
+        }
+
         static void Hazard(Hud h)
         {
             var P = ps.P; var st = P.storm;
@@ -228,7 +250,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.5. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Außenlager, Tiefenabbau.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.6. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Lastdrohnen, Tiefenabbau, Fahrzeugverschleiß, Strahlung, Sternenstaub.");
         }
 
         static void Building(Hud h, string id)
