@@ -50,6 +50,7 @@ namespace LunarCleanup.Core
         public const int GRID = 32;
         public static float SolarPeak = 2.6f;
         public static List<ResDef> Res = new List<ResDef>();
+        public static int DroneMax = 8; public static float DroneCap0 = 160, DroneSpeed0 = 9, DroneRate = 45, DroneMinDist = 30;
         public static Dictionary<string, float> DayLen = new Dictionary<string, float>(), Geof = new Dictionary<string, float>();
         public const float DONE = 0.03f;
 
@@ -97,6 +98,7 @@ namespace LunarCleanup.Core
             var dl = J.G(root, "daylen"); if (dl != null) foreach (var kv in J.O(dl)) DayLen[kv.Key] = Convert.ToSingle(kv.Value);
             var gf = J.G(root, "geof"); if (gf != null) foreach (var kv in J.O(gf)) Geof[kv.Key] = Convert.ToSingle(kv.Value);
             SolarPeak = J.F(J.G(root, "consts"), "SOLAR_PEAK", 2.6f);
+            var dr = J.G(root, "drone"); if (dr != null) { DroneMax = J.I(dr, "max"); DroneCap0 = J.F(dr, "cap"); DroneSpeed0 = J.F(dr, "speed"); DroneRate = J.F(dr, "rate"); DroneMinDist = J.F(dr, "minDist"); }
             foreach (var kv in J.O(J.G(root, "mach"))) Mach[kv.Key] = new Vector3(J.F(kv.Value, "energy"), J.F(kv.Value, "inCap"), J.F(kv.Value, "outCap"));
             foreach (var kv in J.O(J.G(root, "lines")))
             {

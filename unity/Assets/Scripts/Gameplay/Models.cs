@@ -194,6 +194,30 @@ namespace LunarCleanup.Gameplay
             return vp;
         }
 
+        public class DroneParts { public GameObject root; public Transform[] rotors; public Transform cargo; }
+        /// <summary>Transportdrohne: flacher Körper, vier Ausleger mit Rotoren, Frachtkorb darunter, Positionslichter.</summary>
+        public static DroneParts Drone(Color acc)
+        {
+            var dp = new DroneParts(); var g = new GameObject("Drohne"); dp.root = g; var t = g.transform;
+            Material B = M(Hex("#e6eaf0"), .4f, .65f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), P = MeshKit.Mat(Hex("#20242b"), .1f, .3f);
+            MeshKit.Box(t, B, Vector3.zero, new Vector3(1.3f, .32f, 1.3f), new Vector3(0, 45, 0));
+            MeshKit.Ball(t, A, new Vector3(0, .2f, 0), .7f);
+            dp.rotors = new Transform[4];
+            for (int i = 0; i < 4; i++)
+            {
+                float a = (45 + i * 90) * Mathf.Deg2Rad; var o = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                MeshKit.Box(t, D, o * .85f, new Vector3(.14f, .1f, 1.2f), new Vector3(0, 90 - (45 + i * 90), 0));
+                MeshKit.Cyl(t, D, o * 1.45f + new Vector3(0, .12f, 0), .14f, .16f, .25f, 10);
+                var r = new GameObject("Rotor").transform; r.SetParent(t, false); r.localPosition = o * 1.45f + new Vector3(0, .28f, 0);
+                MeshKit.Box(r, P, Vector3.zero, new Vector3(1.5f, .03f, .14f)); MeshKit.Box(r, P, Vector3.zero, new Vector3(.14f, .03f, 1.5f));
+                dp.rotors[i] = r;
+                MeshKit.Ball(t, MeshKit.Glow(i < 2 ? Hex("#6ff2d2") : Hex("#ff5a4a"), 3f), o * 1.45f + new Vector3(0, -.05f, 0), .12f);
+            }
+            dp.cargo = MeshKit.Box(t, A, new Vector3(0, -.45f, 0), new Vector3(.8f, .5f, .8f)).transform;
+            MeshKit.Ball(t, MeshKit.Glow(Hex("#fff0c8"), 2.5f), new Vector3(0, -.2f, .62f), .14f);
+            return dp;
+        }
+
         public static GameObject Cart()
         {
             var g = new GameObject("Sammelwagen"); var t = g.transform;

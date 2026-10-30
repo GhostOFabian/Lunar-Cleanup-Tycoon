@@ -100,6 +100,7 @@ namespace LunarCleanup.Core
                 ps.act[a.id] = A;
             }
             foreach (var v in sv.veh) { v.tank = Arr(v.tank); if (v.d.sqrMagnitude < .5f) v.d = ps.pd.PlanDir(ps.lay.start); }
+            if (sv.drones == null) sv.drones = new List<DroneSave>(); foreach (var dr in sv.drones) { dr.tank = Arr(dr.tank); if (dr.d.sqrMagnitude < .5f) dr.d = ps.lay.pos.ContainsKey("hangar") ? ps.pd.PlanDir(ps.lay.pos["hangar"]) : ps.pd.PlanDir(ps.lay.start); }
             if (sv.cart.owned && sv.cart.d.sqrMagnitude < .5f) sv.cart.d = ps.pd.PlanDir(ps.lay.start);
             CalcFront(ps);
             return ps;
@@ -382,7 +383,7 @@ namespace LunarCleanup.Core
             var B = GameData.Bld[id]; if (ps.bld.Contains(id)) return "Steht schon";
             if (Gs(ps) < B.stage) return "Erst Basisstufe " + B.stage;
             if (!string.IsNullOrEmpty(B.research) && !ResDone(B.research)) return "Erst erforschen: " + (GameData.Res.Find(r => r.id == B.research)?.name ?? B.research);
-            if (id == "hangar" || id == "lifter" || id == "outpost") return "Folgt in der Unity-Version";
+            if (id == "lifter" || id == "outpost") return "Folgt in der Unity-Version";
             if (B.geo && GeoF(ps.pid) <= 0) return "Hier gibt es keine nutzbare Erdwärme";
             return "";
         }
@@ -652,6 +653,7 @@ namespace LunarCleanup.Core
                     }
                 case "toUnload":
                     {
+                        if (v.drone >= 0) { v.mode = "wait"; break; }
                         var s = ChooseStation(ps, v);
                         if (s == null) { NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
                         v.sid = s; v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, pd.PlanDir(StLoc(ps, s, 6.4f, 0)), spd * dt, v.id)) v.mode = "queue"; break;
@@ -676,8 +678,90 @@ namespace LunarCleanup.Core
                         if (Sum(v.tank) < .01f) { Array.Clear(v.tank, 0, NM); FreeDock(st, v); v.mode = "seek"; v.sid = null; if (v.coll >= 1) FloatTxt(pd.PlanDir(ps.lay.pos[s]), "+" + Fmt(v.coll) + " entladen", "mat"); v.coll = 0; }
                         break;
                     }
+                case "wait":
+                    if (v.drone < 0) v.mode = tank >= cap * .98f ? "toUnload" : "seek"; break;
                 default: v.mode = "seek"; break;
             }
+        }
+
+        // ================= Drohnen =================
+        public static float DroneCap(PState ps) => GameData.DroneCap0 * Uv("dcap", ps);
+        public static float DroneSpeed(PState ps) => GameData.DroneSpeed0 * Uv("dspeed", ps);
+        public static double DroneCost(PState ps) => Math.Round(2500 * ps.P.diff * Math.Pow(1.35, ps.sv.drones.Count));
+        public static Vector3 HangarDir(PState ps) => ps.pd.PlanDir(ps.lay.pos["hangar"]);
+        public static bool BuyDrone()
+        {
+            var ps = Cur; if (!ps.bld.Contains("hangar")) return Fail("Erst den Drohnenhangar bauen"); if (ps.sv.drones.Count >= GameData.DroneMax) return Fail("Hangar ist voll");
+            double c = DroneCost(ps); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c;
+            ps.sv.drones.Add(new DroneSave { id = ps.sv.nextDrone++, d = HangarDir(ps), tank = new float[NM] }); Toast("Transportdrohne startklar", "good"); return true;
+        }
+        static string DroneStation(PState ps, string not)
+        {
+            string best = null; float bf = 10; foreach (var s in GameData.Stations) { if (!ps.bld.Contains(s) || s == not) continue; float fr = StBuf(ps, s) - Sum(ps.st[s].buf); if (fr > bf) { bf = fr; best = s; } } return best;
+        }
+        static void DroneStep(PState ps, DroneSave dr, float dt, float f)
+        {
+            var pd = ps.pd; float R = pd.R; var hd = HangarDir(ps); float spd = DroneSpeed(ps) * Mathf.Max(.25f, f), cap = DroneCap(ps), load = Sum(dr.tank); dr.busy = false;
+            VehSave Tgt() { var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null && v.drone == dr.id ? v : null; }
+            switch (dr.mode)
+            {
+                case "idle":
+                    {
+                        if (!MoveDir(ref dr.d, hd, spd * dt, R)) { dr.busy = true; break; }
+                        if (load > .05f) { dr.mode = "drop"; break; }
+                        VehSave best = null; float bs = 0;
+                        foreach (var v in ps.sv.veh)
+                        {
+                            if (v.drone >= 0) continue; if (!(v.mode == "seek" || v.mode == "drive" || v.mode == "clean" || v.mode == "toUnload" || v.mode == "wait")) continue;
+                            float tk = Sum(v.tank), c = TankCap(ps, v); if (tk < c * .4f) continue; float dist = pd.Arc(v.d, hd); if (dist < GameData.DroneMinDist) continue;
+                            float sc = tk / c * dist; if (sc > bs) { bs = sc; best = v; }
+                        }
+                        if (best != null) { best.drone = dr.id; dr.tgt = best.id; dr.mode = "out"; }
+                        break;
+                    }
+                case "out":
+                    { var v = Tgt(); if (v == null) { dr.mode = "back"; dr.tgt = -1; break; } dr.busy = true; if (MoveDir(ref dr.d, v.d, spd * dt, R)) dr.mode = "load"; break; }
+                case "load":
+                    {
+                        var v = Tgt(); if (v == null) { dr.mode = "back"; dr.tgt = -1; break; }
+                        dr.d = v.d; dr.busy = true; float tk = Sum(v.tank), amt = Mathf.Min(tk, Mathf.Min(cap - load, GameData.DroneRate * dt));
+                        if (amt > 0 && tk > 0) { float k = amt / tk; for (int m = 0; m < NM; m++) { float x = v.tank[m] * k; v.tank[m] -= x; dr.tank[m] += x; } }
+                        if (Sum(v.tank) < .05f || cap - Sum(dr.tank) < .05f) { if (Sum(v.tank) < .05f) Array.Clear(v.tank, 0, NM); v.drone = -1; dr.tgt = -1; S.stats.lifts++; dr.sid = DroneStation(ps, null) ?? ""; dr.mode = dr.sid != "" ? "toSt" : "back"; }
+                        break;
+                    }
+                case "toSt":
+                    { var s = dr.sid; if (string.IsNullOrEmpty(s) || !ps.bld.Contains(s)) { dr.sid = ""; dr.mode = "back"; break; } dr.busy = true; if (MoveDir(ref dr.d, pd.PlanDir(ps.lay.pos[s]), spd * dt, R)) { dr.mode = "stdrop"; dr.wt = 0; } break; }
+                case "stdrop":
+                    {
+                        var s = dr.sid; if (string.IsNullOrEmpty(s) || !ps.bld.Contains(s)) { dr.mode = "back"; break; } var st = ps.st[s]; dr.busy = true;
+                        float free = StBuf(ps, s) - Sum(st.buf); if (load < .05f) { Array.Clear(dr.tank, 0, NM); dr.sid = ""; dr.mode = "back"; break; }
+                        if (free <= .01f) { dr.wt += dt; if (dr.wt > 3) { var alt = DroneStation(ps, s); dr.sid = alt ?? ""; dr.mode = alt != null ? "toSt" : "back"; } break; }
+                        float amt = Mathf.Min(load, Mathf.Min(free, GameData.DroneRate * dt)), k = amt / load; for (int m = 0; m < NM; m++) { float x = dr.tank[m] * k; dr.tank[m] -= x; st.buf[m] += x; }
+                        break;
+                    }
+                case "back": dr.busy = true; if (MoveDir(ref dr.d, hd, spd * dt, R)) dr.mode = "drop"; break;
+                case "drop":
+                    {
+                        if (load < .05f) { Array.Clear(dr.tank, 0, NM); dr.mode = "idle"; break; } float fr = RohCap(ps) - RohSum(ps); if (fr <= .01f) break;
+                        float amt = Mathf.Min(load, Mathf.Min(fr, GameData.DroneRate * dt)), k = amt / load; for (int m = 0; m < NM; m++) { float x = dr.tank[m] * k; dr.tank[m] -= x; ps.sv.roh[m] += x; }
+                        break;
+                    }
+                default: dr.mode = "idle"; break;
+            }
+        }
+        public static string DroneStatus(PState ps, DroneSave dr)
+        {
+            switch (dr.mode)
+            {
+                case "idle": return dr.busy ? "Fliegt zum Hangar" : "Bereit im Hangar";
+                case "out": { var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null ? "Fliegt zu " + GameData.Veh[v.type].name + " #" + v.id : "Fliegt los"; }
+                case "load": return "Übernimmt Ladung";
+                case "toSt": return "Bringt die Ladung zur " + (ps.bld.Contains(dr.sid) ? GameData.Bld[dr.sid].name : "Station");
+                case "stdrop": return dr.wt > 0 && !string.IsNullOrEmpty(dr.sid) ? GameData.Bld[dr.sid].name + " ist voll – wartet" : "Entlädt in die " + (string.IsNullOrEmpty(dr.sid) ? "Station" : GameData.Bld[dr.sid].name);
+                case "back": return Sum(dr.tank) > .05f ? "Fliegt zum Hangar (Stationen voll)" : "Fliegt zurück";
+                case "drop": return RohCap(ps) - RohSum(ps) <= .01f ? "Rohstofflager voll – wartet" : "Lädt ins Rohstofflager";
+            }
+            return dr.mode;
         }
         static void FreeDock(StSave st, VehSave v) { if (st.docks == null) return; int k = Array.IndexOf(st.docks, v.id); if (k >= 0) st.docks[k] = 0; }
         public static string VehStatus(VehSave v)
@@ -689,7 +773,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz"; case "clean": return "Reinigt"; case "toUnload": return "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; }
+            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; }
             return v.mode;
         }
 
@@ -814,7 +898,7 @@ namespace LunarCleanup.Core
         // ================= Ziele =================
         static PState Moon => P["moon"];
         static float StartProg() { var m = Moon; return m.act.TryGetValue(m.pd.start, out var a) ? Progress(a) : m.clean[m.pd.start] ? 1 : 0; }
-        public static int QuestsSupported = 16;
+        public static int QuestsSupported = 19;
         public static float QuestProgress(int q)
         {
             var m = Moon; Func<string, bool> any = id => P.Values.Any(p => p.bld.Contains(id));
@@ -835,6 +919,9 @@ namespace LunarCleanup.Core
                 case 12: return m.sv.stage >= 3 ? 1 : Mathf.Min(.99f, (float)(S.credits / 5000));
                 case 13: return m.bld.Contains("schmelze") ? 1 : 0;
                 case 14: return S.stats.barren > 0 ? 1 : 0;
+                case 16: return P.Values.Any(p => p.sv.drones.Count > 0) ? 1 : P.Values.Any(p => p.bld.Contains("hangar")) ? .5f : 0;
+                case 17: return CleanPct(Moon) / .8f;
+                case 18: return P.ContainsKey("mars") ? 1 : 0;
                 case 15: return ResDone("drones") ? 1 : S.resAct == "drones" ? S.resT / 300 : 0;
             }
             return 0;
@@ -891,6 +978,7 @@ namespace LunarCleanup.Core
             var sv = ps.sv; sv.dayT = DayT(ps) + dt; ps.solar = ps.P.solar * DayF(ps);
             float demand = 0, vE = Uv("veff", ps) * (ResDone("motor") ? .7f : 1);
             foreach (var v in sv.veh) { var T = GameData.Veh[v.type]; if (T.batt > 0) { if (v.charging) demand += T.energy * 2.5f * vE; } else if (v.busy) demand += T.energy * vE; }
+            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE;
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach[m].cur >= 0) demand += GameData.Mach[m].x * Uv("meff", ps);
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && ps.belts[b.id].Count > 0) demand += .1f * Uv("beff", ps);
             ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps);
@@ -910,6 +998,8 @@ namespace LunarCleanup.Core
             EnergyStep(ps, dt); float f = ps.ef;
             CartStep(ps, dt);
             foreach (var v in ps.sv.veh) VehStep(ps, v, dt, f);
+            if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
+            foreach (var v in ps.sv.veh) if (v.drone >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.tgt == v.id && d.id == v.drone))) v.drone = -1;
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;
             for (int s = 0; s < sub; s++) { foreach (var b in ps.lay.belts) BeltStep(ps, b, sdt, f); foreach (var m in new[] { "presse", "schmelze", "raff" }) MachStep(ps, m, sdt, f); }
             SellStep(ps, dt);

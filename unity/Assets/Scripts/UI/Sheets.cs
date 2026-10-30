@@ -34,7 +34,9 @@ namespace LunarCleanup.UI
             h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : ""); },
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
         }
-        static bool UpVisible(UpgDef u) => !u.hide && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res) && u.res != "drones" && u.res != "outpost");
+        /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Verschleiß, Strahlung, Tiefenabbau, Außenlager), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
+        static readonly string[] NotPorted = { "vdur", "rshield", "rcare", "rigrate", "obuf", "pipe" };
+        static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res) && u.res != "outpost");
 
         static void Vehicles(Hud h)
         {
@@ -149,7 +151,7 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q < Game.S.quest ? "✓ " : q == Game.S.quest ? "▶ " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Drohnen, Außenlager, Stürme, Tiefenabbau).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Außenlager, Stürme, Tiefenabbau).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
@@ -168,6 +170,17 @@ namespace LunarCleanup.UI
             h.Row("Kernreaktor", () => ps.bld.Contains("reactor") ? "150/s" : "–");
             UpRow(h, "energy"); if (UpVisible(GameData.Up["ecap"])) UpRow(h, "ecap");
             h.Note("Solarfelder liefern nur tagsüber. Nachts laufen Maschinen aus dem Speicher (Akkupark), Akku-Fahrzeuge aus ihrem Akku – oder du baust Radioisotopen-Generator (Stufe 3), Geothermie (Stufe 4) und Kernreaktor (Stufe 5), die rund um die Uhr liefern.");
+        }
+
+        static void Hangar(Hud h)
+        {
+            h.Section("Drohnenhangar");
+            h.Note("Drohnen fliegen zu Fahrzeugen, die weiter als " + GameData.DroneMinDist.ToString("0") + " m von hier arbeiten und mindestens 40 % Ladung haben, übernehmen die Ladung und bringen sie zur Entladestation mit dem meisten Platz. Die Fahrzeuge müssen nicht mehr zurückfahren – auch offline.");
+            h.Row("Transportdrohne kaufen", () => ps.sv.drones.Count + " von " + GameData.DroneMax + " · Ladung " + Game.Fmt(Game.DroneCap(ps)) + " · " + Dec(Game.DroneSpeed(ps), 1) + " m/s",
+                () => ps.sv.drones.Count >= GameData.DroneMax ? "Voll" : Cr(Game.DroneCost(ps)), () => ps.sv.drones.Count < GameData.DroneMax && Game.S.credits >= Game.DroneCost(ps), () => Game.BuyDrone());
+            h.Row("Übernommene Ladungen", () => Game.S.stats.lifts + " insgesamt");
+            foreach (var dr in ps.sv.drones) { var d = dr; h.Row("Drohne #" + d.id, () => Game.DroneStatus(ps, d) + " · " + Game.Fmt(Game.Sum(d.tank)) + "/" + Game.Fmt(Game.DroneCap(ps))); }
+            foreach (var id in new[] { "dcap", "dspeed" }) if (UpVisible(GameData.Up[id])) UpRow(h, id);
         }
 
         static void Research(Hud h)
@@ -196,7 +209,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.3. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Drohnen, Außenlager, Tiefenabbau.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.3. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Außenlager, Tiefenabbau.");
         }
 
         static void Building(Hud h, string id)
@@ -205,6 +218,7 @@ namespace LunarCleanup.UI
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "research") { Research(h); return; }
+            if (id == "hangar") { Hangar(h); return; }
             if (id == "hq") { Base(h); return; }
             if (id == "werkstatt") { Vehicles(h); return; }
         }

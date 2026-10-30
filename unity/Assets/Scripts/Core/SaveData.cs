@@ -6,10 +6,11 @@ using UnityEngine;
 namespace LunarCleanup.Core
 {
     [Serializable] public class KV { public string k; public int v; }
-    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads; public float handM2; }
+    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts; public float handM2; }
 
     [Serializable] public class StSave { public string id; public float[] buf; public int[] docks = new int[0]; }
-    [Serializable] public class VehSave { public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1; [NonSerialized] public bool busy, charging; }
+    [Serializable] public class VehSave { public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1; public int drone = -1; [NonSerialized] public bool busy, charging; }
+    [Serializable] public class DroneSave { public int id; public Vector3 d; public string mode = "idle", sid = ""; public float[] tank; public int tgt = -1; public float wt; [NonSerialized] public bool busy; }
     [Serializable] public class ActSave { public int id; public float sum; public string grid; }
     [Serializable] public class BeltSave { public string id; public List<float> s = new List<float>(); public List<int> m = new List<int>(); public List<float> a = new List<float>(); }
     [Serializable] public class MachSave { public string id; public float[] inp, outp; public int cur = -1, bat = 1, made; public float prog; public int lastOut = -1; }
@@ -34,6 +35,8 @@ namespace LunarCleanup.Core
         public bool rkGo;
         public double soldP;
         public CartSave cart = new CartSave();
+        public List<DroneSave> drones = new List<DroneSave>();
+        public int nextDrone = 1;
     }
 
     [Serializable]

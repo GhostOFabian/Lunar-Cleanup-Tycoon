@@ -129,7 +129,12 @@ namespace LunarCleanup.Core
         public Vector3 ToDir(Cell cl, float x, float y) => (cl.c * R + cl.e1 * x + cl.e2 * y).normalized;
         public Vector2 ToLocal(Cell cl, Vector3 d)
         {
-            float dd = Vector3.Dot(d, cl.c); if (dd <= .05f) return new Vector2(1e4f, 1e4f);
+            float dd = Vector3.Dot(d, cl.c);
+            if (dd <= .05f)
+            {
+                // Rückseite des Planeten: weit weg, aber in der richtigen Richtung (sonst verlassen Fahrzeuge die Basis immer zur selben Ecke und kreisen)
+                var fd = new Vector2(Vector3.Dot(d, cl.e1), Vector3.Dot(d, cl.e2)); return fd.sqrMagnitude > 1e-8f ? fd.normalized * 1e4f : new Vector2(1e4f, 0);
+            }
             float t = R / dd; return new Vector2(Vector3.Dot(d, cl.e1) * t, Vector3.Dot(d, cl.e2) * t);
         }
         public Vector3 PlanDir(float x, float y) => ToDir(cells[baseCell], x, y);

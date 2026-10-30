@@ -13,6 +13,7 @@ namespace LunarCleanup.Gameplay
         Transform baseRoot, beltRoot, vehRoot, skyRoot;
         readonly Dictionary<string, Models.BuildingParts> blds = new Dictionary<string, Models.BuildingParts>();
         readonly Dictionary<int, Models.VehicleParts> vehs = new Dictionary<int, Models.VehicleParts>();
+        readonly Dictionary<int, Models.DroneParts> drones = new Dictionary<int, Models.DroneParts>(); readonly Dictionary<int, float> droneAlt = new Dictionary<int, float>();
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
@@ -26,7 +27,7 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
-            blds.Clear(); vehs.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
+            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust();
             itemMesh = MeshKit.Cube;
@@ -199,7 +200,7 @@ namespace LunarCleanup.Gameplay
             if (builtFor != Game.S.planet) return;
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
-            UpdateSun(); DrawItems(); SyncVehicles(); SyncCart(); AnimateBuildings();
+            UpdateSun(); DrawItems(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
@@ -272,6 +273,26 @@ namespace LunarCleanup.Gameplay
             MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             var lg = new GameObject("Scheinwerfer"); lg.transform.SetParent(vp.root.transform, false); lg.transform.localPosition = new Vector3(0, 1.1f, .9f); lg.transform.localRotation = Quaternion.Euler(28, 0, 0);
             var L = lg.AddComponent<Light>(); L.type = LightType.Spot; L.range = 11; L.spotAngle = 70; L.innerSpotAngle = 35; L.color = new Color(.85f, .92f, 1f); L.intensity = 0; L.shadows = LightShadows.None; vp.head = L;
+        }
+
+        void SyncDrones()
+        {
+            var alive = new HashSet<int>();
+            foreach (var dr in ps.sv.drones)
+            {
+                alive.Add(dr.id);
+                if (!drones.TryGetValue(dr.id, out var dp)) { dp = Models.Drone(ps.P.col0); dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = dr.d * (pd.R + 2); drones[dr.id] = dp; droneAlt[dr.id] = 2; }
+                bool low = dr.mode == "load" || dr.mode == "stdrop" || dr.mode == "drop" || (dr.mode == "idle" && !dr.busy);
+                float goal = dr.mode == "load" ? 3.2f : dr.mode == "stdrop" ? 7.5f : low ? 2.4f : 12f, alt = Mathf.Lerp(droneAlt[dr.id], goal, 1 - Mathf.Exp(-2.5f * Time.deltaTime)); droneAlt[dr.id] = alt;
+                var tr = dp.root.transform; var target = dr.d * (pd.R + alt + Mathf.Sin(Time.time * 2 + dr.id) * .15f); var mv = target - tr.position; var up = dr.d;
+                var fwd = mv - up * Vector3.Dot(mv, up);
+                if (fwd.sqrMagnitude > 1e-5f) tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(fwd.normalized, up) * Quaternion.Euler(Mathf.Min(14, fwd.magnitude / Mathf.Max(1e-3f, Time.deltaTime) * 1.2f), 0, 0), 1 - Mathf.Exp(-5 * Time.deltaTime));
+                else tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up), 1 - Mathf.Exp(-5 * Time.deltaTime));
+                tr.position = target;
+                foreach (var r in dp.rotors) r.Rotate(Vector3.up, (dr.busy || dr.mode != "idle" ? 2200 : 300) * Time.deltaTime, Space.Self);
+                if (dp.cargo) dp.cargo.gameObject.SetActive(Game.Sum(dr.tank) > .05f);
+            }
+            foreach (var id in drones.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(drones[id].root); drones.Remove(id); droneAlt.Remove(id); }
         }
 
         void SyncCart()

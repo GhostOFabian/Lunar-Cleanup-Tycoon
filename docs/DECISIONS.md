@@ -184,3 +184,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Erst die Kernschleife bis zur Planetenreise portiert; spätere Systeme folgen, Ziele dahinter bleiben bis dahin ausgeblendet.
 - Test-Tasten nur im Editor (`#if UNITY_EDITOR`), keine sichtbaren Test-Knöpfe im Spiel.
 - Unity-Spielstand getrennt vom Browser-Spielstand (eigener Schlüssel), damit nichts verloren geht.
+- Unity: Punkte auf der Planetenrückseite behalten in der Basis-Ebene ihre Richtung (statt fester Ecke 1e4/1e4) – sonst kreisen Fahrzeuge um die Basis. Im Browser-Prototyp ist das noch die alte Rechnung.

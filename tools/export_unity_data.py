@@ -21,7 +21,7 @@ with game() as (pg,errs):
    r.cells={};for(const pid of t.PORDER){const pd=t.planetData(pid);r.cells[pid]={N:pd.N,R:pd.R,base:pd.base,start:pd.start,type:pd.cells.map(c=>Object.keys(t.DIRT).indexOf(c.type)),kind:pd.cells.map(c=>Object.keys(t.KINDS).indexOf(c.kind)),c0:pd.cells[0].c,c7:pd.cells[7].c,ring:pd.cells.map(c=>c.ring)};}
    r.dirtKeys=Object.keys(t.DIRT);r.kindKeys=Object.keys(t.KINDS);
    r.quests=t.QUESTS.map(q=>({t:q.t,r:q.r}));
-   r.consts={GRID:t.GRID,DONE:t.DONE,handCap0:60,SOLAR_PEAK:t.SOLAR_PEAK};r.daylen=strip(t.DAYLEN);r.res=strip(t.RES);r.geof=strip(t.GEOF);
+   r.consts={GRID:t.GRID,DONE:t.DONE,handCap0:60,SOLAR_PEAK:t.SOLAR_PEAK};r.daylen=strip(t.DAYLEN);r.res=strip(t.RES);r.drone=strip(t.DRONE);r.geof=strip(t.GEOF);
    return r;}""")
   json.dump(d,open(OUT,'w',encoding='utf-8'),ensure_ascii=False,separators=(',',':'))
   print(len(json.dumps(d)),errs[:2])
