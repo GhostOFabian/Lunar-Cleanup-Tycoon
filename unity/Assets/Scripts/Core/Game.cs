@@ -381,7 +381,8 @@ namespace LunarCleanup.Core
         {
             var B = GameData.Bld[id]; if (ps.bld.Contains(id)) return "Steht schon";
             if (Gs(ps) < B.stage) return "Erst Basisstufe " + B.stage;
-            if (!string.IsNullOrEmpty(B.research)) return "Braucht Forschung – folgt in der Unity-Version";
+            if (!string.IsNullOrEmpty(B.research) && !ResDone(B.research)) return "Erst erforschen: " + (GameData.Res.Find(r => r.id == B.research)?.name ?? B.research);
+            if (id == "hangar" || id == "lifter" || id == "outpost") return "Folgt in der Unity-Version";
             if (B.geo && GeoF(ps.pid) <= 0) return "Hier gibt es keine nutzbare Erdwärme";
             return "";
         }
@@ -813,7 +814,7 @@ namespace LunarCleanup.Core
         // ================= Ziele =================
         static PState Moon => P["moon"];
         static float StartProg() { var m = Moon; return m.act.TryGetValue(m.pd.start, out var a) ? Progress(a) : m.clean[m.pd.start] ? 1 : 0; }
-        public static int QuestsSupported = 15;
+        public static int QuestsSupported = 16;
         public static float QuestProgress(int q)
         {
             var m = Moon; Func<string, bool> any = id => P.Values.Any(p => p.bld.Contains(id));
@@ -834,6 +835,7 @@ namespace LunarCleanup.Core
                 case 12: return m.sv.stage >= 3 ? 1 : Mathf.Min(.99f, (float)(S.credits / 5000));
                 case 13: return m.bld.Contains("schmelze") ? 1 : 0;
                 case 14: return S.stats.barren > 0 ? 1 : 0;
+                case 15: return ResDone("drones") ? 1 : S.resAct == "drones" ? S.resT / 300 : 0;
             }
             return 0;
         }
@@ -856,8 +858,29 @@ namespace LunarCleanup.Core
         public static float SolarProd(PState ps) => (3 + (ps.bld.Contains("energy") ? 8 : 0)) * Uv("energy", ps) * ps.solar * GameData.SolarPeak;
         public static float ExtraProd(PState ps) => (ps.bld.Contains("rtg") ? 10 : 0) + (ps.bld.Contains("geo") ? 30 * GeoF(ps.pid) : 0) + (ps.bld.Contains("reactor") ? 150 : 0);
         public static float EnergyProd(PState ps) => SolarProd(ps) + ExtraProd(ps);
-        /// <summary>Forschung folgt – bis dahin ist nichts erforscht.</summary>
-        public static bool ResDone(string id) => false;
+        // ================= Forschung =================
+        public static bool ResDone(string id) => S.resDone.Contains(id);
+        public static ResDef ResActive => string.IsNullOrEmpty(S.resAct) ? null : GameData.Res.Find(r => r.id == S.resAct);
+        public static bool HasLab() => P.Values.Any(p => p.bld.Contains("research"));
+        public static string ResWhy(ResDef d)
+        {
+            if (ResDone(d.id)) return "Erforscht"; if (!HasLab()) return "Erst eine Forschungsstation bauen";
+            if (ResActive != null) return "Es läuft schon ein Projekt";
+            if (!string.IsNullOrEmpty(d.req) && !ResDone(d.req)) return "Erst " + GameData.Res.Find(r => r.id == d.req).name;
+            return "";
+        }
+        public static bool StartResearch(string id)
+        {
+            var d = GameData.Res.Find(r => r.id == id); if (d == null) return false; string w = ResWhy(d); if (w != "") return Fail(w);
+            if (S.credits < d.cost) return Fail(Lacks(d.cost)); S.credits -= d.cost; S.resAct = id; S.resT = 0; Toast("Forschung gestartet: " + d.name); return true;
+        }
+        public static float ResSpeed() => Uv("research");
+        static void ResearchStep(float dt)
+        {
+            var d = ResActive; if (d == null) { S.resAct = ""; return; }
+            S.resT += dt * ResSpeed();
+            if (S.resT >= d.time) { if (!S.resDone.Contains(d.id)) S.resDone.Add(d.id); S.resAct = ""; S.resT = 0; foreach (var p in P.Values) p.baseVersion++; if (!Offline) Toast("Forschung abgeschlossen: " + d.name, "good"); }
+        }
         public static float BattCap(PState ps, VehSave v) => GameData.Veh[v.type].batt * Uv("vbatt", ps);
         static float Bat(PState ps, VehSave v) => v.bat < 0 ? BattCap(ps, v) : v.bat;
         static bool BattLow(PState ps, VehSave v) => GameData.Veh[v.type].batt > 0 && Bat(ps, v) < BattCap(ps, v) * .15f;
@@ -880,6 +903,7 @@ namespace LunarCleanup.Core
         public static void Step(float dt)
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
+            ResearchStep(dt);
         }
         static void StepPlanet(PState ps, float dt)
         {
@@ -893,6 +917,6 @@ namespace LunarCleanup.Core
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
 
-        public static float OfflineCap => 8 * 3600;
+        public static float OfflineCap => ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800;
     }
 }

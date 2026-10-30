@@ -48,5 +48,8 @@ namespace LunarCleanup.Core
         public List<PlanetSave> planets = new List<PlanetSave>();
         public long lastActive;
         public bool sound = true;
+        public List<string> resDone = new List<string>();
+        public string resAct = "";
+        public float resT;
     }
 }

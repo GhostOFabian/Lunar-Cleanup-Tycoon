@@ -22,6 +22,7 @@ namespace LunarCleanup.UI
                 case "planets": title = "Planeten"; Planets(h); break;
                 case "goals": title = "Ziele"; Goals(h); break;
                 case "energy": title = "Energie"; Energy(h); break;
+                case "research": title = "Forschung"; Research(h); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -33,7 +34,7 @@ namespace LunarCleanup.UI
             h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : ""); },
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
         }
-        static bool UpVisible(UpgDef u) => !u.hide && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && string.IsNullOrEmpty(u.res);
+        static bool UpVisible(UpgDef u) => !u.hide && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res) && u.res != "drones" && u.res != "outpost");
 
         static void Vehicles(Hud h)
         {
@@ -105,6 +106,7 @@ namespace LunarCleanup.UI
                 var B = GameData.Bld[id]; if (ps.bld.Contains(id) || B.stage > s + 1) continue; string key = id;
                 h.Row(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key));
             }
+            if (Game.HasLab()) h.Row("Forschung", () => Game.ResActive != null ? "Läuft: " + Game.ResActive.name + " · " + Mathf.FloorToInt(Game.S.resT / Game.ResActive.time * 100) + " %" : "Kein Projekt aktiv", () => "Öffnen", () => true, () => h.OpenSheet("research"), false);
             h.Section("Steht schon");
             h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
             h.Section("Upgrades");
@@ -147,7 +149,7 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q < Game.S.quest ? "✓ " : q == Game.S.quest ? "▶ " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Forschung, Drohnen, Außenlager, weitere Planeten).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Drohnen, Außenlager, Stürme, Tiefenabbau).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
@@ -168,6 +170,24 @@ namespace LunarCleanup.UI
             h.Note("Solarfelder liefern nur tagsüber. Nachts laufen Maschinen aus dem Speicher (Akkupark), Akku-Fahrzeuge aus ihrem Akku – oder du baust Radioisotopen-Generator (Stufe 3), Geothermie (Stufe 4) und Kernreaktor (Stufe 5), die rund um die Uhr liefern.");
         }
 
+        static void Research(Hud h)
+        {
+            h.Section("Forschung");
+            h.Note("", () => "Ein Projekt zur Zeit, läuft auch offline. Tempo ×" + Dec(Game.ResSpeed(), 2) + (Game.HasLab() ? "" : " · Erst eine Forschungsstation bauen (Basisstufe 3)."));
+            foreach (var d in GameData.Res)
+            {
+                var dd = d;
+                h.Row(d.name, () =>
+                {
+                    bool act = Game.S.resAct == dd.id; string st = Game.ResDone(dd.id) ? "Erforscht · " : act ? "Läuft · " + Mathf.FloorToInt(Game.S.resT / dd.time * 100) + " % · noch " + FmtTime((dd.time - Game.S.resT) / Mathf.Max(.01f, Game.ResSpeed())) + " · " : !string.IsNullOrEmpty(dd.req) && !Game.ResDone(dd.req) ? "Später · " : "";
+                    return st + dd.desc + " · " + FmtTime(dd.time);
+                },
+                () => Game.ResDone(dd.id) ? "Erforscht" : Game.S.resAct == dd.id ? "Läuft" : !string.IsNullOrEmpty(dd.req) && !Game.ResDone(dd.req) ? "Später" : Cr(dd.cost),
+                () => Game.ResWhy(dd) == "" && Game.S.credits >= dd.cost, () => Game.StartResearch(dd.id));
+            }
+            if (UpVisible(GameData.Up["research"])) UpRow(h, "research");
+        }
+
         static float resetT;
         static void Settings(Hud h)
         {
@@ -176,7 +196,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.1. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Forschung, Drohnen, Außenlager, Tiefenabbau.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.3. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Stürme, Drohnen, Außenlager, Tiefenabbau.");
         }
 
         static void Building(Hud h, string id)
@@ -184,6 +204,7 @@ namespace LunarCleanup.UI
             var B = GameData.Bld[id]; h.Note(B.desc);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
+            if (id == "research") { Research(h); return; }
             if (id == "hq") { Base(h); return; }
             if (id == "werkstatt") { Vehicles(h); return; }
         }

@@ -9,6 +9,7 @@ namespace LunarCleanup.Core
     public class DirtDef { public string key, name, deb; public int mat; public float amt, hard; public Color baseC, darkC, lightC; }
     public class KindDef { public string key, name, desc; public float amt, hard, cost; public int tier; }
     public class StageDef { public int n; public string name, txt; public float cost; }
+    public class ResDef { public string id, name, desc, req; public double cost; public float time; }
     public class UpgDef { public string id, cat, name, res, label; public bool loc, hide, done, rad; public float baseCost, grow; public int max, stage; public double[] vals; public string[] show; }
     public class VehDef { public string key, name, size, desc, planet; public float batt, cost, speed, radius, power, tank, energy; public int stage, tier; public string[] home; }
     public class StDef { public int docks; public float buf, rate; public string acc; }
@@ -48,6 +49,7 @@ namespace LunarCleanup.Core
         public static int[] Prods; // Produkte (Mat-Index)
         public const int GRID = 32;
         public static float SolarPeak = 2.6f;
+        public static List<ResDef> Res = new List<ResDef>();
         public static Dictionary<string, float> DayLen = new Dictionary<string, float>(), Geof = new Dictionary<string, float>();
         public const float DONE = 0.03f;
 
@@ -90,7 +92,8 @@ namespace LunarCleanup.Core
                 Bld[kv.Key] = b;
             }
             BOrder = ToStrings(J.G(root, "border")); Stations = ToStrings(J.G(root, "stations"));
-            DayLen.Clear(); Geof.Clear();
+            DayLen.Clear(); Geof.Clear(); Res.Clear();
+            var rs = J.G(root, "res"); if (rs != null) foreach (var o in J.A(rs)) Res.Add(new ResDef { id = J.S(o, "id"), name = J.S(o, "name"), desc = J.S(o, "desc"), req = J.S(o, "req"), cost = J.D(o, "cost"), time = J.F(o, "time") });
             var dl = J.G(root, "daylen"); if (dl != null) foreach (var kv in J.O(dl)) DayLen[kv.Key] = Convert.ToSingle(kv.Value);
             var gf = J.G(root, "geof"); if (gf != null) foreach (var kv in J.O(gf)) Geof[kv.Key] = Convert.ToSingle(kv.Value);
             SolarPeak = J.F(J.G(root, "consts"), "SOLAR_PEAK", 2.6f);
