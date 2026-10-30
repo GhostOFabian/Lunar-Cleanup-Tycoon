@@ -1,5 +1,6 @@
 // Startpunkt der Unity-Version: baut Welt, Kamera und Oberfläche, verarbeitet Eingaben und treibt die Simulation an.
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using LunarCleanup.Core;
 using LunarCleanup.UI;
@@ -49,7 +50,7 @@ namespace LunarCleanup.Gameplay
             var vg = prof.Add<Vignette>(true); vg.intensity.Override(.22f); vg.smoothness.Override(.5f);
             var ca = prof.Add<ColorAdjustments>(true); ca.postExposure.Override(.7f); ca.saturation.Override(8f);
             // Oberfläche
-            var cv = new GameObject("Oberfläche"); var canvas = cv.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 10;
+            var cv = new GameObject("Oberfläche"); uiRoot = cv; var canvas = cv.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 10;
             var sc = cv.AddComponent<CanvasScaler>(); sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(390, 844); sc.matchWidthOrHeight = .5f;
             cv.AddComponent<GraphicRaycaster>();
             if (!FindFirstObjectByType<EventSystem>()) { var es = new GameObject("EventSystem"); es.AddComponent<EventSystem>(); es.AddComponent<InputSystemUIInputModule>(); }
@@ -117,6 +118,7 @@ namespace LunarCleanup.Gameplay
             var kb = Keyboard.current; if (kb == null || !Game.TestMode) return; // Test-Tasten nur im Testmodus (eigener Spielstand)
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
+            if (kb.f11Key.wasPressedThisFrame && preview == null) StartCoroutine(CheckAllBases());
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);
@@ -124,23 +126,56 @@ namespace LunarCleanup.Gameplay
         }
 #endif
         // ---------- Kamera ----------
+        // ---------- Basis-Prüfung (Testmodus, F11): komplette Basis auf jedem Planeten bauen, prüfen, fotografieren ----------
+        GameObject uiRoot; PState preview; PState VP => preview ?? Game.Cur;
+        IEnumerator CheckAllBases()
+        {
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck")); System.IO.Directory.CreateDirectory(dir);
+            var rep = new System.Text.StringBuilder(); rep.AppendLine("Basis-Prüfung " + System.DateTime.Now.ToString("dd.MM.yyyy HH:mm")); int total = 0;
+            var list = new List<(string pid, int f)>(); foreach (var pid in GameData.POrder) list.Add((pid, 0));
+            foreach (var k in GameData.Layouts.Keys) { int at = k.IndexOf('@'); if (at > 0) list.Add((k.Substring(0, at), int.Parse(k.Substring(at + 1)))); }
+            if (uiRoot) uiRoot.SetActive(false);
+            foreach (var (pid, f) in list)
+            {
+                string key = f > 0 ? pid + "@" + f : pid;
+                List<string> iss; string err = null;
+                try { preview = Game.Preview(pid, f); planet.Build(preview); world.Build(preview); var c = preview.pd.cells[preview.pd.baseCell]; cd = c.c; north = c.e2; mapMode = false; WorldView.MapMode = false; }
+                catch (System.Exception e) { err = e.GetType().Name + ": " + e.Message; Debug.LogException(e); }
+                yield return null; yield return null;
+                try { iss = err != null ? new List<string> { "FEHLER beim Aufbau: " + err } : world.CheckBase(); } catch (System.Exception e) { iss = new List<string> { "FEHLER bei der Prüfung: " + e.Message }; Debug.LogException(e); }
+                total += iss.Count;
+                rep.AppendLine(); rep.AppendLine("== " + GameData.Planets[pid].name + (f > 0 ? " (alte Größe " + f + ")" : "") + ": " + (iss.Count == 0 ? "alles in Ordnung" : iss.Count + " Befunde"));
+                foreach (var s in iss) rep.AppendLine("  - " + s);
+                foreach (var s in world.Notes) rep.AppendLine("  · " + s);
+                foreach (var (a, nm) in new[] { (95f, "oben"), (42f, "schraeg") })
+                {
+                    alt = altGoal = a; ApplyCam(); yield return null; yield return new WaitForEndOfFrame();
+                    ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_" + nm + ".png"), 2); yield return null; yield return null;
+                }
+            }
+            rep.AppendLine(); rep.AppendLine("Gesamt: " + total + " Befunde");
+            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "bericht.txt"), rep.ToString());
+            Debug.Log("Lunar Cleanup: Basis-Prüfung fertig – " + total + " Befunde, Bericht in " + dir);
+            preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet();
+        }
+
         void ApplyCam()
         {
-            float R = Game.Cur.pd.R; float tilt = Mathf.Lerp(TILT, 0, Mathf.InverseLerp(60, R * 2f, alt));
+            float R = VP.pd.R; float tilt = Mathf.Lerp(TILT, 0, Mathf.InverseLerp(60, R * 2f, alt));
             north = (north - cd * Vector3.Dot(north, cd)).normalized;
             var focus = cd * R; var pos = focus + (cd * Mathf.Cos(tilt) - north * Mathf.Sin(tilt)) * alt;
             cam.transform.position = pos; cam.transform.rotation = Quaternion.LookRotation(focus - pos, north * Mathf.Cos(tilt) + cd * Mathf.Sin(tilt));
         }
         void Pan(Vector2 delta)
         {
-            float R = Game.Cur.pd.R, mpp = 2 * alt * Mathf.Tan(cam.fieldOfView * .5f * Mathf.Deg2Rad) / Screen.height;
+            float R = VP.pd.R, mpp = 2 * alt * Mathf.Tan(cam.fieldOfView * .5f * Mathf.Deg2Rad) / Screen.height;
             var right = Vector3.Cross(cd, north).normalized * -1; // Bildschirm-rechts auf der Oberfläche
             right = cam.transform.right; right = (right - cd * Vector3.Dot(right, cd)).normalized;
             var move = (-right * delta.x - north * delta.y) * mpp; float ang = move.magnitude / R; if (ang < 1e-7f) return;
             var axis = Vector3.Cross(cd, move.normalized); var q = Quaternion.AngleAxis(ang * Mathf.Rad2Deg, axis); cd = (q * cd).normalized; north = q * north;
         }
         void Twist(float deg) { if (Mathf.Abs(deg) < 1e-4f) return; north = Quaternion.AngleAxis(deg, cd) * north; }
-        void Zoom(float f) { float R = Game.Cur.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 2.6f); mapMode = altGoal > R * 1.5f; }
+        void Zoom(float f) { float R = VP.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 2.6f); mapMode = altGoal > R * 1.5f; }
         public void FocusFront()
         {
             var ps = Game.Cur; if (ps.front.Count == 0) return; int best = -1; float bd = -2;

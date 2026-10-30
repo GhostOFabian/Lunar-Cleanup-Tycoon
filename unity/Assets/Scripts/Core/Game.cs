@@ -68,6 +68,16 @@ namespace LunarCleanup.Core
 
         /// <summary>Größe eines Planeten: wie im Spielstand festgehalten, sonst die aktuelle Größe.</summary>
         public static int FreqOf(string pid) { var sv = S?.planets?.Find(p => p.pid == pid); if (sv != null && sv.freq > 0) return sv.freq; return GameData.Planets.TryGetValue(pid, out var P) ? P.freq : 0; }
+        /// <summary>Vorschau für die Basis-Prüfung: Planet mit allen Gebäuden, höchster Basisstufe und allen Außenlagern, Mittag.
+        /// Wird nie gespeichert und läuft nicht in der Simulation.</summary>
+        public static PState Preview(string pid, int freq = 0)
+        {
+            var sv = NewPlanet(pid); if (freq > 0) sv.freq = freq; sv.stage = GameData.Stages.Count;
+            foreach (var id in GameData.BOrder) if (!sv.bld.Contains(id)) sv.bld.Add(id);
+            sv.dayT = DayLen(pid) * .25f;
+            if (freq <= 0 || freq == GameData.Planets[pid].freq) foreach (int c in OutpostSites(pid)) sv.outposts.Add(new StSave { id = "o" + c, cell = c, buf = new float[NM] });
+            return Attach(sv);
+        }
         static SaveData Fresh() { var s = new SaveData(); s.planets.Add(NewPlanet("moon")); s.lastActive = Now(); return s; }
         public static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 

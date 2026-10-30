@@ -89,7 +89,10 @@ namespace LunarCleanup.Gameplay
                 case "prod": Spawn("space/hangar_smallA", t, D, y0, 0, acc); break;
                 case "u1": Spawn("factory/hopper-square", t, D * .75f, y0, 0, acc); break;
                 case "u2": Spawn("factory/hopper-high-square", t, D * .7f, y0, 0, acc); Spawn("space/supports_low", t, D * .4f, new Vector3(fp * .6f, .14f, 0), 0, acc); break;
-                case "u3": Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(-fp * .35f, .14f, 0), 0, acc); Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(fp * .35f, .14f, 0), 0, acc); break;
+                case "u3": Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(-fp * .35f, .14f, 0), 0, acc); Spawn("factory/hopper-high-square", t, D * .45f, new Vector3(fp * .35f, .14f, 0), 0, acc);
+                    // Verbindungsbau zwischen den beiden Trichtern: hier docken die Bänder an
+                    MeshKit.Box(t, MeshKit.Mat(Hex("#d9dee6"), .3f, .55f), new Vector3(0, 1.5f, 0), new Vector3(fp * .75f, 2.7f, fp * 1.1f)); MeshKit.Box(t, MeshKit.Mat(acc, .35f, .55f), new Vector3(0, 2.75f, 0), new Vector3(fp * .78f, .22f, fp * 1.13f)); MeshKit.Box(t, MeshKit.Mat(Hex("#3a414d"), .4f, .35f), new Vector3(0, 2.95f, 0), new Vector3(fp * .85f, .16f, fp * 1.2f));
+                    break;
                 case "presse":
                     { var mc = Spawn("factory/machine-fortified", t, D * .8f, y0, 0, acc); float top = Top(mc); var p = Spawn("factory/piston-round", t, D * .3f, new Vector3(0, top, 0), 0, acc); if (p) { bp.piston = p.transform; bp.pistonY = top; } }
                     break;

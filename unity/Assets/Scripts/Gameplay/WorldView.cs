@@ -49,7 +49,7 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
-            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear();
+            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             foreach (var id in GameData.BOrder)
             {
@@ -141,6 +141,7 @@ namespace LunarCleanup.Gameplay
             pipes.Clear(); pipeLamps.Clear(); var sites = Game.OutpostSites(ps.pid);
             foreach (int cid in sites)
             {
+                if (cid < 0 || cid >= pd.N) continue; // andere Planetengröße
                 var cl = pd.cells[cid]; var o = ps.sv.outposts.Find(x => x.cell == cid); var d = cl.c;
                 if (o != null)
                 {
@@ -149,7 +150,7 @@ namespace LunarCleanup.Gameplay
                     // und steigt erst neben dem Rohstofflager wieder auf, wo sie seitlich in den Silo-Sockel führt.
                     var otr = bp.root.transform; var pump = otr.TransformPoint(new Vector3(-2.2f, 0, 2.5f)).normalized; var pumpWall = otr.TransformPoint(new Vector3(-2.2f, 0, 1.6f)).normalized; /* Pumpenhaus-Vorderwand im Modell */ var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
                     var pl = pd.PlanLocal(pump); var toOut = (pl.magnitude > 1e3f ? Vector2.right : pl - roh); if (toOut.sqrMagnitude < 1e-4f) toOut = Vector2.right; toOut.Normalize();
-                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f)); { var A = pd.PlanDir(roh + toOut * (rfp + .9f)) * (pd.R + 1.1f); var B = pd.PlanDir(roh) * (pd.R + 1.1f); var D = B - A; float len = D.magnitude, best = 2; D /= len; var T = TrisOf("roh"); for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float tt) && tt <= len) best = Mathf.Min(best, tt / len); if (best <= 1) wall = (A + (B - A) * best).normalized; } // Rohr endet genau an der Wand des Rohstofflagers
+                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f)); { var A = pd.PlanDir(roh + toOut * (rfp + .9f)) * (pd.R + 1.1f); var B = pd.PlanDir(roh) * (pd.R + 1.1f); var D = B - A; float len = D.magnitude, best = 2; D /= len; var T = TrisOf("roh"); for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float tt) && tt <= len) best = Mathf.Min(best, tt / len); if (best <= 1) wall = (A + (B - A) * best).normalized; else pipeMiss++; } // Rohr endet genau an der Wand des Rohstofflagers
                     var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(GameData.Hex("#2b2f36"), .1f, .2f);
                     var lampM = new Material(MeshKit.Glow(GameData.Hex("#6ff2d2"), 1.5f));
                     Riser(pump, pumpWall, steel); Riser(inlet, wall, steel);
@@ -191,7 +192,10 @@ namespace LunarCleanup.Gameplay
             if (w0) s0 = h0 + .02f; else for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= Edge(b.from)) { s0 = q; break; } }
             if (w1) s1 = h1 - .02f; else for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= Edge(b.to)) { s1 = q; break; } }
             if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
-            Port(rp0, cum0, s0, H0, false, w0); Port(rp0, cum0, s1, H0, true, w1);
+            // Kein Wandtreffer (Lücke im Modell oder zu niedrig): überdachter Zulauf bis in die Gebäudemitte, vorne ein Anschlussrahmen
+            if (!w0) Tunnel(rp0, cum0, Mathf.Max(0, s0 - GameData.Bld[b.from].fp), s0 + .25f, H0);
+            if (!w1) Tunnel(rp0, cum0, s1 - .25f, Mathf.Min(L0, s1 + GameData.Bld[b.to].fp), H0);
+            Port(rp0, cum0, s0, H0, false, true); Port(rp0, cum0, s1, H0, true, true); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
             if (!w0 || !w1) Debug.Log("Lunar Cleanup: Band " + b.id + " ohne Wandtreffer bei " + (!w0 ? b.from + " (" + TrisOf(b.from).Count / 3 + " Dreiecke) " : "") + (!w1 ? b.to + " (" + TrisOf(b.to).Count / 3 + " Dreiecke)" : ""));
             beltTrim[b.id] = new Vector2(s0, s1);
             var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
@@ -212,6 +216,7 @@ namespace LunarCleanup.Gameplay
             for (float s = 1f; s < L - .6f; s += 3f)
             {
                 var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
+                if (UnderBelt(b, p, H, BW + .35f)) continue; // keine Stütze in einem tiefer liegenden Band (Kreuzung)
                 foreach (float sd in new[] { -1f, 1f })
                 {
                     var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var g = MeshKit.Cyl(beltRoot, post, Vector3.zero, .06f, .07f, top, 8); g.transform.position = d * (pd.R + top / 2); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
@@ -228,6 +233,58 @@ namespace LunarCleanup.Gameplay
         }
         readonly Dictionary<string, Vector2> beltTrim = new Dictionary<string, Vector2>();
         readonly Dictionary<string, List<Vector3>> bTris = new Dictionary<string, List<Vector3>>();
+        readonly Dictionary<string, (BeltDef b, bool w0, bool w1, float s0, float s1, float H, Vector2[] rp, float[] cum)> beltInfo = new Dictionary<string, (BeltDef, bool, bool, float, float, float, Vector2[], float[])>();
+        int pipeMiss; public readonly List<string> Notes = new List<string>();
+        /// <summary>Basis-Prüfung: Bandenden an der Wand, kein Band/keine Stütze durch ein Gebäude, keine Bänder übereinander, Modelle innerhalb ihrer Grundfläche.</summary>
+        public List<string> CheckBase()
+        {
+            var out_ = new List<string>(); Notes.Clear(); var ids = new List<string>(blds.Keys);
+            foreach (var kv in beltInfo)
+            {
+                var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value; string nm = kv.Key + " (" + b.from + "→" + b.to + ")";
+                if (!w0) Notes.Add(nm + ": Start über überdachten Zulauf mit " + b.from + " verbunden"); if (!w1) Notes.Add(nm + ": Ende über überdachten Zulauf mit " + b.to + " verbunden");
+                // Band durch ein Gebäude? (Mitte, Banden, Rahmenunterkante) – an den eigenen Enden 0,1 m Spielraum
+                foreach (var id in ids)
+                {
+                    var T = TrisOf(id); if (T.Count == 0) continue; bool hit = false;
+                    for (float s = s0 + .1f; s < s1 - .1f && !hit; s += .25f)
+                    {
+                        float sb = Mathf.Min(s + .25f, s1 - .1f); var pa = PointAt(rp, cum, s, out var ta); var pb = PointAt(rp, cum, sb, out _); var na = new Vector2(-ta.y, ta.x);
+                        foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { H - .3f, H - .05f, H + .18f })
+                            {
+                                var A = pd.PlanDir(pa + na * side) * (pd.R + h); var B = pd.PlanDir(pb + na * side) * (pd.R + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
+                                for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) hit = true;
+                            }
+                        if (hit) out_.Add(nm + ": läuft bei " + s.ToString("0.0") + " m durch " + id);
+                    }
+                    // Stützen (senkrecht vom Rahmen bis zum Boden)
+                    for (float s = 1f; s < (s1 - s0) - .6f && !hit; s += 3f)
+                    {
+                        var p = PointAt(rp, cum, s0 + s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
+                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var A = d * (pd.R + H - .32f); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= H - .32f) hit = true; }
+                        if (hit) out_.Add(nm + ": Stütze bei " + (s0 + s).ToString("0.0") + " m steht in " + id);
+                    }
+                }
+            }
+            // Bänder übereinander/nebeneinander zu eng (gleiche Höhe)
+            var keys = new List<string>(beltInfo.Keys);
+            for (int x = 0; x < keys.Count; x++) for (int y = x + 1; y < keys.Count; y++)
+                {
+                    var A = beltInfo[keys[x]]; var B = beltInfo[keys[y]]; if (Mathf.Abs(A.H - B.H) > .62f) continue; /* Profil: Bandkante +0,2 m, Rahmen −0,32 m */ bool clash = false; float at = 0;
+                    for (float s = A.s0 + .8f; s < A.s1 - .8f && !clash; s += .5f) { var pa = PointAt(A.rp, A.cum, s, out _); for (float u = B.s0 + .8f; u < B.s1 - .8f; u += .5f) if ((PointAt(B.rp, B.cum, u, out _) - pa).magnitude < BW * 2 + .15f) { clash = true; at = s; break; } }
+                    if (clash) out_.Add("Bänder " + keys[x] + " und " + keys[y] + " überschneiden sich (bei " + at.ToString("0.0") + " m)");
+                }
+            // Modelle: ragen sie über ihre Grundfläche hinaus oder berühren sie sich?
+            var rad = new Dictionary<string, float>();
+            foreach (var id in ids) { var T = TrisOf(id); if (T.Count == 0 || !ps.lay.pos.ContainsKey(id)) continue; var c = ps.lay.pos[id]; float r = 0; foreach (var v in T) r = Mathf.Max(r, (pd.PlanLocal(v.normalized) - c).magnitude); rad[id] = r; }
+            foreach (var a in rad.Keys) foreach (var b in rad.Keys) if (string.CompareOrdinal(a, b) < 0 && (ps.lay.pos[a] - ps.lay.pos[b]).magnitude < rad[a] + rad[b] - .05f)
+                    {
+                        // genauer: liegt ein Eckpunkt von a innerhalb der Hülle von b? (Abstand zum Mittelpunkt kleiner als b's Ausdehnung in dieser Richtung)
+                        out_.Add("Gebäude " + a + " und " + b + " kommen sich nahe (Abstand " + (ps.lay.pos[a] - ps.lay.pos[b]).magnitude.ToString("0.0") + " m, Ausdehnung " + rad[a].ToString("0.0") + " + " + rad[b].ToString("0.0") + " m)");
+                    }
+            if (pipeMiss > 0) out_.Add(pipeMiss + " Pipeline(s) treffen die Wand des Rohstofflagers nicht");
+            return out_;
+        }
         /// <summary>Alle Dreiecke eines Gebäudemodells in Weltkoordinaten (ohne Bodenplatte/Lampe).</summary>
         List<Vector3> TrisOf(string id)
         {
@@ -289,6 +346,19 @@ namespace LunarCleanup.Gameplay
             }
         }
 
+        void Tunnel(Vector2[] rp, float[] cum, float a, float b, float H)
+        {
+            if (b - a < .3f) return; var sp = SubPath(rp, cum, a, b); var c = new float[sp.Length]; for (int i = 1; i < sp.Length; i++) c[i] = c[i - 1] + (sp[i] - sp[i - 1]).magnitude;
+            AddPart(Extrude(sp, c, Box2(-BW - .25f, BW + .25f, H - .42f, H + .58f), true, false), MeshKit.Mat(GameData.Hex("#aeb5c0"), .5f, .5f), "Zulauf");
+            AddPart(Extrude(sp, c, Box2(-BW - .27f, BW + .27f, H + .5f, H + .62f), true, false), MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f), "Zulauf Dach");
+        }
+        static float SegDist(Vector2 q, Vector2 a, Vector2 c) { var d = c - a; float l2 = d.sqrMagnitude; float t = l2 > 0 ? Mathf.Clamp01(Vector2.Dot(q - a, d) / l2) : 0; return (q - (a + d * t)).magnitude; }
+        /// <summary>Liegt unter Punkt p (Plan) ein anderes, tieferes Band?</summary>
+        bool UnderBelt(BeltDef me, Vector2 p, float H, float r)
+        {
+            foreach (var o in ps.lay.belts) { if (o.id == me.id || !Game.BeltLive(ps, o) || BeltDeck(o) > H - .3f) continue; var q = o.rp; for (int i = 1; i < q.Length; i++) if (SegDist(p, q[i - 1], q[i]) < r) return true; }
+            return false;
+        }
         static Vector2[] SubPath(Vector2[] rp, float[] cum, float s0, float s1)
         {
             var o = new List<Vector2> { PointAt(rp, cum, s0, out _) }; for (int i = 1; i < rp.Length - 1; i++) if (cum[i] > s0 && cum[i] < s1) o.Add(rp[i]); o.Add(PointAt(rp, cum, s1, out _));
