@@ -20,7 +20,7 @@ namespace LunarCleanup.Core
     public class LineDef { public Dictionary<string, string> names = new Dictionary<string, string>(); public List<Recipe> presse = new List<Recipe>(), schmelze = new List<Recipe>(), raff = new List<Recipe>(); public List<Recipe> Of(string id) => id == "presse" ? presse : id == "schmelze" ? schmelze : raff; }
     public class CellsDef { public int N, baseCell, start; public float R; public int[] type, kind, ring; public Vector3 c0, c7; }
     public class Theme { public Color sky, hemiSky, hemiGround, sun, dust, glow; public float hemiI, sunI, glowOp; public Color[] clean, baseC; public int stars; public bool hasGlow; public string giant; }
-    public class StormDef { public string name; public float every, dur, veh = 1, belt = 1, mach = 1, solar = 1, dust = 1; }
+    public class StormDef { public string name; public float every, dur, veh = 1, belt = 1, mach = 1, solar = 1, dust = 1, rad = 1; }
     public class PlanetDef
     {
         public string key, name, sub, hzName, hzDesc; public int freq, start; public float diff, energy, unlockCost, solar = 1, dustMul = 1, rad;
@@ -143,7 +143,7 @@ namespace LunarCleanup.Core
                 if (hz != null)
                 {
                     P.hzName = J.S(hz, "name"); P.hzDesc = J.S(hz, "desc"); P.solar = J.F(hz, "solar", 1); P.dustMul = J.F(hz, "dust", 1); P.rad = J.F(hz, "rad", 0);
-                    var s = J.G(hz, "storm"); if (s != null) P.storm = new StormDef { name = J.S(s, "name"), every = J.F(s, "every"), dur = J.F(s, "dur"), veh = J.F(s, "veh", 1), belt = J.F(s, "belt", 1), mach = J.F(s, "mach", 1), solar = J.F(s, "solar", 1), dust = J.F(s, "dust", 1) };
+                    var s = J.G(hz, "storm"); if (s != null) P.storm = new StormDef { name = J.S(s, "name"), every = J.F(s, "every"), dur = J.F(s, "dur"), veh = J.F(s, "veh", 1), belt = J.F(s, "belt", 1), mach = J.F(s, "mach", 1), solar = J.F(s, "solar", 1), dust = J.F(s, "dust", 1), rad = J.F(s, "rad", 1) };
                 }
                 var th = J.G(o, "theme"); var hemi = J.A(J.G(th, "hemi")); var sun = J.A(J.G(th, "sun"));
                 P.theme = new Theme

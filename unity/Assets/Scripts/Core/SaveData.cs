@@ -9,7 +9,7 @@ namespace LunarCleanup.Core
     [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts; public float handM2; }
 
     [Serializable] public class StSave { public string id; public float[] buf; public int[] docks = new int[0]; public int cell = -1, dc = -1; [NonSerialized] public bool busy; }
-    [Serializable] public class VehSave { public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1; public int drone = -1, lift = -1; [NonSerialized] public bool busy, charging; }
+    [Serializable] public class VehSave { public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public int drone = -1, lift = -1, rep; [NonSerialized] public bool busy, charging; }
     [Serializable] public class DroneSave { public int id; public Vector3 d; public string mode = "idle", sid = "", tk = "v", tko = ""; public float[] tank; public int tgt = -1; public float wt; [NonSerialized] public bool busy; }
     [Serializable] public class LifterSave { public int id; public Vector3 d; public string mode = "idle"; public int veh = -1, cell = -1; }
     [Serializable] public class ActSave { public int id; public float sum; public string grid; }
@@ -33,7 +33,7 @@ namespace LunarCleanup.Core
         public List<MachSave> mach = new List<MachSave>();
         public float rk;
         public float energy = 60, dayT = -1, hzT, hzOn;
-        public bool hzWarned, shield;
+        public bool hzWarned, shield, autoMaint = true;
         public bool rkGo;
         public double soldP;
         public CartSave cart = new CartSave();
@@ -57,6 +57,7 @@ namespace LunarCleanup.Core
         public bool sound = true;
         public List<string> resDone = new List<string>();
         public string resAct = "";
+        public List<string> wrecks = new List<string>();
         public float resT;
     }
 }

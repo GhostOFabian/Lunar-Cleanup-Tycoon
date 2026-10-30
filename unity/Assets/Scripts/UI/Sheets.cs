@@ -36,8 +36,8 @@ namespace LunarCleanup.UI
             h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : ""); },
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
         }
-        /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Verschleiß, Strahlung, Tiefenabbau, Außenlager), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
-        static readonly string[] NotPorted = { "vdur", "rshield", "rcare", "rigrate" };
+        /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Tiefenabbau), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
+        static readonly string[] NotPorted = { "rcare", "rigrate" };
         static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
 
         static void Vehicles(Hud h)
@@ -57,7 +57,16 @@ namespace LunarCleanup.UI
             if (ps.sv.veh.Count > 0)
             {
                 h.Section("Im Einsatz");
-                foreach (var v in ps.sv.veh) { var vv = v; h.Row(GameData.Veh[v.type].name + " #" + v.id, () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + (GameData.Veh[vv.type].batt > 0 ? " · Akku " + Mathf.RoundToInt((vv.bat < 0 ? 1 : vv.bat / Game.BattCap(ps, vv)) * 100) + " %" : "")); }
+                foreach (var v in ps.sv.veh)
+                {
+                    var vv = v;
+                    h.Row(GameData.Veh[v.type].name + " #" + v.id, () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + (GameData.Veh[vv.type].batt > 0 ? " · Akku " + Mathf.RoundToInt((vv.bat < 0 ? 1 : vv.bat / Game.BattCap(ps, vv)) * 100) + " %" : "")
+                        + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " % · Reparaturen übrig " + Game.RepsLeft(vv) : ""),
+                        () => Game.Gs(ps) < 3 || !ps.sv.veh.Contains(vv) ? "–" : vv.mode == "toShop" || vv.mode == "repair" ? "In Werkstatt" : Game.RepsLeft(vv) <= 0 ? "Ersetzen " + Cr(Game.ReplaceCost(ps, vv)) : "Warten " + Cr(Game.RepCost(ps, vv)),
+                        () => Game.Gs(ps) >= 3 && ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
+                        () => { if (Game.RepsLeft(vv) <= 0) Game.ReplaceVeh(ps, vv, false); else if (Game.SendToShop(ps, vv, false)) Game.Toast("Fährt zur Werkstatt", "good"); }, false);
+                }
+                if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt. Ohne Wartung droht ein Totalschaden.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
             }
             h.Section("Upgrades für Fahrzeuge");
             foreach (var u in GameData.Upg.Where(x => x.cat == "Fahrzeuge" && UpVisible(x))) UpRow(h, u.id);
@@ -193,6 +202,7 @@ namespace LunarCleanup.UI
                 if (Game.ResDone("shield")) h.Row("Schild automatisch aktivieren", () => "Schwächt jeden Sturm um 80 %, kostet währenddessen 4 Energie/s. Gilt für diesen Planeten, auch offline.", () => ps.sv.shield ? "An" : "Aus", () => true, () => Game.ToggleShield(), false);
                 else h.Note("Erforsche den Sturmschild in der Forschungsstation, dann kannst du Stürme fast komplett abwehren.");
             }
+            if (P.rad > 0) { h.Section("Strahlung"); h.Row("Verschleiß durch Strahlung", () => "Fahrzeuge verschleißen hier ×" + Dec(1 + 3 * Game.RadF(ps), 1) + " so schnell" + (Game.StormOn(ps) ? " – der Sturm verstärkt die Strahlung" : "") + "."); if (UpVisible(GameData.Up["rshield"])) UpRow(h, "rshield"); }
             if (ps.sv.veh.Count > 0 || Game.PowReq(ps.pid) > 0) h.Row("Fahrzeugleistung", () => Game.PowOK(ps) ? "Deine Fahrzeuge sind stark genug für " + P.name : "Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig – sonst reinigen Fahrzeuge hier nur mit 30 %");
         }
 
@@ -261,7 +271,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.7. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Tiefenabbau, Fahrzeugverschleiß, Strahlung, Sternenstaub.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.8. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Tiefenabbau, Sternenstaub.");
         }
 
         static void Building(Hud h, string id)

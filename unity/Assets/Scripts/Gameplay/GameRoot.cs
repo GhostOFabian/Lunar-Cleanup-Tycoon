@@ -55,7 +55,7 @@ namespace LunarCleanup.Gameplay
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
             hud.OnFocusQuest = FocusFront;
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
-            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnRocket += (p, v) => world.LaunchRocket();
+            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket();
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
             { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 3.2f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 9; brushLight.color = new Color(.75f, 1f, .92f); brushLight.intensity = 0; }
             BuildPlanet();
@@ -84,7 +84,9 @@ namespace LunarCleanup.Gameplay
             }
             Game.Offline = false; offlineRunning = false; hud.ShowOffline(null);
             double gain = Game.S.credits - c0; int h = Mathf.FloorToInt(t / 3600), m = Mathf.FloorToInt(t % 3600 / 60);
-            Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr", "good"); Game.Save();
+            Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr", "good");
+            if (Game.S.wrecks.Count > 0) { Game.Toast("Totalschaden: " + string.Join(", ", Game.S.wrecks) + " – neue Fahrzeuge bauen", "bad"); Game.S.wrecks.Clear(); }
+            Game.Save();
         }
 
         void OnApplicationPause(bool p) { if (p) Game.Save(); else if (!offlineRunning && Game.S != null) StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); }

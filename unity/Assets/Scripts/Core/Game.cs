@@ -39,6 +39,7 @@ namespace LunarCleanup.Core
         public static event Action<string, string> OnToast;              // Text, Art (good/bad/"")
         public static event Action<Vector3, string, string> OnFloat;     // Richtung, Text, Art
         public static event Action<string, double> OnRocket;
+        public static event Action<Vector3> OnBoom;
         public static event Action OnPlanetChanged;
         public static Vector3 CartGoal;                                  // wohin der Sammelwagen fährt (Blickpunkt der Kamera)
         public static bool Offline;
@@ -636,7 +637,7 @@ namespace LunarCleanup.Core
 
         static void VehStep(PState ps, VehSave v, float dt, float f)
         {
-            var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1;
+            var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = (T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1) * (v.wear > .85f ? .8f : 1);
             float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false;
             switch (v.mode)
             {
@@ -692,12 +693,67 @@ namespace LunarCleanup.Core
                     }
                 case "wait":
                     if (v.drone < 0) v.mode = tank >= cap * .98f ? "toUnload" : "seek"; break;
+                case "broken": v.busy = false; break;
+                case "toShop": v.busy = true; if (NavMove(ps, v, pd.PlanDir(ps.lay.shop), T.speed * Uv("vspeed", ps) * .5f * dt, v.id)) { v.mode = "repair"; v.repT = VM_TIME * (1 + .5f * v.rep); } break;
+                case "repair": v.repT -= dt; if (v.repT <= 0) { v.wear = 0; v.rep++; v.mode = "seek"; v.doom = 0; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " repariert (" + v.rep + "/" + VM_REPS + ")", "good"); } break;
                 case "liftwait":
                 case "lifted":
                     if (v.lift < 0 || !ps.sv.lifters.Any(l => l.id == v.lift && l.veh == v.id)) { v.lift = -1; v.mode = "drive"; } break;
                 default: v.mode = "seek"; break;
             }
+            VehWear(ps, v, dt);
         }
+
+        // ================= Wartung, Verschleiß, Strahlung =================
+        const float VM_LIFE = 3 * 3600, VM_TIME = 20, VM_DOOM = 120; const int VM_REPS = 2;
+        public static float RadF(PState ps)
+        {
+            float r = ps.P.rad; if (r <= 0) return 0; var st = ps.P.storm; float sm = ps.sv.hzOn > 0 && st != null && st.rad != 1 ? (ps.shOn ? 1 + (st.rad - 1) * .2f : st.rad) : 1;
+            return r * sm / Uv("rshield", ps);
+        }
+        public static double RepCost(PState ps, VehSave v) => Math.Round(GameData.Veh[v.type].cost * ps.P.diff * .25 * (1 + v.rep));
+        public static double ReplaceCost(PState ps, VehSave v) => Math.Round(GameData.Veh[v.type].cost * ps.P.diff * .85) - Math.Round(GameData.Veh[v.type].cost * ps.P.diff * .15);
+        public static bool SendToShop(PState ps, VehSave v, bool auto)
+        {
+            if (!ps.bld.Contains("werkstatt")) return auto ? false : Fail("Erst eine Roboterwerkstatt bauen"); if (v.rep >= VM_REPS) return auto ? false : Fail("Schon zweimal repariert – ersetzen");
+            if (v.mode == "toShop" || v.mode == "repair") return false; double c = RepCost(ps, v); if (S.credits < c) return auto ? false : Fail(Lacks(c)); S.credits -= c;
+            if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
+            if (v.drone >= 0) v.drone = -1; v.sid = null; v.cell = -1; v.mode = "toShop"; return true;
+        }
+        public static bool ReplaceVeh(PState ps, VehSave v, bool auto)
+        {
+            double c = Math.Round(GameData.Veh[v.type].cost * ps.P.diff * .85), scrap = Math.Round(GameData.Veh[v.type].cost * ps.P.diff * .15);
+            if (S.credits + scrap < c) return auto ? false : Fail(Lacks(c - scrap)); S.credits += scrap - c;
+            if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
+            v.wear = 0; v.rep = 0; v.doom = 0; v.mode = "seek"; Array.Clear(v.tank, 0, NM); v.d = ps.pd.PlanDir(ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start); v.sid = null; v.cell = -1; ps.vnav.Remove(v.id); v.bat = -1;
+            if (!auto || ps.pid == S.planet) Toast(GameData.Veh[v.type].name + " #" + v.id + " ersetzt", "good"); return true;
+        }
+        static void VehWear(PState ps, VehSave v, float dt)
+        {
+            if (Gs(ps) < 3) return; var T = GameData.Veh[v.type];
+            if (v.busy && v.mode != "toShop") v.wear += dt * (1 + 3 * RadF(ps)) / (VM_LIFE * Uv("vdur", ps)); float w = v.wear;
+            if (v.mode != "broken" && v.mode != "toShop" && v.mode != "repair" && v.mode != "lifted" && v.mode != "liftwait" && (w >= 1 || (w > .8f && Rng.NextDouble() < dt / 2400)))
+            {
+                if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
+                v.mode = "broken"; v.busy = false; if (v.drone >= 0) v.drone = -1;
+                if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " ist ausgefallen" + (ps.bld.Contains("werkstatt") && v.rep < VM_REPS ? " – ab in die Werkstatt" : ""), "bad");
+            }
+            bool auto = ps.sv.autoMaint;
+            if (auto && w >= .75f && v.rep < VM_REPS && (v.mode == "seek" || v.mode == "broken" || (v.mode == "drive" && Sum(v.tank) < 1))) SendToShop(ps, v, true);
+            if (v.rep >= VM_REPS && w >= .75f && auto && (v.mode == "broken" || v.mode == "seek")) ReplaceVeh(ps, v, true);
+            if (v.mode == "broken" && v.rep >= VM_REPS)
+            {
+                v.doom += dt;
+                if (v.doom >= VM_DOOM)
+                {
+                    ps.sv.veh.Remove(v); S.credits += Math.Round(T.cost * ps.P.diff * .15);
+                    if (Offline) S.wrecks.Add(ps.P.name + ": " + T.name + " #" + v.id);
+                    else if (ps.pid == S.planet) { OnBoom?.Invoke(v.d); Toast(T.name + " #" + v.id + " explodiert – Totalschaden. Schrottwert gutgeschrieben.", "bad"); }
+                }
+            }
+        }
+        public static string WearText(VehSave v) => v.mode == "broken" ? (v.rep >= VM_REPS ? "Totalschaden droht in " + Mathf.Max(0, Mathf.CeilToInt(VM_DOOM - v.doom)) + " s – ersetzen!" : "Ausgefallen") : v.wear >= .75f ? "Wartung fällig" : "";
+        public static int RepsLeft(VehSave v) => VM_REPS - v.rep;
 
         // ================= Außenlager =================
         static readonly Dictionary<string, List<int>> Sites = new Dictionary<string, List<int>>();
@@ -878,7 +934,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; }
+            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
@@ -1158,7 +1214,7 @@ namespace LunarCleanup.Core
         {
             EnergyStep(ps, dt); float f = ps.ef;
             CartStep(ps, dt);
-            foreach (var v in ps.sv.veh) VehStep(ps, v, dt, f);
+            foreach (var v in ps.sv.veh.ToArray()) VehStep(ps, v, dt, f);
             if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
             foreach (var o in ps.sv.outposts) { OutpostStep(ps, o, dt, f); if (o.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == o.dc && d.tk == "o" && d.tko == o.id && (d.mode == "out" || d.mode == "load")))) o.dc = -1; }
