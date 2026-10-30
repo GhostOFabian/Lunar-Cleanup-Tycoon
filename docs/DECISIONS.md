@@ -173,3 +173,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 ## v6.3
 - Layouts werden erzeugt statt von Hand gebaut: 17 Handlayouts mit Bändern wären fehleranfällig, der Generator nimmt nur Layouts an, die alle Layout-Regeln erfüllen. Der Mond bleibt beim bekannten Original.
 - Layout hängt nur am Planetennamen und steht nicht im Spielstand – alte Stände bekommen auf ihren Planeten (außer dem Mond) das neue Layout; Pakete auf Bändern und Fahrzeuge laufen ohne Umbau weiter.
+
+## Unity – erster Schritt
+- Auf Wunsch des Spielers zuerst ein einzelnes MonoBehaviour-Skript statt der vollen Ordner-Architektur; Logik steckt trotzdem in einer reinen `Simulation`-Klasse mit `Tick(dt)` (live und offline), damit sie später in die Systeme aus CLAUDE.md zerlegt werden kann.
+- Noch keine `.asmdef`: im Standard-Assembly findet Unity Input System, TextMeshPro und uGUI ohne Verweise – weniger Fehlerquellen beim ersten Einrichten.
