@@ -6,7 +6,7 @@
 <style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <title>Lunar Cleanup Tycoon</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Mobiles Idle-Tycoon-Spiel: Planeten sauber wischen, Reinigungsindustrie automatisieren, zehn Planeten vom Mond bis Pluto.">
+<meta name="description" content="Mobiles Idle-Tycoon-Spiel: Planeten sauber wischen, Reinigungsindustrie automatisieren, 18 Welten vom Mond bis zum Pulsarplaneten Poltergeist.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
@@ -137,14 +137,14 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <header class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Mobile Idle-Tycoon · Spielbarer Prototyp v6.1</div>
+      <div class="eyebrow">Mobile Idle-Tycoon · Spielbarer Prototyp v6.2</div>
       <h1 style="margin-top:14px">Lunar Cleanup <span>Tycoon</span></h1>
       <p class="lead">Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.</p>
       <div class="cta">
         <a class="btn primary" href="prototype/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Im Browser spielen</a>
       </div>
       <div class="facts">
-        <div><b>10</b><span>Planeten, Mond bis Pluto</span></div>
+        <div><b>18</b><span>Welten, Mond bis Poltergeist</span></div>
         <div><b>252–3.242</b><span>Parzellen pro Planet</span></div>
         <div><b>24 h</b><span>Offline-Produktion</span></div>
         <div><b>9</b><span>Fahrzeugtypen</span></div>
@@ -245,25 +245,33 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 
 <section class="feature" aria-labelledby="planets-h" style="padding-top:0;border-top:0">
   <div class="wrap" style="display:block">
-    <h3 id="planets-h">Die Route durchs Sonnensystem</h3>
+    <h3 id="planets-h">Die Route durchs Sonnensystem und darüber hinaus</h3>
     <div class="tablebox" role="region" aria-label="Planetentabelle" tabindex="0">
       <table>
-        <thead><tr><th>Planet</th><th class="num">Parzellen</th><th class="num">Ertrag ×</th><th class="num">Freischalten</th><th class="num">Bürsten-Stufe</th><th>Gefahr</th></tr></thead>
+        <thead><tr><th>Planet</th><th class="num">Parzellen</th><th class="num">Ertrag ×</th><th class="num">Freischalten</th><th>Endprodukt</th><th>Gefahr</th></tr></thead>
         <tbody>
-          <tr><td><span class="dot" style="background:#cfd5de"></span>Mond</td><td class="num">252</td><td class="num">1</td><td class="num">Start</td><td class="num">0</td><td>Meteoritenschauer</td></tr>
-          <tr><td><span class="dot" style="background:#e07a4c"></span>Mars</td><td class="num">492</td><td class="num">2,2</td><td class="num">25 k</td><td class="num">1</td><td>Staubstürme, Solar halbiert</td></tr>
-          <tr><td><span class="dot" style="background:#c9dcef"></span>Europa</td><td class="num">1.002</td><td class="num">5</td><td class="num">140 k</td><td class="num">3</td><td>Eisstürme bremsen Bänder</td></tr>
-          <tr><td><span class="dot" style="background:#d6a659"></span>Titan</td><td class="num">1.442</td><td class="num">10</td><td class="num">450 k</td><td class="num">4</td><td>Säureregen bremst Maschinen</td></tr>
-          <tr><td><span class="dot" style="background:#e9c64a"></span>Io</td><td class="num">1.692</td><td class="num">22</td><td class="num">1,4 Mio</td><td class="num">5</td><td>Vulkanausbrüche, 6× Staub</td></tr>
-          <tr><td><span class="dot" style="background:#e8b36a"></span>Venus</td><td class="num">1.962</td><td class="num">45</td><td class="num">4,2 Mio</td><td class="num">6</td><td>Hitze, Säurestürme</td></tr>
-          <tr><td><span class="dot" style="background:#a99a86"></span>Ganymed</td><td class="num">2.252</td><td class="num">90</td><td class="num">12 Mio</td><td class="num">8</td><td>Magnetstürme legen Bänder lahm</td></tr>
-          <tr><td><span class="dot" style="background:#e8f3fb"></span>Enceladus</td><td class="num">2.562</td><td class="num">180</td><td class="num">34 Mio</td><td class="num">9</td><td>Geysire, 2,5× Staub</td></tr>
-          <tr><td><span class="dot" style="background:#c7b8c4"></span>Triton</td><td class="num">2.892</td><td class="num">360</td><td class="num">96 Mio</td><td class="num">10</td><td>Kryostürme, halber Solarstrom</td></tr>
-          <tr><td><span class="dot" style="background:#d8b090"></span>Pluto</td><td class="num">3.242</td><td class="num">700</td><td class="num">270 Mio</td><td class="num">12</td><td>Ewige Dämmerung, 35 % Solar</td></tr>
+          <tr><td><span class="dot" style="background:#cfd5de"></span>Mond</td><td class="num">252</td><td class="num">1</td><td class="num">Start</td><td>Metallbarren</td><td>Meteoritenschauer</td></tr>
+          <tr><td><span class="dot" style="background:#e07a4c"></span>Mars</td><td class="num">492</td><td class="num">2,2</td><td class="num">25 k</td><td>Marsstahl</td><td>Staubstürme, Solar halbiert</td></tr>
+          <tr><td><span class="dot" style="background:#c9dcef"></span>Europa</td><td class="num">1.002</td><td class="num">5</td><td class="num">140 k</td><td>Kryolinse</td><td>Eisstürme bremsen Bänder</td></tr>
+          <tr><td><span class="dot" style="background:#d6a659"></span>Titan</td><td class="num">1.442</td><td class="num">10</td><td class="num">450 k</td><td>Kohlefaser</td><td>Säureregen bremst Maschinen</td></tr>
+          <tr><td><span class="dot" style="background:#e9c64a"></span>Io</td><td class="num">1.692</td><td class="num">22</td><td class="num">1,4 Mio</td><td>Schwefelstahl</td><td>Vulkanausbrüche, 6× Staub</td></tr>
+          <tr><td><span class="dot" style="background:#e8b36a"></span>Venus</td><td class="num">1.962</td><td class="num">45</td><td class="num">4,2 Mio</td><td>Titanlegierung</td><td>Hitze, Säurestürme</td></tr>
+          <tr><td><span class="dot" style="background:#a99a86"></span>Ganymed</td><td class="num">2.252</td><td class="num">90</td><td class="num">12 Mio</td><td>Supraleiter</td><td>Magnetstürme legen Bänder lahm</td></tr>
+          <tr><td><span class="dot" style="background:#e8f3fb"></span>Enceladus</td><td class="num">2.562</td><td class="num">180</td><td class="num">34 Mio</td><td>Elektrolyt</td><td>Geysire, 2,5× Staub</td></tr>
+          <tr><td><span class="dot" style="background:#c7b8c4"></span>Triton</td><td class="num">2.892</td><td class="num">360</td><td class="num">96 Mio</td><td>Kryostahl</td><td>Kryostürme, halber Solarstrom</td></tr>
+          <tr><td><span class="dot" style="background:#d8b090"></span>Pluto</td><td class="num">3.242</td><td class="num">700</td><td class="num">270 Mio</td><td>Tholinharz</td><td>Ewige Dämmerung, 35 % Solar</td></tr>
+          <tr><td><span class="dot" style="background:#e8ecf4"></span>Eris</td><td class="num">2.252</td><td class="num">1.400</td><td class="num">750 Mio</td><td>Frostglas</td><td>Eisnebel, 30 % Solar</td></tr>
+          <tr><td><span class="dot" style="background:#e08a7a"></span>Sedna</td><td class="num">1.962</td><td class="num">2.800</td><td class="num">2,1 Mrd</td><td>Sednit-Verbund</td><td>Kältewellen bremsen Maschinen</td></tr>
+          <tr><td><span class="dot" style="background:#e89a6a"></span>Proxima b</td><td class="num">2.892</td><td class="num">5.600</td><td class="num">6 Mrd</td><td>Brennelement</td><td>Flares, leichte Strahlung</td></tr>
+          <tr><td><span class="dot" style="background:#8ad0f0"></span>Trappist-1e</td><td class="num">2.562</td><td class="num">11.000</td><td class="num">17 Mrd</td><td>Biokristall</td><td>Gezeitenstürme legen Bänder lahm</td></tr>
+          <tr><td><span class="dot" style="background:#9ac87a"></span>Kepler-22b</td><td class="num">3.612</td><td class="num">22.000</td><td class="num">48 Mrd</td><td>Graphen</td><td>Monsun, 2× Schlamm</td></tr>
+          <tr><td><span class="dot" style="background:#ffb060"></span>55 Cancri e</td><td class="num">2.252</td><td class="num">45.000</td><td class="num">135 Mrd</td><td>Industriediamant</td><td>Glutstürme, 3× Energie</td></tr>
+          <tr><td><span class="dot" style="background:#a0c8d8"></span>Gliese 1214 b</td><td class="num">3.242</td><td class="num">90.000</td><td class="num">380 Mrd</td><td>Superionisches Eis</td><td>Druckwellen bremsen alles</td></tr>
+          <tr><td><span class="dot" style="background:#7dff6a"></span>Poltergeist</td><td class="num">2.562</td><td class="num">180.000</td><td class="num">1,1 Bio</td><td>Reaktorkern</td><td>Extrem verstrahlt, Strahlungsstöße</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:12px;color:var(--ink-3);font-size:var(--step--1)">Der nächste Planet öffnet sich erst, wenn der vorherige zu 80 % sauber ist. Unter der nötigen Bürsten-Stufe reinigen Fahrzeuge nur mit 30 %.</p>
+    <p style="margin-top:12px;color:var(--ink-3);font-size:var(--step--1)">Der nächste Planet öffnet sich erst, wenn der vorherige zu 80 % sauber ist. Jeder Planet veredelt seine eigenen Waren und baut seine eigene Technik auf: Basisstufe und Fahrzeug-Upgrades fangen auf jeder neuen Welt bei null an.</p>
   </div>
 </section>
 
@@ -277,11 +285,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
         <table class="fit">
           <thead><tr><th>Fahrzeug</th><th>Ab</th><th class="num">Tank</th><th>Stark auf</th></tr></thead>
           <tbody>
-            <tr><td>Eisfräse</td><td>Europa</td><td class="num">220</td><td>Europa, Enceladus, Triton, Pluto</td></tr>
-            <tr><td>Schlammraupe</td><td>Titan</td><td class="num">320</td><td>Titan, Venus, Enceladus</td></tr>
-            <tr><td>Lavapanzer</td><td>Io</td><td class="num">600</td><td>Io, Venus</td></tr>
-            <tr><td>Magnetgleiter</td><td>Ganymed</td><td class="num">480</td><td>Ganymed, Triton, Europa</td></tr>
-            <tr><td>Kryo-Koloss</td><td>Triton</td><td class="num">1.400</td><td>Triton, Pluto</td></tr>
+            <tr><td>Eisfräse</td><td>Europa</td><td class="num">220</td><td>Europa, Enceladus, Triton, Pluto, Eris, Sedna, Trappist-1e, Gliese 1214 b</td></tr>
+            <tr><td>Schlammraupe</td><td>Titan</td><td class="num">320</td><td>Titan, Venus, Enceladus, Kepler-22b, Trappist-1e</td></tr>
+            <tr><td>Lavapanzer</td><td>Io</td><td class="num">600</td><td>Io, Venus, 55 Cancri e, Proxima b</td></tr>
+            <tr><td>Magnetgleiter</td><td>Ganymed</td><td class="num">480</td><td>Ganymed, Triton, Europa, Gliese 1214 b, Poltergeist</td></tr>
+            <tr><td>Kryo-Koloss</td><td>Triton</td><td class="num">1.400</td><td>Triton, Pluto, Eris, Sedna, Poltergeist</td></tr>
           </tbody>
         </table>
       </div>
@@ -321,7 +329,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
     <h2 id="f5" style="margin-top:10px">Gründe, morgen wiederzukommen</h2>
     <div class="trio">
       <article><img src="assets/screens/09-auftraege.jpg" width="585" height="1266" alt="Tägliche Aufträge mit Fortschrittsbalken und Belohnungen"><h3>Tägliche Aufträge</h3><p>Jeden Tag drei neue Aufgaben, etwa 600 m² reinigen oder 250 Staub verkaufen. Sie zählen auf allen Planeten und auch offline. Wer alle drei schafft, bekommt 50 % Bonus.</p></article>
-      <article><img src="assets/screens/15-ziele.jpg" width="585" height="1266" alt="Ziel-Übersicht mit aktuellem Ziel und Erfolgen"><h3>Ziele und Erfolge</h3><p>44 Hauptziele führen vom ersten Wisch bis nach Pluto. Jeder Planet hat zusätzlich eigene Planetenziele. Dazu wählst du für jeden Planeten eine Ausrichtung (Bergbau, Industrie oder Handel), erfüllst Werksaufträge für mehr Ruf und bekommst bis zu 30 % Betriebsbonus, wenn deine Produktion ohne Stau läuft. Fahrzeuge verschleißen und brauchen die Werkstatt, Bohrtürme haben Störungen, Stürme siehst du als Nebel und Staubwirbel. Dazu kommen 17 Erfolge mit je mehreren Stufen, etwa für gereinigte Parzellen, Raketenstarts oder eingeflogene Maschinen. Alles steht in einer Übersicht.</p></article>
+      <article><img src="assets/screens/15-ziele.jpg" width="585" height="1266" alt="Ziel-Übersicht mit aktuellem Ziel und Erfolgen"><h3>Ziele und Erfolge</h3><p>57 Hauptziele führen vom ersten Wisch bis zum Pulsarplaneten Poltergeist. Jeder Planet hat zusätzlich eigene Planetenziele. Dazu wählst du für jeden Planeten eine Ausrichtung (Bergbau, Industrie oder Handel), erfüllst Werksaufträge für mehr Ruf und bekommst bis zu 30 % Betriebsbonus, wenn deine Produktion ohne Stau läuft. Fahrzeuge verschleißen und brauchen die Werkstatt, Bohrtürme haben Störungen, Stürme siehst du als Nebel und Staubwirbel. Dazu kommen 17 Erfolge mit je mehreren Stufen, etwa für gereinigte Parzellen, Raketenstarts oder eingeflogene Maschinen. Alles steht in einer Übersicht.</p></article>
       <article><img src="assets/screens/08-planeten.jpg" width="585" height="1266" alt="Planetenliste mit Fortschritt und Anzeige „reinigt sich selbst“"><h3>Sternenstaub</h3><p>Ein komplett sauberer Planet gibt dauerhaft +10 % Preise, und dort beginnt der Tiefenabbau: Bohrtürme fördern Rohstoffe aus der Tiefe in ihr eigenes Lager, deine Fahrzeuge holen sie ab, und die Basis wächst weiter. Mit den Ausbaustufen geht das ohne Ende: mehr Bohrtürme, größere Lager, höhere Upgrades. Voll ausgebaute Bohrtürme werden zu Erzbaggern, ausgereizte Gebäude wachsen sichtbar eine Stufe weiter, und jeder Planet hat seine eigenen Farben. Später startest du mit Sternenstaub neu: jeder bringt für immer +5 % Preise und +3 % Reinigungsleistung.</p></article>
     </div>
   </div>
@@ -354,7 +362,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 
 <footer>
   <div class="wrap">
-    <span>Lunar Cleanup Tycoon · Prototyp v6.1 · Oktober 2026</span>
+    <span>Lunar Cleanup Tycoon · Prototyp v6.2 · Oktober 2026</span>
     <span>Alle Rechte vorbehalten</span>
   </div>
 </footer>

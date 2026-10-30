@@ -162,3 +162,10 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Totalschaden nur live und nur nach Warnung; offline wird nie ein Fahrzeug zerstört, damit Idle-Fortschritt sicher bleibt. Offline laufen Verschleiß und Reparatur trotzdem in `simStep`.
 - Störungen beheben sich automatisch (Techniker), damit Offline-Produktion nicht dauerhaft steht; sofortige Behebung ist ein bezahlter Komfort.
 - Wegfindung fällt nie mehr auf eine gerade Linie zurück; ohne Pfad wird um die Basis herum gefahren.
+
+## v6.2
+- Technik und Fahrzeug-Upgrades gelten pro Planet (Wunsch des Spielers, per Rückfrage bestätigt). Alte Planeten behalten ihren Stand, nur neue fangen bei 0 an – so geht kein Fortschritt verloren.
+- Planetenlinien über Rezepttabellen in den bestehenden drei Maschinen statt neuer Gebäude: kein Layout-Umbau, alle Layout-Tests bleiben gültig, Bänder und Offline-Simulation funktionieren unverändert.
+- Unterschiedliche Gebäudeanordnung pro Planet zurückgestellt: Positionen, Bänder, Laternen, Andockpunkte und Wegfindung hängen am gemeinsamen Layout; ein zweites Layout wäre ein eigener großer Schritt.
+- Fahrzeuge dürfen auch offline zerstört werden (Wunsch des Spielers); die Rückkehr-Übersicht meldet es.
+- Doppelbürsten-Pflicht pro Planet auf Stufe 2 begrenzt, weil die Stufen jetzt lokal gekauft werden.

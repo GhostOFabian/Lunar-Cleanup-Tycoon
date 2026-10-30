@@ -170,14 +170,44 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,sp=t.S.planets.moon;t.S.credits+=1e12;t.S.maxStage=5;sp.stage=5;if(!sp.bld.werkstatt)t.buildBuilding('werkstatt');sp.autoMaint=false;const v=sp.veh[0];
       v.wear=1.01;v.mode='seek';t.vehStep('moon',sp,v,.1,1,false);const broke=v.mode;const reps=[];
       for(let k=0;k<3;k++){v.wear=1.01;v.mode='broken';const ok=t.sendToShop('moon',sp,v,true);for(let i=0;i<4000&&(v.mode==='toShop'||v.mode==='repair');i++){sp.dayT=t.dayLen('moon')*.25;t.vehStep('moon',sp,v,.25,1,false);}reps.push([ok,v.rep,+(v.wear||0).toFixed(2),v.mode]);}
-      const n0=sp.veh.length;v.wear=1.2;v.mode='broken';for(let i=0;i<200;i++)t.vehWear('moon',sp,v,1,false);const offlineKept=sp.veh.length===n0;
-      t.replaceVeh('moon',sp,v,true);const fresh=[v.rep,v.wear];sp.autoMaint=true;
+      const n0=sp.veh.length,v2=sp.veh.find(x=>x!==v);t.S.wrecks=[];v.wear=1.2;v.mode='broken';for(let i=0;i<200;i++)t.vehWear('moon',sp,v,1,false);const offlineKept=sp.veh.length===n0-1&&t.S.wrecks.length===1;
+      let fresh=[0,0];if(v2){v2.rep=2;v2.wear=.9;t.replaceVeh('moon',sp,v2,true);fresh=[v2.rep,v2.wear];}sp.autoMaint=true;
       // rig fault
       for(const c of t.planetData('moon').cells)if(c.kind!=='base')t.W.moon.clean[c.id]=1;t.S.done.moon=1;if(!(sp.rigs||[]).length)t.buildRig(-1);const rg=sp.rigs[0];rg.buf={};rg.fault={k:'jam',t:5};const b0=rg.mined||0;sp.energy=1e4;
       for(let i=0;i<4;i++)t.rigStep('moon',sp,rg,1,1);const stopped=(rg.mined||0)===b0&&!!rg.fault;t.rigStep('moon',sp,rg,2,1);const auto=!rg.fault;rg.fault={k:'heat',t:99};const c0=t.S.credits;t.fixFault(rg.cell);
       const manual=!rg.fault&&t.S.credits<c0;sp.hzOn=0;
       return {broke,reps,offlineKept,fresh,stopped,auto,manual}}""")
     show('maintenance / repairs / faults', r); check(r['broke'] == 'broken' and r['reps'][0][1] == 1 and r['reps'][1][1] == 2 and r['reps'][2][0] is False and r['reps'][0][2] == 0 and r['offlineKept'] and r['fresh'] == [0, 0] and r['stopped'] and r['auto'] and r['manual'], 'vehicle maintenance / rig faults')
+    # v6.2: planet production lines, per-planet tech, radiation, offline write-off, drones
+    r = E("""()=>{const t=__t,bad=[],uniq={};const moon=t.PL('moon');
+      for(const pid of t.PORDER){const L=t.PL(pid);for(const id of['presse','schmelze','raff'])for(const rc of L[id]){if(!t.MATS[rc.in]||!t.MATS[rc.out])bad.push(pid+':'+id);}
+        if(!t.PLANETS[pid].theme||!t.DAYLEN[pid]||t.GEOF[pid]==null||!t.SPEC_FIT[pid]||!t.PCOL[pid])bad.push(pid+':table');
+        for(const[d]of t.PLANETS[pid].types)if(!t.DIRT[d]||!t.MATS[t.DIRT[d].mat])bad.push(pid+':dirt '+d);
+        uniq[pid]=L.goods.filter(g=>!moon.goods.includes(g)).length;}
+      return {n:t.PORDER.length,bad,uniq,moonSame:JSON.stringify(moon.presse.map(r=>r.out))===JSON.stringify(['staubBrick','metallBrick'])&&moon.schmelze[0].out==='barren'}}""")
+    show('planet lines', r); check(r['n'] == 18 and not r['bad'] and r['moonSame'] and all(v >= 1 for k, v in r['uniq'].items() if k != 'moon'), 'planet lines data')
+
+    r = E("""()=>{const t=__t,out={};for(const pid of['europa','cancri','poltergeist']){if(!t.S.planets[pid]){t.S.planets[pid]=t.freshPlanet(pid);t.initRuntime(pid);}const sp=t.S.planets[pid];
+        sp.stage=5;for(const id of['presse','schmelze','raff','prod','roh','sell','u1','u2','u3'])sp.bld[id]=1;sp.upg.rohcap=8;sp.upg.prodcap=8;sp.upg.sellcap=8;
+        const raws=t.planetRaws(pid);for(let i=0;i<1600;i++){sp.energy=1e6;for(const m of raws)sp.roh[m]=Math.max(sp.roh[m],120);t.simStep(pid,.5,true);}
+        const made=new Set();for(const m in sp.prod)if(sp.prod[m]>0)made.add(m);for(const m in sp.sellBuf||{})if(sp.sellBuf[m]>0)made.add(m);for(const id of['presse','schmelze','raff'])for(const m in sp.mach[id].out)if(sp.mach[id].out[m]>0)made.add(m);
+        for(const m in (sp.stats.soldBy||{}))made.add(m);
+        out[pid]={ends:[...new Set(raws.map(m=>t.endGood(sp,m)))],smelt:sp.mach.schmelze.made||0,raff:sp.mach.raff.made||0,press:sp.mach.presse.made||0,jam:Object.values(sp.jam).filter(Boolean).length};}
+      return out}""")
+    show('planet production', r); check(all(v['smelt'] > 0 and v['press'] > 0 for v in r.values()) and 'kryolinse' in r['europa']['ends'] and 'diamant' in r['cancri']['ends'] and 'reaktorkern' in r['poltergeist']['ends'], 'planet production runs')
+
+    r = E("""()=>{const t=__t;const o=JSON.parse(t.serialize());delete o.techMig;o.maxStage=5;o.upg=Object.assign(o.upg||{},{vspeed:4,vpower:6});
+      o.planets.ganymed=JSON.parse(JSON.stringify(o.planets.moon));o.planets.ganymed.stage=2;o.planets.ganymed.mach.schmelze={in:{metallBrick:30},out:{barren:2},cur:0,prog:1};o.planets.ganymed.belts.b_ps=[[1,'metallBrick',3]];o.planets.ganymed.prod.barren=0;
+      const b=t.migrateSave(t.normalizeSave(o));const g=b.planets.ganymed,m=b.planets.moon;
+      const r={techG:t.gs(g),techM:t.gs(m),up:[m.upg.vspeed,m.upg.vpower,g.upg.vpower],schIn:Object.keys(g.mach.schmelze.in),barren:g.prod.barren,mb:g.prod.metallBrick,belt:g.belts.b_ps.length};
+      const f=t.freshPlanet('eris');r.newTech=t.gs(f);r.newUp=(f.upg||{}).vpower||0;return r}""")
+    show('per-planet tech + migration', r); check(r['techG'] == 5 and r['techM'] == 5 and r['up'] == [4, 6, 6] and r['schIn'] == [] and r['barren'] == 2 and r['mb'] >= 33 and r['belt'] == 0 and r['newTech'] == 1 and r['newUp'] == 0, 'per-planet tech + line migration')
+
+    r = E("""()=>{const t=__t;if(!t.S.planets.poltergeist){t.S.planets.poltergeist=t.freshPlanet('poltergeist');t.initRuntime('poltergeist');}const sp=t.S.planets.poltergeist;sp.hzOn=0;sp.stage=5;
+      const rad0=t.radF('poltergeist',sp);sp.upg.rshield=5;const rad1=t.radF('poltergeist',sp);sp.upg.rshield=0;
+      const moon=t.radF('moon',t.S.planets.moon);return {rad0,rad1,moon,drone:t.DRONE.cap,up:t.UP.dcap.max}}""")
+    show('radiation + drones', r); check(r['rad0'] == 1 and 0 < r['rad1'] < 0.5 and r['moon'] == 0 and r['drone'] >= 150, 'radiation + drone capacity')
+
     E("()=>{__t.openSheet('settings')}"); pg.wait_for_timeout(300)
     r = E("()=>{const h=document.querySelector('#sheet').textContent;__t.closeSheet();return {idle:h.includes('Idle-Test'),off:!!document.querySelector('[data-act=off]')}}")
     show('no idle test button', r); check(not r['idle'] and not r['off'], 'idle test removed from settings')

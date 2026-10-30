@@ -1,4 +1,4 @@
-# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.1)
+# Lunar Cleanup Tycoon – Spielspezifikation (Stand Prototyp v6.2)
 
 Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten-Progression. Sprache der Oberfläche: Deutsch.
 
@@ -58,7 +58,7 @@ Mobile-3D-Spiel: Reinigungssimulation + Idle-Tycoon + Automatisierung + Planeten
 ## 6. Basis, Gebäude, Stufen
 - Jeder Planet hat seine **eigene Basis**. Technik (Gebäude, Fahrzeuge, Upgrade-Kategorien) ist global: Was auf irgendeinem Planeten freigeschaltet wurde (`S.maxStage`), kann überall gebaut werden. Gebäudekosten × Planetfaktor.
 - Basisstufen pro Planet (Kosten × Planetfaktor): 1 frei · 2 = 200 · 3 = 5 000 · 4 = 40 000 · 5 = 220 000. Die Stufe pro Planet gibt Fahrzeugplätze (Stufe 4 +4, Stufe 5 +6).
-- Gebäude (Plan-Koordinaten relativ zur Basiszelle, Footprint-Radius `fp`; Abstand zwischen Gebäuden ≥ 2 m; alles liegt auf allen 10 Planeten auf Basiszellen – geprüft):
+- Gebäude (Plan-Koordinaten relativ zur Basiszelle, Footprint-Radius `fp`; Abstand zwischen Gebäuden ≥ 2 m; alles liegt auf allen 18 Planeten auf Basiszellen – geprüft):
 
 | Gebäude | Stufe | Kosten | Pos | fp | Funktion |
 |---|---|---|---|---|---|
@@ -189,6 +189,15 @@ Siehe `docs/LANGZEIT.md`, Abschnitt 4 (Zahlen und Formeln).
 - **Verschleiß** (ab Technikstufe 3): steigt beim Fahren, Lebensdauer 3 h × Upgrade `vdur` (1 + 0,35·Stufe). Ab 85 %: −20 % Tempo. Bei 100 % oder zufällig ab 80 %: Panne (Stillstand). Werkstatt: Reparatur 20 s × (1 + 0,5·Reparaturen), Kosten 25 % des Fahrzeugpreises × (1 + Reparaturen), höchstens 2 Mal. Danach Austausch (85 % Preis, 15 % Schrottwert). Totalschaden nur live, nur nach 2 Reparaturen, nur nach 120 s Warnung; offline nie. Auto-Wartung ab 75 % (abschaltbar in der Werkstatt).
 - **Störungen** (`rigFault`): Chance pro s `1/2400 × (1 + 0,15·Stufe) × 1,3 (Erzbagger) × 4 (Sturm ohne Schild) / rcare`. Art: Überhitzung (häufiger auf Venus/Io), Verklemmung, Fehlfunktion, Sturmschaden. Stillstand, rotes Blinklicht, Rauch bei Hitze. Behebung automatisch nach 45 s (mit Werkstatt) bzw. 120 s, sofort für 12 % der Ausbaukosten.
 - **Stürme sichtbar** (`updStorm`, `STORM_LOOK`): Nebel und bis zu 1 400 Partikel in Planetenfarbe, 30 s vorher leicht, mit Schild abgeschwächt; im Kartenmodus und auf Reisen aus. Ampel zeigt Störungen, Pannen und aktive Stürme mit Wirkung.
+
+## 9j. Planetenlinien, Technik pro Planet, Strahlung, neue Planeten (ab v6.2)
+- **Produktionslinie pro Planet** (`PLINE`, `PL(pid)`): die drei Maschinenplätze bleiben (Layout unverändert), aber Eingänge, Ausgänge, Mengen und Namen unterscheiden sich. Presse: Rohstoff → erstes Produkt, Schmelze: ein Pressprodukt → Endprodukt, Raffinerie: Rohstoff → Raffinat. Fehlt ein Eintrag, gilt die Mond-Linie. Beispiele: Europa Eisblock → Kryolinse, Titan Bitumen → Kohlefaser, 55 Cancri e Rohdiamant → Industriediamant, Poltergeist Isotopenpellet → Reaktorkern. Bänder, Endprodukt (`endGood`), Werksaufträge und Rakete folgen der Linie automatisch. Mehrere Rezepte einer Maschine werden ausgeglichen beliefert (was sie am wenigsten hat, kommt zuerst).
+- **Migration** (`fixLines`): Ware, die eine Maschine nach dem Wechsel nicht mehr verarbeitet, geht zurück ins Roh- bzw. Produktlager, ebenso Pakete auf Bändern, deren Ziel sie nicht mehr annimmt.
+- **Technik pro Planet**: `gs(sp)=max(stage, techF)`. Fahrzeug-Upgrades (Tempo, Doppelbürsten, Tanks, Sparmotoren, Akkus, Düsen, Robuste Bauweise) sind lokal. Planeten aus Ständen vor v6.2 bekommen `techF = maxStage` und die bisherigen globalen Stufen. Neue Planeten beginnen bei 0. Global bleiben Handgerät, Drohnen, Wirtschaft, Forschung, Sternenstaub. Doppelbürsten-Pflicht: höchstens Stufe 2.
+- **Strahlung** (`hz.rad`, `radF`): Proxima b 0,4, Poltergeist 1. Verschleiß × (1 + 3·Strahlung), Störchance × (1 + 3·Strahlung), Störungsart „Strahlenschaden“. Strahlungsstoß/Flare × 3 (mit Schild × 1,4). Upgrade Strahlenschutz (lokal, nur auf verstrahlten Planeten, 1 + 0,4·Stufe). Sichtbar: grüner Dauerdunst, Funken, Pulsar mit rotierenden Strahlkegeln.
+- **Totalschaden offline**: nach 2 Reparaturen und 120 s Panne auch offline; die Rückkehr-Übersicht listet die Fahrzeuge.
+- **Drohnen**: Grundladung 160 (vorher 60), Ladebucht 12 Stufen à +50 %.
+- **Neue Planeten**: Eris (×1 400), Sedna (×2 800), Proxima b (×5 600), Trappist-1e (×11 000), Kepler-22b (×22 000), 55 Cancri e (×45 000), Gliese 1214 b (×90 000), Poltergeist (×180 000); Freischaltung jeweils ab 80 % des vorherigen.
 
 ## 10. Gefahren pro Planet
 - Siehe Tabelle Abschnitt 12. Stürme kommen periodisch (`every`, `dur`) und multiplizieren Fahrzeug-, Band- und Maschinentempo, Solarstrom und Staubrate.
