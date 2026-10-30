@@ -220,7 +220,7 @@ namespace LunarCleanup.Gameplay
             for (float s = 1f; s < L - .6f; s += 3f)
             {
                 var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x); float top = H + LF(s0 + s) - .32f;
-                if (UnderBelt(b, p, H + LF(s0 + s), BW + .35f)) continue; // keine Stütze in einem tiefer liegenden Band (Kreuzung)
+                if (UnderBelt(b, p, H + LF(s0 + s), BW + .35f) || InFootprint(p)) continue; // in Kreuzungen und auf Gebäudeflächen keine Stützen // keine Stütze in einem tiefer liegenden Band (Kreuzung)
                 foreach (float sd in new[] { -1f, 1f })
                 {
                     var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var g = MeshKit.Cyl(beltRoot, post, Vector3.zero, .06f, .07f, top, 8); g.transform.position = d * (pd.R + top / 2); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
@@ -265,7 +265,7 @@ namespace LunarCleanup.Gameplay
                     // Stützen (senkrecht vom Rahmen bis zum Boden)
                     for (float s = 1f; s < (s1 - s0) - .6f && !hit; s += 3f)
                     {
-                        var p = PointAt(rp, cum, s0 + s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
+                        var p = PointAt(rp, cum, s0 + s, out var tan); var nrm = new Vector2(-tan.y, tan.x); if (InFootprint(p) || UnderBelt(b, p, H + Lift(kv.Key, s0 + s), BW + .35f)) continue;
                         foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); float top = H + Lift(kv.Key, s0 + s) - .32f; var A = d * (pd.R + top); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= top - .35f) hit = true; } // Bodenplatten zählen nicht
                         if (hit) out_.Add(nm + ": Stütze bei " + (s0 + s).ToString("0.0") + " m steht in " + id);
                     }
@@ -388,7 +388,7 @@ namespace LunarCleanup.Gameplay
             foreach (var b in live)
             {
                 var V = Vis(b); var l = new List<(float, Vector2)>(); var q = V.rp;
-                float zf = GameData.Bld[b.from].fp * .75f, zt = GameData.Bld[b.to].fp * .75f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
+                float zf = GameData.Bld[b.from].fp * .5f, zt = GameData.Bld[b.to].fp * .5f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
                 for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((V.cum[i - 1] + u, p)); } }
                 smp[b.id] = l; len[b.id] = V.cum[V.cum.Length - 1];
             }
@@ -416,6 +416,8 @@ namespace LunarCleanup.Gameplay
                 Flush(); bridges[B.id] = res;
             }
         }
+        /// <summary>Liegt der Punkt auf der Grundfläche eines Gebäudes (dort trägt das Gebäude das Band)?</summary>
+        bool InFootprint(Vector2 p) { foreach (var id in ps.bld) if (ps.lay.pos.TryGetValue(id, out var c) && GameData.Bld.ContainsKey(id) && (p - c).magnitude < GameData.Bld[id].fp * .95f) return true; return false; }
         static float SegDist(Vector2 q, Vector2 a, Vector2 c) { var d = c - a; float l2 = d.sqrMagnitude; float t = l2 > 0 ? Mathf.Clamp01(Vector2.Dot(q - a, d) / l2) : 0; return (q - (a + d * t)).magnitude; }
         /// <summary>Liegt unter Punkt p (Plan) ein anderes, tieferes Band?</summary>
         bool UnderBelt(BeltDef me, Vector2 p, float H, float r)

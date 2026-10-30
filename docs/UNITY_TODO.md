@@ -1,6 +1,6 @@
 # Unity-Version – Was noch zu tun ist
 
-Stand: 30.10.2026 · Unity-Version 0.10 · Branch `claude/prototype-v3.5`
+Stand: 30.10.2026 · Unity-Version 0.11 · Branch `claude/prototype-v3.5`
 Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wird nach jedem Teil abgehakt.
 
 ## Fertig (in Unity getestet, im Editor)
@@ -14,6 +14,8 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 - [x] 0.8 Fahrzeugverschleiß, Werkstatt, Totalschaden, Strahlung
 - [x] 0.9 Tiefenabbau: Bohrtürme, Stufen 0–5, Erzbagger, Störungen, Planet-Abschluss (+10 % Preis, +1 Fahrzeugplatz)
 - [x] 0.10 Wünsche vom 30.10.: Bänder (Banden genau am Band, höher, enden an der Gebäudewand), Pipeline unterirdisch, schlauere Fahrzeuge (Werkstatt, nie dumm herumstehen), Planet in alle Richtungen drehen, Kenney-Modelle (CC0) für Gebäude/Fahrzeuge/Drohnen/Rakete/Deko, Upgrade-Fenster behält die Scrollposition, Planeten werden immer größer (252 → 5.762 Parzellen; alte Stände behalten ihre Größe), Seen aus Wasser/Lava/Säure/Methan mit Umwegen und Schwebereiniger, Hügel und Krater
+- [x] 0.10.1 Bandanschlüsse an der echten Modellwand, Ladeterminal an der Rakete, neues Rohstofflager und Außenlager
+- [x] 0.11 Basis-Prüfung (F11 im Testmodus, alle 18 Planeten + alte Größen, Bericht + Fotos in `BasisCheck/`), Brücken und Weichen für Bänder, glattere Kurven, Raketenlandung von oben, neue Entladestationen mit Abkippgruben, Fahrzeuge verteilen sich und lösen sich, wenn sie hängen, Leuchtkristalle (5 Farben, wachsen nach, Antippen oder Fahrzeuge), Weltraum-Himmel je Planet mit farbigem Sternlicht, Konto-Speicher- und Shop-Platzhalter, Zoom per Tastatur (R/F)
 - [x] Testmodus im Editor (Menü **Lunar Cleanup → Testmodus**): eigener Test-Spielstand, Test-Tasten F5–F10 nur dort
 
 ## Als Nächstes (in dieser Reihenfolge)
@@ -36,6 +38,11 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 15. [ ] Leistung: Planeten mit 3 000+ Parzellen auf schwachen Handys prüfen (Texturgröße, Schatten, Lichter)
 16. [ ] Grafik-Feinschliff: Gebäudemodelle, Fahrzeug-Scheinwerfer, Raketenstart, Übergänge beim Reisen
 17. [ ] iOS-Build (braucht einen Mac)
+
+## Für die Handy-Version (neu)
+- [ ] Google Play Spiele (Android) und Game Center/iCloud (iOS) wirklich anbinden: `Core/Platform.cs` – Klassen PlayGamesCloud/GameCenterCloud füllen
+- [ ] Unity IAP einrichten und die Shop-Angebote (Platform.Offers) mit echten Store-Produkten verbinden; Belohnungen erst nach bestätigtem Kauf
+- [ ] Shader „Skybox/Panoramic“ in „Always Included Shaders“ aufnehmen (sonst fehlt der Himmel im Handy-Build)
 
 ## Offene Kleinigkeiten
 - [ ] Hügel/Krater gibt es nur in Unity (reine Optik). Bohrtürme auf Hängen stehen leicht schief; Seen folgen dem Gelände statt flach zu liegen
