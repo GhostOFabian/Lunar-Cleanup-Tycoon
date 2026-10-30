@@ -169,6 +169,33 @@ namespace LunarCleanup.Gameplay
             return bp;
         }
 
+        /// <summary>Bohrturm (Gittermast mit Pumpenkopf) oder Erzbagger (Schaufelrad auf Raupen).</summary>
+        public static BuildingParts Rig(bool bag, Color acc)
+        {
+            var bp = new BuildingParts(); var g = new GameObject(bag ? "Erzbagger" : "Bohrturm"); bp.root = g; var t = g.transform;
+            Material D = M(Hex("#2b313c"), .4f, .4f), S = M(Hex("#8a93a3"), .7f, .5f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
+            MeshKit.Cyl(t, Pad, new Vector3(0, .05f, 0), 3.2f, 3.4f, .1f, 28);
+            if (!bag)
+            {
+                for (int i = 0; i < 4; i++) { float a = (45 + i * 90) * Mathf.Deg2Rad; var o = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)); MeshKit.Box(t, S, o * .75f + new Vector3(0, 3, 0), new Vector3(.14f, 6.1f, .14f), new Vector3(-o.z * 7, 0, o.x * 7)); }
+                for (int k = 1; k < 6; k++) MeshKit.Box(t, S, new Vector3(0, k * 1.1f, 0), new Vector3(1.6f - k * .14f, .08f, 1.6f - k * .14f), new Vector3(0, 45, 0));
+                MeshKit.Box(t, A, new Vector3(1.6f, .7f, 0), new Vector3(1.4f, 1.2f, 1.6f));
+                bp.piston = MeshKit.Box(t, D, new Vector3(0, 3.5f, 0), new Vector3(.5f, 1.6f, .5f)).transform;
+                MeshKit.Cyl(t, M(Hex("#ffbf4d"), .3f, .5f), new Vector3(-1.4f, .6f, 0), .7f, .7f, 1.1f, 16);
+            }
+            else
+            {
+                MeshKit.Box(t, D, new Vector3(0, .45f, -.9f), new Vector3(3.6f, .8f, .9f)); MeshKit.Box(t, D, new Vector3(0, .45f, .9f), new Vector3(3.6f, .8f, .9f));
+                MeshKit.Box(t, A, new Vector3(-.3f, 1.5f, 0), new Vector3(2.6f, 1.4f, 2.2f));
+                MeshKit.Box(t, S, new Vector3(1.8f, 2.4f, 0), new Vector3(2.6f, .3f, .4f), new Vector3(0, 0, 28));
+                var wheel = new GameObject("Schaufelrad").transform; wheel.SetParent(t, false); wheel.localPosition = new Vector3(3.1f, 3.0f, 0); bp.spin = wheel;
+                MeshKit.Cyl(wheel, S, Vector3.zero, 1.3f, 1.3f, .35f, 20, new Vector3(90, 0, 0));
+                for (int k = 0; k < 8; k++) MeshKit.Box(wheel, M(Hex("#ffbf4d"), .3f, .5f), Quaternion.Euler(0, 0, k * 45) * new Vector3(1.4f, 0, 0), new Vector3(.5f, .4f, .6f), new Vector3(0, 0, k * 45));
+            }
+            bp.lamp = new Material(MeshKit.Glow(Hex("#3fe58a"), 2.5f)); MeshKit.Ball(t, bp.lamp, new Vector3(0, bag ? 2.4f : 6.3f, 0), .3f);
+            return bp;
+        }
+
         public static GameObject Site(float fp)
         {
             var g = new GameObject("Bauplatz"); var t = g.transform; var gold = MeshKit.Glow(Hex("#ffbf4d"), 1.6f);

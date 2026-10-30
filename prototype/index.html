@@ -1364,7 +1364,7 @@ function outpostWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).
 /* ---- Tiefenabbau: once a planet is completely clean, drilling rigs on clean parcels mine raw material forever and pump it to the base.
    Their flow is what makes belts, machines, storage, night power and selling worth expanding on finished planets. ---- */
 const RIG={buf:300,load:16,energy:1.5,base:.8};
-const rigRich=(pid,id)=>{let h=(id*2654435761+(PORDER.indexOf(pid)+1)*40503)>>>0;h^=h>>>15;h=Math.imul(h,2246822519)>>>0;h^=h>>>13;return .6+(h%1000)/1000;};
+const rigRich=(pid,id)=>{let h=(id*2654435761+(PORDER.indexOf(pid)+1)*40503)>>>0;h^=h>>>15;h=Math.imul(h,2246822519)>>>0;h^=h>>>13;return .6+((h>>>0)%1000)/1000;};
 const rigMax=sp=>2+2*sp.stage+2*(sp.exp||0);
 const rigCost=pid=>Math.round(3000*PLANETS[pid].diff*Math.pow(1.45,(S.planets[pid].rigs||[]).length));
 const rigMat=(pid,id)=>DIRT[planetData(pid).cells[id].type].mat;

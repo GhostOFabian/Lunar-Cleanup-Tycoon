@@ -185,3 +185,5 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - Test-Tasten nur im Editor (`#if UNITY_EDITOR`), keine sichtbaren Test-Knöpfe im Spiel.
 - Unity-Spielstand getrennt vom Browser-Spielstand (eigener Schlüssel), damit nichts verloren geht.
 - Unity: Punkte auf der Planetenrückseite behalten in der Basis-Ebene ihre Richtung (statt fester Ecke 1e4/1e4) – sonst kreisen Fahrzeuge um die Basis. Im Browser-Prototyp ist das noch die alte Rechnung.
+- Test-Tasten im Editor wirken nur im Testmodus mit eigenem Spielstand (`…-v1-test`), damit der echte Spielstand nie verändert wird.
+- `rigRich` im Prototyp: Ergebnis jetzt vorzeichenlos (0,6–1,6), vorher konnten durch `^` negative Werte entstehen.

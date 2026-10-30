@@ -75,10 +75,30 @@ namespace LunarCleanup.Gameplay
                 MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
             }
             foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
-            BuildOutposts();
+            BuildOutposts(); BuildRigs();
             builtVersion = ps.baseVersion;
         }
 
+        readonly List<(Models.BuildingParts bp, RigSave r)> rigViews = new List<(Models.BuildingParts, RigSave)>();
+        void BuildRigs()
+        {
+            rigViews.Clear();
+            foreach (var r in ps.sv.rigs)
+            {
+                var cl = pd.cells[r.cell]; var bp = Models.Rig(r.bag, ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = cl.c * pd.R; bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                rigViews.Add((bp, r));
+            }
+        }
+        void AnimateRigs()
+        {
+            foreach (var (bp, r) in rigViews)
+            {
+                if (!bp.root) continue; bool fault = r.faultK != "";
+                if (bp.piston) bp.piston.localPosition = new Vector3(0, 3.5f + (r.busy ? Mathf.Sin(Time.time * 3 + r.cell) * .9f : 0), 0);
+                if (bp.spin && r.busy) bp.spin.Rotate(Vector3.forward, 60 * Time.deltaTime, Space.Self);
+                if (bp.lamp) bp.lamp.SetColor("_EmissionColor", fault ? (Mathf.Sin(Time.time * 10) > 0 ? new Color(1, .16f, .16f) * 3 : Color.black) : r.busy ? new Color(.25f, .9f, .54f) * 2.5f : new Color(1, .75f, .3f) * 1.5f);
+            }
+        }
         readonly List<(LineRenderer l, StSave o)> pipes = new List<(LineRenderer, StSave)>();
         void BuildOutposts()
         {
@@ -271,7 +291,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (l, o) in pipes) if (l) { var c = o.busy ? Color.Lerp(GameData.Hex("#8a93a3"), GameData.Hex("#6ff2d2"), .5f + .5f * Mathf.Sin(Time.time * 6)) : GameData.Hex("#8a93a3"); l.startColor = l.endColor = c; }
-            UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings();
+            UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>

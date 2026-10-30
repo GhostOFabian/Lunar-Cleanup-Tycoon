@@ -46,7 +46,9 @@ namespace LunarCleanup.Core
         static readonly System.Random Rng = new System.Random(4711);
         static readonly Dictionary<string, int> GUpg = new Dictionary<string, int>();
         const float VEH_BUFF = 2.6f, BSP = 1.25f;
-        const string Key = "lunar-cleanup-tycoon-unity-v1";
+        /// <summary>Im Editor kann ein getrennter Test-Spielstand benutzt werden (Menü Lunar Cleanup → Testmodus), damit Test-Tasten nie deinen echten Stand verändern.</summary>
+        public static bool TestMode;
+        static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "");
 
         public static PState Cur => P[S.planet];
         public static PlanetDef CurP => GameData.Planets[S.planet];
@@ -102,10 +104,12 @@ namespace LunarCleanup.Core
             }
             foreach (var v in sv.veh) { v.tank = Arr(v.tank); if (v.d.sqrMagnitude < .5f) v.d = ps.pd.PlanDir(ps.lay.start); }
             if (sv.outposts == null) sv.outposts = new List<StSave>(); foreach (var o in sv.outposts) { o.buf = Arr(o.buf); if (o.docks == null) o.docks = new int[0]; ps.st[o.id] = o; }
+            if (sv.rigs == null) sv.rigs = new List<RigSave>(); foreach (var r in sv.rigs) r.buf = Arr(r.buf);
             if (sv.lifters == null) sv.lifters = new List<LifterSave>(); foreach (var L in sv.lifters) if (L.d.sqrMagnitude < .5f) L.d = ps.pd.PlanDir(ps.lay.start);
             if (sv.drones == null) sv.drones = new List<DroneSave>(); foreach (var dr in sv.drones) { dr.tank = Arr(dr.tank); if (dr.d.sqrMagnitude < .5f) dr.d = ps.lay.pos.ContainsKey("hangar") ? ps.pd.PlanDir(ps.lay.pos["hangar"]) : ps.pd.PlanDir(ps.lay.start); }
             if (sv.cart.owned && sv.cart.d.sqrMagnitude < .5f) sv.cart.d = ps.pd.PlanDir(ps.lay.start);
             CalcFront(ps);
+            if (S.done == null) S.done = new List<string>(); if (!S.done.Contains(sv.pid) && CleanPct(ps) >= .999f) S.done.Add(sv.pid);
             return ps;
         }
 
@@ -168,7 +172,8 @@ namespace LunarCleanup.Core
         public static float Sum(float[] a) { float s = 0; for (int i = 0; i < a.Length; i++) s += a[i]; return s; }
         public static float RohSum(PState ps) { float s = 0; foreach (int m in GameData.Raw) s += ps.sv.roh[m]; return s; }
         public static float ProdSum(PState ps) { float s = 0; foreach (int m in GameData.Prods) s += ps.sv.prod[m]; return s; }
-        public static int DoneCount() => S.planets.Count(p => P.ContainsKey(p.pid) && CleanPct(P[p.pid]) >= .999f);
+        public static int DoneCount() => S.done.Count;
+        public static bool IsDone(string pid) => S.done.Contains(pid);
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
@@ -273,6 +278,7 @@ namespace LunarCleanup.Core
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
             foreach (int b in cl.nb) ps.dirtyCells.Add(b);
+            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
         }
 
         // ================= Handgerät =================
@@ -644,8 +650,9 @@ namespace LunarCleanup.Core
                 case "seek":
                     {
                         if (tank >= cap * .98f || BattLow(ps, v)) { v.mode = "toUnload"; break; }
+                        { var rg = PickRig(ps, v, false); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } }
                         int c = ChooseCell(ps, v);
-                        if (c < 0) { if (tank > .5f) { v.mode = "toUnload"; break; } NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
+                        if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
                         if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
                 case "drive":
@@ -693,6 +700,15 @@ namespace LunarCleanup.Core
                     }
                 case "wait":
                     if (v.drone < 0) v.mode = tank >= cap * .98f ? "toUnload" : "seek"; break;
+                case "toRig": { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r == null || r.claim != v.id) { v.rig = -1; v.mode = "seek"; break; } v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, RigDock(ps, r), spd * dt, v.id)) v.mode = "rigload"; break; }
+                case "rigload":
+                    {
+                        var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r == null) { v.rig = -1; v.mode = "seek"; break; }
+                        float b = Sum(r.buf), amt = Mathf.Min(GameData.RigLoad * Uv("urate", ps) * dt, Mathf.Min(cap - tank, b));
+                        if (amt > 0) { float k = amt / b; for (int m = 0; m < NM; m++) { float x = r.buf[m] * k; r.buf[m] -= x; v.tank[m] += x; } v.coll += amt; }
+                        if (cap - Sum(v.tank) < .5f || Sum(r.buf) < .05f) { r.claim = -1; v.rig = -1; v.mode = Sum(v.tank) > .5f ? "toUnload" : "seek"; }
+                        break;
+                    }
                 case "broken": v.busy = false; break;
                 case "toShop": v.busy = true; if (NavMove(ps, v, pd.PlanDir(ps.lay.shop), T.speed * Uv("vspeed", ps) * .5f * dt, v.id)) { v.mode = "repair"; v.repT = VM_TIME * (1 + .5f * v.rep); } break;
                 case "repair": v.repT -= dt; if (v.repT <= 0) { v.wear = 0; v.rep++; v.mode = "seek"; v.doom = 0; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " repariert (" + v.rep + "/" + VM_REPS + ")", "good"); } break;
@@ -718,7 +734,7 @@ namespace LunarCleanup.Core
             if (!ps.bld.Contains("werkstatt")) return auto ? false : Fail("Erst eine Roboterwerkstatt bauen"); if (v.rep >= VM_REPS) return auto ? false : Fail("Schon zweimal repariert – ersetzen");
             if (v.mode == "toShop" || v.mode == "repair") return false; double c = RepCost(ps, v); if (S.credits < c) return auto ? false : Fail(Lacks(c)); S.credits -= c;
             if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
-            if (v.drone >= 0) v.drone = -1; v.sid = null; v.cell = -1; v.mode = "toShop"; return true;
+            if (v.drone >= 0) v.drone = -1; if (v.rig >= 0) { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r != null && r.claim == v.id) r.claim = -1; v.rig = -1; } v.sid = null; v.cell = -1; v.mode = "toShop"; return true;
         }
         public static bool ReplaceVeh(PState ps, VehSave v, bool auto)
         {
@@ -754,6 +770,102 @@ namespace LunarCleanup.Core
         }
         public static string WearText(VehSave v) => v.mode == "broken" ? (v.rep >= VM_REPS ? "Totalschaden droht in " + Mathf.Max(0, Mathf.CeilToInt(VM_DOOM - v.doom)) + " s – ersetzen!" : "Ausgefallen") : v.wear >= .75f ? "Wartung fällig" : "";
         public static int RepsLeft(VehSave v) => VM_REPS - v.rep;
+
+        // ================= Tiefenabbau =================
+        public const int RIG_MAXLV = 5;
+        /// <summary>Vorkommen einer Parzelle (0,6–1,6). Gleiche Streuung wie im Browser, aber ohne dessen Vorzeichen-Fehler (dort konnten Werte unter 0 entstehen).</summary>
+        public static float RigRich(string pid, int id)
+        {
+            int idx = Array.IndexOf(GameData.POrder, pid); uint a = (uint)(((ulong)id * 2654435761UL + (ulong)((idx + 1) * 40503)) & 0xffffffffUL);
+            uint h = a ^ (a >> 15); h = unchecked(h * 2246822519u); h ^= h >> 13; return .6f + (h % 1000) / 1000f;
+        }
+        public static int RigMax(PState ps) => 2 + 2 * ps.sv.stage;
+        public static double RigCost(PState ps) => Math.Round(3000 * ps.P.diff * Math.Pow(1.45, ps.sv.rigs.Count));
+        public static int RigMat(PState ps, int id) => GameData.Dirt[ps.pd.cells[id].type].mat;
+        public static float RigRate(PState ps, RigSave r) => GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1);
+        public static float RigBufCap(RigSave r) => r.bag ? 600 : GameData.RigBuf;
+        public static double RigUpCost(PState ps, RigSave r) => Math.Round(2500 * ps.P.diff * Math.Pow(1.9, r.lv));
+        public static double BagCost(PState ps) => Math.Round(60000 * ps.P.diff);
+        public static double FaultFixCost(PState ps, RigSave r) => Math.Round(RigUpCost(ps, r) * .12);
+        public static string RichTxt(float x) => x >= 1.3f ? "reich" : x >= .95f ? "gut" : "mager";
+        public static List<int> PlanetRaws(PState ps) { var set = new HashSet<int>(ps.P.types.Select(t => GameData.Dirt[t.Key].mat)); return GameData.Raw.Where(set.Contains).ToList(); }
+        public static Vector3 RigDock(PState ps, RigSave r) => ps.pd.ToDir(ps.pd.cells[r.cell], 2.7f, 0);
+        public static string RigWhy(PState ps, int id)
+        {
+            var cl = ps.pd.cells[id];
+            if (!IsDone(ps.pid)) return "Erst wenn " + ps.P.name + " komplett sauber ist";
+            if (cl.IsBase || !ps.clean[id]) return "Nur auf sauberen Parzellen außerhalb der Basis"; if (cl.ring < 2) return "Zu nah an der Basis";
+            if (ps.sv.rigs.Any(r => r.cell == id)) return "Hier steht schon ein Bohrturm"; if (ps.sv.outposts.Any(o => o.cell == id)) return "Hier steht ein Außenlager";
+            if (OutpostSites(ps.pid).Contains(id)) return "Dieser Platz ist für ein Außenlager reserviert";
+            if (ps.sv.rigs.Count >= RigMax(ps)) return "Höchstens " + RigMax(ps) + " Bohrtürme auf Basisstufe " + ps.sv.stage + (ps.sv.stage < 5 ? " – die nächste Stufe erlaubt 2 mehr" : "");
+            return "";
+        }
+        public static int BestRigCell(PState ps)
+        {
+            var cnt = new Dictionary<int, int>(); foreach (var r in ps.sv.rigs) { int q = RigMat(ps, r.cell); cnt[q] = (cnt.TryGetValue(q, out var n) ? n : 0) + 1; }
+            int best = -1; float bs = -1; foreach (var cl in ps.pd.cells) { if (cl.IsBase || RigWhy(ps, cl.id) != "") continue; int m = GameData.Dirt[cl.type].mat; float sc = RigRich(ps.pid, cl.id) / (1 + cl.ring * .05f) * (cnt.TryGetValue(m, out var k) ? 1f / (1 + k) : 3); if (sc > bs) { bs = sc; best = cl.id; } }
+            return best;
+        }
+        public static bool BuildRig(int id)
+        {
+            var ps = Cur; if (id < 0) { id = BestRigCell(ps); if (id < 0) return Fail("Keine freie Parzelle"); }
+            string w = RigWhy(ps, id); if (w != "") return Fail(w); double c = RigCost(ps); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c;
+            ps.sv.rigs.Add(new RigSave { cell = id, buf = new float[NM] }); ps.baseVersion++;
+            Toast("Bohrturm fördert " + GameData.Mats[RigMat(ps, id)].name + " (" + RichTxt(RigRich(ps.pid, id)) + "es Vorkommen)", "good"); return true;
+        }
+        public static bool RigUp(int cell)
+        {
+            var ps = Cur; var r = ps.sv.rigs.Find(x => x.cell == cell); if (r == null) return false; if (r.lv >= RIG_MAXLV) return Fail("Höchste Stufe – baue ihn zum Erzbagger um");
+            double c = RigUpCost(ps, r); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c; r.lv++; Toast("Bohrturm Stufe " + r.lv + " · +30 % Förderung", "good"); return true;
+        }
+        public static bool RigToBagger(int cell)
+        {
+            var ps = Cur; var r = ps.sv.rigs.Find(x => x.cell == cell); if (r == null || r.bag) return false; if (r.lv < RIG_MAXLV) return Fail("Erst Bohrturm-Stufe " + RIG_MAXLV);
+            double c = BagCost(ps); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c; r.bag = true; ps.baseVersion++; Toast("Erzbagger – gräbt alle Rohstoffe aus", "good"); return true;
+        }
+        public static bool FixFault(int cell)
+        {
+            var ps = Cur; var r = ps.sv.rigs.Find(x => x.cell == cell); if (r == null || r.faultK == "") return false; double c = FaultFixCost(ps, r); if (S.credits < c) return Fail(Lacks(c));
+            S.credits -= c; r.faultK = ""; r.fixedN++; Toast("Störung behoben", "good"); return true;
+        }
+        static readonly Dictionary<string, string> Faults = new Dictionary<string, string> { { "heat", "Überhitzung" }, { "jam", "Mechanik blockiert" }, { "error", "Steuerung gestört" }, { "storm", "Sturmschaden" }, { "rad", "Strahlenschaden an der Elektronik" } };
+        static readonly HashSet<string> Hot = new HashSet<string> { "venus", "io", "cancri" };
+        public static string FaultName(RigSave r) => Faults.TryGetValue(r.faultK, out var n) ? n : r.faultK;
+        static bool RigFault(PState ps, RigSave r, float dt)
+        {
+            if (r.faultK != "") { r.faultT -= dt; if (r.faultT <= 0) { r.faultK = ""; r.fixedN++; } return r.faultK != ""; }
+            if (!r.busy) return false; bool storm = ps.sv.hzOn > 0 && !ps.shOn; float rf = RadF(ps);
+            double p = dt / 2400.0 * (1 + .15 * r.lv) * (r.bag ? 1.3 : 1) * (storm ? 4 : 1) * (1 + 3 * rf) / Uv("rcare", ps);
+            if (Rng.NextDouble() < p)
+            {
+                string k = rf > 0 && Rng.NextDouble() < rf / (1 + rf) ? "rad" : storm ? "storm" : Hot.Contains(ps.pid) && Rng.NextDouble() < .6 ? "heat" : new[] { "heat", "jam", "error" }[Rng.Next(3)];
+                r.faultK = k; r.faultT = ps.bld.Contains("werkstatt") ? 45 : 120;
+                if (ps.pid == S.planet) Toast((r.bag ? "Erzbagger" : "Bohrturm") + ": " + (k == "storm" && ps.P.storm != null ? ps.P.storm.name + " – " : "") + FaultName(r), "bad");
+                return true;
+            }
+            return false;
+        }
+        static void RigStep(PState ps, RigSave r, float dt, float f)
+        {
+            if (RigFault(ps, r, dt)) { r.busy = false; return; }
+            int m = RigMat(ps, r.cell); float cap = RigBufCap(r);
+            if (Sum(r.buf) < cap - .01f)
+            {
+                float x = Mathf.Min(cap - Sum(r.buf), RigRate(ps, r) * f * dt); var raws = PlanetRaws(ps); var by = raws.Where(q => q != m).ToList();
+                if (r.bag) foreach (var q in raws) r.buf[q] += x / raws.Count;
+                else { r.buf[m] += x * (by.Count > 0 ? .75f : 1); foreach (var q in by) r.buf[q] += x * .25f / by.Count; }
+                r.mined += x; ps.sv.deep += x; r.busy = true;
+            }
+            else r.busy = false;
+            if (r.claim >= 0 && !ps.sv.veh.Any(v => v.id == r.claim && v.rig == r.cell && (v.mode == "toRig" || v.mode == "rigload"))) r.claim = -1;
+        }
+        public static string RigStatus(PState ps, RigSave r) => r.faultK != "" ? "Störung: " + FaultName(r) + " · Techniker in " + Mathf.CeilToInt(r.faultT) + " s" : Sum(r.buf) >= RigBufCap(r) - .5f ? (ps.sv.veh.Count > 0 ? "Lager voll – wartet auf Abholung" : "Lager voll – kein Fahrzeug holt ab") : ps.ef < .6f ? "Bohrt langsam – zu wenig Energie" : "Bohrt" + (r.claim >= 0 ? " · Fahrzeug holt ab" : "");
+        static RigSave PickRig(PState ps, VehSave v, bool idle)
+        {
+            if (ps.sv.rigs.Count == 0) return null; float cap = TankCap(ps, v) - Sum(v.tank); if (cap < 5) return null; RigSave best = null; float bs = 1e9f;
+            foreach (var r in ps.sv.rigs) { if (r.claim >= 0 || r.dc >= 0) continue; float b = Sum(r.buf); if (b < (idle ? Mathf.Min(15, RigBufCap(r) * .05f) : RigBufCap(r) * .7f)) continue; float d = ps.pd.Arc(v.d, RigDock(ps, r)) - b * .05f; if (d < bs) { bs = d; best = r; } }
+            return best;
+        }
 
         // ================= Außenlager =================
         static readonly Dictionary<string, List<int>> Sites = new Dictionary<string, List<int>>();
@@ -849,7 +961,8 @@ namespace LunarCleanup.Core
         static void DroneStep(PState ps, DroneSave dr, float dt, float f)
         {
             var pd = ps.pd; float R = pd.R; var hd = HangarDir(ps); float spd = DroneSpeed(ps) * Mathf.Max(.25f, f) * ps.vm, cap = DroneCap(ps), load = Sum(dr.tank); dr.busy = false;
-            VehSave Tgt() { if (dr.tk == "o") return null; var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null && v.drone == dr.id ? v : null; }
+            RigSave TgtR() { if (dr.tk != "r") return null; var r = ps.sv.rigs.Find(x => x.cell == dr.tgt); return r != null && r.dc == dr.id ? r : null; }
+            VehSave Tgt() { if (dr.tk == "o" || dr.tk == "r") return null; var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null && v.drone == dr.id ? v : null; }
             StSave TgtO() { if (dr.tk != "o") return null; return ps.st.TryGetValue(dr.tko, out var o) && o.dc == dr.id ? o : null; }
             switch (dr.mode)
             {
@@ -866,17 +979,28 @@ namespace LunarCleanup.Core
                         }
                         StSave bo = null;
                         foreach (var o in ps.sv.outposts) { if (o.dc >= 0) continue; float b = Sum(o.buf), fl = b / StBuf(ps, o.id); if (b < cap * .8f || fl < .5f) continue; float sc = fl * 90; if (sc > bs) { bs = sc; bo = o; best = null; } }
-                        if (bo != null) { bo.dc = dr.id; dr.tk = "o"; dr.tko = bo.id; dr.tgt = -1; dr.mode = "out"; }
+                        RigSave br = null;
+                        foreach (var r in ps.sv.rigs) { if (r.dc >= 0 || r.claim >= 0) continue; float b = Sum(r.buf); if (b < Mathf.Min(cap * .8f, RigBufCap(r) * .6f)) continue; float sc = b / RigBufCap(r) * pd.Arc(RigDock(ps, r), hd); if (sc > bs) { bs = sc; br = r; bo = null; best = null; } }
+                        if (br != null) { br.dc = dr.id; dr.tk = "r"; dr.tgt = br.cell; dr.mode = "out"; }
+                        else if (bo != null) { bo.dc = dr.id; dr.tk = "o"; dr.tko = bo.id; dr.tgt = -1; dr.mode = "out"; }
                         else if (best != null) { best.drone = dr.id; dr.tk = "v"; dr.tgt = best.id; dr.mode = "out"; }
                         break;
                     }
                 case "out":
                     {
                         if (dr.tk == "o") { var o = TgtO(); if (o == null) { dr.mode = "back"; dr.tk = "v"; break; } dr.busy = true; if (MoveDir(ref dr.d, StDir(ps, o.id, 'c'), spd * dt, R)) dr.mode = "load"; break; }
+                        if (dr.tk == "r") { var rr = TgtR(); if (rr == null) { dr.mode = "back"; dr.tk = "v"; dr.tgt = -1; break; } dr.busy = true; if (MoveDir(ref dr.d, RigDock(ps, rr), spd * dt, R)) dr.mode = "load"; break; }
                         var v = Tgt(); if (v == null) { dr.mode = "back"; dr.tgt = -1; break; } dr.busy = true; if (MoveDir(ref dr.d, v.d, spd * dt, R)) dr.mode = "load"; break;
                     }
                 case "load":
                     {
+                        if (dr.tk == "r")
+                        {
+                            var rr = TgtR(); if (rr == null) { dr.mode = "back"; dr.tk = "v"; dr.tgt = -1; break; } dr.busy = true; float rb = Sum(rr.buf), ra = Mathf.Min(rb, Mathf.Min(cap - load, GameData.DroneRate * dt));
+                            if (ra > 0 && rb > 0) { float k = ra / rb; for (int m = 0; m < NM; m++) { float x = rr.buf[m] * k; rr.buf[m] -= x; dr.tank[m] += x; } }
+                            if (Sum(rr.buf) < .05f || cap - Sum(dr.tank) < .05f) { rr.dc = -1; dr.tk = "v"; dr.tgt = -1; S.stats.lifts++; dr.sid = DroneStation(ps, null) ?? ""; dr.mode = dr.sid != "" ? "toSt" : "back"; }
+                            break;
+                        }
                         if (dr.tk == "o")
                         {
                             var o = TgtO(); if (o == null) { dr.mode = "back"; dr.tk = "v"; break; } dr.busy = true; float ob = Sum(o.buf), oa = Mathf.Min(ob, Mathf.Min(cap - load, GameData.DroneRate * dt));
@@ -915,7 +1039,7 @@ namespace LunarCleanup.Core
             switch (dr.mode)
             {
                 case "idle": return dr.busy ? "Fliegt zum Hangar" : "Bereit im Hangar";
-                case "out": { if (dr.tk == "o") return "Fliegt zum Außenlager"; var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null ? "Fliegt zu " + GameData.Veh[v.type].name + " #" + v.id : "Fliegt los"; }
+                case "out": { if (dr.tk == "o") return "Fliegt zum Außenlager"; if (dr.tk == "r") return "Fliegt zum Bohrturm"; var v = ps.sv.veh.Find(x => x.id == dr.tgt); return v != null ? "Fliegt zu " + GameData.Veh[v.type].name + " #" + v.id : "Fliegt los"; }
                 case "load": return "Übernimmt Ladung";
                 case "toSt": return "Bringt die Ladung zur " + (ps.bld.Contains(dr.sid) ? GameData.Bld[dr.sid].name : "Station");
                 case "stdrop": return dr.wt > 0 && !string.IsNullOrEmpty(dr.sid) ? GameData.Bld[dr.sid].name + " ist voll – wartet" : "Entlädt in die " + (string.IsNullOrEmpty(dr.sid) ? "Station" : GameData.Bld[dr.sid].name);
@@ -934,7 +1058,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
+            switch (v.mode) { case "seek": return "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
@@ -1195,7 +1319,7 @@ namespace LunarCleanup.Core
             var sv = ps.sv; var storm = StormStep(ps, dt); sv.dayT = DayT(ps) + dt; ps.solar = ps.P.solar * (storm?.solar ?? 1) * DayF(ps);
             float demand = 0, vE = Uv("veff", ps) * (ResDone("motor") ? .7f : 1);
             foreach (var v in sv.veh) { var T = GameData.Veh[v.type]; if (T.batt > 0) { if (v.charging) demand += T.energy * 2.5f * vE; } else if (v.busy) demand += T.energy * vE; }
-            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4; foreach (var L in sv.lifters) if (L.mode != "idle") demand += 2 * vE; foreach (var o in sv.outposts) if (o.busy) demand += .2f;
+            foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4; foreach (var L in sv.lifters) if (L.mode != "idle") demand += 2 * vE; foreach (var o in sv.outposts) if (o.busy) demand += .2f; foreach (var r in sv.rigs) if (r.busy) demand += GameData.RigEnergy * Uv("meff", ps);
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach[m].cur >= 0) demand += GameData.Mach[m].x * Uv("meff", ps);
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && ps.belts[b.id].Count > 0) demand += .1f * Uv("beff", ps);
             ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps);
@@ -1217,6 +1341,7 @@ namespace LunarCleanup.Core
             foreach (var v in ps.sv.veh.ToArray()) VehStep(ps, v, dt, f);
             if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
+            foreach (var r in ps.sv.rigs) { RigStep(ps, r, dt, f); if (r.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == r.dc && d.tk == "r" && d.tgt == r.cell && (d.mode == "out" || d.mode == "load")))) r.dc = -1; }
             foreach (var o in ps.sv.outposts) { OutpostStep(ps, o, dt, f); if (o.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == o.dc && d.tk == "o" && d.tko == o.id && (d.mode == "out" || d.mode == "load")))) o.dc = -1; }
             foreach (var v in ps.sv.veh) if (v.drone >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.tgt == v.id && d.id == v.drone))) v.drone = -1;
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;

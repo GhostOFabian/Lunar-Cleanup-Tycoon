@@ -25,6 +25,7 @@ namespace LunarCleanup.UI
                 case "research": title = "Forschung"; Research(h); break;
                 case "hazard": title = "Gefahren"; Hazard(h); break;
                 case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); break;
+                case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -37,7 +38,7 @@ namespace LunarCleanup.UI
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
         }
         /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Tiefenabbau), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
-        static readonly string[] NotPorted = { "rcare", "rigrate" };
+        static readonly string[] NotPorted = { };
         static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
 
         static void Vehicles(Hud h)
@@ -119,6 +120,14 @@ namespace LunarCleanup.UI
                 var B = GameData.Bld[id]; if (ps.bld.Contains(id) || B.stage > s + 1) continue; string key = id;
                 h.Row(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key));
             }
+            if (Game.IsDone(ps.pid))
+            {
+                h.Section("Tiefenabbau");
+                h.Note(ps.P.name + " ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe in ihr eigenes Lager, deine Fahrzeuge holen sie dort ab. Jede Basisstufe erlaubt 2 Bohrtürme mehr. Tippe eine saubere Parzelle an, um gezielt zu bauen.");
+                h.Row("Bohrtürme", () => ps.sv.rigs.Count + " / " + Game.RigMax(ps) + " · Förderung " + Dec(ps.sv.rigs.Sum(r => Game.RigRate(ps, r)) * 60, 0) + " E pro Minute",
+                    () => ps.sv.rigs.Count >= Game.RigMax(ps) ? "Voll" : "Bauen " + Cr(Game.RigCost(ps)), () => ps.sv.rigs.Count < Game.RigMax(ps) && Game.S.credits >= Game.RigCost(ps), () => Game.BuildRig(-1));
+                foreach (var r in ps.sv.rigs) { var rr = r; h.Row((r.bag ? "Erzbagger" : "Bohrturm Stufe " + r.lv) + " · " + GameData.Mats[Game.RigMat(ps, r.cell)].name, () => Game.RigStatus(ps, rr), () => "Öffnen", () => true, () => h.OpenSheet("rig", rr.cell.ToString()), false); }
+            }
             if (Game.HasLab()) h.Row("Forschung", () => Game.ResActive != null ? "Läuft: " + Game.ResActive.name + " · " + Mathf.FloorToInt(Game.S.resT / Game.ResActive.time * 100) + " %" : "Kein Projekt aktiv", () => "Öffnen", () => true, () => h.OpenSheet("research"), false);
             h.Section("Steht schon");
             h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
@@ -162,11 +171,33 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub, Tiefenabbau).");
+            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
         static string FmtTime(float s) { int t = Mathf.Max(0, Mathf.CeilToInt(s)); return t >= 60 ? t / 60 + " min " + (t % 60).ToString("00") + " s" : t + " s"; }
+        static void Rig(Hud h, int cell)
+        {
+            var r = ps.sv.rigs.Find(x => x.cell == cell); int m = Game.RigMat(ps, cell); float rich = Game.RigRich(ps.pid, cell); var raws = Game.PlanetRaws(ps);
+            if (r != null)
+            {
+                h.Section(r.bag ? "Erzbagger" : "Bohrturm · Stufe " + r.lv + " / " + Game.RIG_MAXLV);
+                h.Note((r.bag ? "Gräbt alle Rohstoffe des Planeten zu gleichen Teilen aus. " : "") + "Fördert " + GameData.Mats[m].name + " aus der Tiefe und sammelt es im eigenen Lager. Deine Fahrzeuge holen es ab, sobald sie nichts zu reinigen haben oder das Lager zu 70 % voll ist. Braucht Strom – auch nachts.");
+                h.Row("Status", () => Game.RigStatus(ps, r));
+                h.Row("Vorkommen", () => Game.RichTxt(rich) + " · ×" + Dec(rich, 2) + (raws.Count > 1 && !r.bag ? " · 75 % " + GameData.Mats[m].name + ", 25 % " + string.Join(", ", raws.Where(q => q != m).Select(q => GameData.Mats[q].name)) : ""));
+                h.Row("Förderung", () => Dec(Game.RigRate(ps, r) * 60, 0) + " pro Minute · Lager " + Game.Fmt(Game.Sum(r.buf)) + " / " + Game.RigBufCap(r).ToString("0") + " E · gefördert " + Game.Fmt(r.mined));
+                h.Row("Störungen", () => r.faultK != "" ? Game.FaultName(r) + " – Techniker in " + Mathf.CeilToInt(r.faultT) + " s" : "keine · bisher " + r.fixedN, () => "Beheben " + Cr(Game.FaultFixCost(ps, r)), () => r.faultK != "" && Game.S.credits >= Game.FaultFixCost(ps, r), () => Game.FixFault(cell));
+                if (!r.bag && r.lv < Game.RIG_MAXLV) h.Row("Bohrturm verbessern", () => "Stufe " + r.lv + " → " + (r.lv + 1) + " · +30 % Förderung. Auf Stufe " + Game.RIG_MAXLV + " kannst du ihn zum Erzbagger umbauen.", () => Cr(Game.RigUpCost(ps, r)), () => Game.S.credits >= Game.RigUpCost(ps, r), () => Game.RigUp(cell));
+                else if (!r.bag) h.Row("Zum Erzbagger umbauen", () => "×2,5 Förderung, alle Rohstoffe zu gleichen Teilen, doppeltes Lager.", () => Cr(Game.BagCost(ps)), () => Game.S.credits >= Game.BagCost(ps), () => Game.RigToBagger(cell));
+                foreach (var id in new[] { "rcare", "rigrate" }) if (UpVisible(GameData.Up[id])) UpRow(h, id);
+                return;
+            }
+            h.Section("Tiefenabbau");
+            string w = Game.RigWhy(ps, cell);
+            h.Note(w != "" ? w + "." : "Tiefenvorkommen: " + Game.RichTxt(rich) + " (×" + Dec(rich, 2) + ") " + GameData.Mats[m].name + ". Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.");
+            if (w == "") h.Row("Bohrturm bauen", () => ps.sv.rigs.Count + " von " + Game.RigMax(ps), () => Cr(Game.RigCost(ps)), () => Game.S.credits >= Game.RigCost(ps), () => { if (Game.BuildRig(cell)) h.OpenSheet("rig", cell.ToString()); });
+        }
+
         static void Outpost(Hud h, int cell)
         {
             var o = ps.sv.outposts.Find(x => x.cell == cell);
@@ -271,7 +302,7 @@ namespace LunarCleanup.UI
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.8. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Tiefenabbau, Sternenstaub.");
+            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.9. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Meteoritenschauer, Ausbaustufen, Sternenstaub-Neustart.");
         }
 
         static void Building(Hud h, string id)

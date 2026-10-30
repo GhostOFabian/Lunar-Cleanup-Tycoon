@@ -21,6 +21,12 @@ namespace LunarCleanup.EditorTools
             EditorApplication.delayCall += () => { EditorPrefs.SetBool(Ver, true); Build(); };
         }
 
+        const string TestKey = "LunarCleanup.TestMode";
+        [MenuItem("Lunar Cleanup/Testmodus (eigener Spielstand + Test-Tasten)")]
+        static void ToggleTest() { bool on = !EditorPrefs.GetBool(TestKey, false); EditorPrefs.SetBool(TestKey, on); Debug.Log("Lunar Cleanup: Testmodus " + (on ? "AN – getrennter Test-Spielstand, Tasten F5–F10 aktiv" : "AUS – dein normaler Spielstand")); }
+        [MenuItem("Lunar Cleanup/Testmodus (eigener Spielstand + Test-Tasten)", true)]
+        static bool ToggleTestCheck() { Menu.SetChecked("Lunar Cleanup/Testmodus (eigener Spielstand + Test-Tasten)", EditorPrefs.GetBool(TestKey, false)); return !EditorApplication.isPlaying; }
+
         [MenuItem("Lunar Cleanup/Build Prototype")]
         public static void Build()
         {

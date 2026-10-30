@@ -35,6 +35,9 @@ namespace LunarCleanup.Gameplay
                 try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }
             } // Laternen, Scheinwerfer, Saugkopf bei Nacht
             EnhancedTouchSupport.Enable();
+#if UNITY_EDITOR
+            Game.TestMode = UnityEditor.EditorPrefs.GetBool("LunarCleanup.TestMode", false);
+#endif
             Game.Init(); MeshKit.Init();
             cam = Camera.main; if (!cam) { var cg = new GameObject("Main Camera"); cg.tag = "MainCamera"; cam = cg.AddComponent<Camera>(); }
             cam.nearClipPlane = .3f; cam.farClipPlane = 6000; cam.fieldOfView = 50;
@@ -107,15 +110,15 @@ namespace LunarCleanup.Gameplay
         }
 
 #if UNITY_EDITOR
-        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % säubern, F9 Vierteltag vorspulen, F10 Sturm in 25 s.
+        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % (nochmal: 100 %) säubern, F9 Vierteltag vorspulen, F10 Sturm in 25 s.
         void DevKeys()
         {
-            var kb = Keyboard.current; if (kb == null) return;
+            var kb = Keyboard.current; if (kb == null || !Game.TestMode) return; // Test-Tasten nur im Testmodus (eigener Spielstand)
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
-            if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(.81f);
+            if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);
             if (kb.f7Key.wasPressedThisFrame && !offlineRunning) StartCoroutine(Offline(8 * 3600));
         }
 #endif
@@ -206,6 +209,7 @@ namespace LunarCleanup.Gameplay
             if (best != null) { hud.OpenSheet("building", best); return; }
             int c = ps.pd.CellOf(dir);
             if (Game.OutpostSites(ps.pid).Contains(c) && (Game.ResDone("drones") || ps.sv.outposts.Any(o => o.cell == c))) { hud.OpenSheet("outpost", c.ToString()); return; }
+            if (ps.sv.rigs.Any(r => r.cell == c) || (Game.IsDone(ps.pid) && !ps.pd.cells[c].IsBase && ps.clean[c])) { hud.OpenSheet("rig", c.ToString()); return; }
             string why = Game.FrontWhy(ps, c);
             if (why != "" && why != "Basisgelände" && !Game.Workable(ps, c)) Game.Toast(why);
         }
