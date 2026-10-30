@@ -16,6 +16,7 @@ namespace LunarCleanup.UI
 
     public static class UiKit
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { Sprites.Clear(); Display = DisplaySemi = Body = BodyBold = null; }
         public static TMP_FontAsset Display, DisplaySemi, Body, BodyBold;
         static readonly Dictionary<string, Sprite> Sprites = new Dictionary<string, Sprite>();
 

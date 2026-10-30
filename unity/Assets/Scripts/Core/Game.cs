@@ -33,6 +33,7 @@ namespace LunarCleanup.Core
 
     public static class Game
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnPlanetChanged = null; Offline = false; }
         public static SaveData S;
         public static Dictionary<string, PState> P = new Dictionary<string, PState>();
         public static int NM;

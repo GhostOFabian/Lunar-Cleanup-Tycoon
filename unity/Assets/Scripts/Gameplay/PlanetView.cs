@@ -8,6 +8,7 @@ namespace LunarCleanup.Gameplay
 {
     public class PlanetView : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
         const int TILE = 64, SUB = 3;
         class Chunk { public Texture2D tex; public Color32[] px; public int per, size; public bool dirty; public Material mat; }
         PState ps; PlanetData pd; Theme th;

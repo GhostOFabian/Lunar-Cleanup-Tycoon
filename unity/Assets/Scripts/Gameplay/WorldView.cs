@@ -9,6 +9,7 @@ namespace LunarCleanup.Gameplay
 {
     public class WorldView : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { beltTex = null; NightF = 0; MapMode = false; }
         PState ps; PlanetData pd;
         Transform baseRoot, beltRoot, vehRoot, skyRoot;
         readonly Dictionary<string, Models.BuildingParts> blds = new Dictionary<string, Models.BuildingParts>();
@@ -47,7 +48,7 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
-            blds.Clear(); beltCum.Clear(); beltMats.Clear();
+            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear();
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             foreach (var id in GameData.BOrder)
             {
@@ -99,27 +100,54 @@ namespace LunarCleanup.Gameplay
                 if (bp.lamp) bp.lamp.SetColor("_EmissionColor", fault ? (Mathf.Sin(Time.time * 10) > 0 ? new Color(1, .16f, .16f) * 3 : Color.black) : r.busy ? new Color(.25f, .9f, .54f) * 2.5f : new Color(1, .75f, .3f) * 1.5f);
             }
         }
-        readonly List<(LineRenderer l, StSave o)> pipes = new List<(LineRenderer, StSave)>();
+        readonly List<(LineRenderer l, StSave o)> pipes = new List<(LineRenderer, StSave)>(); readonly List<(Material m, StSave o)> pipeLamps = new List<(Material, StSave)>();
+        /// <summary>Senkrechtes Rohrstück aus dem Boden mit Bogen, das seitlich in die Gebäudewand führt.</summary>
+        void Riser(Vector3 at, Vector3 wallAt, Material steel)
+        {
+            float h = 1.1f; var up = at; var p0 = at * (pd.R - .2f); var p1 = at * (pd.R + h);
+            var r = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .17f, .17f, h + .2f, 12); r.transform.position = (p0 + p1) / 2; r.transform.rotation = Quaternion.FromToRotation(Vector3.up, up);
+            var w = wallAt * (pd.R + h); var dir = w - p1; float len = dir.magnitude;
+            if (len > .05f) { var hz = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .17f, .17f, len, 12); hz.transform.position = (p1 + w) / 2; hz.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir.normalized); }
+            var elbow = MeshKit.Ball(baseRoot, steel, Vector3.zero, .36f); elbow.transform.position = p1;
+            var flange = MeshKit.Cyl(baseRoot, MeshKit.Mat(GameData.Hex("#ffbf4d"), .3f, .5f), Vector3.zero, .26f, .26f, .08f, 14); flange.transform.position = at * (pd.R + .05f); flange.transform.rotation = Quaternion.FromToRotation(Vector3.up, up);
+        }
+        /// <summary>Unterirdische Trasse: dunkler Streifen auf dem Boden und alle ~9 m ein Schachtdeckel mit Leuchte.</summary>
+        void Trench(Vector3 a, Vector3 b, Material dark, Material steel, Material lamp)
+        {
+            float arc = pd.Arc(a, b); int n = Mathf.Max(6, Mathf.CeilToInt(arc / 1.2f)); var v = new List<Vector3>(); var t = new List<int>();
+            for (int i = 0; i <= n; i++)
+            {
+                var p = Vector3.Slerp(a, b, i / (float)n).normalized; var q = Vector3.Slerp(a, b, Mathf.Min(1, (i + .5f) / n)).normalized; var tan = (q - p); if (i == n) tan = p - Vector3.Slerp(a, b, (i - .5f) / n).normalized;
+                var side = Vector3.Cross(p, tan.normalized).normalized * .32f; v.Add(p * (pd.R + .035f) - side); v.Add(p * (pd.R + .035f) + side);
+                if (i < n) { int k = i * 2; t.AddRange(new[] { k, k + 1, k + 2, k + 1, k + 3, k + 2, k, k + 2, k + 1, k + 1, k + 2, k + 3 }); }
+            }
+            var mesh = new Mesh { name = "Trasse" }; mesh.SetVertices(v); mesh.SetTriangles(t, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var g = new GameObject("Pipeline-Trasse"); g.transform.SetParent(baseRoot, false); g.AddComponent<MeshFilter>().sharedMesh = mesh; var mr = g.AddComponent<MeshRenderer>(); mr.sharedMaterial = dark; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            for (float s = 4; s < arc - 3; s += 9)
+            {
+                var p = Vector3.Slerp(a, b, s / arc).normalized;
+                var cap = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .38f, .42f, .08f, 16); cap.transform.position = p * (pd.R + .04f); cap.transform.rotation = Quaternion.FromToRotation(Vector3.up, p);
+                var l = MeshKit.Ball(baseRoot, lamp, Vector3.zero, .14f); l.transform.position = p * (pd.R + .1f);
+            }
+        }
         void BuildOutposts()
         {
-            pipes.Clear(); var sites = Game.OutpostSites(ps.pid);
+            pipes.Clear(); pipeLamps.Clear(); var sites = Game.OutpostSites(ps.pid);
             foreach (int cid in sites)
             {
                 var cl = pd.cells[cid]; var o = ps.sv.outposts.Find(x => x.cell == cid); var d = cl.c;
                 if (o != null)
                 {
                     var bp = Models.Outpost(ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = d * pd.R; bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, d);
-                    // Pipeline auf Stelzen bis zum Rohstofflager
-                    var a = pd.ToDir(cl, 1.6f, -2.2f); var b = ps.lay.pos.ContainsKey("roh") ? pd.PlanDir(ps.lay.pos["roh"]) : pd.cells[pd.baseCell].c; float arc = pd.Arc(a, b); int n = Mathf.Max(8, Mathf.CeilToInt(arc / 2));
-                    var lg = new GameObject("Pipeline"); lg.transform.SetParent(baseRoot, false); var lr = lg.AddComponent<LineRenderer>(); lr.useWorldSpace = true; lr.positionCount = n + 1; lr.widthMultiplier = .42f; lr.numCapVertices = 4;
-                    lr.sharedMaterial = MeshKit.Unlit(GameData.Hex("#8a93a3")); lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    var post = MeshKit.Mat(GameData.Hex("#4a525e"), .5f, .4f);
-                    for (int i = 0; i <= n; i++)
-                    {
-                        var p = Vector3.Slerp(a, b, i / (float)n).normalized; float h = i == n ? 4.6f : 1.9f; lr.SetPosition(i, p * (pd.R + h));
-                        if (i % 3 == 1 && i < n - 1) { var pg = MeshKit.Cyl(baseRoot, post, Vector3.zero, .07f, .09f, 1.9f, 8); pg.transform.position = p * (pd.R + .95f); pg.transform.rotation = Quaternion.FromToRotation(Vector3.up, p); }
-                    }
-                    pipes.Add((lr, o));
+                    // Pipeline unterirdisch: kommt seitlich aus dem Pumpenhaus, läuft unter der Oberfläche (sichtbar als Trasse mit Schachtdeckeln)
+                    // und steigt erst neben dem Rohstofflager wieder auf, wo sie seitlich in den Silo-Sockel führt.
+                    var pump = pd.ToDir(cl, 2.5f, -2.2f); var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
+                    var pl = pd.PlanLocal(pump); var toOut = (pl.magnitude > 1e3f ? Vector2.right : pl - roh); if (toOut.sqrMagnitude < 1e-4f) toOut = Vector2.right; toOut.Normalize();
+                    float rfp = GameData.Bld["roh"].fp; var inlet = pd.PlanDir(roh + toOut * (rfp + .9f)); var wall = pd.PlanDir(roh + toOut * (rfp * .8f));
+                    var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(GameData.Hex("#2b2f36"), .1f, .2f);
+                    var lampM = new Material(MeshKit.Glow(GameData.Hex("#6ff2d2"), 1.5f));
+                    Riser(pump, pd.ToDir(cl, 1.6f, -2.2f), steel); Riser(inlet, wall, steel);
+                    Trench(pump, inlet, dark, steel, lampM); pipeLamps.Add((lampM, o));
                 }
                 else if (Game.ResDone("outpost") || Game.ResDone("drones"))
                 {
@@ -142,33 +170,102 @@ namespace LunarCleanup.Gameplay
             beltTex.SetPixels32(px); beltTex.Apply(true); return beltTex;
         }
 
+        /// <summary>Bandhöhe über dem Boden: so hoch, dass Rahmen und Stützen komplett unter dem Band liegen.</summary>
+        public static float BeltDeck(BeltDef b) => b.h + .55f;
+        const float BW = .55f; // halbe Bandbreite
+
+        /// <summary>Förderband als durchgehendes Profil entlang der Kurve: Lauffläche, Seitenbanden, Rahmen – alles folgt exakt derselben Linie.</summary>
         void BuildBelt(BeltDef b)
         {
-            var rp = b.rp; int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude; beltCum[b.id] = cum;
-            var v = new List<Vector3>(); var nn = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>(); float w = .55f;
-            for (int i = 0; i < n; i++)
-            {
-                Vector2 dir = (i < n - 1 ? rp[i + 1] - rp[i] : rp[i] - rp[i - 1]).normalized; if (i > 0 && i < n - 1) dir = ((rp[i + 1] - rp[i]).normalized + (rp[i] - rp[i - 1]).normalized).normalized;
-                var nrm = new Vector2(-dir.y, dir.x);
-                foreach (float s in new[] { -1f, 1f }) { var d = pd.PlanDir(rp[i] + nrm * w * s); v.Add(d * (pd.R + b.h + .12f)); nn.Add(d); uv.Add(new Vector2(s < 0 ? 0 : 1, cum[i] / 1.2f)); }
-            }
-            for (int i = 0; i < n - 1; i++) { int a = i * 2; t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
-            var mesh = new Mesh { name = b.id }; mesh.SetVertices(v); mesh.SetNormals(nn); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
-            var tri = mesh.triangles; for (int i = 0; i < tri.Length; i += 3) { var A = v[tri[i]]; var B = v[tri[i + 1]]; var C = v[tri[i + 2]]; if (Vector3.Dot(Vector3.Cross(B - A, C - A), A) < 0) { int x = tri[i + 1]; tri[i + 1] = tri[i + 2]; tri[i + 2] = x; } }
-            mesh.triangles = tri; mesh.RecalculateBounds();
-            var go = new GameObject(b.id); go.transform.SetParent(beltRoot, false); go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var rp0 = b.rp; int n0 = rp0.Length; if (n0 < 2) return; var cum0 = new float[n0]; for (int i = 1; i < n0; i++) cum0[i] = cum0[i - 1] + (rp0[i] - rp0[i - 1]).magnitude; beltCum[b.id] = cum0;
+            // Band endet an der Gebäudewand statt durch das Gebäude zu laufen
+            float L0 = cum0[n0 - 1], s0 = 0, s1 = L0;
+            float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp * .92f : 0;
+            float ef = Edge(b.from), et = Edge(b.to);
+            for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= ef) { s0 = q; break; } }
+            for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= et) { s1 = q; break; } }
+            beltTrim[b.id] = new Vector2(s0, s1);
+            var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
+            float H = BeltDeck(b);
+            // Lauffläche (Textur läuft mit)
+            var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true);
+            var go = new GameObject(b.id); go.transform.SetParent(beltRoot, false); go.AddComponent<MeshFilter>().sharedMesh = deck;
             var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", BeltTex()); m.SetFloat("_Smoothness", .3f); m.SetFloat("_Metallic", .2f);
             go.AddComponent<MeshRenderer>().sharedMaterial = m; beltMats.Add(m);
-            // Seitenwangen und Stützen
-            var rail = MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .2f, .4f);
-            float L = cum[n - 1];
-            for (float s = .8f; s < L - .4f; s += 2.6f)
+            var rail = MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var frame = MeshKit.Mat(GameData.Hex("#2f3540"), .6f, .45f);
+            // Seitenbanden: liegen genau an den Bandkanten und folgen jeder Kurve
+            AddPart(Extrude(rp, cum, Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false), gold, "Bande links");
+            AddPart(Extrude(rp, cum, Box2(BW, BW + .09f, H - .06f, H + .2f), true, false), gold, "Bande rechts");
+            // Rahmen unter dem Band
+            AddPart(Extrude(rp, cum, Box2(-BW - .06f, BW + .06f, H - .32f, H - .02f), true, false), frame, "Rahmen");
+            // Stützen: enden unter dem Rahmen, nie im Band
+            var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); float L = cum[n - 1], top = H - .32f;
+            for (float s = 1f; s < L - .6f; s += 3f)
             {
-                var p = PointAt(rp, cum, s, out var tan); var d = pd.PlanDir(p); float h = b.h + .1f;
-                var g = MeshKit.Box(beltRoot, post, Vector3.zero, new Vector3(.12f, h, .12f)); g.transform.position = d * (pd.R + h / 2); g.transform.rotation = PlanRot(d, 0);
-                var nrm = new Vector2(-tan.y, tan.x);
-                foreach (float sd in new[] { -1f, 1f }) { var dd = pd.PlanDir(p + nrm * (w + .06f) * sd); var r = MeshKit.Box(beltRoot, sd < 0 ? rail : gold, Vector3.zero, new Vector3(.1f, .18f, 2.6f)); r.transform.position = dd * (pd.R + b.h + .16f); r.transform.rotation = Quaternion.LookRotation(Tangent(d, tan), dd); }
+                var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x);
+                foreach (float sd in new[] { -1f, 1f })
+                {
+                    var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var g = MeshKit.Cyl(beltRoot, post, Vector3.zero, .06f, .07f, top, 8); g.transform.position = d * (pd.R + top / 2); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+                    var f = MeshKit.Cyl(beltRoot, rail, Vector3.zero, .14f, .16f, .06f, 10); f.transform.position = d * (pd.R + .03f); f.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+                }
+                var cross = MeshKit.Box(beltRoot, rail, Vector3.zero, new Vector3((BW - .1f) * 2 + .12f, .08f, .1f)); var dc = pd.PlanDir(p); cross.transform.position = dc * (pd.R + top * .45f); cross.transform.rotation = Quaternion.LookRotation(Tangent(dc, tan), dc);
             }
+            // Umlenkrollen an den Enden
+            foreach (int e in new[] { 0, n - 1 })
+            {
+                var tan = (e == 0 ? rp[1] - rp[0] : rp[n - 1] - rp[n - 2]).normalized; var d = pd.PlanDir(rp[e]);
+                var r = MeshKit.Cyl(beltRoot, rail, Vector3.zero, .16f, .16f, BW * 2 + .04f, 14); r.transform.position = d * (pd.R + H - .14f); r.transform.rotation = Quaternion.LookRotation(Tangent(d, tan), d) * Quaternion.Euler(0, 0, 90);
+            }
+        }
+        readonly Dictionary<string, Vector2> beltTrim = new Dictionary<string, Vector2>();
+        static Vector2[] SubPath(Vector2[] rp, float[] cum, float s0, float s1)
+        {
+            var o = new List<Vector2> { PointAt(rp, cum, s0, out _) }; for (int i = 1; i < rp.Length - 1; i++) if (cum[i] > s0 && cum[i] < s1) o.Add(rp[i]); o.Add(PointAt(rp, cum, s1, out _));
+            return o.ToArray();
+        }
+        static Vector2[] Box2(float x0, float x1, float y0, float y1) => new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y1), new Vector2(x0, y1) };
+        void AddPart(Mesh mesh, Material mat, string name) { var g = new GameObject(name); g.transform.SetParent(beltRoot, false); g.AddComponent<MeshFilter>().sharedMesh = mesh; g.AddComponent<MeshRenderer>().sharedMaterial = mat; }
+        /// <summary>Zieht ein Querschnitt-Profil (x = seitlich, y = Höhe) entlang der Bandlinie. closed = geschlossener Körper mit Endkappen.</summary>
+        Mesh Extrude(Vector2[] rp, float[] cum, Vector2[] prof, bool closed, bool uvAlong)
+        {
+            int n = rp.Length, k = prof.Length; var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+            var frames = new (Vector3 o, Vector3 side, Vector3 up)[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 dir = (i < n - 1 ? rp[i + 1] - rp[i] : rp[i] - rp[i - 1]).normalized; float miter = 1;
+                if (i > 0 && i < n - 1) { var a = (rp[i] - rp[i - 1]).normalized; var c = (rp[i + 1] - rp[i]).normalized; dir = (a + c).normalized; miter = 1 / Mathf.Max(.5f, Vector2.Dot(dir, a)); }
+                var nrm2 = new Vector2(-dir.y, dir.x); var d = pd.PlanDir(rp[i]); var side = (pd.PlanDir(rp[i] + nrm2 * .5f) - d); side = (side - d * Vector3.Dot(side, d)).normalized * miter;
+                frames[i] = (d * pd.R, side, d);
+            }
+            int segs = closed ? k : k - 1;
+            for (int j = 0; j < segs; j++)
+            {
+                var p0 = prof[j]; var p1 = prof[(j + 1) % k]; int b0 = v.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    var f = frames[i];
+                    v.Add(f.o + f.side * p0.x + f.up * p0.y); v.Add(f.o + f.side * p1.x + f.up * p1.y);
+                    float along = cum[i] / 1.2f; uv.Add(uvAlong ? new Vector2(0, along) : new Vector2(0, cum[i])); uv.Add(uvAlong ? new Vector2(1, along) : new Vector2(1, cum[i]));
+                }
+                for (int i = 0; i < n - 1; i++) { int a = b0 + i * 2; t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
+            }
+            if (closed)
+                foreach (int e in new[] { 0, n - 1 })
+                {
+                    var f = frames[e]; int c0 = v.Count; foreach (var p in prof) { v.Add(f.o + f.side * p.x + f.up * p.y); uv.Add(Vector2.zero); }
+                    for (int j = 1; j < k - 1; j++) t.AddRange(new[] { c0, c0 + j, c0 + j + 1 });
+                }
+            var mesh = new Mesh { name = "Band", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 }; mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            // Außenseiten nach außen drehen (Profil-Umlaufrichtung ist beliebig)
+            return DoubleSided(mesh);
+        }
+        static Mesh DoubleSided(Mesh m)
+        {
+            var v = m.vertices; var uv = m.uv; var t = m.triangles; int n = v.Length; var v2 = new Vector3[n * 2]; var uv2 = new Vector2[n * 2]; var t2 = new int[t.Length * 2];
+            for (int i = 0; i < n; i++) { v2[i] = v[i]; v2[i + n] = v[i]; uv2[i] = uv[i]; uv2[i + n] = uv[i]; }
+            for (int i = 0; i < t.Length; i += 3) { t2[i] = t[i]; t2[i + 1] = t[i + 1]; t2[i + 2] = t[i + 2]; t2[t.Length + i] = t[i] + n; t2[t.Length + i + 1] = t[i + 2] + n; t2[t.Length + i + 2] = t[i + 1] + n; }
+            var r = new Mesh { name = m.name, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 }; r.vertices = v2; r.uv = uv2; r.triangles = t2; r.RecalculateNormals(); r.RecalculateBounds(); return r;
         }
         Vector3 Tangent(Vector3 d, Vector2 tan) { var a = pd.PlanDir(Vector2.zero); var c = pd.cells[pd.baseCell]; var t3 = c.e1 * tan.x + c.e2 * tan.y; return (t3 - d * Vector3.Dot(t3, d)).normalized; }
         static Vector2 PointAt(Vector2[] rp, float[] cum, float s, out Vector2 tan)
@@ -290,7 +387,7 @@ namespace LunarCleanup.Gameplay
             if (builtFor != Game.S.planet) return;
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
-            foreach (var (l, o) in pipes) if (l) { var c = o.busy ? Color.Lerp(GameData.Hex("#8a93a3"), GameData.Hex("#6ff2d2"), .5f + .5f * Mathf.Sin(Time.time * 6)) : GameData.Hex("#8a93a3"); l.startColor = l.endColor = c; }
+            foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
             UpdateSun(); UpdateStorm(); DrawItems(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
@@ -317,9 +414,10 @@ namespace LunarCleanup.Gameplay
                 if (!beltCum.TryGetValue(b.id, out var cum) || !ps.belts.TryGetValue(b.id, out var items)) continue;
                 foreach (var it in items)
                 {
-                    var p = PointAt(b.rp, cum, it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1], out var tan); var d = pd.PlanDir(p);
+                    float sp = it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1]; if (beltTrim.TryGetValue(b.id, out var tr) && (sp < tr.x - .2f || sp > tr.y + .2f)) continue; // im Gebäude: unsichtbar
+                    var p = PointAt(b.rp, cum, sp, out var tan); var d = pd.PlanDir(p);
                     var M = GameData.Mats[it.m]; Vector3 sc = M.shape == "brick" ? new Vector3(.3f, .2f, .5f) : M.shape == "ingot" ? new Vector3(.22f, .16f, .55f) : M.shape == "gem" ? new Vector3(.3f, .3f, .3f) : M.shape == "barrel" ? new Vector3(.32f, .4f, .32f) : new Vector3(.42f, .34f, .42f);
-                    var mx = Matrix4x4.TRS(d * (pd.R + b.h + .14f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
+                    var mx = Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + .02f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
                     if (!itemMx.TryGetValue(it.m, out var list)) { list = new List<Matrix4x4>(); itemMx[it.m] = list; }
                     list.Add(mx);
                 }

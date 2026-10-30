@@ -7,6 +7,8 @@ namespace LunarCleanup.Gameplay
 {
     public static class MeshKit
     {
+        // Unity 6 lädt beim Play-Start die Skripte nicht neu – zwischengespeicherte Meshes/Materialien aus der letzten Runde sind dann zerstört.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { Mats.Clear(); MeshCache.Clear(); glowTex = null; Cube = Sphere = Quad = null; }
         static readonly Dictionary<string, Material> Mats = new Dictionary<string, Material>();
         static Shader lit, unlit;
         public static Mesh Cube, Sphere, Quad;
