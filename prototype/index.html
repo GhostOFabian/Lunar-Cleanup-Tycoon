@@ -445,6 +445,9 @@ Object.assign(PLANETS,{
 const PORDER=['moon','mars','europa','titan','io','venus','ganymed','enceladus','triton','pluto','eris','sedna','proxima','trappist','kepler','cancri','gliese','poltergeist'];
 for(const t in DIRT){const D=DIRT[t];if(D.amt==null)D.amt=Math.round(D.a*100);}
 // Planetengröße: seit v6.4 wird jeder Planet größer (freq). Bereits begonnene Planeten behalten ihre alte Größe (sp.freq), damit kein Spielstand kaputtgeht.
+// Flüssige Flächen (seit v6.4): Bodenfahrzeuge können sie weder befahren noch reinigen – nur von Hand oder mit Schwebefahrzeugen.
+const LIQ={water:{name:'Wasser',col:'#2b78c2',deep:'#0d2a55',glow:0},lava:{name:'Lava',col:'#ff6a1f',deep:'#5a0e02',glow:1},acid:{name:'Säure',col:'#a6e83a',deep:'#2a4a08',glow:.45},methan:{name:'Methan',col:'#c9913f',deep:'#3a2208',glow:0}};
+const PLIQ={europa:['water',.08],titan:['methan',.14],io:['lava',.12],venus:['acid',.1],enceladus:['water',.1],proxima:['water',.1],trappist:['water',.24],kepler:['water',.18],cancri:['lava',.18],gliese:['water',.15],poltergeist:['acid',.12]};
 const OLD_FREQ={moon:5,mars:7,europa:10,titan:12,io:13,venus:14,ganymed:15,enceladus:16,triton:17,pluto:18,eris:15,sedna:14,proxima:17,trappist:16,kepler:19,cancri:15,gliese:18,poltergeist:16};let FREQ_CTX=null;
 const pfreq=pid=>{const sp=(FREQ_CTX||(typeof S!=='undefined'&&S&&S.planets)||{})[pid];return sp&&sp.freq||PLANETS[pid].freq;};
 const cellCount=pid=>{const f=pfreq(pid);return 10*f*f+2;};
@@ -456,7 +459,8 @@ const VT={
   eisfraese:{name:'Eisfräse',stage:3,cost:4000,speed:3.4,radius:1.8,power:5,tank:220,energy:1.8,tier:2,size:'m',planet:'europa',home:['europa','enceladus','triton','pluto','eris','sedna','trappist','gliese'],look:{col:0x9fd3ff,s:1.1,tool:'drill',tracks:1},desc:'Fräst gefrorenen Schmutz. Auf Eiswelten doppelt stark und sturmfest.'},
   schlammraupe:{name:'Schlammraupe',stage:4,cost:8000,speed:3,radius:2,power:7,tank:320,energy:2.4,tier:2,size:'m',planet:'titan',home:['titan','venus','enceladus','kepler','trappist'],look:{col:0x7fbf5a,s:1.2,tool:'scoop',tracks:1},desc:'Kettenfahrzeug mit Schlammpumpe. Auf Titan, Venus und Enceladus doppelt stark und sturmfest.'},
   lavapanzer:{name:'Lavapanzer',stage:4,cost:16000,speed:2.8,radius:2.4,power:11,tank:600,energy:4,tier:3,size:'l',planet:'io',home:['io','venus','cancri','proxima'],look:{col:0xd2643a,s:1.35,tool:'scoop',tracks:1},desc:'Hitzefester Koloss. Auf Io und Venus doppelt stark und sturmfest.'},
-  magnetgleiter:{name:'Magnetgleiter',batt:300,stage:5,cost:25000,speed:7,radius:2.2,power:13,tank:480,energy:3.5,tier:3,size:'l',planet:'ganymed',home:['ganymed','triton','europa','gliese','poltergeist'],look:{col:0xb79cff,s:1.2,tool:'brush',hover:1},desc:'Schwebt über dem Boden und ist sehr schnell. Auf Ganymed, Triton und Europa doppelt stark und sturmfest.'},
+  schwebe:{name:'Schwebereiniger',batt:160,stage:3,cost:3200,speed:4.6,radius:1.3,power:3.2,tank:110,energy:1.2,tier:1,size:'m',fly:1,look:{col:0x6fe0ff,s:1,tool:'brush',hover:1},desc:'Schwebt über Wasser, Lava und Säure und reinigt Flächen, die Bodenfahrzeuge nicht erreichen.'},
+  magnetgleiter:{name:'Magnetgleiter',batt:300,fly:1,stage:5,cost:25000,speed:7,radius:2.2,power:13,tank:480,energy:3.5,tier:3,size:'l',planet:'ganymed',home:['ganymed','triton','europa','gliese','poltergeist'],look:{col:0xb79cff,s:1.2,tool:'brush',hover:1},desc:'Schwebt über dem Boden und ist sehr schnell. Auf Ganymed, Triton und Europa doppelt stark und sturmfest.'},
   kryokoloss:{name:'Kryo-Koloss',stage:5,cost:40000,speed:2.6,radius:3,power:20,tank:1400,energy:6,tier:3,size:'l',planet:'triton',home:['triton','pluto','eris','sedna','poltergeist'],look:{col:0x5fd0c8,s:1.55,tool:'drill',tracks:1},desc:'Die größte Reinigungsmaschine. Auf Triton und Pluto doppelt stark und sturmfest.'},
 };
 const BLD={
@@ -774,6 +778,14 @@ function planetData(pid){
   }
   let start=-1;{let bd2=-2;const dirS=vnorm(vadd(cells[base].c,vsc(cells[base].e2,-.5)));for(const cl of cells)if(cl.ring===3){const d=vdot(cl.c,dirS);if(d>bd2){bd2=d;start=cl.id;}}}
   cells[start].type=P.start;cells[start].kind='normal';
+  for(const cl of cells)cl.liq=null;
+  if(PLIQ[pid]){/* Seen wachsen aus Keimen; jede Zelle wird nur geflutet, wenn alles Land von der Basis aus erreichbar bleibt */
+    const [lt,lf]=PLIQ[pid],rl=rng(FQ*104729+PORDER.indexOf(pid)*7907+3),want=Math.round(lf*N);let n=0;
+    const landOK=()=>{const seen=new Uint8Array(N),q=[base];seen[base]=1;let c=1;while(q.length){const a=q.pop();for(const b of cells[a].nb)if(!seen[b]&&!cells[b].liq){seen[b]=1;c++;q.push(b);}}let land=0;for(const cl of cells)if(!cl.liq)land++;return c===land;};
+    let maxR=0;for(const cl of cells)maxR=Math.max(maxR,cl.ring);const siteR=clamp(Math.round(maxR*.45),OUTPOST.minRing,Math.max(OUTPOST.minRing,maxR-1));
+    const ok=cl=>cl.ring>=5&&cl.ring!==siteR&&cl.kind==='normal'&&cl.id!==start&&!cl.liq;
+    for(let tries=0;n<want&&tries<want*6;tries++){const seed=cells[rl()*N|0];if(!ok(seed))continue;const size=3+(rl()*10|0),lake=[seed.id];
+      for(let k=0;k<lake.length&&n<want&&k<size;k++){const cl=cells[lake[k]];if(!ok(cl))continue;cl.liq=lt;if(!landOK()){cl.liq=null;continue;}n++;for(const b of cl.nb)if(rl()<.6&&ok(cells[b]))lake.push(b);}}}
   for(const cl of cells){let best=0,bdot=-2;g.faceCenters.forEach((f,k)=>{const d=vdot(cl.c,f);if(d>bdot){bdot=d;best=k;}});cl.chunk=best;}
   return PD[PK]={pid,R,N,cells,base,start,freq:FQ};
 }
@@ -1148,11 +1160,30 @@ function navPath(pid,a,b){const nv=navGrid(pid),g=nv.g,N=NAV.N;const s=navFree(g
 function avoidOutposts(pid,sp,v,t,R){const pd=planetData(pid);for(const o of sp.rigs&&sp.rigs.length?sp.outposts.concat(sp.rigs):sp.outposts){const cl=pd.cells[o.cell],c=cl.c;const dv=arcDist(v.d,c,R),dt0=arcDist(t,c,R);if(dv<3.4||dt0<3.4||dv>40)continue;
     const a=toLocal(cl,v.d,R),b=toLocal(cl,t,R);if(segD([0,0],a,b)>3.4)continue;const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;let px=-dy/l,py=dx/l;if(px*a[0]+py*a[1]<0){px=-px;py=-py;}
     return toDir(cl,px*4.6,py*4.6,R);}return null;}
+/* Bodenfahrzeuge fahren um Seen herum: Weg über die Nachbarzellen (nur Land), dann immer auf die am weitesten entfernte noch frei erreichbare Wegzelle zu */
+function liqClear(pd,a,b,R,ign){const n=Math.max(2,Math.ceil(arcDist(a,b,R)/.5)),sd=vsc(vnorm(vcross(a,vsub(b,a))),1/R);let g=-1,g1=-1,g2=-1;
+  /* Mitte und beide Fahrzeugseiten (±0,9 m) prüfen, damit keine Ecke eines Sees angeschnitten wird */
+  for(let i=1;i<=n;i++){const q=i/n,p=vnorm(vadd(vsc(a,1-q),vsc(b,q)));g=cellOf(pd,p,g);if(pd.cells[g].liq&&g!==ign)return false;
+    g1=cellOf(pd,vnorm(vadd(p,vsc(sd,.9))),g1);if(pd.cells[g1].liq&&g1!==ign)return false;g2=cellOf(pd,vnorm(vadd(p,vsc(sd,-.9))),g2);if(pd.cells[g2].liq&&g2!==ign)return false;}return true;}
+function liqPath(pd,from,to){if(from===to)return[to];const prev=new Int32Array(pd.N).fill(-1);prev[from]=from;const q=[from];let h=0;
+  while(h<q.length){const a=q[h++];if(a===to)break;for(const b of pd.cells[a].nb)if(prev[b]<0&&(!pd.cells[b].liq||b===to)){prev[b]=a;q.push(b);}}
+  if(prev[to]<0)return null;const p=[];for(let c=to;c!==from;c=prev[c])p.push(c);return p.reverse();}
+function liqDetour(pid,v,t,R){if(!PLIQ[pid])return null;const pd=planetData(pid),tc=cellOf(pd,t,v.lqTo!=null?v.lqTo:-1);
+  if(v.lqTo!==tc){v.lqTo=tc;v.lq=null;v.lqFree=false;}
+  if(v.lqFree)return null; /* Strecke zu diesem Ziel wurde schon als frei geprüft */
+  if(!v.lq){if(liqClear(pd,v.d,t,R,tc)){v.lqFree=true;return null;}const p=liqPath(pd,cellOf(pd,v.d,-1),tc);if(!p){v.lqFree=true;return null;}v.lq={p,i:0,k:0};}
+  const L=v.lq;
+  /* Abkürzen (nicht jeden Schritt): die weiteste Wegzelle, zu der die Strecke frei ist */
+  if((L.k++)%12===0)for(let k=Math.min(L.p.length-1,L.i+6);k>L.i;k--)if(liqClear(pd,v.d,pd.cells[L.p[k]].c,R,tc)){L.i=k;break;}
+  {const dg=arcDist(v.d,pd.cells[L.p[L.i]].c,R);if(dg<.4||(dg<2&&(L.i+1>=L.p.length||liqClear(pd,v.d,pd.cells[L.p[L.i+1]].c,R,tc))))L.i++;}
+  if(L.i>=L.p.length){v.lq=null;v.lqFree=true;return null;}
+  return pd.cells[L.p[L.i]].c;}
 function navMove(pid,v,t,step,R){const sp=S.planets[pid],pd=planetData(pid),bc=pd.cells[pd.base],Z=NAV.zone;const a=toLocal(bc,v.d,R),b=toLocal(bc,t,R),ra=Math.hypot(a[0],a[1]),rb=Math.hypot(b[0],b[1]);
   if(ra>=Z&&rb>=Z){v.nav=null;
     if(ra<1e3&&rb<1e3&&segD([0,0],a,b)<Z-.5){/* the straight line would cross the base: go around it on a circle just outside the zone */
       const aa=Math.atan2(a[1],a[0]);let da=Math.atan2(b[1],b[0])-aa;while(da>Math.PI)da-=TAU;while(da<-Math.PI)da+=TAU;const ang=aa+Math.sign(da)*Math.min(Math.abs(da),.5),rr=Math.max(Z+2,Math.min(ra,Z+6));
       moveDir(v,basePlanDir(pd,Math.cos(ang)*rr,Math.sin(ang)*rr),step,R);return false;}
+    const lq=VT[v.type]&&!VT[v.type].fly?liqDetour(pid,v,t,R):null;if(lq){moveDir(v,lq,step,R);return false;}
     const det=(sp.outposts.length||(sp.rigs||[]).length)?avoidOutposts(pid,sp,v,t,R):null;if(det){moveDir(v,det,step,R);return false;}return moveDir(v,t,step,R);}
   const nv=navGrid(pid),tk=Math.round(b[0]*2)+','+Math.round(b[1]*2);
   /* a cached path is only valid while the vehicle is still on it – otherwise (new trip to the same target, pushed aside) plan again */
@@ -1171,12 +1202,12 @@ function moveDir(v,t,step,R){const c=clamp(vdot(v.d,t),-1,1),ang=Math.acos(c);if
   const w=vnorm(vsub(t,vsc(v.d,c))),a=step/R;v.d=vnorm(vadd(vsc(v.d,Math.cos(a)),vsc(w,Math.sin(a))));return ang*R-step<.35;}
 function chooseCell(pid,sp,v){
   const w=W[pid],pd=planetData(pid),T=VT[v.type];let best=-1,bs=1e9;
-  if(v.fix!=null){if(workable(pid,v.fix)&&KINDS[pd.cells[v.fix].kind].tier<=T.tier)return v.fix;return -1;}
-  for(const[id,a]of w.act){if(a.kind.tier>T.tier||a.sum<a.cl.nIn*a.thr)continue;
+  if(v.fix!=null){if(workable(pid,v.fix)&&KINDS[pd.cells[v.fix].kind].tier<=T.tier&&(T.fly||!pd.cells[v.fix].liq))return v.fix;return -1;}
+  for(const[id,a]of w.act){if(a.kind.tier>T.tier||a.sum<a.cl.nIn*a.thr||(a.cl.liq&&!T.fly))continue;
     let crowd=0;for(const o of sp.veh)if(o!==v&&o.cell===id&&(o.mode==='drive'||o.mode==='clean'))crowd++;if(crowd>=(a.dust?2:a.kind.tier>0?4:3))continue;
     const left=a.sum/a.cl.nIn,team=crowd&&left>.35?-6*Math.min(crowd,2)-(a.kind.hard>1.3?6:0):crowd*14;
     const sc=arcDist(v.d,a.cl.c,pd.R)+team-(v.last===id?8:0)+(a.dust?(a.sum>a.cl.nIn*.2?20:60):0);if(sc<bs){bs=sc;best=id;}}
-  for(const id of w.front){if(w.act.has(id))continue;const cl=pd.cells[id];if(KINDS[cl.kind].tier>T.tier)continue;
+  for(const id of w.front){if(w.act.has(id))continue;const cl=pd.cells[id];if(KINDS[cl.kind].tier>T.tier||(cl.liq&&!T.fly))continue;
     const sc=arcDist(v.d,cl.c,pd.R)+6-(cl.kind==='rich'?6:0);if(sc<bs){bs=sc;best=id;}}
   return best;
 }
@@ -1385,6 +1416,7 @@ const richTxt=x=>x>=1.3?'reich':x>=.95?'gut':'mager';
 function rigWhy(pid,id){const sp=S.planets[pid],w=W[pid],cl=planetData(pid).cells[id],rs=sp.rigs||[];
   if(!S.done[pid])return 'Erst wenn '+PLANETS[pid].name+' komplett sauber ist';
   if(cl.kind==='base'||!w.clean[id])return 'Nur auf sauberen Parzellen außerhalb der Basis';
+  if(cl.liq)return 'Nicht auf '+LIQ[cl.liq].name;
   if(cl.ring<2)return 'Zu nah an der Basis';
   if(rs.some(r=>r.cell===id))return 'Hier steht schon ein Bohrturm';
   if(sp.outposts.some(o=>o.cell===id))return 'Hier steht ein Außenlager';
@@ -1750,6 +1782,7 @@ function flashCell(pid,id,hex){if(!world||pid!==S.planet||TRACK)return;const pd=
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:hex,transparent:true,opacity:.7,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.renderOrder=4;world.add(m);flashes.push({m,t:0});}
 function updFlashes(dt){for(let i=flashes.length-1;i>=0;i--){const F=flashes[i];F.t+=dt;const u=F.t/1.6;F.m.material.opacity=.7*Math.max(0,1-u)*(.75+.25*Math.sin(F.t*14));if(u>=1){world.remove(F.m);F.m.geometry.dispose();F.m.material.dispose();flashes.splice(i,1);}}}
 const MAPCOL={locked:0x232a38,clean:0x8ff0d8,base:0x7fb4ff,buy:0xc7963a};
+let _cL=null;
 function paintCell(pid,id,noFlag){
   const pd=planetData(pid),w=W[pid],cl=pd.cells[id],ch=chunks[cl.chunk];if(!ch||!ch.ranges[id])return;
   const[s,e]=ch.ranges[id],uv=ch.geo.attributes.uv.array,col=ch.geo.attributes.color.array,mcol=ch.mgeo.attributes.color.array,loc=ch.loc;
@@ -1762,10 +1795,12 @@ function paintCell(pid,id,noFlag){
   else if(w.clean[id])_c2.setHex(MAPCOL.clean);
   else if(!disc)_c2.setHex(MAPCOL.locked);
   else{_c2.set(DIRT[cl.type].map).multiplyScalar(.6);if(buy)_c2.lerp(_c.setHex(MAPCOL.buy),.45);}
+  /* Wasser, Lava, Säure: Fläche in der Farbe der Flüssigkeit; verschmutzt mit Schmutzfilm darüber */
+  let lr=1,lg=1,lb=1;if(cl.liq){if(!_cL)_cL=new THREE.Color();_cL.set(LIQ[cl.liq].col);const k=w.clean[id]?.9:.55;lr=1-k+k*_cL.r*1.4;lg=1-k+k*_cL.g*1.4;lb=1-k+k*_cL.b*1.4;if(disc||!locked)_c2.lerp(_cL,w.clean[id]?.85:.5);}
   if(!isBase&&locked&&disc&&cl.kind!=='normal')_c2.lerp(_c.setHex(cl.kind==='rich'?0xffcc55:cl.kind==='anomaly'?0xb98cff:0xff7a3a),.55);
   for(let i=s;i<e;i++){const lx=loc[i*3],ly=loc[i*3+1],edge=loc[i*3+2];
     uv[i*2]=u0+pad+lx*(.25-2*pad);uv[i*2+1]=v0+pad+ly*(.5-2*pad);
-    const f=shade*(1-.3*smooth(.82,1,edge));col[i*3]=f;col[i*3+1]=f;col[i*3+2]=f;
+    const f=shade*(1-.3*smooth(.82,1,edge));col[i*3]=f*lr;col[i*3+1]=f*lg;col[i*3+2]=f*lb;
     const mb=1-.45*smooth(.8,1,edge);mcol[i*3]=_c2.r*mb;mcol[i*3+1]=_c2.g*mb;mcol[i*3+2]=_c2.b*mb;}
   if(!noFlag){ch.geo.attributes.uv.needsUpdate=true;ch.geo.attributes.color.needsUpdate=true;ch.mgeo.attributes.color.needsUpdate=true;}
   paintBorder(pid,id,noFlag);
@@ -2561,7 +2596,7 @@ function renderSheet(){
       let btn;if(cur)btn='<span class="pill ok">Du bist hier</span>';else if(have)btn='<button class="buy alt" data-act="travel" data-id="'+p+'">Reisen</button>';
       else if(prev&&!S.planets[prev])btn='<span class="pill">Erst '+PLANETS[prev].name+'</span>';
       else if(prev&&cleanPct(prev)<PLANET_GATE)btn='<span class="pill">'+Math.floor(cleanPct(prev)*100)+' / '+Math.round(PLANET_GATE*100)+' % '+PLANETS[prev].name+'</span>';else btn='<button class="buy" data-act="unlock" data-id="'+p+'" data-en="'+bind(()=>S.credits>=P.unlockCost)+'">'+cr(P.unlockCost)+'</button>';
-      h+='<div class="row'+(!have&&!cur&&prev&&!S.planets[prev]?' locked':'')+'"><span class="psphere" style="background:radial-gradient(circle at 34% 30%,'+P.col[0]+','+P.col[1]+' 72%)"></span><div class="row-main"><div class="row-t">'+P.name+'</div><div class="row-d">'+fmt(cellCount(p))+' Parzellen · Ertrag ×'+fmt(P.diff)+' · '+P.sub+'<br>'+dirt+'<br><b>Gefahr: '+P.hz.name+'</b> – '+P.hz.desc+(powReq(p)?'<br>Fahrzeuge brauchen <b>Doppelbürsten Stufe '+powReq(p)+'</b>'+(lvl('vpower')>=powReq(p)?' ✓':' – du hast '+lvl('vpower')):'')+(have?'<br>'+planetProgressText(p):'')+'</div></div>'+btn+'</div>';}
+      h+='<div class="row'+(!have&&!cur&&prev&&!S.planets[prev]?' locked':'')+'"><span class="psphere" style="background:radial-gradient(circle at 34% 30%,'+P.col[0]+','+P.col[1]+' 72%)"></span><div class="row-main"><div class="row-t">'+P.name+'</div><div class="row-d">'+fmt(cellCount(p))+' Parzellen · Ertrag ×'+fmt(P.diff)+' · '+P.sub+'<br>'+dirt+(PLIQ[p]?'<br><b>'+LIQ[PLIQ[p][0]].name+'-Flächen</b> – Bodenfahrzeuge kommen nicht drauf, hier helfen nur Schwebefahrzeuge oder deine Hand':'')+'<br><b>Gefahr: '+P.hz.name+'</b> – '+P.hz.desc+(powReq(p)?'<br>Fahrzeuge brauchen <b>Doppelbürsten Stufe '+powReq(p)+'</b>'+(lvl('vpower')>=powReq(p)?' ✓':' – du hast '+lvl('vpower')):'')+(have?'<br>'+planetProgressText(p):'')+'</div></div>'+btn+'</div>';}
     h+='</section><p class="note">Jeder Planet hat seine eigene Basis. Was du einmal freigeschaltet hast – Gebäude, Fahrzeuge, Upgrades – kannst du auf jedem Planeten sofort bauen. Härtere Planeten verlangen aber stärkere Doppelbürsten, sonst schaffen deine Fahrzeuge nur 30 %.</p>';h+='<p class="note">Der nächste Planet wird erst erreichbar, wenn der vorherige zu '+Math.round(PLANET_GATE*100)+' % gereinigt ist. Bau also genug Automatik auf – dann putzt sich der alte Planet weiter, während du auf dem neuen anfängst.</p>';}
   else if(kind==='hazard'){const P=PLANETS[pid],hz=P.hz,stm=hz.storm;k=P.name;t='Gefahren';
     h+='<section class="sec"><h3>'+hz.name+'</h3><p class="note">'+hz.desc+'</p>';

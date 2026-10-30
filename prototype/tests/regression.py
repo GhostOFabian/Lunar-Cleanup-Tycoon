@@ -244,6 +244,14 @@ with game() as (pg, errs):
     r = E("""()=>{const t=__t,o=JSON.parse(t.serialize());const e=t.freshPlanet('europa');delete e.freq;o.planets.europa=JSON.parse(JSON.stringify(e));delete o.planets.moon.freq;
       const b=t.normalizeSave(o);return {eu:b.planets.europa.freq,moon:b.planets.moon.freq,ctx:t.FREQ_CTX===null,list:t.PORDER.map(p=>t.PLANETS[p].freq)}}""")
     show('planet size migration', r); check(r['eu'] == 10 and r['moon'] == 5 and r['ctx'] and all(a < b for a, b in zip(r['list'], r['list'][1:])), 'old planets must keep their size; new sizes increase')
+    r = E("""()=>{const t=__t,out={};for(const pid of ['titan','trappist','io']){const pd=t.planetData(pid),N=pd.N;let liq=0;for(const c of pd.cells)if(c.liq)liq++;
+        const seen=new Uint8Array(N),q=[pd.base];seen[pd.base]=1;let c=1;while(q.length){const a=q.pop();for(const b of pd.cells[a].nb)if(!seen[b]&&!pd.cells[b].liq){seen[b]=1;c++;q.push(b);}}
+        // Fahrt quer über den Planeten: nie durch eine Flüssigkeitszelle
+        const far=pd.cells.filter(x=>!x.liq&&x.ring>=8).sort((a,b)=>t.vdot(a.c,pd.cells[pd.base].c)-t.vdot(b.c,pd.cells[pd.base].c))[0];
+        const v={type:'buggy',d:pd.cells.find(x=>x.ring===5&&!x.liq).c.slice()};let wet=0,steps=0,g=-1;
+        for(;steps<20000;steps++){const lq=t.liqDetour(pid,v,far.c,pd.R);const ok=t.moveDir(v,lq||far.c,1.2,pd.R);g=t.cellOf(pd,v.d,g);if(pd.cells[g].liq)wet++;if(!lq&&ok)break;}
+        out[pid]={liq,share:+(liq/N).toFixed(3),connected:c===N-liq,wet,steps};}return out}""")
+    show('liquids', r); check(all(o['liq'] > 0 and o['connected'] and o['wet'] == 0 and o['steps'] < 20000 for o in r.values()), 'liquid areas: land connected, ground vehicles drive around')
     show('save/load', [s1, s2]); check(s1['d'] == s2['d'] and s1['o'] == s2['o'] and s2['n'] == s1['n'] and s1['dt'] == s2['dt'] and s2['ps'] == 0 and s2['cr'] > s1['cr'], 'save/load roundtrip')
 
     for e in errs[:20]:
