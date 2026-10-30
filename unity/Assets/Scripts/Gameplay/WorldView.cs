@@ -408,16 +408,22 @@ namespace LunarCleanup.Gameplay
                     float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
                     // gleiches Ziel und Berührung erst kurz davor → Weiche
                     if (A.to == B.to && uMax > len[B.id] - 6 && !mergeEnd.ContainsKey(A.id)) { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
-                    else if (A.from == B.from && uMin < 6 && !mergeStart.ContainsKey(A.id)) { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
+                    else if (A.from == B.from && uMin < 6) { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
                 }
                 if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
                 void Flush() { float x = a0 - .5f, y = a1 + .5f; if (x < 4) x = -100; if (y > len[B.id] - 4) y = 1e4f; res.Add(new Vector3(x, y, am)); }
                 for (int k = 1; k < marks.Count; k++) { if (marks[k].u - a1 > 1.5f) { Flush(); a0 = marks[k].u; am = 0; } a1 = marks[k].u; am = Mathf.Max(am, marks[k].amt); }
                 Flush(); bridges[B.id] = res;
+                // Nachprüfen: liegt das angehobene Stück jetzt auf Höhe eines anderen (höheren) Bandes? Dann noch einmal darüber.
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    float extra = 0; foreach (var A in live.Take(j)) foreach (var (u, q) in smp[B.id]) { float hb = HB + Lift(B.id, u); if (hb - HB < .1f) continue; foreach (var (s, p) in smp[A.id]) if ((p - q).magnitude < BW * 2 + .3f) { float ha = BeltDeck(A) + Lift(A.id, s); if (Mathf.Abs(ha - hb) < .62f) extra = Mathf.Max(extra, ha + 1f - hb); break; } }
+                    if (extra <= 0) break; for (int k = 0; k < res.Count; k++) res[k] = new Vector3(res[k].x, res[k].y, res[k].z + extra);
+                }
             }
         }
         /// <summary>Liegt der Punkt auf der Grundfläche eines Gebäudes (dort trägt das Gebäude das Band)?</summary>
-        bool InFootprint(Vector2 p) { foreach (var id in ps.bld) if (ps.lay.pos.TryGetValue(id, out var c) && GameData.Bld.ContainsKey(id) && (p - c).magnitude < GameData.Bld[id].fp * .95f) return true; return false; }
+        bool InFootprint(Vector2 p) { foreach (var id in ps.bld) if (ps.lay.pos.TryGetValue(id, out var c) && GameData.Bld.ContainsKey(id) && (p - c).magnitude < GameData.Bld[id].fp * (id == "sell" || id == "port" ? 1.4f : .95f)) return true; /* Raketenplattform ist eckig */ return false; }
         static float SegDist(Vector2 q, Vector2 a, Vector2 c) { var d = c - a; float l2 = d.sqrMagnitude; float t = l2 > 0 ? Mathf.Clamp01(Vector2.Dot(q - a, d) / l2) : 0; return (q - (a + d * t)).magnitude; }
         /// <summary>Liegt unter Punkt p (Plan) ein anderes, tieferes Band?</summary>
         bool UnderBelt(BeltDef me, Vector2 p, float H, float r)

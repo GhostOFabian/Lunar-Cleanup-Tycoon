@@ -201,7 +201,7 @@ namespace LunarCleanup.UI
             var t = UiKit.Text(g.transform, "Text", text, 13.5f, kind == "good" ? Pal.Clean : kind == "bad" ? Pal.Warn : Pal.Ink, false, FontStyles.Normal, TextAlignmentOptions.Center);
             UiKit.Add<ContentSizeFitter>(g).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             while (toastBox.childCount > 3) DestroyImmediate(toastBox.GetChild(0).gameObject);
-            var cg = g.gameObject.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; StartCoroutine(Fade(cg, 2.8f));
+            var cg = g.gameObject.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; if (isActiveAndEnabled) StartCoroutine(Fade(cg, 2.8f)); else Destroy(g.gameObject);
         }
         System.Collections.IEnumerator Fade(CanvasGroup cg, float life)
         {
@@ -213,7 +213,7 @@ namespace LunarCleanup.UI
             var t = UiKit.Text(floatLayer, "Schwebetext", text, kind == "big" ? 20 : 14, kind == "big" ? Pal.Credit : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center);
             t.textWrappingMode = TextWrappingModes.NoWrap; t.rectTransform.sizeDelta = new Vector2(240, 30);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(floatLayer, screen, null, out var lp);
-            t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(.5f, .5f); t.rectTransform.anchoredPosition = lp; StartCoroutine(Rise(t));
+            t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(.5f, .5f); t.rectTransform.anchoredPosition = lp; if (isActiveAndEnabled) StartCoroutine(Rise(t)); else Destroy(t.gameObject);
         }
         System.Collections.IEnumerator Rise(TextMeshProUGUI t) { float a = 0; var p0 = t.rectTransform.anchoredPosition; while (a < 1.4f && t) { a += Time.deltaTime; t.rectTransform.anchoredPosition = p0 + new Vector2(0, a * 34); t.alpha = Mathf.Clamp01(1.6f - a * 1.15f); yield return null; } if (t) Destroy(t.gameObject); }
 

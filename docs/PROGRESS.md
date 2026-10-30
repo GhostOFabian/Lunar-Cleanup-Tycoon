@@ -85,3 +85,13 @@
 - Neues Rohstofflager (Annahmehalle + 4 Silotürme, Laufstege, Elevator) und neues Außenlager (Pumpenhaus, 2 Tanks, Rohrverteiler, Lichtmast, Landefeld). Pipeline kommt am Pumpenhaus seitlich heraus und endet genau an der Lagerwand.
 - Fehler behoben: dunkler Planetenkern verdeckte Täler/Krater (Kern jetzt 4 m tiefer); Krater-Deko entfernt (echte Krater im Gelände); Schatten verblassen bei tiefer Sonne; Bohrtürme bekommen ein Fundament am Hang.
 - Zoom per Tastatur: R/Numpad+ näher, F/Numpad− weiter weg.
+
+## Unity 0.11 (30.10.2026)
+- Basis-Prüfung (Testmodus, F11): baut auf allen 18 Planeten (plus 16 alten Planetengrößen) eine komplette Basis, prüft Bänder gegen die echten Modelle (Wandanschluss, nichts durch Gebäude, keine Überschneidungen, keine Stützen in Gebäuden/Bändern) und fotografiert jede Basis nach `BasisCheck/`. Ergebnis: 307 → 0 Befunde.
+- Bänder: Brücken bei Kreuzungen auf gleicher Höhe, Weichen bei Bändern, die zum selben Gebäude laufen, geglättete Kurven, schmalere Bänder, überdachte Zuläufe bei Modelllücken, Schornsteine auf den Dächern.
+- Rakete landet nach dem Start von oben wieder auf der Plattform.
+- Entladestationen: Sammelbunker mit Trichteraufsatz, Abkippgruben an den Andockplätzen.
+- Fahrzeuge verteilen sich über den Planeten und suchen sich eine andere Parzelle, wenn sie festhängen.
+- Leuchtkristalle (5 Farben) wachsen auf sauberen Parzellen nach; antippen oder Fahrzeuge bauen sie ab (Kristallsplitter).
+- Weltraum-Himmel je Planet (Nebel, Milchstraße, Sterne, Galaxie) plus farbiges Sternlicht.
+- Platzhalter: Konto-Speicher (Google Play Spiele / Game Center) und Shop-Vorschau in den Einstellungen.
