@@ -153,6 +153,50 @@ namespace LunarCleanup.Core
             }
             return cur;
         }
+        // ---------- Gelände: sanfte Hügel und Meteoritenkrater (nur Optik – die Simulation rechnet weiter auf der Kugel) ----------
+        // Die Basis (bis ~31 m) und die Außenlager-Plätze bleiben flach, damit Gebäude, Bänder und Pipelines gerade stehen.
+        Vector3[] hk; float[] hf, hp, cth; Vector4[] cr; int[][] cc; int lastHC = -1; float hAmp; List<Vector3> flat = new List<Vector3>();
+        void InitTerrain()
+        {
+            int seed = 7; foreach (char ch in pid) seed = seed * 31 + ch; var rnd = new System.Random(seed & 0x7fffffff);
+            System.Func<float> r = () => (float)rnd.NextDouble();
+            hk = new Vector3[5]; hf = new float[5]; hp = new float[5];
+            for (int i = 0; i < 5; i++) { hk[i] = new Vector3(r() - .5f, r() - .5f, r() - .5f).normalized; hf[i] = R / (14f + r() * 30f) * (i < 2 ? .6f : 1.3f); hp[i] = r() * 6.283f; }
+            hAmp = Mathf.Clamp(.45f + R * .006f, .5f, 1.5f);
+            // Krater: Mulde mit aufgeworfenem Rand; ihre Zahl wächst mit der Planetengröße
+            int nc = Mathf.Clamp(N / 14, 12, 160); cr = new Vector4[nc];
+            for (int i = 0; i < nc; i++) { var d = new Vector3(r() - .5f, r() - .5f, r() - .5f).normalized; float rad = 3.5f + Mathf.Pow(r(), 2.2f) * 13f; cr[i] = new Vector4(d.x, d.y, d.z, rad); }
+            cth = new float[nc]; for (int i = 0; i < nc; i++) cth[i] = Mathf.Cos(Mathf.Min(Mathf.PI, cr[i].w * 1.8f / R));
+            // Krater je Zelle vorsortieren, damit Height() nicht alle Krater prüfen muss
+            cc = new int[N][]; var tmp = new List<int>();
+            for (int z = 0; z < N; z++) { tmp.Clear(); var cz = cells[z]; for (int i = 0; i < nc; i++) { float lim = (cr[i].w * 1.8f + cz.H * 1.4f) / R; if (Vector3.Dot(cz.c, new Vector3(cr[i].x, cr[i].y, cr[i].z)) > Mathf.Cos(Mathf.Min(Mathf.PI, lim))) tmp.Add(i); } cc[z] = tmp.ToArray(); }
+            try { foreach (int c in Game.OutpostSites(pid)) Flatten(cells[c].c, 7f); } catch (Exception) { }
+        }
+        /// <summary>Flache Stelle (z. B. Außenlager), Radius in Metern.</summary>
+        public void Flatten(Vector3 dir, float radius) { flat.Add(dir.normalized * radius); }
+        public float Height(Vector3 dir, int cell = -1)
+        {
+            if (hk == null) InitTerrain(); dir.Normalize();
+            var b = PlanLocal(dir); float bd = b.magnitude; float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(33f, 46f, bd > 1e3f ? 1e3f : bd)); if (k <= 0) return 0;
+            float h = 0; for (int i = 0; i < hk.Length; i++) h += Mathf.Sin(Vector3.Dot(dir, hk[i]) * hf[i] + hp[i]) * (i < 2 ? 1f : .35f);
+            h *= hAmp * .55f;
+            if (cell < 0) { cell = CellOf(dir, lastHC); lastHC = cell; }
+            foreach (int i in cc[cell])
+            {
+                var c = cr[i]; float cd = Vector3.Dot(dir, new Vector3(c.x, c.y, c.z)); if (cd < cth[i]) continue; float dist = Mathf.Acos(Mathf.Min(1, cd)) * R; float x = dist / c.w; if (x > 1.8f) continue;
+                float depth = c.w * .09f; h += x < 1 ? depth * (x * x - 1) * .9f + depth * .25f * x * x * x * x : 0; h += depth * .45f * Mathf.Exp(-(x - 1) * (x - 1) / .06f);
+            }
+            foreach (var f in flat) { float fr = f.magnitude; float dd = Mathf.Acos(Mathf.Clamp(Vector3.Dot(dir, f / fr), -1, 1)) * R; if (dd < fr * 1.8f) k *= Mathf.SmoothStep(0, 1, Mathf.InverseLerp(fr, fr * 1.8f, dd)); }
+            return h * k;
+        }
+        /// <summary>Punkt auf der Geländeoberfläche (plus Höhe darüber).</summary>
+        public Vector3 Surf(Vector3 dir, float lift = 0, int cell = -1) { dir.Normalize(); return dir * (R + Height(dir, cell) + lift); }
+        /// <summary>Gelände-Normale (für Licht und zum Ausrichten von Fahrzeugen).</summary>
+        public Vector3 SurfNormal(Vector3 dir, int cell = -1)
+        {
+            dir.Normalize(); var t1 = Vector3.Cross(dir, Mathf.Abs(dir.y) < .9f ? Vector3.up : Vector3.right).normalized; var t2 = Vector3.Cross(dir, t1); float e = .6f / R;
+            var p1 = Surf(dir + t1 * e, 0, cell) - Surf(dir - t1 * e, 0, cell); var p2 = Surf(dir + t2 * e, 0, cell) - Surf(dir - t2 * e, 0, cell); var n = Vector3.Cross(p1, p2).normalized; return Vector3.Dot(n, dir) < 0 ? -n : n;
+        }
         public float Arc(Vector3 a, Vector3 b) => Mathf.Acos(Mathf.Clamp(Vector3.Dot(a, b), -1, 1)) * R;
         public Vector3 GridDir(Cell cl, int i) { int G = GameData.GRID; return ToDir(cl, -cl.H + ((i % G) + .5f) * cl.cs, -cl.H + ((i / G) + .5f) * cl.cs); }
         public float CellArea(Cell cl) => cl.nIn * cl.cs * cl.cs;

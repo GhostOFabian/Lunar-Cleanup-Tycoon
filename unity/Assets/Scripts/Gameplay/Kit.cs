@@ -189,7 +189,7 @@ namespace LunarCleanup.Gameplay
                 float a = (float)r.NextDouble() * Mathf.PI * 2, d = (float)r.NextDouble() * cl.H * .8f; var dir = pd.ToDir(cl, Mathf.Cos(a) * d, Mathf.Sin(a) * d);
                 string m = deco[r.Next(deco.Length)]; bool crater = m.Contains("crater"); float s = crater ? 3 + (float)r.NextDouble() * 6 : .6f + (float)r.NextDouble() * 1.6f;
                 var go = Spawn(m, parent, s, Vector3.zero, (float)r.NextDouble() * 360, rockTint); if (!go) continue;
-                go.transform.position = dir * (pd.R - (crater ? .05f : .1f)); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
+                go.transform.position = pd.Surf(dir, -(crater ? .05f : .1f)); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
             }
         }
     }

@@ -67,3 +67,14 @@
 1. Feedback des Spielers zur v3.5 einarbeiten (im echten Browser testen lassen).
 2. Balancing-Pass für Planeten 3–10.
 3. Unity-Projekt unter `unity/` anlegen (siehe `CLAUDE.md`) und Systeme in dieser Reihenfolge portieren: Planet/Parzellen → Reinigung → Wirtschaft/Lager → Fahrzeuge/Stationen → Bänder/Maschinen/Rakete → Idle/Offline → Upgrades/Forschung → Drohnen/Außenlager → Langzeitsysteme → UI.
+
+## Unity 0.10 (30.10.2026)
+- Bänder: Banden folgen exakt der Bandkante, Band höher (Stützen ragen nicht mehr durch), Band endet an der Gebäudewand.
+- Pipeline zum Außenlager läuft unterirdisch (Trasse mit Schachtdeckeln) und kommt seitlich aus den Gebäuden. Fehler behoben: die Trasse hatte Null-Normalen und erzeugte einen weißen Lichtfleck.
+- Fahrzeuge: meiden volle Stationen, fahren selbst zur Werkstatt, laden Akkus, entladen Reste – kein Herumstehen.
+- Kamera: rechte/mittlere Maustaste oder zwei Finger drehen und kippen den Planeten in alle Richtungen.
+- Kenney-Modelle (CC0) für Gebäude, Fahrzeuge, Drohnen, Rakete und Deko; prozedurale Modelle bleiben als Rückfall.
+- Upgrade-Fenster springt nach dem Kauf nicht mehr nach oben.
+- Planetengröße wächst mit jedem Ziel (Browser + Unity); begonnene Planeten behalten ihre alte Größe.
+- Seen aus Wasser/Lava/Säure/Methan auf 11 Planeten (Browser + Unity): Bodenfahrzeuge fahren außen herum, Schwebereiniger und Magnetgleiter reinigen sie. Neuer Regressionstest „liquids“.
+- Gelände in Unity: sanfte Hügel und Meteoritenkrater außerhalb der Basis; Fahrzeuge, Drohnen, Außenlager, Bohrtürme und Deko stehen auf dem Gelände, Bodenfahrzeuge neigen sich mit.

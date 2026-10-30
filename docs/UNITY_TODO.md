@@ -1,6 +1,6 @@
 # Unity-Version – Was noch zu tun ist
 
-Stand: 30.10.2026 · Unity-Version 0.9 · Branch `claude/prototype-v3.5`
+Stand: 30.10.2026 · Unity-Version 0.10 · Branch `claude/prototype-v3.5`
 Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wird nach jedem Teil abgehakt.
 
 ## Fertig (in Unity getestet, im Editor)
@@ -13,6 +13,7 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 - [x] 0.7 Lastdrohnen (Schwerlast-Hangar)
 - [x] 0.8 Fahrzeugverschleiß, Werkstatt, Totalschaden, Strahlung
 - [x] 0.9 Tiefenabbau: Bohrtürme, Stufen 0–5, Erzbagger, Störungen, Planet-Abschluss (+10 % Preis, +1 Fahrzeugplatz)
+- [x] 0.10 Wünsche vom 30.10.: Bänder (Banden genau am Band, höher, enden an der Gebäudewand), Pipeline unterirdisch, schlauere Fahrzeuge (Werkstatt, nie dumm herumstehen), Planet in alle Richtungen drehen, Kenney-Modelle (CC0) für Gebäude/Fahrzeuge/Drohnen/Rakete/Deko, Upgrade-Fenster behält die Scrollposition, Planeten werden immer größer (252 → 5.762 Parzellen; alte Stände behalten ihre Größe), Seen aus Wasser/Lava/Säure/Methan mit Umwegen und Schwebereiniger, Hügel und Krater
 - [x] Testmodus im Editor (Menü **Lunar Cleanup → Testmodus**): eigener Test-Spielstand, Test-Tasten F5–F10 nur dort
 
 ## Als Nächstes (in dieser Reihenfolge)
@@ -37,6 +38,8 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 17. [ ] iOS-Build (braucht einen Mac)
 
 ## Offene Kleinigkeiten
+- [ ] Hügel/Krater gibt es nur in Unity (reine Optik). Bohrtürme auf Hängen stehen leicht schief; Seen folgen dem Gelände statt flach zu liegen
+- [ ] Schwebereiniger im Spiel kaufen und auf einem See-Planeten (z. B. Europa) im Editor beobachten (bisher nur im Browser-Test geprüft)
 - [ ] Mausrad-Zoom im Editor reagiert bei meinen Tests nicht (auf dem Handy zoomt man mit zwei Fingern; prüfen, ob es nur an den simulierten Mausrad-Ereignissen liegt)
 - [ ] Hauptziel 1 zählt nur die Startparzelle – wie im Browser, aber eventuell freundlicher machen
 - [ ] Im Browser-Prototyp fehlt noch der Fix „Rückseite des Planeten“ für die Wegfindung (in Unity behoben)

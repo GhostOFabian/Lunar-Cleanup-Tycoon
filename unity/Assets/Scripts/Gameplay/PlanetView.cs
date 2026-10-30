@@ -32,7 +32,7 @@ namespace LunarCleanup.Gameplay
                 var mesh = BuildMesh(ids, per);
                 var go = new GameObject("Abschnitt " + f); go.transform.SetParent(transform, false);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                var mr = go.AddComponent<MeshRenderer>();
+                var mr = go.AddComponent<MeshRenderer>(); mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // Hügel werfen keine langen schwarzen Schatten über den Planeten
                 var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .05f); m.SetFloat("_Metallic", 0); m.SetFloat("_SpecularHighlights", 0); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); m.SetFloat("_EnvironmentReflections", 0); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF"); // kein Blenden bei flachem Sonnenstand
                 m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 9, per * 9)); m.SetFloat("_DetailAlbedoMapScale", .3f); m.EnableKeyword("_DETAIL_MULX2");
                 mr.sharedMaterial = m; ch.mat = m;
@@ -59,7 +59,7 @@ namespace LunarCleanup.Gameplay
                     for (int i = 0; i <= SUB; i++) for (int j = 0; j <= SUB - i; j++)
                         {
                             Vector2 p = A + (B - A) * (i / (float)SUB) + (C - A) * (j / (float)SUB);
-                            var d = pd.ToDir(cl, p.x, p.y); v.Add(d * pd.R); n.Add(d); uv.Add(UV(p));
+                            var d = pd.ToDir(cl, p.x, p.y); v.Add(pd.Surf(d, 0, id)); n.Add(pd.SurfNormal(d, id)); uv.Add(UV(p));
                         }
                     System.Func<int, int, int> I = (i, j) => { int idx = 0; for (int a = 0; a < i; a++) idx += SUB + 1 - a; return b0 + idx + j; };
                     for (int i = 0; i < SUB; i++) for (int j = 0; j < SUB - i; j++)
@@ -168,6 +168,13 @@ namespace LunarCleanup.Gameplay
         {
             dir = Vector3.zero; var o = ray.origin; var d = ray.direction; float b = Vector3.Dot(o, d), c = o.sqrMagnitude - R * R, disc = b * b - c;
             if (disc < 0) return false; float t = -b - Mathf.Sqrt(disc); if (t < 0) return false; dir = (o + d * t).normalized; return true;
+        }
+        /// <summary>Strahl gegen das Gelände (Hügel/Krater): zweimal gegen die Kugel in der Geländehöhe nachrechnen.</summary>
+        public static bool RayHit(Ray ray, PlanetData pd, out Vector3 dir)
+        {
+            if (!RayHit(ray, pd.R, out dir)) return false;
+            for (int it = 0; it < 2; it++) { float h = pd.Height(dir); if (Mathf.Abs(h) < .02f) break; if (!RayHit(ray, pd.R + h, out var d2)) break; dir = d2; }
+            return true;
         }
     }
 }

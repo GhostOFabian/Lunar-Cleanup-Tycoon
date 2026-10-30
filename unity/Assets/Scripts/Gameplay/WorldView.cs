@@ -87,7 +87,7 @@ namespace LunarCleanup.Gameplay
             rigViews.Clear();
             foreach (var r in ps.sv.rigs)
             {
-                var cl = pd.cells[r.cell]; var bp = Models.Rig(r.bag, ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = cl.c * pd.R; bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                var cl = pd.cells[r.cell]; var bp = Models.Rig(r.bag, ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = pd.Surf(cl.c); bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
                 rigViews.Add((bp, r));
             }
         }
@@ -119,7 +119,7 @@ namespace LunarCleanup.Gameplay
             for (int i = 0; i <= n; i++)
             {
                 var p = Vector3.Slerp(a, b, i / (float)n).normalized; var q = Vector3.Slerp(a, b, Mathf.Min(1, (i + .5f) / n)).normalized; var tan = (q - p); if (i == n) tan = p - Vector3.Slerp(a, b, (i - .5f) / n).normalized;
-                var side = Vector3.Cross(p, tan.normalized).normalized * .32f; v.Add(p * (pd.R + .035f) - side); v.Add(p * (pd.R + .035f) + side); nm.Add(p); nm.Add(p);
+                var side = Vector3.Cross(p, tan.normalized).normalized * .32f; v.Add(pd.Surf(p, .035f) - side); v.Add(pd.Surf(p, .035f) + side); nm.Add(p); nm.Add(p);
                 if (i < n) { int k = i * 2; t.AddRange(new[] { k, k + 2, k + 1, k + 1, k + 2, k + 3 }); }
             }
             if (v.Count >= 3 && Vector3.Dot(Vector3.Cross(v[2] - v[0], v[1] - v[0]), v[0]) < 0) for (int j = 0; j < t.Count; j += 3) { int tmp = t[j + 1]; t[j + 1] = t[j + 2]; t[j + 2] = tmp; }
@@ -128,8 +128,8 @@ namespace LunarCleanup.Gameplay
             for (float s = 4; s < arc - 3; s += 9)
             {
                 var p = Vector3.Slerp(a, b, s / arc).normalized;
-                var cap = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .38f, .42f, .08f, 16); cap.transform.position = p * (pd.R + .04f); cap.transform.rotation = Quaternion.FromToRotation(Vector3.up, p);
-                var l = MeshKit.Ball(baseRoot, lamp, Vector3.zero, .14f); l.transform.position = p * (pd.R + .1f);
+                var cap = MeshKit.Cyl(baseRoot, steel, Vector3.zero, .38f, .42f, .08f, 16); cap.transform.position = pd.Surf(p, .04f); cap.transform.rotation = Quaternion.FromToRotation(Vector3.up, p);
+                var l = MeshKit.Ball(baseRoot, lamp, Vector3.zero, .14f); l.transform.position = pd.Surf(p, .1f);
             }
         }
         void BuildOutposts()
@@ -140,7 +140,7 @@ namespace LunarCleanup.Gameplay
                 var cl = pd.cells[cid]; var o = ps.sv.outposts.Find(x => x.cell == cid); var d = cl.c;
                 if (o != null)
                 {
-                    var bp = Models.Outpost(ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = d * pd.R; bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, d);
+                    var bp = Models.Outpost(ps.P.col0); bp.root.transform.SetParent(baseRoot, false); bp.root.transform.position = pd.Surf(d); bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, d);
                     // Pipeline unterirdisch: kommt seitlich aus dem Pumpenhaus, läuft unter der Oberfläche (sichtbar als Trasse mit Schachtdeckeln)
                     // und steigt erst neben dem Rohstofflager wieder auf, wo sie seitlich in den Silo-Sockel führt.
                     var pump = pd.ToDir(cl, 2.5f, -2.2f); var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero;
@@ -153,7 +153,7 @@ namespace LunarCleanup.Gameplay
                 }
                 else if (Game.ResDone("outpost") || Game.ResDone("drones"))
                 {
-                    var site = Models.Site(3.2f); site.transform.SetParent(baseRoot, false); site.transform.position = d * (pd.R + .02f); site.transform.rotation = Quaternion.LookRotation(cl.e1, d);
+                    var site = Models.Site(3.2f); site.transform.SetParent(baseRoot, false); site.transform.position = pd.Surf(d, .02f); site.transform.rotation = Quaternion.LookRotation(cl.e1, d);
                 }
             }
         }
@@ -378,7 +378,7 @@ namespace LunarCleanup.Gameplay
         }
         public void EmitDust(Vector3 dir, Color c, int n)
         {
-            if (!dust) return; var ep = new ParticleSystem.EmitParams { position = dir * (pd.R + .2f), startColor = c, applyShapeToPosition = true };
+            if (!dust) return; var ep = new ParticleSystem.EmitParams { position = pd.Surf(dir, .2f), startColor = c, applyShapeToPosition = true };
             dust.transform.rotation = Quaternion.LookRotation(dir); dust.Emit(ep, n);
         }
 
@@ -441,7 +441,7 @@ namespace LunarCleanup.Gameplay
                 alive.Add(v.id);
                 if (!vehs.TryGetValue(v.id, out var vp)) { vp = Models.Vehicle(GameData.Veh[v.type], acc); vp.root.transform.SetParent(vehRoot, false); vp.root.transform.position = v.d * pd.R; AddHeadlight(vp); vehs[v.id] = vp; }
                 float air = v.mode == "lifted" && liftAlt.TryGetValue(v.lift, out var la) ? Mathf.Max(0, la - 2.8f) : 0;
-                var tr = vp.root.transform; var target = v.d * (pd.R + air); var mv = target - tr.position; var up = v.d;
+                var tr = vp.root.transform; var target = pd.Surf(v.d, air); var mv = target - tr.position; var up = GameData.Veh[v.type].fly ? v.d : Vector3.Slerp(v.d, pd.SurfNormal(v.d), .85f); // Bodenfahrzeuge neigen sich mit dem Gelände
                 var fwd = mv - up * Vector3.Dot(mv, up);
                 Quaternion rot = fwd.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up);
                 tr.position = target; tr.rotation = Quaternion.Slerp(tr.rotation, rot, 1 - Mathf.Exp(-8 * Time.deltaTime));
@@ -477,7 +477,7 @@ namespace LunarCleanup.Gameplay
                 float goal = L.mode == "idle" ? 3f : L.mode == "fetch" && ps.pd.Arc(L.d, ps.sv.veh.Find(x => x.id == L.veh)?.d ?? L.d) < 6 ? 4.2f : 14f;
                 if (L.mode == "carry" && ps.sv.veh.Find(x => x.id == L.veh) is VehSave cv && ps.pd.Arc(L.d, ps.pd.cells[L.cell].c) < 8) goal = 4.2f;
                 float alt = Mathf.Lerp(liftAlt[L.id], goal, 1 - Mathf.Exp(-2f * Time.deltaTime)); liftAlt[L.id] = alt;
-                var tr = dp.root.transform; var target = L.d * (pd.R + alt); var mv = target - tr.position; var up = L.d; var fwd = mv - up * Vector3.Dot(mv, up);
+                var tr = dp.root.transform; var target = pd.Surf(L.d, alt); var mv = target - tr.position; var up = L.d; var fwd = mv - up * Vector3.Dot(mv, up);
                 tr.rotation = Quaternion.Slerp(tr.rotation, fwd.sqrMagnitude > 1e-5f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up), 1 - Mathf.Exp(-4 * Time.deltaTime));
                 tr.position = target; foreach (var r in dp.rotors) r.Rotate(Vector3.up, (L.mode != "idle" ? 1800 : 240) * Time.deltaTime, Space.Self);
                 if (dp.cargo) dp.cargo.gameObject.SetActive(false);
@@ -494,7 +494,7 @@ namespace LunarCleanup.Gameplay
                 if (!drones.TryGetValue(dr.id, out var dp)) { dp = Models.Drone(ps.P.col0); dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = dr.d * (pd.R + 2); drones[dr.id] = dp; droneAlt[dr.id] = 2; }
                 bool low = dr.mode == "load" || dr.mode == "stdrop" || dr.mode == "drop" || (dr.mode == "idle" && !dr.busy);
                 float goal = dr.mode == "load" ? 3.2f : dr.mode == "stdrop" ? 7.5f : low ? 2.4f : 12f, alt = Mathf.Lerp(droneAlt[dr.id], goal, 1 - Mathf.Exp(-2.5f * Time.deltaTime)); droneAlt[dr.id] = alt;
-                var tr = dp.root.transform; var target = dr.d * (pd.R + alt + Mathf.Sin(Time.time * 2 + dr.id) * .15f); var mv = target - tr.position; var up = dr.d;
+                var tr = dp.root.transform; var target = pd.Surf(dr.d, alt + Mathf.Sin(Time.time * 2 + dr.id) * .15f); var mv = target - tr.position; var up = dr.d;
                 var fwd = mv - up * Vector3.Dot(mv, up);
                 if (fwd.sqrMagnitude > 1e-5f) tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(fwd.normalized, up) * Quaternion.Euler(Mathf.Min(14, fwd.magnitude / Mathf.Max(1e-3f, Time.deltaTime) * 1.2f), 0, 0), 1 - Mathf.Exp(-5 * Time.deltaTime));
                 else tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up), 1 - Mathf.Exp(-5 * Time.deltaTime));
@@ -508,8 +508,8 @@ namespace LunarCleanup.Gameplay
         void SyncCart()
         {
             var c = ps.sv.cart; if (!c.owned) { if (cartGo) Destroy(cartGo); return; }
-            if (!cartGo) { cartGo = Models.Cart(); cartGo.transform.SetParent(vehRoot, false); cartGo.transform.position = c.d * pd.R; }
-            var tr = cartGo.transform; var target = c.d * pd.R; var mv = target - tr.position; var fwd = mv - c.d * Vector3.Dot(mv, c.d);
+            if (!cartGo) { cartGo = Models.Cart(); cartGo.transform.SetParent(vehRoot, false); cartGo.transform.position = pd.Surf(c.d); }
+            var tr = cartGo.transform; var target = pd.Surf(c.d); var mv = target - tr.position; var fwd = mv - c.d * Vector3.Dot(mv, c.d);
             if (fwd.sqrMagnitude > 1e-6f) tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(fwd.normalized, c.d), 1 - Mathf.Exp(-8 * Time.deltaTime));
             else tr.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, c.d).normalized + c.d * 1e-4f, c.d);
             tr.position = target;

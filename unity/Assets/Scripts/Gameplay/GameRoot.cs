@@ -196,7 +196,7 @@ namespace LunarCleanup.Gameplay
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
-                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = dir * (Game.Cur.pd.R + .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 2.4f * Mathf.Clamp01((WorldView.NightF - .2f) / .6f);
+                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 2.4f * Mathf.Clamp01((WorldView.NightF - .2f) / .6f);
                         if (amt > 0 && Random.value < .6f) { int c = Game.Cur.pd.CellOf(dir); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, 3); }
                     }
                 }
@@ -209,7 +209,7 @@ namespace LunarCleanup.Gameplay
         }
         void EndWipe() { brush.SetActive(false); mode = Mode.None; }
 
-        bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd.R, out dir);
+        bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
 
         void Tap(Vector2 pos)
         {
@@ -226,7 +226,7 @@ namespace LunarCleanup.Gameplay
 
         void OnFloat(Vector3 dir, string text, string kind)
         {
-            var w = dir * (Game.Cur.pd.R + 3); var sp = cam.WorldToScreenPoint(w); if (sp.z <= 0) return;
+            var w = Game.Cur.pd.Surf(dir, 3); var sp = cam.WorldToScreenPoint(w); if (sp.z <= 0) return;
             if (Vector3.Dot(dir, (cam.transform.position - w).normalized) < 0) return; hud.FloatText(sp, text, kind);
         }
     }
