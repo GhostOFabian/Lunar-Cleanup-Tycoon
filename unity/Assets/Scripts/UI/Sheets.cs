@@ -303,7 +303,18 @@ namespace LunarCleanup.UI
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
-            if (Game.TestMode) { h.Section("Testmodus"); h.Row("Alles maximal ausbauen", () => "Nur im Testmodus: Basisstufe, alle Gebäude, Upgrades, Forschungen, Außenlager und Fahrzeuge auf diesem Planeten. Taste F12 geht auch.", () => "Ausbauen", () => true, () => { Game.DevMaxOut(); h.CloseSheet(); }, true); }
+            if (Game.TestMode)
+            {
+                h.Section("Testmodus");
+                h.Row("Alles maximal ausbauen", () => "Basisstufe, alle Gebäude, Upgrades, Forschungen, Außenlager und Fahrzeuge auf diesem Planeten (Editor: F12).", () => "Ausbauen", () => true, () => { Game.DevMaxOut(); h.CloseSheet(); }, true);
+                h.Row("+1 Mio Credits", () => "Geld zum Ausprobieren.", () => "+1 Mio", () => true, () => Game.Earn(1e6), false);
+                h.Row("Planet säubern", () => "Erst auf 81 %, beim zweiten Mal komplett sauber.", () => "Säubern", () => true, () => Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f), false);
+                h.Row("Vierteltag vorspulen", () => "Tag und Nacht testen.", () => "Vorspulen", () => true, () => { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }, false);
+                h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
+            }
+            if (Debug.isDebugBuild && !Application.isEditor)
+                h.Row("Testmodus " + (Game.TestMode ? "an" : "aus"), () => Game.TestMode ? "Du spielst mit einem eigenen Test-Spielstand. Ausschalten und die Seite neu laden = normaler Spielstand." : "Normaler Spielstand. Einschalten und die Seite neu laden = Test-Spielstand mit Test-Knöpfen.",
+                    () => Game.TestMode ? "Ausschalten" : "Einschalten", () => true, () => { Game.Save(); PlayerPrefs.SetInt("LunarCleanup.TestMode", Game.TestMode ? 0 : 1); PlayerPrefs.Save(); Game.Toast("Gespeichert – jetzt die Seite neu laden", "good"); }, false);
             h.Section("Konto-Speicher");
             h.Row(Platform.Cloud.Name, () => Platform.Cloud.SignedIn ? "Verbunden – dein Spielstand wird zusätzlich in deinem Konto gesichert." : "Noch nicht verbunden. Auf dem Handy sicherst du hier deinen Spielstand in deinem " + Platform.Cloud.Name + "-Konto.",
                 () => Platform.Cloud.SignedIn ? "Verbunden" : "Anmelden", () => !Platform.Cloud.SignedIn, () => Platform.Cloud.SignIn(ok => Game.Toast(ok ? "Angemeldet – Spielstand wird gesichert" : "Anmeldung kommt mit der Handy-Version", ok ? "good" : "")), false);

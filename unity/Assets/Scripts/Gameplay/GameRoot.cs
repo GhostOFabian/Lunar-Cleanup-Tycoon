@@ -38,6 +38,8 @@ namespace LunarCleanup.Gameplay
             EnhancedTouchSupport.Enable();
 #if UNITY_EDITOR
             Game.TestMode = UnityEditor.EditorPrefs.GetBool("LunarCleanup.TestMode", false);
+#elif DEVELOPMENT_BUILD
+            Game.TestMode = PlayerPrefs.GetInt("LunarCleanup.TestMode", 1) == 1; // Browser-Testversion: standardmäßig Testmodus (eigener Spielstand)
 #endif
             Game.Init(); MeshKit.Init();
             cam = Camera.main; if (!cam) { var cg = new GameObject("Main Camera"); cg.tag = "MainCamera"; cam = cg.AddComponent<Camera>(); }
@@ -101,7 +103,7 @@ namespace LunarCleanup.Gameplay
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             HandleInput(dt);
             var kbd = Keyboard.current; if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevKeys();
 #endif
             if (!offlineRunning) Game.Step(dt);
@@ -111,14 +113,14 @@ namespace LunarCleanup.Gameplay
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
 
-#if UNITY_EDITOR
-        // Test-Tasten nur im Editor (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % (nochmal: 100 %) säubern, F9 Vierteltag vorspulen, F10 Sturm in 25 s.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Test-Tasten nur im Editor/Testbuild (nicht im Spiel-Build): F5 Parzelle vorne säubern, F6 +10.000 Cr, F7 8 h offline simulieren, F8 Planet zu 81 % (nochmal: 100 %) säubern, F9 Vierteltag vorspulen, F10 Sturm in 25 s.
         void DevKeys()
         {
             var kb = Keyboard.current; if (kb == null || !Game.TestMode) return; // Test-Tasten nur im Testmodus (eigener Spielstand)
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
-            if (kb.f11Key.wasPressedThisFrame && preview == null) StartCoroutine(CheckAllBases());
+            if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
