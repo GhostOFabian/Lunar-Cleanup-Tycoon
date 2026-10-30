@@ -85,7 +85,7 @@ namespace LunarCleanup.Gameplay
             switch (id)
             {
                 case "hq": Spawn("space/hangar_largeA", t, D, y0, 0, acc); Spawn("space/satelliteDish", t, D * .22f, new Vector3(fp * .45f, Top(t.GetChild(t.childCount - 1).gameObject) + .1f, fp * .2f), 30, acc); break;
-                case "roh": Spawn("factory/hopper-high-round", t, D * .48f, new Vector3(-fp * .45f, .14f, 0), 0, acc); Spawn("factory/hopper-high-round", t, D * .48f, new Vector3(fp * .45f, .14f, 0), 0, acc); break;
+                case "roh": RawStore(t, fp, acc); break;
                 case "prod": Spawn("space/hangar_smallA", t, D, y0, 0, acc); break;
                 case "u1": Spawn("factory/hopper-square", t, D * .75f, y0, 0, acc); break;
                 case "u2": Spawn("factory/hopper-high-square", t, D * .7f, y0, 0, acc); Spawn("space/supports_low", t, D * .4f, new Vector3(fp * .6f, .14f, 0), 0, acc); break;
@@ -152,14 +152,79 @@ namespace LunarCleanup.Gameplay
             MeshKit.Ball(t, MeshKit.Glow(Hex("#6ff2d2"), 3f), new Vector3(0, -.35f, .9f), .14f);
             return dp;
         }
+        /// <summary>Rohstofflager: Annahmehalle mit flachen Wänden (dort docken die Bänder an) und vier Silotürmen an den Ecken,
+        /// oben verbunden durch Laufstege und einen Becherelevator.</summary>
+        static void RawStore(Transform t, float fp, Color acc)
+        {
+            var wall = MeshKit.Mat(Hex("#d9dee6"), .3f, .55f); var seam = MeshKit.Mat(Hex("#5a626e"), .5f, .4f); var roof = MeshKit.Mat(Hex("#3a414d"), .4f, .35f);
+            var silo = MeshKit.Mat(Hex("#eef1f5"), .45f, .65f); var ring = MeshKit.Mat(Hex("#7d8594"), .7f, .5f); var accM = MeshKit.Mat(acc, .35f, .55f); var grate = MeshKit.Mat(Hex("#2a3039"), .6f, .4f);
+            float y0 = .14f, s = fp * .52f, hw = fp * .47f; // Silo-Abstand, halbe Hallenbreite
+            MeshKit.Box(t, MeshKit.Mat(Hex("#6b717c"), .05f, .2f), new Vector3(0, y0 + .1f, 0), new Vector3(fp * 1.62f, .2f, fp * 1.62f));
+            // Halle
+            float hh = 2.7f, hy = y0 + .2f;
+            MeshKit.Box(t, wall, new Vector3(0, hy + hh / 2, 0), new Vector3(hw * 2, hh, hw * 2));
+            foreach (float y in new[] { .8f, 1.5f, 2.2f }) MeshKit.Box(t, seam, new Vector3(0, hy + y, 0), new Vector3(hw * 2 + .03f, .05f, hw * 2 + .03f));
+            MeshKit.Box(t, accM, new Vector3(0, hy + hh - .2f, 0), new Vector3(hw * 2 + .04f, .24f, hw * 2 + .04f));
+            MeshKit.Box(t, roof, new Vector3(0, hy + hh + .09f, 0), new Vector3(hw * 2 + .3f, .18f, hw * 2 + .3f));
+            // Silotürme an den Ecken
+            float sh = 4.8f;
+            foreach (float sx in new[] { -1f, 1f }) foreach (float sz in new[] { -1f, 1f })
+                {
+                    var c = new Vector3(sx * s, 0, sz * s); float r = fp * .27f;
+                    MeshKit.Cyl(t, silo, c + new Vector3(0, hy + sh / 2, 0), r, r, sh, 28);
+                    foreach (float y in new[] { 1.1f, 2.3f, 3.5f }) MeshKit.Cyl(t, ring, c + new Vector3(0, hy + y, 0), r + .04f, r + .04f, .08f, 28);
+                    MeshKit.Cyl(t, accM, c + new Vector3(0, hy + sh - .45f, 0), r + .02f, r + .02f, .32f, 28);
+                    MeshKit.Cyl(t, ring, c + new Vector3(0, hy + sh + .35f, 0), .14f, r + .03f, .7f, 28); // Kegeldach
+                    MeshKit.Cyl(t, grate, c + new Vector3(0, hy + sh + .85f, 0), .1f, .1f, .3f, 10);
+                    for (int k = 0; k < 4; k++) MeshKit.Box(t, grate, c + new Vector3(0, hy + .15f, 0) + Quaternion.Euler(0, 45 + k * 90, 0) * new Vector3(0, 0, r * .8f), new Vector3(.16f, .3f, .16f)); // Füße
+                }
+            // Laufstege zwischen den Silodächern
+            float wy = hy + sh + .05f;
+            foreach (float sz in new[] { -1f, 1f }) { MeshKit.Box(t, grate, new Vector3(0, wy, sz * s), new Vector3(s * 2 - .9f, .07f, .45f)); MeshKit.Box(t, ring, new Vector3(0, wy + .45f, sz * (s + .22f)), new Vector3(s * 2 - .9f, .04f, .04f)); }
+            foreach (float sx in new[] { -1f, 1f }) { MeshKit.Box(t, grate, new Vector3(sx * s, wy, 0), new Vector3(.45f, .07f, s * 2 - .9f)); MeshKit.Box(t, ring, new Vector3(sx * (s + .22f), wy + .45f, 0), new Vector3(.04f, .04f, s * 2 - .9f)); }
+            // Becherelevator in der Mitte und Leiter
+            MeshKit.Box(t, ring, new Vector3(0, hy + hh + (sh - hh) / 2 + .2f, 0), new Vector3(.6f, sh - hh + .4f, .6f));
+            MeshKit.Box(t, accM, new Vector3(0, hy + sh + .35f, 0), new Vector3(.8f, .5f, .8f));
+            foreach (float lx in new[] { -.18f, .18f }) MeshKit.Box(t, ring, new Vector3(s + fp * .27f + .06f + 0, hy + sh / 2, -s + lx), new Vector3(.04f, sh, .04f));
+            for (float y = .4f; y < sh; y += .35f) MeshKit.Box(t, ring, new Vector3(s + fp * .27f + .06f, hy + y, -s), new Vector3(.04f, .03f, .36f));
+        }
+
+        /// <summary>Außenlager: Pumpstation mit Pumpenhaus, zwei liegenden Tanks, Rohrverteiler, Lichtmast und Drohnen-Landefeld.</summary>
         public static Models.BuildingParts Outpost(Color acc)
         {
-            if (!Has("factory/hopper-high-square")) return null;
             var bp = new Models.BuildingParts(); var g = new GameObject("Außenlager"); bp.root = g; var t = g.transform;
-            MeshKit.Cyl(t, MeshKit.Mat(Hex("#3a414d"), .2f, .35f), new Vector3(0, .06f, 0), 4.2f, 4.4f, .12f, 32);
-            Spawn("factory/hopper-high-round", t, 3.2f, new Vector3(-.8f, .12f, 0), 0, acc); Spawn("factory/machine-connection-pipe", t, 1.6f, new Vector3(1.6f, .12f, -2.2f), 0, acc);
-            for (int k = 0; k < 2; k++) MeshKit.Box(t, MeshKit.Glow(Hex("#6ff2d2"), 1.8f), new Vector3(2.9f, .14f, -(k - .5f) * 2), new Vector3(1.6f, .04f, .12f));
-            bp.lamp = new Material(MeshKit.Glow(Hex("#3fe58a"), 2.5f)); MeshKit.Ball(t, bp.lamp, new Vector3(-.8f, 5.2f, 0), .3f);
+            var pad = MeshKit.Mat(Hex("#4a505c"), .1f, .25f); var steel = MeshKit.Mat(Hex("#8a93a3"), .75f, .55f); var tank = MeshKit.Mat(Hex("#eef1f5"), .45f, .65f); var wall = MeshKit.Mat(Hex("#d9dee6"), .3f, .55f);
+            var dark = MeshKit.Mat(Hex("#2a3039"), .5f, .4f); var accM = MeshKit.Mat(acc, .35f, .55f); var stripe = MeshKit.Mat(Hex("#ffbf4d"), .2f, .45f);
+            MeshKit.Cyl(t, pad, new Vector3(0, .07f, 0), 4.2f, 4.35f, .14f, 40); MeshKit.Cyl(t, accM, new Vector3(0, .15f, 0), 4.2f, 4.2f, .03f, 40);
+            MeshKit.Cyl(t, MeshKit.Mat(Hex("#353a44"), .1f, .2f), new Vector3(0, .155f, 0), 4.0f, 4.0f, .03f, 40);
+            // Drohnen-Landefeld (Mitte): Ring + Querbalken
+            MeshKit.Cyl(t, stripe, new Vector3(-.2f, .175f, -.3f), 1.15f, 1.15f, .02f, 32); MeshKit.Cyl(t, MeshKit.Mat(Hex("#353a44"), .1f, .2f), new Vector3(-.2f, .18f, -.3f), .95f, .95f, .02f, 32);
+            MeshKit.Box(t, stripe, new Vector3(-.2f, .19f, -.3f), new Vector3(.18f, .02f, 1.2f));
+            // Pumpenhaus: Vorderwand bei z = 1,6 – dort kommt die Pipeline seitlich heraus (siehe WorldView.Riser)
+            MeshKit.Box(t, wall, new Vector3(-2.2f, 1.15f, .4f), new Vector3(1.8f, 2f, 2.4f)); MeshKit.Box(t, dark, new Vector3(-2.2f, 2.25f, .4f), new Vector3(2.0f, .2f, 2.6f));
+            MeshKit.Box(t, accM, new Vector3(-2.2f, 1.95f, .4f), new Vector3(1.84f, .18f, 2.44f));
+            MeshKit.Box(t, dark, new Vector3(-3.11f, .95f, .1f), new Vector3(.04f, 1.5f, .9f)); // Tür
+            bp.lamp = new Material(MeshKit.Glow(Hex("#3fe58a"), 2.5f)); MeshKit.Box(t, bp.lamp, new Vector3(-1.29f, 1.4f, .4f), new Vector3(.03f, .18f, 1.6f)); // Statusleiste
+            MeshKit.Cyl(t, steel, new Vector3(-2.5f, 2.6f, -.2f), .22f, .22f, .5f, 14); MeshKit.Cyl(t, dark, new Vector3(-2.5f, 2.88f, -.2f), .3f, .3f, .06f, 14); // Lüfter
+            // Zwei liegende Tanks auf Sätteln
+            foreach (float tx in new[] { 1.3f, 3.0f })
+            {
+                MeshKit.Cyl(t, tank, new Vector3(tx, 1.15f, -.1f), .75f, .75f, 3.6f, 28, new Vector3(90, 0, 0));
+                foreach (float tz in new[] { -1.9f, 1.7f }) MeshKit.Ball(t, tank, new Vector3(tx, 1.15f, tz), 1.5f);
+                foreach (float tz in new[] { -1.1f, .9f }) { MeshKit.Box(t, steel, new Vector3(tx, .45f, tz), new Vector3(1.2f, .6f, .25f)); MeshKit.Cyl(t, accM, new Vector3(tx, 1.15f, tz), .79f, .79f, .12f, 28, new Vector3(90, 0, 0)); }
+                MeshKit.Cyl(t, steel, new Vector3(tx, 2.0f, -.1f), .12f, .12f, .3f, 10); // Einfüllstutzen
+            }
+            // Rohrverteiler Pumpenhaus → Tanks
+            foreach (float pz in new[] { -.4f, 1.1f })
+            {
+                MeshKit.Cyl(t, steel, new Vector3(-.2f, 1.15f, pz), .11f, .11f, 2.2f, 12, new Vector3(0, 0, 90));
+                MeshKit.Cyl(t, dark, new Vector3(-1.25f, 1.15f, pz), .17f, .17f, .08f, 12, new Vector3(0, 0, 90));
+            }
+            // Lichtmast mit Statuslampe oben
+            MeshKit.Cyl(t, steel, new Vector3(-3.3f, 2.4f, -2.5f), .07f, .1f, 4.8f, 10); MeshKit.Box(t, dark, new Vector3(-3.3f, 4.85f, -2.5f), new Vector3(.5f, .12f, .25f));
+            MeshKit.Ball(t, bp.lamp, new Vector3(-3.3f, 5.1f, -2.5f), .3f);
+            // Geländer am Rand (Pfosten)
+            for (int k = 0; k < 20; k++) { float a = k / 20f * Mathf.PI * 2; if (Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, 90)) < 25) continue; MeshKit.Cyl(t, stripe, new Vector3(Mathf.Cos(a) * 4.05f, .45f, Mathf.Sin(a) * 4.05f), .04f, .04f, .6f, 6); }
             return bp;
         }
         public static Models.BuildingParts Rig(bool bag, Color acc)

@@ -49,7 +49,7 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
-            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear();
+            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear();
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             foreach (var id in GameData.BOrder)
             {
@@ -180,12 +180,14 @@ namespace LunarCleanup.Gameplay
         void BuildBelt(BeltDef b)
         {
             var rp0 = b.rp; int n0 = rp0.Length; if (n0 < 2) return; var cum0 = new float[n0]; for (int i = 1; i < n0; i++) cum0[i] = cum0[i - 1] + (rp0[i] - rp0[i - 1]).magnitude; beltCum[b.id] = cum0;
-            // Band endet an der Gebäudewand statt durch das Gebäude zu laufen
-            float L0 = cum0[n0 - 1], s0 = 0, s1 = L0;
+            // Band endet genau an der Gebäudewand: Strahlen (Bandmitte + beide Banden, zwei Höhen) gegen die echte Modelloberfläche
+            float L0 = cum0[n0 - 1], s0 = 0, s1 = L0, H0 = BeltDeck(b);
             float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp * .92f : 0;
-            float ef = Edge(b.from), et = Edge(b.to);
-            for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= ef) { s0 = q; break; } }
-            for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= et) { s1 = q; break; } }
+            bool w0 = WallHit(b.from, rp0, cum0, H0, false, out float h0), w1 = WallHit(b.to, rp0, cum0, H0, true, out float h1);
+            if (w0) s0 = h0 + .02f; else for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= Edge(b.from)) { s0 = q; break; } }
+            if (w1) s1 = h1 - .02f; else for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= Edge(b.to)) { s1 = q; break; } }
+            if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
+            Port(rp0, cum0, s0, H0, false, w0); Port(rp0, cum0, s1, H0, true, w1);
             beltTrim[b.id] = new Vector2(s0, s1);
             var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
             float H = BeltDeck(b);
@@ -220,6 +222,68 @@ namespace LunarCleanup.Gameplay
             }
         }
         readonly Dictionary<string, Vector2> beltTrim = new Dictionary<string, Vector2>();
+        readonly Dictionary<string, List<Vector3>> bTris = new Dictionary<string, List<Vector3>>();
+        /// <summary>Alle Dreiecke eines Gebäudemodells in Weltkoordinaten (ohne Bodenplatte/Lampe).</summary>
+        List<Vector3> TrisOf(string id)
+        {
+            if (bTris.TryGetValue(id, out var T)) return T; T = new List<Vector3>(); bTris[id] = T;
+            if (!blds.TryGetValue(id, out var bp) || !bp.root) return T;
+            foreach (var mf in bp.root.GetComponentsInChildren<MeshFilter>())
+            {
+                var m = mf.sharedMesh; if (!m || mf.name == "Sockel" || mf.name == "Lampe") continue; Vector3[] v; int[] tr;
+                try { if (!m.isReadable) continue; v = m.vertices; tr = m.triangles; } catch (System.Exception) { continue; }
+                var M = mf.transform.localToWorldMatrix; for (int i = 0; i < tr.Length; i++) T.Add(M.MultiplyPoint3x4(v[tr[i]]));
+            }
+            return T;
+        }
+        static bool RayTri(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c, out float t)
+        {
+            t = 0; var e1 = b - a; var e2 = c - a; var p = Vector3.Cross(d, e2); float det = Vector3.Dot(e1, p); if (Mathf.Abs(det) < 1e-9f) return false;
+            float inv = 1 / det; var q = o - a; float u = Vector3.Dot(q, p) * inv; if (u < 0 || u > 1) return false; var r = Vector3.Cross(q, e1); float w = Vector3.Dot(d, r) * inv; if (w < 0 || u + w > 1) return false;
+            t = Vector3.Dot(e2, r) * inv; return t >= 0;
+        }
+        /// <summary>Wo trifft das Band (von der Mitte her) auf die Wand des Gebäudes? Liefert die Bandposition s.</summary>
+        bool WallHit(string id, Vector2[] rp, float[] cum, float H, bool atEnd, out float sHit)
+        {
+            sHit = 0; var T = TrisOf(id); if (T.Count == 0) return false; float L = cum[cum.Length - 1], st = .25f;
+            for (int k = 0; k < 400; k++)
+            {
+                float sa = atEnd ? L * .5f + k * st : L * .5f - k * st, sb = atEnd ? sa + st : sa - st; if (atEnd ? sa >= L : sa <= 0) break; sb = Mathf.Clamp(sb, 0, L);
+                var pa = PointAt(rp, cum, sa, out var ta); var pb = PointAt(rp, cum, sb, out _); var na = new Vector2(-ta.y, ta.x); float best = 2;
+                foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { H - .05f, H + .18f })
+                    {
+                        var A = pd.PlanDir(pa + na * side) * (pd.R + h); var B = pd.PlanDir(pb + na * side) * (pd.R + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
+                        for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) best = Mathf.Min(best, t / len);
+                    }
+                if (best <= 1) { sHit = sa + (sb - sa) * best; return true; }
+            }
+            return false;
+        }
+        /// <summary>Anschluss am Gebäude: Rahmen mit dunkler Öffnung, halb in der Wand – das Band läuft sichtbar hinein bzw. heraus.
+        /// Ohne Wandtreffer (Gebäude zu niedrig) steht dort eine Übergabesäule, damit das Band nie in der Luft endet.</summary>
+        void Port(Vector2[] rp, float[] cum, float s, float H, bool atEnd, bool wall)
+        {
+            var p = PointAt(rp, cum, s, out var tan); if (!atEnd) tan = -tan; var d = pd.PlanDir(p); var fwd = Tangent(d, tan); var rot = Quaternion.LookRotation(fwd, d);
+            var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .7f, .5f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var dark = MeshKit.Mat(GameData.Hex("#101318"), 0, .1f);
+            var g = new GameObject(wall ? "Anschluss" : "Übergabe"); g.transform.SetParent(beltRoot, false); g.transform.position = d * pd.R; g.transform.rotation = rot; var t = g.transform;
+            float w = BW * 2 + .5f;
+            if (wall)
+            {
+                // Rahmen: ragt 0,3 m aus der Wand und steckt 0,4 m darin
+                MeshKit.Box(t, steel, new Vector3(0, H + .5f, .05f), new Vector3(w, .16f, .7f)); MeshKit.Box(t, steel, new Vector3(0, H - .36f, .05f), new Vector3(w, .12f, .7f));
+                foreach (float sx in new[] { -1f, 1f }) MeshKit.Box(t, steel, new Vector3(sx * (w / 2 - .08f), H + .07f, .05f), new Vector3(.16f, .98f, .7f));
+                MeshKit.Box(t, dark, new Vector3(0, H + .1f, .14f), new Vector3(w - .3f, .74f, .32f)); // Öffnung: dunkle Fläche knapp vor der Wand
+                MeshKit.Box(t, gold, new Vector3(0, H + .6f, -.28f), new Vector3(w, .05f, .06f)); // Warnkante
+                // Schutzlamellen über dem Einlauf
+                for (int i = 0; i < 4; i++) MeshKit.Box(t, MeshKit.Mat(GameData.Hex("#2b3038"), .3f, .3f), new Vector3(-w / 2 + .3f + i * (w - .6f) / 3, H + .3f, -.22f), new Vector3(.08f, .4f, .02f));
+            }
+            else
+            {
+                MeshKit.Box(t, steel, new Vector3(0, (H + .35f) / 2, .25f), new Vector3(w, H + .35f, .7f)); MeshKit.Box(t, dark, new Vector3(0, H + .1f, -.08f), new Vector3(w - .3f, .5f, .06f));
+                MeshKit.Box(t, gold, new Vector3(0, H + .38f, .25f), new Vector3(w + .04f, .06f, .74f));
+            }
+        }
+
         static Vector2[] SubPath(Vector2[] rp, float[] cum, float s0, float s1)
         {
             var o = new List<Vector2> { PointAt(rp, cum, s0, out _) }; for (int i = 1; i < rp.Length - 1; i++) if (cum[i] > s0 && cum[i] < s1) o.Add(rp[i]); o.Add(PointAt(rp, cum, s1, out _));
