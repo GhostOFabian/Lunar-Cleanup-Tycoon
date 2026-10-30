@@ -32,6 +32,7 @@ namespace LunarCleanup.Gameplay
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm();
+            { var deco = New("Deko"); Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
         }
         Transform New(string n) { var g = new GameObject(n); g.transform.SetParent(transform, false); return g.transform; }
@@ -95,7 +96,7 @@ namespace LunarCleanup.Gameplay
             foreach (var (bp, r) in rigViews)
             {
                 if (!bp.root) continue; bool fault = r.faultK != "";
-                if (bp.piston) bp.piston.localPosition = new Vector3(0, 3.5f + (r.busy ? Mathf.Sin(Time.time * 3 + r.cell) * .9f : 0), 0);
+                if (bp.piston) bp.piston.localPosition = new Vector3(0, bp.pistonY + (r.busy ? Mathf.Sin(Time.time * 3 + r.cell) * .9f : 0), 0);
                 if (bp.spin && r.busy) bp.spin.Rotate(Vector3.forward, 60 * Time.deltaTime, Space.Self);
                 if (bp.lamp) bp.lamp.SetColor("_EmissionColor", fault ? (Mathf.Sin(Time.time * 10) > 0 ? new Color(1, .16f, .16f) * 3 : Color.black) : r.busy ? new Color(.25f, .9f, .54f) * 2.5f : new Color(1, .75f, .3f) * 1.5f);
             }
@@ -114,14 +115,15 @@ namespace LunarCleanup.Gameplay
         /// <summary>Unterirdische Trasse: dunkler Streifen auf dem Boden und alle ~9 m ein Schachtdeckel mit Leuchte.</summary>
         void Trench(Vector3 a, Vector3 b, Material dark, Material steel, Material lamp)
         {
-            float arc = pd.Arc(a, b); int n = Mathf.Max(6, Mathf.CeilToInt(arc / 1.2f)); var v = new List<Vector3>(); var t = new List<int>();
+            float arc = pd.Arc(a, b); int n = Mathf.Max(6, Mathf.CeilToInt(arc / 1.2f)); var v = new List<Vector3>(); var nm = new List<Vector3>(); var t = new List<int>();
             for (int i = 0; i <= n; i++)
             {
                 var p = Vector3.Slerp(a, b, i / (float)n).normalized; var q = Vector3.Slerp(a, b, Mathf.Min(1, (i + .5f) / n)).normalized; var tan = (q - p); if (i == n) tan = p - Vector3.Slerp(a, b, (i - .5f) / n).normalized;
-                var side = Vector3.Cross(p, tan.normalized).normalized * .32f; v.Add(p * (pd.R + .035f) - side); v.Add(p * (pd.R + .035f) + side);
-                if (i < n) { int k = i * 2; t.AddRange(new[] { k, k + 1, k + 2, k + 1, k + 3, k + 2, k, k + 2, k + 1, k + 1, k + 2, k + 3 }); }
+                var side = Vector3.Cross(p, tan.normalized).normalized * .32f; v.Add(p * (pd.R + .035f) - side); v.Add(p * (pd.R + .035f) + side); nm.Add(p); nm.Add(p);
+                if (i < n) { int k = i * 2; t.AddRange(new[] { k, k + 2, k + 1, k + 1, k + 2, k + 3 }); }
             }
-            var mesh = new Mesh { name = "Trasse" }; mesh.SetVertices(v); mesh.SetTriangles(t, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            if (v.Count >= 3 && Vector3.Dot(Vector3.Cross(v[2] - v[0], v[1] - v[0]), v[0]) < 0) for (int j = 0; j < t.Count; j += 3) { int tmp = t[j + 1]; t[j + 1] = t[j + 2]; t[j + 2] = tmp; }
+            var mesh = new Mesh { name = "Trasse" }; mesh.SetVertices(v); mesh.SetTriangles(t, 0); mesh.SetNormals(nm); mesh.RecalculateBounds(); // Normalen zeigen nach außen (doppelseitige Dreiecke hätten Null-Normalen → Lichtfehler)
             var g = new GameObject("Pipeline-Trasse"); g.transform.SetParent(baseRoot, false); g.AddComponent<MeshFilter>().sharedMesh = mesh; var mr = g.AddComponent<MeshRenderer>(); mr.sharedMaterial = dark; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             for (float s = 4; s < arc - 3; s += 9)
             {
@@ -471,7 +473,7 @@ namespace LunarCleanup.Gameplay
             foreach (var L in ps.sv.lifters)
             {
                 alive.Add(L.id);
-                if (!lifters.TryGetValue(L.id, out var dp)) { dp = Models.Drone(GameData.Hex("#ffbf4d")); dp.root.name = "Lastdrohne"; dp.root.transform.localScale = Vector3.one * 2.1f; dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = L.d * (pd.R + 3); lifters[L.id] = dp; liftAlt[L.id] = 3; }
+                if (!lifters.TryGetValue(L.id, out var dp)) { dp = Models.Drone(GameData.Hex("#ffbf4d"), true); dp.root.name = "Lastdrohne"; if (!Kit.Has("space/craft_cargoB")) dp.root.transform.localScale = Vector3.one * 2.1f; dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = L.d * (pd.R + 3); lifters[L.id] = dp; liftAlt[L.id] = 3; }
                 float goal = L.mode == "idle" ? 3f : L.mode == "fetch" && ps.pd.Arc(L.d, ps.sv.veh.Find(x => x.id == L.veh)?.d ?? L.d) < 6 ? 4.2f : 14f;
                 if (L.mode == "carry" && ps.sv.veh.Find(x => x.id == L.veh) is VehSave cv && ps.pd.Arc(L.d, ps.pd.cells[L.cell].c) < 8) goal = 4.2f;
                 float alt = Mathf.Lerp(liftAlt[L.id], goal, 1 - Mathf.Exp(-2f * Time.deltaTime)); liftAlt[L.id] = alt;
@@ -518,18 +520,18 @@ namespace LunarCleanup.Gameplay
         void AnimateBuildings()
         {
             float t = Time.time;
-            if (blds.TryGetValue("presse", out var pr) && pr.piston) { bool on = ps.mach["presse"].cur >= 0; float y = on ? 2.2f - .9f * Mathf.Pow(Mathf.Abs(Mathf.Sin(t * 1.6f)), 3) : 2.2f; pr.piston.localPosition = new Vector3(0, y, 0); }
-            if (blds.TryGetValue("research", out var rs) && rs.spin) rs.spin.Rotate(Vector3.up, 20 * Time.deltaTime, Space.World);
+            if (blds.TryGetValue("presse", out var pr) && pr.piston) { bool on = ps.mach["presse"].cur >= 0; float y = on ? pr.pistonY - .5f * Mathf.Pow(Mathf.Abs(Mathf.Sin(t * 1.6f)), 3) : pr.pistonY; pr.piston.localPosition = new Vector3(0, y, 0); }
+            if (blds.TryGetValue("research", out var rs) && rs.spin) rs.spin.Rotate(Vector3.up, 20 * Time.deltaTime, Space.Self);
             if (blds.TryGetValue("sell", out var sl) && sl.rocket)
             {
                 if (rocketT >= 0)
                 {
                     rocketT += Time.deltaTime; float h = rocketT < .5f ? 0 : Mathf.Pow(rocketT - .5f, 2.2f) * 14;
-                    sl.rocket.localPosition = new Vector3(0, .7f + h, 0);
+                    sl.rocket.localPosition = new Vector3(0, sl.rocketY + h, 0);
                     if (rocketT < 3.5f && Random.value < .9f) EmitDust(sl.rocket.position.normalized, new Color(1, .7f, .35f), 3);
                     if (rocketT > 4) { rocketT = -1; sl.rocket.localPosition = new Vector3(0, -6, 0); }
                 }
-                else if (sl.rocket.localPosition.y < .7f) sl.rocket.localPosition = Vector3.MoveTowards(sl.rocket.localPosition, new Vector3(0, .7f, 0), Time.deltaTime * 3);
+                else if (sl.rocket.localPosition.y < sl.rocketY) sl.rocket.localPosition = Vector3.MoveTowards(sl.rocket.localPosition, new Vector3(0, sl.rocketY, 0), Time.deltaTime * 3);
             }
         }
     }

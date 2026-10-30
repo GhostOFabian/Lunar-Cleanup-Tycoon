@@ -11,11 +11,12 @@ namespace LunarCleanup.Gameplay
         static Material M(Color c, float met = .25f, float sm = .5f) => MeshKit.Mat(c, met, sm);
         static Color Hex(string h) => GameData.Hex(h);
 
-        public class BuildingParts { public GameObject root; public Transform piston, rocket, spin; public Material lamp; }
+        public class BuildingParts { public GameObject root; public Transform piston, rocket, spin; public Material lamp; public float pistonY = 2.2f, rocketY = .7f; }
 
         /// <summary>Gebäude in Modellkoordinaten: x = Plan-x, z = −Plan-y, y nach oben. Grundfläche ~ Radius fp.</summary>
         public static BuildingParts Building(string id, float fp, Color acc, Color acc2)
         {
+            var kb = Kit.Building(id, fp, acc); if (kb != null) return kb;
             var bp = new BuildingParts(); var g = new GameObject(id); bp.root = g; var t = g.transform;
             Material white = M(Hex("#dfe5ee"), .1f, .55f), light = M(Hex("#c4ccd8"), .2f, .5f), dark = M(Hex("#3a4150"), .5f, .45f), steel = M(Hex("#8a93a3"), .8f, .6f),
                 pad = M(Hex("#4a5060"), .2f, .3f), A = M(acc, .3f, .55f), A2 = M(acc2, .3f, .55f), glass = MeshKit.Mat(Hex("#7fd8ff") * .35f, .1f, .9f, Hex("#7fd8ff") * .9f),
@@ -157,6 +158,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Außenlager: Silo mit Trichter, zwei Andockplätze, Pumpenhaus mit Pipeline-Anschluss.</summary>
         public static BuildingParts Outpost(Color acc)
         {
+            var ko = Kit.Outpost(acc); if (ko != null) return ko;
             var bp = new BuildingParts(); var g = new GameObject("Außenlager"); bp.root = g; var t = g.transform;
             Material W = M(Hex("#d9dee6"), .35f, .55f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
             MeshKit.Cyl(t, Pad, new Vector3(0, .06f, 0), 4.2f, 4.4f, .12f, 32);
@@ -172,6 +174,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Bohrturm (Gittermast mit Pumpenkopf) oder Erzbagger (Schaufelrad auf Raupen).</summary>
         public static BuildingParts Rig(bool bag, Color acc)
         {
+            var kr = Kit.Rig(bag, acc); if (kr != null) return kr;
             var bp = new BuildingParts(); var g = new GameObject(bag ? "Erzbagger" : "Bohrturm"); bp.root = g; var t = g.transform;
             Material D = M(Hex("#2b313c"), .4f, .4f), S = M(Hex("#8a93a3"), .7f, .5f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
             MeshKit.Cyl(t, Pad, new Vector3(0, .05f, 0), 3.2f, 3.4f, .1f, 28);
@@ -207,6 +210,7 @@ namespace LunarCleanup.Gameplay
 
         public static VehicleParts Vehicle(VehDef T, Color acc)
         {
+            var kv = Kit.Vehicle(T, acc); if (kv != null) return kv;
             var vp = new VehicleParts(); var g = new GameObject(T.name); vp.root = g; var t = g.transform;
             float s = T.size == "s" ? .8f : T.size == "m" ? 1.15f : 1.55f; if (T.key == "staubi") s = .6f;
             Color body = T.key == "staubi" ? Hex("#d9dee6") : T.key == "buggy" ? Hex("#ffbf4d") : T.key == "sauger" ? Hex("#58cdb4") : T.key == "truck" ? Hex("#e2553a") : acc;
@@ -238,8 +242,9 @@ namespace LunarCleanup.Gameplay
 
         public class DroneParts { public GameObject root; public Transform[] rotors; public Transform cargo; }
         /// <summary>Transportdrohne: flacher Körper, vier Ausleger mit Rotoren, Frachtkorb darunter, Positionslichter.</summary>
-        public static DroneParts Drone(Color acc)
+        public static DroneParts Drone(Color acc, bool heavy = false)
         {
+            var kd = Kit.Drone(acc, heavy); if (kd != null) return kd;
             var dp = new DroneParts(); var g = new GameObject("Drohne"); dp.root = g; var t = g.transform;
             Material B = M(Hex("#e6eaf0"), .4f, .65f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), P = MeshKit.Mat(Hex("#20242b"), .1f, .3f);
             MeshKit.Box(t, B, Vector3.zero, new Vector3(1.3f, .32f, 1.3f), new Vector3(0, 45, 0));
@@ -262,6 +267,7 @@ namespace LunarCleanup.Gameplay
 
         public static GameObject Cart()
         {
+            var kc = Kit.Cart(GameData.Hex("#ffbf4d")); if (kc != null) return kc;
             var g = new GameObject("Sammelwagen"); var t = g.transform;
             Material Y = M(Hex("#ffbf4d"), .3f, .55f), D = M(Hex("#2b313c"), .3f, .4f), L = MeshKit.Glow(Hex("#6ff2d2"), 3f);
             MeshKit.Box(t, D, new Vector3(0, .4f, 0), new Vector3(1.1f, .25f, 1.6f));

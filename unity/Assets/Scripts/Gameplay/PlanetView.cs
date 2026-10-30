@@ -33,7 +33,7 @@ namespace LunarCleanup.Gameplay
                 var go = new GameObject("Abschnitt " + f); go.transform.SetParent(transform, false);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>();
-                var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .18f); m.SetFloat("_Metallic", 0);
+                var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .05f); m.SetFloat("_Metallic", 0); m.SetFloat("_SpecularHighlights", 0); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); m.SetFloat("_EnvironmentReflections", 0); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF"); // kein Blenden bei flachem Sonnenstand
                 m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 9, per * 9)); m.SetFloat("_DetailAlbedoMapScale", .3f); m.EnableKeyword("_DETAIL_MULX2");
                 mr.sharedMaterial = m; ch.mat = m;
                 chunks.Add(ch);
