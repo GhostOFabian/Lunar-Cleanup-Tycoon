@@ -40,8 +40,27 @@ namespace LunarCleanup.Gameplay
             foreach (var id in new[] { "u1", "u2", "u3" }) if (ps.bld.Contains(id) && feet.ContainsKey("u1") && GameData.Bld[id].st != null) for (int k = 0; k < GameData.Bld[id].st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; Mark(pp - Vector2.one * 1.4f, pp + Vector2.one * 1.4f); var vp = dp; Mark(vp - Vector2.one * 1.2f, vp + Vector2.one * 1.2f); }
             var lampIds = new[] { "hq", "roh", "u1", "prod", "presse", "sell", "werkstatt", "schmelze" }; int nl = 0;
             foreach (var id in lampIds) { if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || nl >= 6) continue; nl++; var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f); Mark(off - Vector2.one * .4f, off + Vector2.one * .4f); }
+                        
+            /* Reihenfolge der Bänder: kreuzt ein Band ein anderes nah an einem Ein-/Ausgang (dort geht keine Brücke), wird es beim nächsten Versuch zuerst verlegt */
+            var order = new List<BeltDef>(live); Dictionary<string, Vector2[]> bestR = null; Dictionary<string, string> bestS = null; int bestBad = int.MaxValue;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                routed.Clear(); sharedEnd.Clear(); var bad = RouteOnce(order, feet, block);
+                if (bad.Count < bestBad) { bestBad = bad.Count; bestR = new Dictionary<string, Vector2[]>(routed); bestS = new Dictionary<string, string>(sharedEnd); }
+                if (bad.Count == 0) break;
+                var front = order.Where(x => bad.Contains(x.id)).ToList(); var rest = order.Where(x => !bad.Contains(x.id)).ToList();
+                var nord = front.Concat(rest).ToList(); if (nord.Select(x => x.id).SequenceEqual(order.Select(x => x.id))) { nord = rest.Concat(front).ToList(); } order = nord;
+            }
+            routed.Clear(); sharedEnd.Clear(); foreach (var kv in bestR) routed[kv.Key] = kv.Value; foreach (var kv in bestS) sharedEnd[kv.Key] = kv.Value;
+        }
+
+        /// <summary>Alle Bänder in dieser Reihenfolge verlegen. Rückgabe: Bänder, die ein anderes nah an einem Bandende kreuzen.</summary>
+        HashSet<string> RouteOnce(List<BeltDef> live, Dictionary<string, Foot> feet, bool[] block)
+        {
+            var bad = new HashSet<string>();
             var used = new Dictionary<string, HashSet<int>>();   // belegte Port-Plätze je Gebäude/Fläche
-            var occ = new Dictionary<int, List<(string from, string to)>>(); // Rasterzellen schon verlegter Bänder
+            var occ = new Dictionary<int, List<(string from, string to, string id)>>(); // Rasterzellen schon verlegter Bänder
+            var ends = new Dictionary<string, (int a, int b)>(); var raw = new Dictionary<int, List<string>>();
             var portOf = new Dictionary<string, (BPort a, BPort b)>();
             foreach (var b in live)
             {
@@ -80,10 +99,15 @@ namespace LunarCleanup.Gameplay
                 portOf[b.id] = (A, B);
                 // belegte Fläche: Bandzellen plus zwei Zellen ringsum (Bandbreite + Abstand), damit nichts eng nebeneinander läuft
                 var mark = new HashSet<int>(); foreach (int cell in best) { int cx = cell % GN, cy = cell / GN; for (int dy = -2; dy <= 2; dy++) for (int dx = -2; dx <= 2; dx++) { int x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < GN && y < GN) mark.Add(y * GN + x); } }
-                foreach (int cell in mark) { if (!occ.TryGetValue(cell, out var l)) { l = new List<(string, string)>(); occ[cell] = l; } l.Add((b.from, b.to)); }
+                int ca = best[0], cb = best[best.Count - 1]; ends[b.id] = (ca, cb);
+                int Md(int p, int q) => Mathf.Abs(p % GN - q % GN) + Mathf.Abs(p / GN - q / GN);
+                /* echte Kreuzung (Bandmitte auf Bandmitte ±1 Zelle) nah an einem Bandende? */ foreach (int cell in best) for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int nc = cell + dy * GN + dx; if (!raw.TryGetValue(nc, out var ol)) continue; foreach (var oid in ol) { if (sharedEnd.TryGetValue(b.id, out var se) && se == oid) continue; var oe = ends[oid]; if (Md(cell, ca) < 11 || Md(cell, cb) < 11 || Md(cell, oe.a) < 11 || Md(cell, oe.b) < 11) bad.Add(b.id); } }
+                foreach (int cell in best) { if (!raw.TryGetValue(cell, out var rl)) { rl = new List<string>(); raw[cell] = rl; } if (!rl.Contains(b.id)) rl.Add(b.id); }
+                foreach (int cell in mark) { if (!occ.TryGetValue(cell, out var l)) { l = new List<(string, string, string)>(); occ[cell] = l; } l.Add((b.from, b.to, b.id)); }
                 // Ecken der Rasterlinie → Polylinie; davor/dahinter gerade aus der Fläche heraus und bis ins Gebäude (wird an der Wand gekappt)
                 routed[b.id] = Shape(A, B, best);
             }
+            return bad;
         }
         static Vector2[] Shape(BPort A, BPort B, List<int> cells)
         {
@@ -132,7 +156,7 @@ namespace LunarCleanup.Gameplay
 
         /// <summary>A* mit Richtungszustand: Schritt 0,5, Abbiegen +3 m, neben Hindernissen +0,4, fremde Bänder kreuzen +2,5,
         /// auf Bändern mit gleichem Ziel/gleicher Quelle mitlaufen ist günstig (Y-Zusammenführung).</summary>
-        List<int> AStar(Vector2 s, Vector2 sDir, Vector2 g, Vector2 gDir, bool[] block, Dictionary<int, List<(string, string)>> occ, string from, string to, out float cost)
+        List<int> AStar(Vector2 s, Vector2 sDir, Vector2 g, Vector2 gDir, bool[] block, Dictionary<int, List<(string, string, string)>> occ, string from, string to, out float cost)
         {
             cost = 1e9f; int sx = Ix(s.x), sy = Ix(s.y), gx = Ix(g.x), gy = Ix(g.y);
             if (sx < 1 || sy < 1 || gx < 1 || gy < 1 || sx >= GN - 1 || sy >= GN - 1 || gx >= GN - 1 || gy >= GN - 1) return null;
