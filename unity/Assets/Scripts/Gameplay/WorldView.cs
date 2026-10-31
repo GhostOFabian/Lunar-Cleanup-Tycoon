@@ -31,7 +31,7 @@ namespace LunarCleanup.Gameplay
             foreach (Transform c in transform) Destroy(c.gameObject);
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
-            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; /* Bodenteile beim nächsten Bild neu verteilen */
+            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
         }
@@ -681,7 +681,7 @@ namespace LunarCleanup.Gameplay
         {
             var g = new GameObject("Staub"); g.transform.SetParent(transform, false); dust = g.AddComponent<ParticleSystem>();
             var main = dust.main; main.loop = false; main.playOnAwake = false; main.startLifetime = new ParticleSystem.MinMaxCurve(.5f, 1.1f); main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 3f);
-            main.startSize = new ParticleSystem.MinMaxCurve(.12f, .32f); main.gravityModifier = 0; main.simulationSpace = ParticleSystemSimulationSpace.World; main.maxParticles = 600;
+            main.startSize = new ParticleSystem.MinMaxCurve(.12f, .32f); main.gravityModifier = 0; main.simulationSpace = ParticleSystemSimulationSpace.World; main.maxParticles = 2500;
             var em = dust.emission; em.rateOverTime = 0; var sh = dust.shape; sh.shapeType = ParticleSystemShapeType.Hemisphere; sh.radius = .4f;
             var col = dust.colorOverLifetime; col.enabled = true; var grd = new Gradient(); grd.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) }, new[] { new GradientAlphaKey(.9f, 0), new GradientAlphaKey(0, 1) }); col.color = grd;
             var pr = dust.GetComponent<ParticleSystemRenderer>(); var m = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); m.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(m, false); pr.sharedMaterial = m;
@@ -700,7 +700,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
