@@ -126,3 +126,9 @@
 - Vorbereitet ohne Unity (noch nicht kompiliert): Gebäudefenster zeigt die passenden Upgrades; Ziel antippen fliegt zur richtigen Stelle/öffnet das richtige Fenster (QuestTarget); Kristalle werden im Bild angetippt (nicht mehr am Boden dahinter); Bodenteile wie im Prototyp (Steine, Schrott, Satellitenteile, Kristalle, Fässer, Eis, Lava, Schleim) verschwinden mit Staubwolke, wenn ihr Feld sauber ist (WorldView.Debris.cs, GPU-Instancing); Detailtextur-Fix für den Browser-Build.
 - Ideen ausgearbeitet (docs/IDEEN_SPEC.md) mit Zahlen, Spielstand-Feldern und Reihenfolge; Tabellen in Core/FeatureData.cs; neue Spielstand-Felder mit Standardwerten in SaveData.cs (noch nicht benutzt, noch nicht übersetzt).
 - Planetengrößen neu bis 17.642 Parzellen; Daten neu exportiert (alte Größen 1:1 erhalten, geprüft), Layout-Test und Regressionstest des Prototyps: ALL OK. Unity-Anpassungen für große Planeten noch ungetestet.
+
+## Unity 0.13 (31.10.2026) – Browser-Build v=4 auf GitHub
+- Neu: Kombo beim Handputzen, Funde + Album, Ereignisse (Wrack, Komet, Sonnensturm, Ader, Frachter) mit Leuchtsäule, Tagesbonus, Fahrzeug-Erfahrung/Spezialisierung, prozeduraler Ton + Musik, Meteoritenschauer, Sternenstaub-Neustart, 19 Erfolge, Foto-Modus (P), Wetter je Planet (Mars, Europa, Titan, Io), laufende Astronauten, Bodenteile, Produkte auf Bändern (DrawMesh).
+- Planeten bis 17.642 Parzellen; alte Spielstände behalten ihre Größe.
+- Boden wieder hell (DetailTex in ShaderKeep).
+- Ungetestet im Browser durch den Spieler: alle neuen Funktionen, große Planeten (Leistung), großer Basis-Check.
