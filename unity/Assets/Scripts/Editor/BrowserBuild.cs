@@ -69,6 +69,9 @@ namespace LunarCleanup.EditorTools
             if (lit)
             {
                 Save(new Material(lit), "Lit");
+                /* GPU-Instancing-Varianten behalten: Waren auf den Bändern, Bodenteile und Kristalle werden mit DrawMeshInstanced gezeichnet – ohne diese Variante fehlen sie im Build */
+                var li = new Material(lit) { enableInstancing = true }; Save(li, "LitInstanced");
+                var lie = new Material(lit) { enableInstancing = true }; lie.EnableKeyword("_EMISSION"); lie.SetColor("_EmissionColor", Color.white); Save(lie, "LitInstancedEmission");
                 var e = new Material(lit); e.EnableKeyword("_EMISSION"); e.SetColor("_EmissionColor", Color.white); Save(e, "LitEmission");
                 var t = new Material(lit); MeshKit.MakeTransparent(t, false); Save(t, "LitTransparent");
                 var ta = new Material(lit); MeshKit.MakeTransparent(ta, true); Save(ta, "LitAdditive");

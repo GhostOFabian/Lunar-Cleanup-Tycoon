@@ -33,7 +33,7 @@ namespace LunarCleanup.Core
     }
     public class VehNav { public string tk, nk; public List<Vector2> wp; public int i; public Vector2 s; }
 
-    public static class Game
+    public static partial class Game
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnPlanetChanged = null; Offline = false; }
         public static SaveData S;
@@ -206,7 +206,7 @@ namespace LunarCleanup.Core
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
-            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount());
+            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid));
         }
         public static void Earn(double cr) { S.credits += cr; S.stats.earned += cr; }
         public static bool Fail(string t) { Toast(t, "bad"); return false; }
@@ -316,6 +316,7 @@ namespace LunarCleanup.Core
                 double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff; Earn(bonus);
                 if (GameData.Kinds[cl.kind].key == "rich") { int m = GameData.Dirt[cl.type].mat; float x = Mathf.Min(ParcelYield(cl) * .2f, RohCap(ps) - RohSum(ps)); if (x > 0) ps.sv.roh[m] += x; }
                 FloatTxt(ps.pd.cells[id].c, "+" + Fmt(bonus) + " Cr", "big");
+                OnCellDone(ps, id, bonus);
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
             foreach (int b in cl.nb) ps.dirtyCells.Add(b);
@@ -641,7 +642,7 @@ namespace LunarCleanup.Core
             if (sv.rk > 0) { sv.rk = Mathf.Max(0, sv.rk - dt); return; }
             float tot = Sum(sv.sellBuf); if (tot <= 1e-6f) { sv.rkGo = false; return; }
             if (tot < SellCap(ps) * .98f && !sv.rkGo) return;
-            bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); Array.Clear(sv.sellBuf, 0, NM);
+            bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } Array.Clear(sv.sellBuf, 0, NM);
             Earn(val); sv.soldP += val; S.stats.sold += val; sv.nRockets++; sv.rk = RocketTime(ps);
             if (!Offline && ps.pid == S.planet) { OnRocket?.Invoke(ps.pid, val); if (man) Toast("Rakete gestartet · +" + Fmt(val) + " Cr", "good"); }
         }
@@ -663,7 +664,7 @@ namespace LunarCleanup.Core
             ps.sv.veh.Add(new VehSave { id = ps.sv.nextVeh++, type = t, d = ps.pd.PlanDir(p0), tank = new float[NM] });
             Toast(GameData.Veh[t].name + " ist im Einsatz", "good"); return true;
         }
-        static float TankCap(PState ps, VehSave v) => GameData.Veh[v.type].tank * Uv("vtank", ps);
+        static float TankCap(PState ps, VehSave v) => GameData.Veh[v.type].tank * Uv("vtank", ps) * VehBonus(v, "tank");
         static bool CanUse(VehSave v, string s) => IsOut(s) || GameData.Bld[s].st.acc.Contains(GameData.Veh[v.type].size);
 
         static int ChooseCell(PState ps, VehSave v)
@@ -760,7 +761,7 @@ namespace LunarCleanup.Core
         static void VehStep(PState ps, VehSave v, float dt, float f)
         {
             var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = (T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1) * (v.wear > .85f ? .8f : 1);
-            float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf, tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false; if (v.avoidT > 0) v.avoidT -= dt;
+            float hf = HomeF(ps, v), spd = T.speed * Uv("vspeed", ps) * Mathf.Max(.25f, f) * (hf > 1 ? 1 : ps.vm) * bf * VehBonus(v, "speed") * (EvOn(ps, "solar") ? FeatureData.SOLAR_VEH : 1), tank = Sum(v.tank), cap = TankCap(ps, v); v.busy = false; v.charging = false; if (v.avoidT > 0) v.avoidT -= dt;
             switch (v.mode)
             {
                 case "seek":
@@ -791,9 +792,9 @@ namespace LunarCleanup.Core
                             break;
                         }
                         v.ph += dt * 4; var loc = pd.ToLocal(a.cl, v.d); float wg = arrived ? .4f : 0;
-                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
+                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * VehBonus(v, "power") * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
                         float rem = CleanAt(ps, a, loc.x + Mathf.Cos(v.ph) * wg, loc.y + Mathf.Sin(v.ph) * wg, T.radius * Uv("vradius", ps), k);
-                        if (rem > 0) { float amt = rem / a.cl.nIn * a.amt; v.tank[a.D.mat] += amt; v.coll += amt; }
+                        if (rem > 0) { float amt = rem / a.cl.nIn * a.amt; v.tank[a.D.mat] += amt; v.coll += amt; VehXp(v, rem / a.cl.nIn * pd.CellArea(a.cl)); }
                         v.last = v.cell; break;
                     }
                 case "toUnload":
@@ -905,7 +906,7 @@ namespace LunarCleanup.Core
         static void VehWear(PState ps, VehSave v, float dt)
         {
             if (Gs(ps) < 3) return; var T = GameData.Veh[v.type];
-            if (v.busy && v.mode != "toShop") v.wear += dt * (1 + 3 * RadF(ps)) / (VM_LIFE * Uv("vdur", ps)); float w = v.wear;
+            if (v.busy && v.mode != "toShop") v.wear += dt * (1 + 3 * RadF(ps)) / (VM_LIFE * Uv("vdur", ps)) * VehBonus(v, "wear"); float w = v.wear;
             if (v.mode != "broken" && v.mode != "toShop" && v.mode != "repair" && v.mode != "lifted" && v.mode != "liftwait" && (w >= 1 || (w > .8f && Rng.NextDouble() < dt / 2400)))
             {
                 if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
@@ -940,7 +941,7 @@ namespace LunarCleanup.Core
         public static int RigMax(PState ps) => 2 + 2 * ps.sv.stage;
         public static double RigCost(PState ps) => Math.Round(3000 * ps.P.diff * Math.Pow(1.45, ps.sv.rigs.Count));
         public static int RigMat(PState ps, int id) => GameData.Dirt[ps.pd.cells[id].type].mat;
-        public static float RigRate(PState ps, RigSave r) => GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1);
+        public static float RigRate(PState ps, RigSave r) => GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1) * (EvOn(ps, "vein") ? FeatureData.VEIN_MULT : 1);
         public static float RigBufCap(RigSave r) => r.bag ? 600 : GameData.RigBuf;
         public static double RigUpCost(PState ps, RigSave r) => Math.Round(2500 * ps.P.diff * Math.Pow(1.9, r.lv));
         public static double BagCost(PState ps) => Math.Round(60000 * ps.P.diff);
@@ -1484,7 +1485,7 @@ namespace LunarCleanup.Core
         public static float DayLeft(PState ps) { float L = DayLen(ps.pid), t = DayT(ps) % L; return t < L / 2 ? L / 2 - t : L - t; }
         public static Vector3 SunDir(PState ps) { var c = ps.pd.cells[ps.pd.baseCell]; float a = SunAng(ps); return (c.c * Mathf.Sin(a) + c.e1 * Mathf.Cos(a)).normalized; }
         public static float EnergyCap(PState ps) => 150 + (ps.bld.Contains("energy") ? 150 : 0) + Uv("ecap", ps) + (ps.bld.Contains("reactor") ? 1000 : 0);
-        public static float SolarProd(PState ps) => (3 + (ps.bld.Contains("energy") ? 8 : 0)) * Uv("energy", ps) * ps.solar * GameData.SolarPeak;
+        public static float SolarProd(PState ps) => (3 + (ps.bld.Contains("energy") ? 8 : 0)) * Uv("energy", ps) * ps.solar * GameData.SolarPeak * (EvOn(ps, "solar") ? FeatureData.SOLAR_MULT : 1);
         public static float ExtraProd(PState ps) => (ps.bld.Contains("rtg") ? 10 : 0) + (ps.bld.Contains("geo") ? 30 * GeoF(ps.pid) : 0) + (ps.bld.Contains("reactor") ? 150 : 0);
         public static float EnergyProd(PState ps) => SolarProd(ps) + ExtraProd(ps);
         // ================= Forschung =================
@@ -1513,7 +1514,7 @@ namespace LunarCleanup.Core
         public static float BattCap(PState ps, VehSave v) => GameData.Veh[v.type].batt * Uv("vbatt", ps);
         static float Bat(PState ps, VehSave v) => v.bat < 0 ? BattCap(ps, v) : v.bat;
         static bool BattLow(PState ps, VehSave v) => GameData.Veh[v.type].batt > 0 && Bat(ps, v) < BattCap(ps, v) * .15f;
-        static void BattUse(PState ps, VehSave v, float dt) { if (GameData.Veh[v.type].batt <= 0) return; v.bat = Mathf.Max(0, Bat(ps, v) - dt); }
+        static void BattUse(PState ps, VehSave v, float dt) { if (GameData.Veh[v.type].batt <= 0) return; v.bat = Mathf.Max(0, Bat(ps, v) - dt * VehBonus(v, "energy")); }
 
         // ================= Stürme =================
         public static bool StormOn(PState ps) => ps.P.storm != null && ps.sv.hzOn > 0;
@@ -1579,6 +1580,7 @@ namespace LunarCleanup.Core
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;
             for (int s = 0; s < sub; s++) { foreach (var b in ps.lay.belts) BeltStep(ps, b, sdt, f); foreach (var m in new[] { "presse", "schmelze", "raff" }) MachStep(ps, m, sdt, f); }
             SellStep(ps, dt);
+            if (!Offline && ps.pid == S.planet) EventStep(ps, dt);
             List<int> done = null; foreach (var kv in ps.act) if (kv.Value.sum < kv.Value.cl.nIn * GameData.DONE) (done = done ?? new List<int>()).Add(kv.Key);
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }

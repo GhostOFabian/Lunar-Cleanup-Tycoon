@@ -68,6 +68,13 @@ namespace LunarCleanup.UI
                         () => Game.Gs(ps) >= 3 && ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
                         () => { if (Game.RepsLeft(vv) <= 0) Game.ReplaceVeh(ps, vv, false); else if (Game.SendToShop(ps, vv, false)) Game.Toast("Fährt zur Werkstatt", "good"); }, false);
                 }
+                h.Section("Erfahrung und Spezialisierung");
+                foreach (var v in ps.sv.veh)
+                {
+                    var vv = v;
+                    h.Row(Game.VehName(v), () => { int l = Game.VehLvl(vv); string nx = l < FeatureData.VehXp.Length ? " · nächste Stufe bei " + Game.Fmt(FeatureData.VehXp[l]) + " m²" : " · höchste Stufe"; return "Stufe " + l + " (+" + Mathf.RoundToInt(FeatureData.VEH_LVL_BONUS * l * 100) + " % Tempo und Saugkraft) · " + Game.Fmt(vv.xp) + " m² gereinigt" + nx + " · " + FeatureData.VehSpecName[vv.spec]; },
+                        () => Game.VehLvl(vv) < 2 ? "ab Stufe 2" : "Wechseln", () => Game.VehLvl(vv) >= 2, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
+                }
                 if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt. Ohne Wartung droht ein Totalschaden.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
             }
             h.Section("Upgrades für Fahrzeuge");
@@ -168,6 +175,19 @@ namespace LunarCleanup.UI
 
         static void Goals(Hud h)
         {
+            var ev = ps.sv.ev;
+            if (ev != null && ev.key != "")
+            {
+                var E = Game.EvDef(ev.key); h.Section("Ereignis");
+                h.Row(E != null ? E.name : "Ereignis", () => (E != null ? E.hint : "") + " · noch " + Mathf.CeilToInt(Mathf.Max(0, ps.sv.ev.t) / 60f) + " min", () => ps.sv.ev.cell >= 0 ? "Hinfliegen" : "OK", () => true, () => { h.CloseSheet(); h.OnFocusEvent?.Invoke(); }, false);
+            }
+            h.Section("Funde");
+            foreach (var kv in FeatureData.Finds)
+            {
+                if (!Game.P.ContainsKey(kv.Key)) continue; string pid = kv.Key; var al = kv.Value;
+                h.Row(GameData.Planets[pid].name + " · " + Game.FindsOn(pid) + "/" + al.Length, () => string.Join(" · ", al.Select((f, i) => Game.HasFind(pid, i) ? f.name : "???")) + (Game.FindsOn(pid) >= al.Length ? " · Album komplett: +5 % Erlös" : " · Funde gibt es beim Reinigen (3 %, auf seltsamen Parzellen 8 %)"));
+            }
+            if (Game.S.daily != null && Game.S.daily.streak > 0) h.Note("Tagesbonus: Tag " + Game.S.daily.streak + " von 7 – komm morgen wieder, die Belohnung steigt.");
             h.Section("Hauptziele");
             for (int i = 0; i < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count); i++)
             {
@@ -300,6 +320,9 @@ namespace LunarCleanup.UI
         static float resetT;
         static void Settings(Hud h)
         {
+            h.Section("Ton");
+            h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
+            h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);
             h.Section("Spielstand");
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,

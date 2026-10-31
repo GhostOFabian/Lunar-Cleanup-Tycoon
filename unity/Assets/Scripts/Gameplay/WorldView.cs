@@ -741,7 +741,7 @@ namespace LunarCleanup.Gameplay
             {
                 if (kv.Value.Count == 0) continue;
                 if (!itemMat.TryGetValue(kv.Key, out var mat)) { var M = GameData.Mats[kv.Key]; mat = M.shape == "gem" ? MeshKit.Mat(M.col, .1f, .9f, M.col * .5f) : MeshKit.Mat(M.col, M.shape == "ingot" ? .85f : .2f, M.shape == "ingot" ? .75f : .45f); itemMat[kv.Key] = mat; }
-                Graphics.DrawMeshInstanced(itemMesh, 0, mat, kv.Value);
+                foreach (var mx in kv.Value) Graphics.DrawMesh(itemMesh, mx, mat, 0); /* einzeln statt Instancing: braucht keine Instancing-Shadervariante (die fehlte im Build – Waren waren unsichtbar) */
             }
         }
 

@@ -27,7 +27,7 @@ namespace LunarCleanup.Gameplay
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
         GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos;
 
-        UniversalRenderPipelineAsset urpA;
+        UniversalRenderPipelineAsset urpA; bool dailyDone;
         void Awake()
         {
             Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
@@ -50,7 +50,7 @@ namespace LunarCleanup.Gameplay
 #elif DEVELOPMENT_BUILD
             Game.TestMode = PlayerPrefs.GetInt("LunarCleanup.TestMode", 1) == 1; // Browser-Testversion: standardmäßig Testmodus (eigener Spielstand)
 #endif
-            Game.Init(); MeshKit.Init();
+            Game.Init(); MeshKit.Init(); gameObject.AddComponent<Sfx>();
             cam = Camera.main; if (!cam) { var cg = new GameObject("Main Camera"); cg.tag = "MainCamera"; cam = cg.AddComponent<Camera>(); }
             cam.nearClipPlane = .3f; cam.farClipPlane = 6000; cam.fieldOfView = 50;
             // Nachbearbeitung: Leuchten (Bloom), Filmlook (ACES), leichte Vignette
@@ -68,7 +68,7 @@ namespace LunarCleanup.Gameplay
             hud = cv.AddComponent<Hud>(); hud.Build(cv.transform);
             hud.OnNav = k => { if (k == "clean") { hud.CloseSheet(); FocusFront(); } else hud.OpenSheet(k); };
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
-            hud.OnFocusQuest = FocusQuest;
+            hud.OnFocusQuest = FocusQuest; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket();
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
@@ -110,6 +110,7 @@ namespace LunarCleanup.Gameplay
         void Update()
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
+            if (!dailyDone && !offlineRunning && Time.realtimeSinceStartup > 3) { dailyDone = true; var dtx = Game.DailyCheck(); if (dtx != null) Game.Toast(dtx, "good"); }
             HandleInput(dt);
             var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
             if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
@@ -312,6 +313,7 @@ namespace LunarCleanup.Gameplay
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
                         brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 2.4f * Mathf.Clamp01((WorldView.NightF - .2f) / .6f);
+                        Sfx.Wipe(amt > 0);
                         if (amt > 0 && Random.value < .6f) { int c = Game.Cur.pd.CellOf(dir); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, 3); }
                     }
                 }
@@ -322,7 +324,7 @@ namespace LunarCleanup.Gameplay
             if (mode == Mode.Pan && !moved && Time.time - downT < .7f) Tap(pos);
             mode = Mode.None;
         }
-        void EndWipe() { brush.SetActive(false); mode = Mode.None; }
+        void EndWipe() { brush.SetActive(false); mode = Mode.None; Sfx.Wipe(false); }
 
         bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
 
