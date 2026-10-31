@@ -1438,6 +1438,36 @@ namespace LunarCleanup.Core
             }
             return 0;
         }
+        /// <summary>Wohin ein Tipp auf das aktuelle Ziel führt: "front" (nächste Parzelle), "hand" (Behälter), "sheet:&lt;Fenster&gt;", "build:&lt;Gebäude&gt;", "outpost".</summary>
+        public static string QuestTarget(int q)
+        {
+            var c = Cur; string Gate(string pf) => P.ContainsKey(pf) && CleanPct(P[pf]) < .8f ? (S.planet == pf ? "front" : "sheet:planets") : "sheet:planets";
+            string Res(string r, string then) => ResDone(r) ? then : "sheet:research";
+            switch (q)
+            {
+                case 0: case 2: case 4: return "front";
+                case 1: return "hand";
+                case 3: case 11: case 14: return "sheet:production";
+                case 5: return "sheet:upgrades";
+                case 6: case 9: return "sheet:vehicles";
+                case 7: case 12: return "sheet:base";
+                case 8: return "build:u1"; case 10: return "build:presse"; case 13: return "build:schmelze";
+                case 15: return "sheet:research"; case 16: return c.bld.Contains("hangar") ? "build:hangar" : Res("drones", "build:hangar");
+                case 17: return S.planet == "moon" ? "front" : "sheet:planets";
+                case 18: return "sheet:planets";
+                case 19: return Res("outpost", "outpost");
+                case 20: return Gate("mars"); case 26: return Gate("europa"); case 29: return Gate("titan"); case 34: return Gate("io");
+                case 36: return Gate("venus"); case 38: return Gate("ganymed"); case 39: return Gate("enceladus"); case 41: return Gate("triton");
+                case 42: return S.planet == "pluto" ? "front" : "sheet:planets";
+                case 21: return "build:energy";
+                case 22: return Res("rtg", "build:rtg"); case 23: return Res("raff", "build:raff"); case 25: return "sheet:research";
+                case 24: case 27: case 30: case 37: case 40: return "sheet:vehicles";
+                case 28: return "build:geo"; case 31: return "sheet:research"; case 32: return Res("nuclear", "build:reactor");
+                case 33: return Res("airlift", "build:lifter");
+                case 35: return "front";
+            }
+            return "front";
+        }
         public static bool ClaimQuest()
         {
             int q = S.quest; if (q >= QuestsSupported || q >= GameData.Quests.Count || QuestProgress(q) < 1) return false;

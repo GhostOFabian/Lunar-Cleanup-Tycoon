@@ -19,6 +19,26 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 - [x] 0.12 Bänder rechtwinklig aus geraden Flächen mit Y-Zusammenführungen, Pipeline unterirdisch, Test-Knopf „Alles maximal ausbauen“ (F12), Fahrzeuge sammeln Kristalle unterwegs
 - [x] Testmodus im Editor (Menü **Lunar Cleanup → Testmodus**): eigener Test-Spielstand, Test-Tasten F5–F10 nur dort
 
+## Nach Dringlichkeit (Stand 31.10.2026, 11 Uhr)
+
+### Sofort, sobald Unity wieder offen ist
+1. [ ] **Vorbereiteten Code übersetzen und Fehler beheben** (ohne Unity geschrieben, noch nie kompiliert): Gebäude-Upgrades im Gebäudefenster, Ziel antippen = Sprung an die richtige Stelle, Kristalle im Bild antippen, Bodenteile auf schmutzigen Parzellen, Detailtextur-Fix.
+2. [ ] **Dunklen Planetenboden in der Browser-Fassung beheben** – Vermutung: nach dem Unity-Absturz fehlt die Shader-Variante mit Detailtextur (`_DETAIL_MULX2`). Fix vorbereitet (Platzhalter-Material bekommt eine echte Detailtextur). Danach Browser-Build und A/B-Vergleich mit dem hellen Stand von 09:50, erst dann online stellen.
+3. [ ] **Große Bänder-Prüfung** (jeder Teilausbau, alle Planeten) mit der neuen Verlege-Reihenfolge; Rest: Kreuzungen auf Enceladus und Sedna, eine enge Kurve auf Gliese 1214 b.
+4. [ ] **Alles Neue im Spiel testen**: 2 Parzellen pro Wisch, Kamera beim Wischen (Rand, WASD/Pfeile, rechte Maustaste), Scheinwerfer nur nachts, Gebäude-Upgrades, Ziel-Sprung, Kristalle ernten, Bodenteile verschwinden beim Reinigen (Leistung auf großen Planeten wie Poltergeist prüfen).
+5. [ ] **Webseite: echte Spielbilder aus Unity** (mit HUD, ausgebaute Basis, Nacht mit Scheinwerfern, Kristalle, Bodenteile) statt der Prüf-Fotos.
+
+### Hoch
+6. [ ] **Planetenboden schöner** (Unity): feinere Bodentextur mit Normal-Map, weniger Rauschen, Schatten auf Handy-Qualität prüfen.
+7. [ ] **Meteoritenschauer** (Unity): Staub auf sauberen Parzellen, Erzbagger räumt, Ziel dazu.
+8. [ ] **Browser-Prototyp nachziehen**: eine Entladeanlage mit 3 Stufen; entscheiden, ob 2 Parzellen pro Wisch auch dort gelten.
+
+### Mittel (Spielinhalt aus dem Prototyp)
+9. [ ] Ausbaustufen nach Basisstufe 5 · 10. [ ] Sternenstaub-Neustart + Artefakte · 11. [ ] Frachtaufträge der Rakete, „Band an/aus“ · 12. [ ] Verkaufsautomat + Produktionsplan · 13. [ ] Produktions-Ampel · 14. [ ] Gebäudestufen · 15. [ ] Ausrichtung, Betriebsbonus, Werksaufträge · 16. [ ] Planetenziele + tägliche Aufträge · 17. [ ] Funde, Erfolge, Statistik · 18. [ ] Fahrzeug-Feinheiten (Teamarbeit, Arbeitsbereich) · 19. [ ] Sound + Vibration
+
+### Später (Handy)
+20. [ ] Spielstand-Code (Übernahme aus dem Browser) · 21. [ ] Android-Build + Test in BlueStacks · 22. [ ] Google Play Spiele / Game Center + Käufe · 23. [ ] iOS-Build (Mac nötig)
+
 ## Morgen zuerst: Playtest-Befunde vom 30.10. (Fabian)
 Reihenfolge so gewählt, dass jeder Punkt einzeln in Unity geprüft werden kann (Basis-Prüfung F11 + Fotos).
 

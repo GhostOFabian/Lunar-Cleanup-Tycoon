@@ -1,4 +1,5 @@
 // Inhalte der Fenster (Fahrzeuge, Produktion, Basis, Upgrades, Planeten, Ziele, Einstellungen, Gebäude) – Texte wie im Browser.
+using System.Collections.Generic;
 using System.Linq;
 using LunarCleanup.Core;
 using UnityEngine;
@@ -24,8 +25,8 @@ namespace LunarCleanup.UI
                 case "energy": title = "Energie"; Energy(h); break;
                 case "research": title = "Forschung"; Research(h); break;
                 case "hazard": title = "Gefahren"; Hazard(h); break;
-                case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); break;
-                case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); break;
+                case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); BuildingUpgrades(h, "outpost"); break;
+                case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); BuildingUpgrades(h, "rig"); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -325,9 +326,30 @@ namespace LunarCleanup.UI
             h.Note("Lunar Cleanup Tycoon · Unity-Version 0.10. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Meteoritenschauer, Ausbaustufen, Sternenstaub-Neustart.");
         }
 
+        /// <summary>Welche Upgrades zu welchem Gebäude gehören (Antippen eines Gebäudes zeigt sie oben im Fenster).</summary>
+        static readonly Dictionary<string, string[]> BldUpg = new Dictionary<string, string[]>
+        {
+            { "u1", new[] { "urate", "ubuf", "udock" } }, { "u2", new[] { "urate", "ubuf", "udock" } }, { "u3", new[] { "urate", "ubuf", "udock" } },
+            { "roh", new[] { "rohcap", "bspeed", "bcap", "beff" } }, { "prod", new[] { "prodcap", "bspeed", "bcap", "beff" } },
+            { "presse", new[] { "pvol", "pspeed", "mspeed", "mcap", "meff", "mqual" } }, { "schmelze", new[] { "mspeed", "mcap", "meff", "mqual" } }, { "raff", new[] { "mspeed", "mcap", "meff", "mqual" } },
+            { "sell", new[] { "sellcap", "rspeed", "price", "autosell" } }, { "port", new[] { "sellcap", "rspeed", "price", "autosell" } },
+            { "energy", new[] { "energy", "ecap" } }, { "rtg", new[] { "ecap" } }, { "geo", new[] { "ecap" } }, { "reactor", new[] { "ecap" } },
+            { "research", new[] { "research" } }, { "hq", new[] { "slots" } },
+            { "werkstatt", new[] { "vdur", "vspeed", "vpower", "vtank", "veff", "vbatt", "vradius", "slots" } },
+            { "hangar", new[] { "dcap", "dspeed" } }, { "lifter", new[] { "dcap", "dspeed" } },
+            { "outpost", new[] { "obuf", "pipe" } }, { "rig", new[] { "rigrate", "rcare", "rshield" } },
+        };
+        static void BuildingUpgrades(Hud h, string key)
+        {
+            if (!BldUpg.TryGetValue(key, out var ids)) return;
+            var list = ids.Where(x => GameData.Up.ContainsKey(x) && UpVisible(GameData.Up[x])).ToList(); if (list.Count == 0) return;
+            h.Section("Upgrades für dieses Gebäude"); foreach (var x in list) UpRow(h, x);
+        }
+
         static void Building(Hud h, string id)
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
+            BuildingUpgrades(h, id);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "research") { Research(h); return; }

@@ -73,7 +73,9 @@ namespace LunarCleanup.EditorTools
                 var t = new Material(lit); MeshKit.MakeTransparent(t, false); Save(t, "LitTransparent");
                 var ta = new Material(lit); MeshKit.MakeTransparent(ta, true); Save(ta, "LitAdditive");
                 var te = new Material(lit); MeshKit.MakeTransparent(te, false); te.EnableKeyword("_EMISSION"); Save(te, "LitTransparentEmission");
-                var d = new Material(lit); d.EnableKeyword("_DETAIL_MULX2"); Save(d, "LitDetail");
+                /* Planetenboden: Lit mit Detailtextur. Ohne zugewiesene Detailtextur entfernt Unity das Schlüsselwort beim Speichern – dann fehlt die Variante im Build und der Boden wird dunkel und flach */
+                var dtPath = Keep + "/DetailTex.asset"; var dt = AssetDatabase.LoadAssetAtPath<Texture2D>(dtPath); if (!dt) { dt = new Texture2D(8, 8, TextureFormat.RGBA32, true); var px = new Color[64]; for (int i = 0; i < 64; i++) px[i] = new Color(.5f, .5f, .5f, 1); dt.SetPixels(px); dt.Apply(); AssetDatabase.CreateAsset(dt, dtPath); }
+                var d = new Material(lit); d.SetTexture("_DetailAlbedoMap", dt); d.SetFloat("_DetailAlbedoMapScale", .3f); d.EnableKeyword("_DETAIL_MULX2"); Save(d, "LitDetail");
             }
             if (pu) { var a = new Material(pu); MeshKit.MakeTransparent(a, true); Save(a, "ParticlesAdditive"); var b = new Material(pu); MeshKit.MakeTransparent(b, false); Save(b, "ParticlesAlpha"); Save(new Material(pu), "Particles"); }
             foreach (var (n, s) in new[] { ("Unlit", "Universal Render Pipeline/Unlit"), ("Sky", "Skybox/Panoramic"), ("Sprites", "Sprites/Default"), ("UnlitColor", "Unlit/Color") }) { var sh = Shader.Find(s); if (sh) Save(new Material(sh), n); }

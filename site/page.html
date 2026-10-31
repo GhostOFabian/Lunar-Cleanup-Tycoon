@@ -170,7 +170,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
     <div class="copy">
       <div class="eyebrow">Handreinigung</div>
       <h2 id="f1">Eine Parzelle nach der anderen</h2>
-      <p>Der Planet ist in Sechsecke geteilt, dazu genau zwölf Fünfecke. Reinigen kannst du jede Parzelle, die an eine saubere grenzt, ohne Freischalten und ohne Kosten. Ein Wisch bleibt immer auf der Parzelle, auf der er beginnt. Ist sie fertig, leuchtet sie kurz grün auf und zahlt eine einmalige Prämie. Was du selbst abbaust, landet erst in deinem Sammelbehälter. Den leerst du von Hand in einen Trichter oder ins Lager und baust ihn mit Upgrades aus. Schon früh gibt es den Sammelwagen: Ist der Behälter voll, kommt er zu dir, du kippst alles hinein, und er fährt zur Entladestation.</p>
+      <p>Der Planet ist in Sechsecke geteilt, dazu genau zwölf Fünfecke. Reinigen kannst du jede Parzelle, die an eine saubere grenzt, ohne Freischalten und ohne Kosten. Im Prototyp bleibt ein Wisch auf seiner Parzelle, in der Unity-Version putzt er zwei Nachbarparzellen auf einmal. Ist sie fertig, leuchtet sie kurz grün auf und zahlt eine einmalige Prämie. Was du selbst abbaust, landet erst in deinem Sammelbehälter. Den leerst du von Hand in einen Trichter oder ins Lager und baust ihn mit Upgrades aus. Schon früh gibt es den Sammelwagen: Ist der Behälter voll, kommt er zu dir, du kippst alles hinein, und er fährt zur Entladestation.</p>
       <div class="legend" aria-label="Farben der Parzellenränder">
         <span class="chip c-clean"><i></i><em>Sauber</em></span>
         <span class="chip c-part"><i></i><em>In Arbeit</em></span>
@@ -197,7 +197,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
       <ul>
         <li>Neun Fahrzeugtypen vom Staubi bis zum Kryo-Koloss mit 1.400er-Tank. Sie suchen sich die nächste Parzelle selbst und fahren um Gebäude und Bänder herum.</li>
         <li>Fahrzeuge arbeiten im Team: Mehrere Maschinen teilen sich eine große Parzelle in Abschnitte auf und reinigen zusammen schneller. Elektrische Fahrzeuge laden ihren Akku an den Andockplätzen.</li>
-        <li>Drei Entladestationen mit Andockplätzen. Förderbänder laufen in runden Kurven und über Brücken und sind an jedem Gebäude direkt angeschlossen.</li>
+        <li>Entladestationen mit Andockplätzen (in der Unity-Version eine Entladeanlage mit drei Ausbaustufen). Förderbänder laufen in runden Kurven und über Brücken und sind an jedem Gebäude direkt angeschlossen.</li>
         <li>Staubpresse, Schmelzanlage und Raffinerie machen aus 10 Metallschrott einen Brick und aus 10 Bricks einen Barren für 340 Credits.</li>
         <li>Drohnen holen die Ladung weit entfernter Fahrzeuge ab, Außenlager pumpen ihr Material per Pipeline zur Basis, und Lastdrohnen fliegen schwere Maschinen direkt an neue Einsatzorte.</li>
         <li>Ein Sturmschild hält 80 % jedes Sturms ab, solange die Energie reicht.</li>
@@ -347,6 +347,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
         <li>Eine Entladeanlage mit drei Ausbaustufen, alle Andockplätze in einer Reihe.</li>
         <li>Bohrturm mit Gittermast und drehendem Gestänge, Erzbagger mit schwenkendem Arm.</li>
         <li>Leuchtkristalle in fünf Farben wachsen auf sauberen Parzellen nach. Du tippst sie an, oder die Fahrzeuge nehmen sie mit.</li>
+        <li>Beim Wischen dreht sich der Planet am Bildschirmrand mit; Kamera mit WASD/Pfeiltasten verschieben, mit Q/E oder rechter Maustaste drehen, Mausrad zoomt.</li>
+        <li>Fahrzeuge schalten ihre Scheinwerfer erst in der Nacht ein, Laternen leuchten nur im Dunkeln.</li>
         <li>Noch nicht dabei: Meteoritenschauer, Sternenstaub-Neustart, Frachtaufträge, Produktions-Ampel, Statistik und Sound. Die Liste wird Version für Version kürzer.</li>
       </ul>
       <div class="cta"><a class="btn" href="play-unity/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Unity-Version spielen</a></div>

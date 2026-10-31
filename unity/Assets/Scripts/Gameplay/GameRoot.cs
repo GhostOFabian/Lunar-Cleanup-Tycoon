@@ -68,7 +68,7 @@ namespace LunarCleanup.Gameplay
             hud = cv.AddComponent<Hud>(); hud.Build(cv.transform);
             hud.OnNav = k => { if (k == "clean") { hud.CloseSheet(); FocusFront(); } else hud.OpenSheet(k); };
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
-            hud.OnFocusQuest = FocusFront;
+            hud.OnFocusQuest = FocusQuest;
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket();
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
@@ -225,6 +225,26 @@ namespace LunarCleanup.Gameplay
         }
         void Twist(float deg) { if (Mathf.Abs(deg) < 1e-4f) return; north = Quaternion.AngleAxis(deg, cd) * north; }
         void Zoom(float f) { float R = VP.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 2.6f); mapMode = altGoal > R * 1.5f; }
+        /// <summary>Tipp auf das Ziel: an die passende Stelle fliegen bzw. das passende Fenster öffnen.</summary>
+        public void FocusQuest()
+        {
+            var ps = Game.Cur; string t = Game.QuestTarget(Game.S.quest);
+            if (t == "front") { FocusFront(); return; }
+            if (t == "hand") { if (ps.lay.pos.TryGetValue("roh", out var rp)) StartCoroutine(Fly(ps.pd.PlanDir(rp), 40)); Game.Toast("Tippe unten links auf den Behälter, um ihn zu leeren"); return; }
+            if (t.StartsWith("sheet:")) { hud.OpenSheet(t.Substring(6)); return; }
+            if (t.StartsWith("build:"))
+            {
+                string id = t.Substring(6);
+                if (ps.lay.pos.TryGetValue(Game.IsUnit(id) ? "u1" : id, out var bp)) StartCoroutine(Fly(ps.pd.PlanDir(bp), 40));
+                hud.OpenSheet(ps.bld.Contains(id) ? "building" : "base", ps.bld.Contains(id) ? id : null); return;
+            }
+            if (t == "outpost")
+            {
+                var sites = Game.OutpostSites(ps.pid); int best = -1; float bd = -2; foreach (int c in sites) { float d = Vector3.Dot(ps.pd.cells[c].c, cd); if (d > bd) { bd = d; best = c; } }
+                if (best >= 0) { StartCoroutine(Fly(ps.pd.cells[best].c, 40)); hud.OpenSheet("outpost", best.ToString()); } return;
+            }
+            FocusFront();
+        }
         public void FocusFront()
         {
             var ps = Game.Cur; if (ps.front.Count == 0) return; int best = -1; float bd = -2;
@@ -308,8 +328,23 @@ namespace LunarCleanup.Gameplay
 
         void Tap(Vector2 pos)
         {
-            if (!Hit(pos, out var dir)) return; var ps = Game.Cur; var pl = ps.pd.PlanLocal(dir);
-            { CrystalSave bc = null; float cd0 = 2.2f; foreach (var cx in ps.sv.crystals) { float d = ps.pd.Arc(dir, Game.CrystalDir(ps, cx)); if (d < cd0) { cd0 = d; bc = cx; } } if (bc != null) { Game.HarvestCrystal(bc.id); return; } } // Leuchtkristall antippen = ernten
+            var ps = Game.Cur;
+            /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */
+            {
+                CrystalSave bc = null; float bpx = Mathf.Max(44f, Screen.height * .045f);
+                foreach (var cx in ps.sv.crystals)
+                {
+                    var cdir = Game.CrystalDir(ps, cx);
+                    foreach (float h in new[] { .2f, .7f, 1.3f })
+                    {
+                        var wp = ps.pd.Surf(cdir, h * Mathf.Max(.4f, cx.g)); var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0) continue;
+                        if (Vector3.Dot(cdir, (cam.transform.position - wp).normalized) < -.05f) continue; /* Rückseite des Planeten */
+                        float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bc = cx; }
+                    }
+                }
+                if (bc != null) { Game.HarvestCrystal(bc.id); return; }
+            }
+            if (!Hit(pos, out var dir)) return; var pl = ps.pd.PlanLocal(dir);
             string best = null; float bd = 1e9f;
             foreach (var id in ps.bld) { if (!ps.lay.pos.ContainsKey(id)) continue; float d = (ps.lay.pos[id] - pl).magnitude; if (d < GameData.Bld[id].fp + .6f && d < bd) { bd = d; best = id; } }
             if (best != null) { hud.OpenSheet("building", best); return; }
