@@ -10,7 +10,7 @@
 :root{
   --void:#070b16; --deck:#0d1424; --panel:#121b2f; --line:rgba(160,182,232,.16);
   --ink:#e9eef8; --ink-2:#a8b3cb; --ink-3:#7480a0;
-  --credit:#ffbf4d; --clean:#6ff2d2; --part:#ffd23f; --dirty:#ff4d3d; --base:#4f86e8;
+  --credit:#ffbf4d; --clean:#6ff2d2; --part:#ffbd61; --dirty:#ff6b4d; --base:#a8b3c2;
   --f-display:"Oxanium","Trebuchet MS",system-ui,sans-serif;
   --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
   --step--1:clamp(.8rem,.78rem + .1vw,.86rem); --step-0:clamp(1rem,.96rem + .2vw,1.08rem);
@@ -131,13 +131,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <header class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Mobile Idle-Tycoon · Version 0.13 (Beta)</div>
+      <div class="eyebrow">Mobile Idle-Tycoon · Version 0.15 (Beta)</div>
       <h1 style="margin-top:14px">Lunar Cleanup <span>Tycoon</span></h1>
       <p class="lead">Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.</p>
       <div class="cta">
         <a class="btn primary" href="play-unity/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Im Browser spielen (Beta)</a>
       </div>
-      <p class="note" style="margin-top:12px">Beta der späteren Handy-App: echte 3D-Modelle, Weltraum-Himmel und Leuchtkristalle. Lädt einmalig rund 17 MB und läuft am besten am PC in Chrome, Edge, Opera oder Firefox. Der Spielstand bleibt in deinem Browser.</p>
+      <p class="note" style="margin-top:12px">Beta der späteren Handy-App mit 3D-Modellen, Tag und Nacht, Wetter und Sound. Lädt einmalig rund 17 MB und läuft am besten am PC in Chrome, Edge, Opera oder Firefox. Der Spielstand bleibt in deinem Browser.</p>
       <div class="facts">
         <div><b>18</b><span>Welten, Mond bis Poltergeist</span></div>
         <div><b>252–17.642</b><span>Parzellen pro Planet</span></div>
@@ -145,7 +145,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
         <div><b>9</b><span>Fahrzeugtypen</span></div>
       </div>
     </div>
-    <div class="phone tilt"><img src="assets/screens/unity-mars.jpg" width="585" height="1266" alt="Ausgebaute Marsbasis mit Entladeanlage, Rohstofflager und Förderbändern"></div>
+    <div class="phone tilt"><img src="assets/screens/u15-basis.jpg" width="600" height="1066" alt="Mondbasis bei Tag mit Rohstofflager, Presse, Förderbändern und Rakete"></div>
   </div>
 </header>
 
@@ -169,18 +169,18 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
     <div class="copy">
       <div class="eyebrow">Handreinigung</div>
       <h2 id="f1">Eine Parzelle nach der anderen</h2>
-      <p>Der Planet ist in Sechsecke geteilt, dazu genau zwölf Fünfecke. Reinigen kannst du jede Parzelle, die an eine saubere grenzt, ohne Freischalten und ohne Kosten. Ein Wisch putzt bis zu zwei Nachbarparzellen auf einmal. Ist sie fertig, leuchtet sie kurz grün auf und zahlt eine einmalige Prämie. Was du selbst abbaust, landet erst in deinem Sammelbehälter. Den leerst du von Hand in einen Trichter oder ins Lager und baust ihn mit Upgrades aus. Schon früh gibt es den Sammelwagen: Ist der Behälter voll, kommt er zu dir, du kippst alles hinein, und er fährt zur Entladestation.</p>
+      <p>Der Planet ist in Sechsecke geteilt, dazu genau zwölf Fünfecke. Reinigen kannst du jede Parzelle, die an eine saubere grenzt, ohne Freischalten und ohne Kosten. Ein Wisch putzt bis zu zwei Nachbarparzellen auf einmal, und wer schnell hintereinander putzt, bekommt einen Kombo-Bonus. Auf dem Boden liegen Steine, Metallstücke und alte Satellitenteile, kleine Krater und Steinchen werfen Schatten. Alles verschwindet mit einer Staubwolke, sobald die Stelle sauber ist.</p>
+      <p>Was du selbst abbaust, landet in deinem Sammelbehälter. Den leerst du von Hand in den Trichter, später holt ihn der Sammelwagen ab. Beim Putzen tauchen manchmal Funde auf, sechs pro Planet, die ins Album kommen und die Preise erhöhen.</p>
       <div class="legend" aria-label="Farben der Parzellenränder">
-        <span class="chip c-clean"><i></i><em>Sauber</em></span>
-        <span class="chip c-part"><i></i><em>In Arbeit</em></span>
-        <span class="chip c-dirty"><i></i><em>Verschmutzt</em></span>
+        <span class="chip c-part"><i></i><em>Putzbar</em></span>
+        <span class="chip c-dirty"><i></i><em>Meteoritenstaub</em></span>
         <span class="chip c-base"><i></i><em>Basis</em></span>
       </div>
-      <p>Bald gehen immer wieder Meteoritenschauer nieder und decken gleich mehrere saubere Parzellen fast ganz mit Staub zu, ihr Rand wird rot. Auf komplett sauberen Planeten kommen sie öfter und größer – Arbeit und Ertrag für die Flotte.</p>
+      <p>Immer wieder gehen Meteoritenschauer nieder und decken saubere Parzellen mit frischem Staub zu, ihr Rand wird rot. Auf komplett sauberen Planeten kommen sie öfter und größer – Arbeit und Ertrag für die Flotte.</p>
     </div>
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-start.jpg" width="585" height="1266" alt="Spielstart auf dem Mond mit dem ersten Ziel"></div>
-      <div class="phone"><img src="assets/screens/unity-mond-aufbau.jpg" width="585" height="1266" alt="Mondbasis im Aufbau, Bänder zwischen Lager, Presse und Schmelze"></div>
+      <div class="phone"><img src="assets/screens/u15-start.jpg" width="600" height="1066" alt="Spielstart auf dem Mond mit Kratern, Steinen und dem ersten Ziel"></div>
+      <div class="phone"><img src="assets/screens/u15-basis-nah.jpg" width="600" height="1066" alt="Mondbasis aus der Nähe mit Förderbändern"></div>
     </div>
   </div>
 </section>
@@ -188,18 +188,18 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <section class="feature flip" aria-labelledby="f2">
   <div class="wrap">
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-enceladus.jpg" width="585" height="1266" alt="Basis auf Enceladus mit Entladeanlage und Bändern"></div>
+      <div class="phone"><img src="assets/screens/u15-enceladus.jpg" width="600" height="1066" alt="Ausgebaute Basis auf Enceladus mit Entladeanlage und Bändern"></div>
     </div>
     <div class="copy">
       <div class="eyebrow">Automatisierung</div>
       <h2 id="f2">Eine Basis, die sich selbst trägt</h2>
       <ul>
-        <li>Neun Fahrzeugtypen vom Staubi bis zum Kryo-Koloss mit 1.400er-Tank. Sie suchen sich die nächste Parzelle selbst und fahren um Gebäude und Bänder herum.</li>
-        <li>Fahrzeuge arbeiten im Team: Mehrere Maschinen teilen sich eine große Parzelle in Abschnitte auf und reinigen zusammen schneller. Elektrische Fahrzeuge laden ihren Akku an den Andockplätzen.</li>
-        <li>Eine Entladeanlage mit drei Ausbaustufen und Andockplätzen in einer Reihe. Förderbänder laufen in runden Kurven und über Brücken und sind an jedem Gebäude direkt angeschlossen.</li>
-        <li>Staubpresse, Schmelzanlage und Raffinerie machen aus 10 Metallschrott einen Brick und aus 10 Bricks einen Barren für 340 Credits.</li>
+        <li>Neun Fahrzeugtypen vom Staubi bis zum Kryo-Koloss mit 1.400er-Tank. Sie suchen sich die nächste Parzelle selbst, fahren um Gebäude und Bänder herum und sammeln unterwegs Leuchtkristalle ein.</li>
+        <li>Fahrzeuge sammeln Erfahrung, steigen Stufen auf und lassen sich spezialisieren: schneller, stärker, größerer Tank oder sparsamer.</li>
+        <li>Eine Entladeanlage mit drei Ausbaustufen und Andockplätzen in einer Reihe. Förderbänder laufen in runden Kurven und über Brücken, und du siehst die Waren darauf fahren.</li>
+        <li>Staubpresse, Schmelzanlage und Raffinerie veredeln Staub, Schrott und Kristalle zu Bricks, Barren und Reinkristallen. Jeder Planet hat seine eigene Produktionslinie.</li>
         <li>Drohnen holen die Ladung weit entfernter Fahrzeuge ab, Außenlager pumpen ihr Material per Pipeline zur Basis, und Lastdrohnen fliegen schwere Maschinen direkt an neue Einsatzorte.</li>
-        <li>Ein Sturmschild hält 80 % jedes Sturms ab, solange die Energie reicht.</li>
+        <li>Astronauten laufen zwischen den Gebäuden hin und her. Ein Tipp auf ein Gebäude zeigt seine Upgrades.</li>
       </ul>
     </div>
   </div>
@@ -208,18 +208,19 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <section class="feature" aria-labelledby="f3">
   <div class="wrap">
     <div class="copy">
-      <div class="eyebrow">Produktions-Ampel · kommt bald</div>
+      <div class="eyebrow">Produktions-Ampel</div>
       <h2 id="f3">Du siehst sofort, wo es hakt</h2>
-      <p>Die Ampel im HUD bewertet jede Station, jedes Lager, jede Maschine und jedes Band. Bei Gelb oder Rot steht dabei, warum: zum Beispiel „Puffer voll, weil das Förderband zu langsam abtransportiert“. Darunter liegen die passenden Upgrades zum direkten Kaufen.</p>
+      <p>Die Ampel bewertet Entladeanlage, Lager, Maschinen, Bohrtürme, Fahrzeuge und Bänder. Bei Gelb oder Rot steht dabei, warum: zum Beispiel „Puffer voll, weil das Förderband zu langsam abtransportiert“. Darunter liegen die passenden Upgrades zum direkten Kaufen. Im HUD wird aus „PROD“ dann „ENGPASS“ oder „STAU“.</p>
       <div class="legend">
-        <span class="chip"><span class="lamp c-clean"></span><em>Produktion läuft</em></span>
+        <span class="chip"><span class="lamp c-clean"></span><em>Läuft</em></span>
         <span class="chip"><span class="lamp c-part"></span><em>Engpass</em></span>
         <span class="chip"><span class="lamp c-dirty"></span><em>Stau</em></span>
       </div>
-      <p>Bänder holen nur so viel, wie am Ziel Platz ist. Die Waren laufen von klein nach groß: Was eine Maschine veredeln kann, wird veredelt, und in den Frachtraum kommt nur das Endprodukt. Erst kurz vor einem vollen Lager geht der Überschuss unveredelt mit, damit nichts stehen bleibt. Jede Rakete hat einen Frachtauftrag für ein Endprodukt und zahlt für gemischte Ladung bis zu 40 % mehr. Ein Tipp auf ein Band zeigt, was gerade darauf unterwegs ist.</p>
+      <p>Bleibt die Ampel grün, wächst der Betriebsbonus in zehn Minuten auf +30 % für jede Rakete. Im Produktionsplan schaltest du einzelne Rezepte an oder aus, und für jedes Produkt legst du fest, ob es aufs Verkaufsband geht. Jede Rakete hat einen Frachtauftrag für ein Endprodukt (+60 %) und zahlt für gemischte Ladung bis zu 40 % mehr. Ab Basisstufe 3 verkauft der Verkaufsautomat volle Lager von selbst.</p>
     </div>
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-titan.jpg" width="585" height="1266" alt="Produktion auf Titan: Presse, Schmelze, Raffinerie"></div>
+      <div class="phone"><img src="assets/screens/u15-ampel.jpg" width="600" height="1066" alt="Produktionsfenster mit Ampel und passenden Upgrades"></div>
+      <div class="phone"><img src="assets/screens/u15-plan.jpg" width="600" height="1066" alt="Produktionsplan mit Rezepten zum An- und Ausschalten"></div>
     </div>
   </div>
 </section>
@@ -227,13 +228,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <section class="feature flip" aria-labelledby="f4">
   <div class="wrap">
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-europa.jpg" width="585" height="1266" alt="Europa mit Eisflächen und Basis"></div>
-      <div class="phone"><img src="assets/screens/unity-io.jpg" width="585" height="1266" alt="Io mit Lavafeldern"></div>
+      <div class="phone"><img src="assets/screens/u15-europa.jpg" width="600" height="1066" alt="Basis auf Europa mit Eisflächen"></div>
+      <div class="phone"><img src="assets/screens/u15-io.jpg" width="600" height="1066" alt="Basis auf Io mit Lavafeldern"></div>
     </div>
     <div class="copy">
-      <div class="eyebrow">Zehn Planeten</div>
+      <div class="eyebrow">18 Planeten</div>
       <h2 id="f4">Jeder Planet bringt sein eigenes Problem</h2>
-      <p>Zoomst du heraus, wird der Planet zur Karte. Jeder Planet hat seine eigene Basis. Freigeschaltete Technik kannst du überall bauen, Lager, Bänder und Maschinen musst du aber auf jedem Planeten neu ausbauen. Je weiter draußen, desto mehr ist das Material wert, desto härter ist der Schmutz und desto stärker müssen deine Doppelbürsten sein.</p>
+      <p>Zoomst du heraus, wird der Planet zur Karte. Jeder Planet hat seine eigene Basis, eigene Farben, einen eigenen Weltraum-Himmel und sein eigenes Wetter: Staubteufel auf dem Mars, Eisnebel auf Europa, Methanregen auf Titan, Lavafontänen auf Io. Freigeschaltete Technik kannst du überall bauen, Lager, Bänder und Maschinen musst du aber auf jedem Planeten neu ausbauen. Je weiter draußen, desto mehr ist das Material wert und desto härter ist der Schmutz.</p>
     </div>
   </div>
 </section>
@@ -291,8 +292,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
       <p>Weit draußen holt eine Lastdrohne aus dem Schwerlast-Hangar die schweren Maschinen ab und fliegt sie direkt zur nächsten schmutzigen Parzelle.</p>
     </div>
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-mars-west.jpg" width="585" height="1266" alt="Marsbasis aus der Nähe"></div>
-      <div class="phone"><img src="assets/screens/unity-03-bagger.jpg" width="585" height="1266" alt="Erzbagger"></div>
+      <div class="phone"><img src="assets/screens/u15-titan.jpg" width="600" height="1066" alt="Ausgebaute Basis auf Titan"></div>
+      <div class="phone"><img src="assets/screens/u15-bohrturm.jpg" width="600" height="1066" alt="Bohrturm mit Gittermast auf dem Mond"></div>
     </div>
   </div>
 </section>
@@ -300,13 +301,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <section class="feature flip" aria-labelledby="f7">
   <div class="wrap">
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-01-venus.jpg" width="585" height="1266" alt="Venusbasis"></div>
-      <div class="phone"><img src="assets/screens/unity-02-baender.jpg" width="585" height="1266" alt="Förderbänder auf Titan"></div>
+      <div class="phone"><img src="assets/screens/u15-nacht.jpg" width="600" height="1066" alt="Mondbasis bei Nacht mit Laternen und Scheinwerfern"></div>
+      <div class="phone"><img src="assets/screens/u15-nacht-weit.jpg" width="600" height="1066" alt="Die Basis von oben in der Nacht"></div>
     </div>
     <div class="copy">
       <div class="eyebrow">Energie</div>
       <h2 id="f7">Tag, Nacht und Kernkraft</h2>
-      <p>Jeder Planet dreht sich: Es wird hell und wieder dunkel. Nachts liefern die Solarfelder nichts, die Fahrzeuge schalten ihre Scheinwerfer ein und reinigen im Lichtkegel weiter. In der Basis gehen die Laternen an und strahlen die Gebäude an. Die Basis läuft dann aus dem Speicher, den der Tag gefüllt hat, Akku-Fahrzeuge aus ihrem Akkupack. Je weiter du dich von der Sonne entfernst, desto weniger bringen Solarfelder. Auf Pluto sind es nur noch 35 %, und gleichzeitig brauchen die Maschinen dort 2,4-mal so viel Strom. Darum wächst auch das Kraftwerk mit.</p>
+      <p>Jeder Planet dreht sich: Es wird hell und wieder dunkel. Nachts liefern die Solarfelder nichts, die Fahrzeuge schalten ihre Scheinwerfer ein und reinigen im Lichtkegel weiter. Tagsüber bleiben die Lichter aus. In der Basis gehen die Laternen an und strahlen die Gebäude an. Die Basis läuft dann aus dem Speicher, den der Tag gefüllt hat, Akku-Fahrzeuge aus ihrem Akkupack. Je weiter du dich von der Sonne entfernst, desto weniger bringen Solarfelder. Auf Pluto sind es nur noch 35 %, und gleichzeitig brauchen die Maschinen dort 2,4-mal so viel Strom. Darum wächst auch das Kraftwerk mit.</p>
       <ul>
         <li>Solarfelder: günstig, aber nur bei Tag und abhängig von Stürmen.</li>
         <li>Radioisotopen-Generator: +10 Energie pro Sekunde, Tag und Nacht.</li>
@@ -320,12 +321,12 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 
 <section class="feature" aria-labelledby="f5">
   <div class="wrap" style="display:block">
-    <div class="eyebrow">Langzeit · in Arbeit</div>
+    <div class="eyebrow">Langzeit</div>
     <h2 id="f5" style="margin-top:10px">Gründe, morgen wiederzukommen</h2>
     <div class="trio">
-      <article><img src="assets/screens/unity-mars-aufbau.jpg" width="585" height="1266" alt="Marsbasis im Aufbau"><h3>Tägliche Aufträge</h3><p>Jeden Tag drei neue Aufgaben, etwa 600 m² reinigen oder 250 Staub verkaufen. Sie zählen auf allen Planeten und auch offline. Wer alle drei schafft, bekommt 50 % Bonus.</p></article>
-      <article><img src="assets/screens/unity-start.jpg" width="585" height="1266" alt="Ziele oben im Bild"><h3>Ziele und Erfolge</h3><p>57 Hauptziele führen vom ersten Wisch bis zum Pulsarplaneten Poltergeist. Jeder Planet hat zusätzlich eigene Planetenziele. Dazu wählst du für jeden Planeten eine Ausrichtung (Bergbau, Industrie oder Handel), erfüllst Werksaufträge für mehr Ruf und bekommst bis zu 30 % Betriebsbonus, wenn deine Produktion ohne Stau läuft. Fahrzeuge verschleißen und brauchen die Werkstatt, Bohrtürme haben Störungen, Stürme siehst du als Nebel und Staubwirbel. Dazu kommen 17 Erfolge mit je mehreren Stufen, etwa für gereinigte Parzellen, Raketenstarts oder eingeflogene Maschinen. Alles steht in einer Übersicht.</p></article>
-      <article><img src="assets/screens/unity-europa-ost.jpg" width="585" height="1266" alt="Europa von Osten"><h3>Sternenstaub</h3><p>Ein komplett sauberer Planet gibt dauerhaft +10 % Preise, und dort beginnt der Tiefenabbau: Bohrtürme fördern Rohstoffe aus der Tiefe in ihr eigenes Lager, deine Fahrzeuge holen sie ab, und die Basis wächst weiter. Mit den Ausbaustufen geht das ohne Ende: mehr Bohrtürme, größere Lager, höhere Upgrades. Voll ausgebaute Bohrtürme werden zu Erzbaggern, ausgereizte Gebäude wachsen sichtbar eine Stufe weiter, und jeder Planet hat seine eigenen Farben. Später startest du mit Sternenstaub neu: jeder bringt für immer +5 % Preise und +3 % Reinigungsleistung.</p></article>
+      <article><img src="assets/screens/u15-ziele.jpg" width="600" height="1066" alt="Zielfenster mit Ereignis und Funden"><h3>Ereignisse, Funde und Tagesbonus</h3><p>Ein Wrack, ein Kometenschweif, ein Sonnensturm, eine reiche Ader oder ein Frachter mit +50 %: Eine Leuchtsäule zeigt, wo gerade etwas los ist, und ein Tipp auf das Ziel bringt dich hin. Jeder Planet versteckt sechs Funde fürs Album. Wer jeden Tag vorbeischaut, bekommt einen Tagesbonus, der eine Woche lang steigt.</p></article>
+      <article><img src="assets/screens/u15-gebaeudestufe.jpg" width="600" height="1066" alt="Gebäudefenster mit Gebäudestufe"><h3>Ziele, Erfolge und Gebäudestufen</h3><p>57 Hauptziele führen vom ersten Wisch bis zum Pulsarplaneten Poltergeist, dazu kommen 19 Erfolge. Hast du alle Upgrades eines Gebäudes ausgereizt, wächst es eine Stufe weiter: sichtbar höher und bis zu 50 % stärker. Ein komplett sauberer Planet gibt dauerhaft +10 % Preise, und dort beginnt der Tiefenabbau mit Bohrtürmen und Erzbaggern.</p></article>
+      <article><img src="assets/screens/u15-sternenstaub.jpg" width="600" height="1066" alt="Planetenfenster mit Sternenstaub-Neustart"><h3>Sternenstaub</h3><p>Jeder komplett saubere Planet bringt Sternenstaub, weiter draußen mehr. Mit einem Neustart beginnst du wieder auf dem Mond und gibst den Staub für dauerhafte Vorteile aus: Startkapital, Schnellstart, ein Buggy von Anfang an, höhere Preise, längere Offline-Zeit oder schneller wachsende Kristalle. Funde, Erfolge und Tagesbonus bleiben.</p></article>
     </div>
   </div>
 </section>
@@ -333,22 +334,21 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 <section class="feature flip" aria-labelledby="fu">
   <div class="wrap">
     <div class="shots">
-      <div class="phone"><img src="assets/screens/unity-01-venus.jpg" width="585" height="1266" alt="Unity-Version: voll ausgebaute Venusbasis mit Rohstofflager, Presse und rechtwinklig verlegten Förderbändern"></div>
-      <div class="phone"><img src="assets/screens/unity-02-baender.jpg" width="585" height="1266" alt="Unity-Version: Förderbänder auf Titan aus der Nähe, jedes mit eigenem Ein- und Ausgang"></div>
+      <div class="phone"><img src="assets/screens/u15-venus.jpg" width="600" height="1066" alt="Voll ausgebaute Basis auf der Venus"></div>
+      <div class="phone"><img src="assets/screens/u15-baender.jpg" width="600" height="1066" alt="Förderbänder aus der Nähe"></div>
     </div>
     <div class="copy">
-      <div class="eyebrow">Version 0.13 · Beta</div>
+      <div class="eyebrow">Version 0.15 · Beta</div>
       <h2 id="fu">Was die Beta schon kann</h2>
       <p>Das Spiel entsteht als App für Android und iOS. Im Browser kannst du den aktuellen Stand schon spielen.</p>
       <ul>
-        <li>Planeten mit Hügeln, Kratern und Seen aus Wasser, Lava, Säure oder Methan, dazu ein eigener Weltraum-Himmel und farbiges Sternlicht je Welt.</li>
-        <li>Förderbänder kommen aus geraden Gebäudeflächen, laufen rechtwinklig mit runden Kurven und gehen als Brücke übereinander. Pipelines liegen unterirdisch.</li>
-        <li>Eine Entladeanlage mit drei Ausbaustufen, alle Andockplätze in einer Reihe.</li>
-        <li>Bohrturm mit Gittermast und drehendem Gestänge, Erzbagger mit schwenkendem Arm.</li>
-        <li>Leuchtkristalle in fünf Farben wachsen auf sauberen Parzellen nach. Du tippst sie an, oder die Fahrzeuge nehmen sie mit.</li>
-        <li>Beim Wischen dreht sich der Planet am Bildschirmrand mit; Kamera mit WASD/Pfeiltasten verschieben, mit Q/E oder rechter Maustaste drehen, Mausrad zoomt.</li>
-        <li>Fahrzeuge schalten ihre Scheinwerfer erst in der Nacht ein, Laternen leuchten nur im Dunkeln.</li>
-        <li>Noch nicht dabei: Meteoritenschauer, Sternenstaub-Neustart, Frachtaufträge, Produktions-Ampel, Statistik und Sound. Die Liste wird Version für Version kürzer.</li>
+        <li>18 Planeten mit 252 bis 17.642 Parzellen, Hügeln, Kratern und Seen aus Wasser, Lava, Säure oder Methan, jeder mit eigenem Himmel und Wetter.</li>
+        <li>Förderbänder mit eigenen Ein- und Ausgängen, runden Kurven und Brücken, auf denen die Waren sichtbar fahren. Pipelines liegen unterirdisch.</li>
+        <li>Produktions-Ampel mit Betriebsbonus, Produktionsplan, Frachtaufträge, Verkaufsautomat und Gebäudestufen.</li>
+        <li>Meteoritenschauer, Ereignisse, Funde, Kombo, Tagesbonus, 19 Erfolge und der Neustart mit Sternenstaub.</li>
+        <li>Fahrzeuge mit Erfahrung und Spezialisierung, Bohrtürme und Erzbagger, Leuchtkristalle in fünf Farben.</li>
+        <li>Sound und Musik, die das Spiel selbst erzeugt, Foto-Modus (Taste P) und Kamera, die sich beim Wischen mitdreht.</li>
+        <li>Noch nicht dabei: Ausbaustufen nach Basisstufe 5, Planetenziele, tägliche Aufträge, Statistik und Vibration. Die Liste wird Version für Version kürzer.</li>
       </ul>
       <div class="cta"><a class="btn primary" href="play-unity/index.html"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>Jetzt spielen</a></div>
     </div>
@@ -360,26 +360,34 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
     <div class="eyebrow">Galerie</div>
     <h2 id="g-h" style="margin-top:10px">Alle Screenshots</h2>
     <div class="strip" tabindex="0" aria-label="Screenshots, seitlich scrollbar">
-      <figure><img src="assets/screens/unity-start.jpg" width="585" height="1266" alt="Spielstart auf dem Mond" loading="lazy"><figcaption>Spielstart auf dem Mond</figcaption></figure>
-      <figure><img src="assets/screens/unity-mond-aufbau.jpg" width="585" height="1266" alt="Mondbasis im Aufbau" loading="lazy"><figcaption>Mondbasis im Aufbau</figcaption></figure>
-      <figure><img src="assets/screens/unity-mars.jpg" width="585" height="1266" alt="Ausgebaute Marsbasis" loading="lazy"><figcaption>Ausgebaute Marsbasis</figcaption></figure>
-      <figure><img src="assets/screens/unity-mars-west.jpg" width="585" height="1266" alt="Mars aus der Nähe" loading="lazy"><figcaption>Mars aus der Nähe</figcaption></figure>
-      <figure><img src="assets/screens/unity-mars-aufbau.jpg" width="585" height="1266" alt="Mars im Aufbau" loading="lazy"><figcaption>Mars im Aufbau</figcaption></figure>
-      <figure><img src="assets/screens/unity-europa.jpg" width="585" height="1266" alt="Europa" loading="lazy"><figcaption>Europa</figcaption></figure>
-      <figure><img src="assets/screens/unity-europa-ost.jpg" width="585" height="1266" alt="Europa von Osten" loading="lazy"><figcaption>Europa von Osten</figcaption></figure>
-      <figure><img src="assets/screens/unity-titan.jpg" width="585" height="1266" alt="Titan" loading="lazy"><figcaption>Titan</figcaption></figure>
-      <figure><img src="assets/screens/unity-02-baender.jpg" width="585" height="1266" alt="Bänder auf Titan" loading="lazy"><figcaption>Bänder auf Titan</figcaption></figure>
-      <figure><img src="assets/screens/unity-io.jpg" width="585" height="1266" alt="Io" loading="lazy"><figcaption>Io</figcaption></figure>
-      <figure><img src="assets/screens/unity-01-venus.jpg" width="585" height="1266" alt="Venus" loading="lazy"><figcaption>Venus</figcaption></figure>
-      <figure><img src="assets/screens/unity-enceladus.jpg" width="585" height="1266" alt="Enceladus" loading="lazy"><figcaption>Enceladus</figcaption></figure>
-      <figure><img src="assets/screens/unity-03-bagger.jpg" width="585" height="1266" alt="Erzbagger" loading="lazy"><figcaption>Erzbagger</figcaption></figure>
+      <figure><img src="assets/screens/u15-start.jpg" width="600" height="1066" alt="Spielstart auf dem Mond" loading="lazy"><figcaption>Spielstart auf dem Mond</figcaption></figure>
+      <figure><img src="assets/screens/u15-basis.jpg" width="600" height="1066" alt="Mondbasis bei Tag" loading="lazy"><figcaption>Mondbasis bei Tag</figcaption></figure>
+      <figure><img src="assets/screens/u15-basis-nah.jpg" width="600" height="1066" alt="Mondbasis aus der Nähe" loading="lazy"><figcaption>Mondbasis aus der Nähe</figcaption></figure>
+      <figure><img src="assets/screens/u15-nacht.jpg" width="600" height="1066" alt="Die Basis bei Nacht" loading="lazy"><figcaption>Die Basis bei Nacht</figcaption></figure>
+      <figure><img src="assets/screens/u15-nacht-weit.jpg" width="600" height="1066" alt="Nacht von oben" loading="lazy"><figcaption>Nacht von oben</figcaption></figure>
+      <figure><img src="assets/screens/u15-baender.jpg" width="600" height="1066" alt="Förderbänder" loading="lazy"><figcaption>Förderbänder</figcaption></figure>
+      <figure><img src="assets/screens/u15-ampel.jpg" width="600" height="1066" alt="Produktions-Ampel" loading="lazy"><figcaption>Produktions-Ampel</figcaption></figure>
+      <figure><img src="assets/screens/u15-plan.jpg" width="600" height="1066" alt="Produktionsplan" loading="lazy"><figcaption>Produktionsplan</figcaption></figure>
+      <figure><img src="assets/screens/u15-gebaeudestufe.jpg" width="600" height="1066" alt="Gebäudestufe" loading="lazy"><figcaption>Gebäudestufe</figcaption></figure>
+      <figure><img src="assets/screens/u15-ziele.jpg" width="600" height="1066" alt="Ereignisse und Funde" loading="lazy"><figcaption>Ereignisse und Funde</figcaption></figure>
+      <figure><img src="assets/screens/u15-sternenstaub.jpg" width="600" height="1066" alt="Sternenstaub-Neustart" loading="lazy"><figcaption>Sternenstaub-Neustart</figcaption></figure>
+      <figure><img src="assets/screens/u15-mars.jpg" width="600" height="1066" alt="Mars" loading="lazy"><figcaption>Mars</figcaption></figure>
+      <figure><img src="assets/screens/u15-europa.jpg" width="600" height="1066" alt="Europa" loading="lazy"><figcaption>Europa</figcaption></figure>
+      <figure><img src="assets/screens/u15-titan.jpg" width="600" height="1066" alt="Titan" loading="lazy"><figcaption>Titan</figcaption></figure>
+      <figure><img src="assets/screens/u15-io.jpg" width="600" height="1066" alt="Io" loading="lazy"><figcaption>Io</figcaption></figure>
+      <figure><img src="assets/screens/u15-venus.jpg" width="600" height="1066" alt="Venus" loading="lazy"><figcaption>Venus</figcaption></figure>
+      <figure><img src="assets/screens/u15-enceladus.jpg" width="600" height="1066" alt="Enceladus" loading="lazy"><figcaption>Enceladus</figcaption></figure>
+      <figure><img src="assets/screens/u15-triton.jpg" width="600" height="1066" alt="Triton" loading="lazy"><figcaption>Triton</figcaption></figure>
+      <figure><img src="assets/screens/u15-cancri.jpg" width="600" height="1066" alt="55 Cancri e" loading="lazy"><figcaption>55 Cancri e</figcaption></figure>
+      <figure><img src="assets/screens/u15-poltergeist.jpg" width="600" height="1066" alt="Poltergeist" loading="lazy"><figcaption>Poltergeist</figcaption></figure>
+      <figure><img src="assets/screens/u15-bohrturm.jpg" width="600" height="1066" alt="Bohrturm" loading="lazy"><figcaption>Bohrturm</figcaption></figure>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <span>Lunar Cleanup Tycoon · Version 0.13 (Beta) · Oktober 2026</span>
+    <span>Lunar Cleanup Tycoon · Version 0.15 (Beta) · Oktober 2026</span>
     <span>Alle Rechte vorbehalten</span>
   </div>
 </footer>

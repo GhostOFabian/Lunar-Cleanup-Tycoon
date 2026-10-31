@@ -136,6 +136,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots("moon"));
+            if (kb.f2Key.wasPressedThisFrame && Application.isEditor) { string wd = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Web")); System.IO.Directory.CreateDirectory(wd); string fn = System.IO.Path.Combine(wd, "web_" + System.DateTime.Now.ToString("HHmmss") + ".png"); ScreenCapture.CaptureScreenshot(fn, 2); Debug.Log("Lunar Cleanup: Webseiten-Foto " + fn); } /* F2: Bildschirmfoto mit HUD für die Webseite */
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);

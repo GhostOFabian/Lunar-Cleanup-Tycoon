@@ -642,7 +642,8 @@ namespace LunarCleanup.Core
             var sv = ps.sv; if (!ps.bld.Contains("sell")) return;
             if (sv.rk > 0) { sv.rk = Mathf.Max(0, sv.rk - dt); return; }
             float tot = Sum(sv.sellBuf); if (tot <= 1e-6f) { sv.rkGo = false; return; }
-            if (tot < SellCap(ps) * .98f && !sv.rkGo) return;
+            bool jamS = false; foreach (var b in ps.lay.belts) if (b.to == "sell" && ps.jam.TryGetValue(b.id, out bool j) && j) jamS = true; /* passt das nächste Paket nicht mehr hinein, startet sie schon ab 60 % – sonst steht alles */
+            if (tot < SellCap(ps) * .98f && !sv.rkGo && !(jamS && tot >= SellCap(ps) * .6f)) return;
             bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } int om0 = sv.order; bool hadOrder = om0 >= 0 && om0 < NM && sv.sellBuf[om0] > 1e-6f; Array.Clear(sv.sellBuf, 0, NM); NewOrder(ps);
             Earn(val); sv.soldP += val; S.stats.sold += val; sv.nRockets++; sv.rk = RocketTime(ps);
             if (!Offline && ps.pid == S.planet) { OnRocket?.Invoke(ps.pid, val); if (man) Toast("Rakete gestartet · +" + Fmt(val) + " Cr" + (hadOrder ? " · Auftrag " + GameData.Mats[om0].name + " erfüllt" : ""), "good"); }
