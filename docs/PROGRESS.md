@@ -141,3 +141,10 @@
 ## Unity 0.15 (31.10.2026) – Browser-Build v=6 online
 - Neu: Produktions-Ampel (Produktionsfenster + HUD „ENGPASS“/„STAU“) mit Betriebsbonus bis +30 %, Produktionsplan (Rezepte an/aus), Frachtauftrag (+60 %), Verkaufsband je Produkt, Verkaufsautomat (ab Basisstufe 3), Gebäudestufen (+50/+40/+30 %, Gebäude wachsen in die Höhe).
 - Große Basis-Prüfung (alle 18 Planeten, alle Teilausbauten, alle alten Größen): 29 Befunde, davon 28 Hinweise „Entladeanlage nah an Nachbargebäude“ (Mond, Venus, Kepler u. a., nur Abstand) und eine enge Bandführung auf Kepler-22b (b_pp/b_rap, im Bild unauffällig). Keine Stützen in Bändern, keine hängenden Enden mehr.
+
+## Unity 0.16 (31.10.2026) – Browser-Build v=7 online
+- Fahrzeuge stehen nie mehr herum: Nachlese auf sauberen Parzellen (Reststaub, kleiner Ertrag), Rückkehr zur echten Arbeit alle 2 s (Meteoritenstaub, Bohrtürme, Kristalle).
+- Wegfindung kennt jetzt die tatsächlich verlegten Bänder (vorher die alten Linien aus dem Prototyp) – Fahrzeuge fahren nicht mehr durch Bänder; Astronauten laufen nur auf freien Wegen.
+- Maschinen bekommen den Bandeingang gegenüber vom Ausgang statt seitlich.
+- Optik: Triebwerksfeuer bei Start und Landung, Staub an reinigenden Fahrzeugen, Absturzwrack und Komet mit Schweif bei Ereignissen, Nordlichter alle paar Minuten, Ampel-Lampen über den Gebäuden, hellere und mehr Laternen, Kristallschein ohne eckigen Schatten.
+- Ungetestet: Wrack, Komet, Nordlicht und Raketenflamme im Spiel gesehen (nur kompiliert und Nachtbild geprüft).
