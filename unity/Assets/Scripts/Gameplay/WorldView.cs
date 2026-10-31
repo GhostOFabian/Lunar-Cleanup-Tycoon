@@ -19,7 +19,7 @@ namespace LunarCleanup.Gameplay
         readonly Dictionary<string, float[]> beltCum = new Dictionary<string, float[]>();
         readonly List<Material> beltMats = new List<Material>();
         GameObject cartGo; int builtVersion = -1; string builtFor;
-        public static float NightF; public static bool MapMode; ParticleSystem stormPs; ParticleSystem.Particle[] stormP; Vector3[] stormSt; float stormI, flash; readonly List<Light> lamps = new List<Light>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun, starLight; Color amb0, amb1, amb2; float sunI0;
+        public static float NightF; public static bool MapMode; ParticleSystem stormPs; ParticleSystem.Particle[] stormP; Vector3[] stormSt; float stormI, flash; readonly List<Light> lamps = new List<Light>(); readonly List<MeshRenderer> glowRends = new List<MeshRenderer>(); Material lampHead, poolMat, beamMat; ParticleSystem dust; Light sun, starLight; Color amb0, amb1, amb2; float sunI0;
         float rocketT = -1, landT = -1;
         Mesh itemMesh;
         readonly Dictionary<int, Material> itemMat = new Dictionary<int, Material>();
@@ -84,7 +84,7 @@ namespace LunarCleanup.Gameplay
                 MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
                 var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
-                MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
+                var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
             RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
             BuildOutposts(); BuildRigs();
@@ -715,7 +715,9 @@ namespace LunarCleanup.Gameplay
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
             foreach (var L in lamps) if (L) L.intensity = 2.2f * nf;
             if (lampHead) lampHead.SetColor("_EmissionColor", new Color(1f, .78f, .45f) * (.1f + 2.2f * nf));
-            foreach (var vp in vehs.Values) if (vp.head) vp.head.intensity = 3f * nf;
+            foreach (var vp in vehs.Values) if (vp.head) { vp.head.intensity = 3f * nf; vp.head.enabled = nf > .02f; }
+            foreach (var vp in vehs.Values) if (vp.headMat) vp.headMat.SetColor("_EmissionColor", new Color(1f, .94f, .78f) * (.15f + 2.85f * nf)); /* tagsüber nur schwach, nachts hell */
+            glowRends.RemoveAll(r => !r); foreach (var r in glowRends) r.enabled = nf > .02f;
             if (poolMat) poolMat.SetColor("_BaseColor", new Color(1f, .78f, .5f, .5f * nf)); if (beamMat) beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, .45f * nf));
         }
 
@@ -773,7 +775,7 @@ namespace LunarCleanup.Gameplay
         }
         void AddHeadlight(Models.VehicleParts vp)
         {
-            MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)).name = "Lichtkegel";
+            var beam = MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)); beam.name = "Lichtkegel"; glowRends.Add(beam.GetComponent<MeshRenderer>());
             var lg = new GameObject("Scheinwerfer"); lg.transform.SetParent(vp.root.transform, false); lg.transform.localPosition = new Vector3(0, 1.1f, .9f); lg.transform.localRotation = Quaternion.Euler(28, 0, 0);
             var L = lg.AddComponent<Light>(); L.type = LightType.Spot; L.range = 11; L.spotAngle = 70; L.innerSpotAngle = 35; L.color = new Color(.85f, .92f, 1f); L.intensity = 0; L.shadows = LightShadows.None; vp.head = L;
         }

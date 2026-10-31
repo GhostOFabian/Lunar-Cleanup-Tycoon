@@ -122,3 +122,4 @@
 - `play-unity/`: WebGL-Build der Unity-Fassung 0.13, eigene deutsche Ladeseite. Headless (Chromium/SwiftShader) gestartet: läuft.
 - Neuer Menüpunkt „Browser-Version für GitHub bauen“ (Release, Optimierung „BuildTimes“, gzip mit Entpacken im Browser, ohne Testmodus). Erster Versuch mit voller Optimierung ließ Unity abstürzen; mit BuildTimes läuft er in ~3 Min. `play-unity/` ist jetzt dieser Build: 17 MB statt 100 MB, headless getestet.
 - 31.10.2026: Browser-Fassung nutzt die PC-Qualitätsstufe (volle Auflösung, weiche Schatten, 4 Kaskaden), alle Fassungen 4× MSAA; Online-Build neu (Bandführung mit neuer Reihenfolge noch ungeprüft).
+- Wischen über zwei Parzellen gleichzeitig; Kamera beim Wischen drehbar (Rand, WASD/Pfeile, rechte Maustaste); Scheinwerfer/Lichtkegel tagsüber aus und ohne Schatten; Schatten 4 Kaskaden, 2048, weich, Reichweite passt sich dem Zoom an; anisotrope Filterung für den Planetenboden.

@@ -214,7 +214,7 @@ namespace LunarCleanup.Gameplay
             var vp = new VehicleParts(); var g = new GameObject(T.name); vp.root = g; var t = g.transform;
             float s = T.size == "s" ? .8f : T.size == "m" ? 1.15f : 1.55f; if (T.key == "staubi") s = .6f;
             Color body = T.key == "staubi" ? Hex("#d9dee6") : T.key == "buggy" ? Hex("#ffbf4d") : T.key == "sauger" ? Hex("#58cdb4") : T.key == "truck" ? Hex("#e2553a") : acc;
-            Material B = M(body, .35f, .6f), D = M(Hex("#2b313c"), .3f, .4f), W = M(Hex("#1a1d22"), .1f, .3f), G = MeshKit.Mat(Hex("#9fd8ff") * .3f, .1f, .95f, Hex("#9fd8ff") * .4f), L = MeshKit.Glow(Hex("#fff0c8"), 3f), R = MeshKit.Glow(Hex("#ff5a4a"), 2f);
+            Material B = M(body, .35f, .6f), D = M(Hex("#2b313c"), .3f, .4f), W = M(Hex("#1a1d22"), .1f, .3f), G = MeshKit.Mat(Hex("#9fd8ff") * .3f, .1f, .95f, Hex("#9fd8ff") * .4f), L = MeshKit.Glow(Hex("#fff0c8"), 3f), R = MeshKit.Glow(Hex("#ff5a4a"), 2f); vp.headMat = L; /* Scheinwerfer-Glühen folgt Tag/Nacht */
             if (T.key == "staubi")
             {
                 MeshKit.Cyl(t, B, new Vector3(0, .35f * s, 0), .9f * s, .95f * s, .4f * s, 24);

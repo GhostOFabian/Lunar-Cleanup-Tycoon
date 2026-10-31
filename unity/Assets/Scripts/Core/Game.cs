@@ -324,8 +324,10 @@ namespace LunarCleanup.Core
 
         // ================= Handgerät =================
         public static float HandSum() => Sum(Cur.sv.hand);
-        static int strokeCell = -1, lastCell = -1; static float fullWarnT;
-        public static void BeginStroke() { strokeCell = -1; }
+        static int lastCell = -1; static float fullWarnT;
+        /// <summary>Ein Wisch darf bis zu zwei Parzellen gleichzeitig reinigen (die erste und eine benachbarte, auf die der Pinsel hinüberstreicht).</summary>
+        static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 2;
+        public static void BeginStroke() { strokeCells.Clear(); }
         public static bool CanClean(Vector3 d) { var ps = Cur; int c = ps.pd.CellOf(d, lastCell); return Workable(ps, c); }
         /// <summary>Wischen an der Stelle d (Einheitsvektor). Liefert die aufgenommene Menge.</summary>
         public static float Stroke(Vector3 d, float dt, out int mat)
@@ -337,19 +339,24 @@ namespace LunarCleanup.Core
                 return 0;
             }
             int c0 = pd.CellOf(d, lastCell); lastCell = c0;
-            if (strokeCell < 0 || !Workable(ps, strokeCell)) strokeCell = Workable(ps, c0) ? c0 : -1;
-            if (strokeCell < 0) return 0;
-            var a = EnsureAct(ps, strokeCell); if (a == null) return 0;
-            var l = pd.ToLocal(a.cl, d); float r = Uv("radius");
-            if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) return 0;
-            float k = 1 - Mathf.Exp(-.35f * Uv("power") * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
-            float got = CleanAt(ps, a, l.x, l.y, r, k);
-            if (got <= 0) return 0;
-            float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum());
-            ps.sv.hand[a.D.mat] += amt; mat = a.D.mat; S.stats.handM2 += got / a.cl.nIn * pd.CellArea(a.cl);
-            return amt;
+            strokeCells.RemoveAll(c => !Workable(ps, c));
+            if (Workable(ps, c0) && !strokeCells.Contains(c0) && strokeCells.Count < StrokeMax) strokeCells.Add(c0);
+            if (strokeCells.Count == 0) return 0;
+            float r = Uv("radius"), total = 0;
+            foreach (int sc in strokeCells)
+            {
+                var a = EnsureAct(ps, sc); if (a == null) continue;
+                var l = pd.ToLocal(a.cl, d);
+                if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
+                float k = 1 - Mathf.Exp(-.35f * Uv("power") * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
+                float got = CleanAt(ps, a, l.x, l.y, r, k);
+                if (got <= 0) continue;
+                float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
+                ps.sv.hand[a.D.mat] += amt; mat = a.D.mat; S.stats.handM2 += got / a.cl.nIn * pd.CellArea(a.cl); total += amt;
+            }
+            return total;
         }
-        public static float StrokeProgress() { var ps = Cur; return strokeCell >= 0 && ps.act.TryGetValue(strokeCell, out var a) ? Progress(a) : -1; }
+        public static float StrokeProgress() { var ps = Cur; int c = strokeCells.Contains(lastCell) ? lastCell : strokeCells.Count > 0 ? strokeCells[0] : -1; return c >= 0 && ps.act.TryGetValue(c, out var a) ? Progress(a) : -1; }
 
         public static void UnloadHand()
         {
@@ -1372,7 +1379,7 @@ namespace LunarCleanup.Core
             S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); Travel(pid);
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }
-        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; S.planet = pid; strokeCell = -1; lastCell = -1; OnPlanetChanged?.Invoke(); }
+        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
 
         // ================= Ziele =================
         static PState Moon => P["moon"];

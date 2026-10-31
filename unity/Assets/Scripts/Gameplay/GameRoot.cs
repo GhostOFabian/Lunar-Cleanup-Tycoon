@@ -25,18 +25,23 @@ namespace LunarCleanup.Gameplay
         // Eingabe
         enum Mode { None, Wipe, Pan, Ui }
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
-        GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe;
+        GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos;
 
+        UniversalRenderPipelineAsset urpA;
         void Awake()
         {
-            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0; QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable; /* Planetenboden auch schräg von der Seite scharf */
 #if UNITY_WEBGL && !UNITY_EDITOR
             QualitySettings.SetQualityLevel(1, true); /* Browser: PC-Qualität statt Handy-Stufe (volle Auflösung, weiche Schatten, 4 Kaskaden) */
 #endif
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
             {
                 urp.renderScale = 1f; urp.msaaSampleCount = 4; /* Kanten glätten – ohne sahen Bänder und Gebäude im Browser zackig und unscharf aus */
-                urp.shadowDistance = Mathf.Max(urp.shadowDistance, 60f);
+                urp.shadowDistance = Mathf.Max(urp.shadowDistance, 60f); urp.shadowCascadeCount = 4;
+                /* feinere, weiche Schatten (sonst nur eckige Klötze): Auflösung 2048, weiche Kanten – Felder sind nicht öffentlich setzbar */
+                void SetF(string n, object v) { try { var f = typeof(UniversalRenderPipelineAsset).GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null) f.SetValue(urp, f.FieldType.IsEnum ? System.Enum.ToObject(f.FieldType, v) : System.Convert.ChangeType(v, f.FieldType)); } catch { } }
+                SetF("m_MainLightShadowmapResolution", 2048); SetF("m_SoftShadowsSupported", true);
+                urpA = urp;
                 urp.maxAdditionalLightsCount = 8;
                 try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }
             } // Laternen, Scheinwerfer, Saugkopf bei Nacht
@@ -107,7 +112,9 @@ namespace LunarCleanup.Gameplay
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             HandleInput(dt);
-            var kbd = Keyboard.current; if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
+            if (urpA) urpA.shadowDistance = Mathf.Clamp(alt * 1.5f + 25f, 50f, 170f); /* Schatten reichen immer bis zum sichtbaren Teil des Planeten */
+            var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
+            if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevKeys();
 #endif
@@ -248,6 +255,12 @@ namespace LunarCleanup.Gameplay
             lastPinch = 0;
             bool pressed; Vector2 pos; int pid = -1;
             if (touches.Count == 1) { pressed = true; pos = touches[0].screenPosition; pid = touches[0].touchId; }
+            else if (Mouse.current != null && (Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed) && mode == Mode.Wipe && Mouse.current.leftButton.isPressed)
+            {
+                /* beim Wischen (linke Taste) zusätzlich rechts ziehen = Kamera drehen, der Wisch läuft weiter */
+                var mp = Mouse.current.position.ReadValue(); if (Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame) rotPos = mp;
+                var dm = mp - rotPos; Twist(-dm.x * .25f); TILT = Mathf.Clamp(TILT + dm.y * .004f, 0, 70 * Mathf.Deg2Rad); rotPos = mp; pressed = true; pos = mp;
+            }
             else if (Mouse.current != null && (Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed))
             {
                 // PC: rechte/mittlere Maustaste ziehen = Blickrichtung drehen (links/rechts) und neigen (hoch/runter)
@@ -269,6 +282,11 @@ namespace LunarCleanup.Gameplay
                 if ((pos - downPos).magnitude > 10) moved = true;
                 if (mode == Mode.Wipe)
                 {
+                    /* Am Bildschirmrand weiterwischen: der Planet dreht sich langsam mit, so erreichst du auch Stellen außerhalb des Bildes */
+                    float ex = pos.x / Screen.width, ey = pos.y / Screen.height, edge = .1f; var ep = Vector2.zero;
+                    if (ex < edge) ep.x = (edge - ex) / edge; else if (ex > 1 - edge) ep.x = -(ex - (1 - edge)) / edge;
+                    if (ey < edge * 1.6f) ep.y = (edge * 1.6f - ey) / (edge * 1.6f); else if (ey > 1 - edge * 2.2f) ep.y = -(ey - (1 - edge * 2.2f)) / (edge * 2.2f);
+                    if (ep != Vector2.zero) Pan(ep * Screen.height * .45f * dt);
                     if (Hit(pos, out var dir))
                     {
                         // Zwischenpunkte, damit auch schnelle Striche lückenlos reinigen
