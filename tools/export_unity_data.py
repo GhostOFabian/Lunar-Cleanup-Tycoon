@@ -19,12 +19,12 @@ with game() as (pg,errs):
    r.lines={};for(const pid of t.PORDER){const L=t.PL(pid);r.lines[pid]={names:L.names,presse:L.presse,schmelze:L.schmelze,raff:L.raff};}
    const LO=L=>({pos:L.pos,yaw:L.yaw,shop:L.shop,start:L.start,park:L.park,belts:L.belts.map(b=>({id:b.id,from:b.from,to:b.to,h:b.h,stage:b.stage||0,rp:b.rp,L:b.L,port0:b.port0,port1:b.port1}))});
    const CE=pd=>({N:pd.N,R:pd.R,base:pd.base,start:pd.start,freq:pd.freq,type:pd.cells.map(c=>Object.keys(t.DIRT).indexOf(c.type)),kind:pd.cells.map(c=>Object.keys(t.KINDS).indexOf(c.kind)),c0:pd.cells[0].c,c7:pd.cells[7].c,ring:pd.cells.map(c=>c.ring),liq:pd.cells.map(c=>c.liq?Object.keys(t.LIQ).indexOf(c.liq):-1)});
-   r.layouts={};r.cells={};r.oldFreq=strip(t.OLD_FREQ);r.liqKeys=Object.keys(t.LIQ);r.liq=strip(t.LIQ);r.pliq=strip(t.PLIQ);
+   r.layouts={};r.cells={};r.oldFreq=strip(t.OLD_FREQ);r.prevFreq=strip(t.PREV_FREQ);r.liqKeys=Object.keys(t.LIQ);r.liq=strip(t.LIQ);r.pliq=strip(t.PLIQ);
    for(const pid of t.PORDER){
      // aktuelle (neue) Größe
      r.layouts[pid]=LO(t.layoutOf(pid));r.cells[pid]=CE(t.planetData(pid));
      // alte Größe für bereits begonnene Planeten (Spielstände ohne freq-Feld)
-     const of=t.OLD_FREQ[pid];if(of&&of!==t.PLANETS[pid].freq){window.__setFreqCtx({[pid]:{freq:of}});try{r.layouts[pid+'@'+of]=LO(t.layoutOf(pid));r.cells[pid+'@'+of]=CE(t.planetData(pid));}finally{window.__setFreqCtx(null);}}}
+     const olds=[...new Set([t.OLD_FREQ[pid],t.PREV_FREQ[pid]])].filter(f=>f&&f!==t.PLANETS[pid].freq);for(const of of olds){window.__setFreqCtx({[pid]:{freq:of}});try{r.layouts[pid+'@'+of]=LO(t.layoutOf(pid));r.cells[pid+'@'+of]=CE(t.planetData(pid));}finally{window.__setFreqCtx(null);}}}
    r.dirtKeys=Object.keys(t.DIRT);r.kindKeys=Object.keys(t.KINDS);
    r.quests=t.QUESTS.map(q=>({t:q.t,r:q.r}));
    r.consts={GRID:t.GRID,DONE:t.DONE,handCap0:60,SOLAR_PEAK:t.SOLAR_PEAK};r.daylen=strip(t.DAYLEN);r.res=strip(t.RES);r.drone=strip(t.DRONE);r.stormLook=strip(t.STORM_LOOK);r.powreq=t.POWREQ;r.outpost=strip(t.OUTPOST);r.lift=strip(t.LIFT);r.rig=strip(t.RIG);r.rigRichTest=[t.rigRich('moon',5),t.rigRich('mars',123),t.rigRich('poltergeist',2000)];r.geof=strip(t.GEOF);

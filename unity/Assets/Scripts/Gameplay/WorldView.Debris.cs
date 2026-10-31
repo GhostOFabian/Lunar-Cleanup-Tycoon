@@ -50,7 +50,7 @@ namespace LunarCleanup.Gameplay
             float R() => (float)rnd.NextDouble();
             foreach (var cl in pd.cells)
             {
-                if (cl.IsBase || cl.Wet) continue; var D = GameData.Dirt[cl.type]; int n = GameData.Kinds[cl.kind].key == "industrial" ? 9 : 5;
+                if (cl.IsBase || cl.Wet) continue; var D = GameData.Dirt[cl.type]; int n = GameData.Kinds[cl.kind].key == "industrial" ? 9 : 5; if (pd.N > 12000) n = (n + 2) / 3; else if (pd.N > 6000) n = (n + 1) / 2; /* große Planeten: weniger Teile je Parzelle */
                 for (int k = 0; k < n; k++)
                 {
                     int gi = -1; for (int t = 0; t < 20; t++) { int c = (int)(R() * CELLS); if (c >= CELLS) c = CELLS - 1; if (cl.inside[c]) { gi = c; break; } }

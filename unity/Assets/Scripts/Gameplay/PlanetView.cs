@@ -9,7 +9,7 @@ namespace LunarCleanup.Gameplay
     public class PlanetView : MonoBehaviour
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
-        const int TILE = 64, SUB = 3;
+        const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
         class Chunk { public Texture2D tex; public Color32[] px; public int per, size; public bool dirty; public Material mat; }
         PState ps; PlanetData pd; Theme th;
         readonly List<Chunk> chunks = new List<Chunk>();
@@ -19,6 +19,7 @@ namespace LunarCleanup.Gameplay
         public void Build(PState state)
         {
             ps = state; pd = ps.pd; th = ps.P.theme;
+            TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : 64;
             foreach (Transform c in transform) Destroy(c.gameObject); chunks.Clear();
             int F = pd.faceCenters.Length; var lists = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
             foreach (var cl in pd.cells) lists[cl.chunk].Add(cl.id);
