@@ -29,6 +29,9 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 4. [ ] **Alles Neue im Spiel testen**: 2 Parzellen pro Wisch, Kamera beim Wischen (Rand, WASD/Pfeile, rechte Maustaste), Scheinwerfer nur nachts, Gebäude-Upgrades, Ziel-Sprung, Kristalle ernten, Bodenteile verschwinden beim Reinigen (Leistung auf großen Planeten wie Poltergeist prüfen).
 5. [ ] **Webseite: echte Spielbilder aus Unity** (mit HUD, ausgebaute Basis, Nacht mit Scheinwerfern, Kristalle, Bodenteile) statt der Prüf-Fotos.
 
+### Neue Ideen (ausgearbeitet in docs/IDEEN_SPEC.md, Daten in Core/FeatureData.cs, Spielstand-Felder vorbereitet)
+- [ ] A1 Waren sichtbar (Bänder, Lager-Füllstand, Rakete beladen) · [ ] B3 Kombo · [ ] B2 Funde + Album · [ ] B1 Ereignisse · [ ] B4 Tagesbonus · [ ] A4/A5 Sound, Vibration · [ ] C2 Fahrzeug-Stufen · [ ] A2 Wetter, A3 Astronauten · [ ] D1 Sternenstaub · [ ] C1 Forschungsbaum · [ ] F1–F3 Komfort · [ ] D3/D4 · [ ] C3–C5 · [ ] D2, E1–E3
+
 ### Hoch
 6. [ ] **Planetenboden schöner** (Unity): feinere Bodentextur mit Normal-Map, weniger Rauschen, Schatten auf Handy-Qualität prüfen.
 7. [ ] **Meteoritenschauer** (Unity): Staub auf sauberen Parzellen, Erzbagger räumt, Ziel dazu.
