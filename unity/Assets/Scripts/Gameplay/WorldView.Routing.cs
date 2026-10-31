@@ -54,7 +54,12 @@ namespace LunarCleanup.Gameplay
                 foreach (var cnd in cands)
                 {
                     var path = AStar(cnd.a.p + cnd.a.n * 1.1f, cnd.a.n, cnd.b.p + cnd.b.n * 1.1f, -cnd.b.n, block, occ, null, null, out float cost);
-                    if (path != null && cost < bc) { bc = cost; best = path; bestC = cnd; }
+                    if (path == null) continue;
+                    /* lieber eine freie Gebäudefläche als neben einem anderen Band (dort laufen sie sonst ineinander), und keine zu engen Kurven */
+                    int nA = used.TryGetValue(cnd.a.bid + cnd.a.face, out var tA) ? tA.Count : 0, nB = used.TryGetValue(cnd.b.bid + cnd.b.face, out var tB) ? tB.Count : 0;
+                    cost += 7f * (nA + nB);
+                    if (MinRadius(Shape(cnd.a, cnd.b, path)) < .56f) cost += 25f;
+                    if (cost < bc) { bc = cost; best = path; bestC = cnd; }
                 }
                 // 2. nur wenn das nicht geht: als Y in den Eingang eines Bandes mit gleichem Ziel münden (nie als Abzweig am Anfang)
                 if (best == null)
@@ -77,10 +82,20 @@ namespace LunarCleanup.Gameplay
                 var mark = new HashSet<int>(); foreach (int cell in best) { int cx = cell % GN, cy = cell / GN; for (int dy = -2; dy <= 2; dy++) for (int dx = -2; dx <= 2; dx++) { int x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < GN && y < GN) mark.Add(y * GN + x); } }
                 foreach (int cell in mark) { if (!occ.TryGetValue(cell, out var l)) { l = new List<(string, string)>(); occ[cell] = l; } l.Add((b.from, b.to)); }
                 // Ecken der Rasterlinie → Polylinie; davor/dahinter gerade aus der Fläche heraus und bis ins Gebäude (wird an der Wand gekappt)
-                var pts = new List<Vector2> { A.p - A.n * 1.6f, A.p };
-                var cor = Corners(best); foreach (var q in cor) pts.Add(q); pts.Add(B.p); pts.Add(B.p - B.n * 1.6f);
-                routed[b.id] = Round(Dedupe(pts), 1.1f);
+                routed[b.id] = Shape(A, B, best);
             }
+        }
+        static Vector2[] Shape(BPort A, BPort B, List<int> cells)
+        {
+            var pts = new List<Vector2> { A.p - A.n * 1.6f, A.p };
+            foreach (var q in Corners(cells)) pts.Add(q); pts.Add(B.p); pts.Add(B.p - B.n * 1.6f);
+            return Round(Dedupe(pts), 1.1f);
+        }
+        /// <summary>Kleinster Kurvenradius der fertigen Linie (Sehne / Winkel).</summary>
+        static float MinRadius(Vector2[] rp)
+        {
+            float m = 9; for (int i = 1; i + 1 < rp.Length; i++) { var u1 = rp[i] - rp[i - 1]; var u2 = rp[i + 1] - rp[i]; float l1 = u1.magnitude, l2 = u2.magnitude; if (l1 < 1e-4f || l2 < 1e-4f) continue; float an = Vector2.Angle(u1, u2) * Mathf.Deg2Rad; if (an < .05f) continue; m = Mathf.Min(m, Mathf.Min(l1, l2) / an); }
+            return m;
         }
 
         static int Ix(float v) => Mathf.FloorToInt((v + GOFF) / GC);
