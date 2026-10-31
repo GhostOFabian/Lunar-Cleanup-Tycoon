@@ -28,6 +28,7 @@ namespace LunarCleanup.EditorTools
             PlayerSettings.WebGL.compressionFormat = pub ? WebGLCompressionFormat.Gzip : WebGLCompressionFormat.Disabled; // unkomprimiert läuft auf jedem einfachen Webserver
             PlayerSettings.WebGL.decompressionFallback = pub; // GitHub Pages: der Browser entpackt selbst
             PlayerSettings.WebGL.nameFilesAsHashes = false;
+            SetCodeOptimization(pub ? "BuildTimes" : null); /* der erste Release-Versuch mit voller Optimierung hat Unity abstürzen lassen */
             PlayerSettings.WebGL.dataCaching = true;
             PlayerSettings.defaultWebScreenWidth = 540; PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.runInBackground = true;
@@ -42,6 +43,20 @@ namespace LunarCleanup.EditorTools
             };
             var rep = BuildPipeline.BuildPlayer(opt);
             Debug.Log("Lunar Cleanup: Browser-Version " + (rep.summary.result == BuildResult.Succeeded ? "fertig: " + Path.GetFullPath(opt.locationPathName) + " (" + (rep.summary.totalSize / 1048576f).ToString("0.0") + " MB)" : "FEHLGESCHLAGEN: " + rep.summary.result));
+        }
+
+        /// <summary>WebGL-Code-Optimierung per Reflexion setzen (UnityEditor.WebGL.UserBuildSettings.codeOptimization), damit es auch ohne direkte Modul-Referenz kompiliert.</summary>
+        static void SetCodeOptimization(string name)
+        {
+            if (name == null) return;
+            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var t = asm.GetType("UnityEditor.WebGL.UserBuildSettings"); if (t == null) continue;
+                var p = t.GetProperty("codeOptimization", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static); if (p == null) continue;
+                try { p.SetValue(null, System.Enum.Parse(p.PropertyType, name)); Debug.Log("Lunar Cleanup: WebGL-Optimierung = " + name); } catch (System.Exception e) { Debug.LogWarning("Lunar Cleanup: Optimierung nicht gesetzt: " + e.Message); }
+                return;
+            }
+            Debug.LogWarning("Lunar Cleanup: WebGL-Optimierung nicht gefunden (Standard bleibt).");
         }
 
         /// <summary>Materialien in Resources: dadurch sind Lit/Unlit/Partikel/Himmel samt der benutzten Schlüsselwörter im Build.</summary>
