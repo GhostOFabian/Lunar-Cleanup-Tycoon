@@ -119,5 +119,5 @@
 
 ## Webseite + Unity-Version online (31.10.2026)
 - GitHub Pages: Startseite mit zwei Knöpfen – „Prototyp spielen“ (`prototype/index.html`) und „Unity-Version spielen (3D, Beta)“ (`play-unity/index.html`), neuer Abschnitt „Der Weg aufs Handy“ mit Unity-Bildern.
-- `play-unity/`: WebGL-Build der Unity-Fassung 0.13 (Development-Build, ~100 MB, unkomprimiert, Testmodus mit eigenem Spielstand), eigene deutsche Ladeseite. Headless (Chromium/SwiftShader) gestartet: läuft.
-- Neuer Menüpunkt „Browser-Version für GitHub bauen“ (Release, gzip mit Entpacken im Browser, ohne Testmodus). Erster Versuch brach ab, weil Unity während des Builds beendet wurde – noch einmal starten, dann `play-unity/Build` ersetzen (deutlich kleiner).
+- `play-unity/`: WebGL-Build der Unity-Fassung 0.13, eigene deutsche Ladeseite. Headless (Chromium/SwiftShader) gestartet: läuft.
+- Neuer Menüpunkt „Browser-Version für GitHub bauen“ (Release, Optimierung „BuildTimes“, gzip mit Entpacken im Browser, ohne Testmodus). Erster Versuch mit voller Optimierung ließ Unity abstürzen; mit BuildTimes läuft er in ~3 Min. `play-unity/` ist jetzt dieser Build: 17 MB statt 100 MB, headless getestet.
