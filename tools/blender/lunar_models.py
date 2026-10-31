@@ -1559,7 +1559,8 @@ def _material(name):
         return mat
     col, met, rough, emit, est = MATS[name]
     mat = bpy.data.materials.new(key)
-    mat.use_nodes = True
+    if bpy.app.version < (5, 0, 0):  # ab Blender 5 immer an
+        mat.use_nodes = True
     nt = mat.node_tree
     bsdf = nt.nodes.get("Principled BSDF")
     bsdf.inputs["Base Color"].default_value = _hex(col)
@@ -1642,7 +1643,8 @@ def _setup_scene(width, depth):
     sc = bpy.context.scene
     w = sc.world or bpy.data.worlds.new("World")
     sc.world = w
-    w.use_nodes = True
+    if bpy.app.version < (5, 0, 0):  # ab Blender 5 immer an
+        w.use_nodes = True
     bg = w.node_tree.nodes.get("Background")
     if bg:
         bg.inputs[0].default_value = (0.012, 0.014, 0.02, 1)
@@ -1659,7 +1661,8 @@ def _setup_scene(width, depth):
         s = max(width, depth) + 30
         me.from_pydata([(-10, -s, 0), (s, -s, 0), (s, s, 0), (-10, s, 0)], [], [(0, 1, 2, 3)])
         mat = bpy.data.materials.new("LC_Mondboden")
-        mat.use_nodes = True
+        if bpy.app.version < (5, 0, 0):  # ab Blender 5 immer an
+            mat.use_nodes = True
         b = mat.node_tree.nodes.get("Principled BSDF")
         b.inputs["Base Color"].default_value = (0.09, 0.09, 0.1, 1)
         b.inputs["Roughness"].default_value = 0.95
