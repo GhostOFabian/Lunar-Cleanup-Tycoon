@@ -135,10 +135,36 @@ namespace LunarCleanup.Gameplay
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
+            if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots());
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);
             if (kb.f7Key.wasPressedThisFrame && !offlineRunning) StartCoroutine(Offline(8 * 3600));
+        }
+#endif
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>F4 (Testmodus, Editor): Nahaufnahmen der Bänder mit Waren und Stützen nach BasisCheck/band_*.png.</summary>
+        IEnumerator BeltShots()
+        {
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck")); System.IO.Directory.CreateDirectory(dir);
+            if (uiRoot) uiRoot.SetActive(false); var cd0 = cd; var n0 = north; float a0 = altGoal; int i = 0;
+            foreach (var (id, d, tan) in world.BeltViews())
+            {
+                if (i++ >= 6) break;
+                // leere Bänder fürs Foto kurz mit Waren füllen
+                var ps0 = Game.Cur; List<BeltItem> fake = null; var bd = ps0.lay.belts.Find(x => x.id == id);
+                if (bd != null && ps0.belts.TryGetValue(id, out var its) && its.Count == 0) { fake = new List<BeltItem>(); for (float q = bd.L * .9f; q > bd.L * .1f; q -= 1.1f) { var it = new BeltItem { s = q, m = (int)(q * 7) % GameData.Mats.Count }; its.Add(it); fake.Add(it); } }
+                cd = d; north = tan; alt = altGoal = 12; ApplyCam(); float R = Game.Cur.pd.R; var side = Vector3.Cross(d, tan).normalized;
+                foreach (var (nm, sd, h, back) in new[] { ("a", 3.2f, 1.6f, -2.5f), ("b", -2.6f, .7f, 1.5f), ("c", .01f, 5f, -6f) })
+                {
+                    yield return null; WorldView.NightF = 0;
+                    cam.transform.position = d * (R + h) + side * sd + tan * back; cam.transform.LookAt(d * (R + .7f), d);
+                    yield return new WaitForEndOfFrame();
+                    ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "band_" + id + "_" + nm + ".png"), 1); yield return null;
+                }
+                if (fake != null && ps0.belts.TryGetValue(id, out var its2)) its2.RemoveAll(x => fake.Contains(x));
+            }
+            cd = cd0; north = n0; alt = altGoal = a0; if (uiRoot) uiRoot.SetActive(true); Debug.Log("Lunar Cleanup: Bandfotos fertig");
         }
 #endif
         // ---------- Kamera ----------

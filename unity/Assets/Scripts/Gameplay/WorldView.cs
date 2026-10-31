@@ -261,6 +261,13 @@ namespace LunarCleanup.Gameplay
             }
         }
         readonly Dictionary<string, Vector2> beltTrim = new Dictionary<string, Vector2>();
+        /// <summary>Testfotos: Mitte und Richtung jedes sichtbaren Bandes.</summary>
+        public List<(string id, Vector3 dir, Vector3 tan)> BeltViews()
+        {
+            var r = new List<(string, Vector3, Vector3)>();
+            foreach (var kv in beltInfo) { var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value; var p = PointAt(rp, cum, (s0 + s1) / 2, out var tan); var d = pd.PlanDir(p); r.Add((kv.Key, d, Tangent(d, tan))); }
+            return r;
+        }
         readonly Dictionary<string, List<Vector3>> bTris = new Dictionary<string, List<Vector3>>();
         readonly Dictionary<string, (BeltDef b, bool w0, bool w1, float s0, float s1, float H, Vector2[] rp, float[] cum)> beltInfo = new Dictionary<string, (BeltDef, bool, bool, float, float, float, Vector2[], float[])>();
         int pipeMiss; public readonly List<string> Notes = new List<string>();
@@ -741,7 +748,8 @@ namespace LunarCleanup.Gameplay
             {
                 if (kv.Value.Count == 0) continue;
                 if (!itemMat.TryGetValue(kv.Key, out var mat)) { var M = GameData.Mats[kv.Key]; mat = M.shape == "gem" ? MeshKit.Mat(M.col, .1f, .9f, M.col * .5f) : MeshKit.Mat(M.col, M.shape == "ingot" ? .85f : .2f, M.shape == "ingot" ? .75f : .45f); itemMat[kv.Key] = mat; }
-                foreach (var mx in kv.Value) Graphics.DrawMesh(itemMesh, mx, mat, 0); /* einzeln statt Instancing: braucht keine Instancing-Shadervariante (die fehlte im Build – Waren waren unsichtbar) */
+                var sh0 = GameData.Mats[kv.Key].shape; var mesh0 = sh0 == "barrel" ? MeshKit.CylMesh(.5f, .5f, 1f, 14) : sh0 == "gem" ? MeshKit.Sphere : itemMesh; /* Fässer rund, Kristalle als Kugel – sonst sehen Waren wie Stützen aus */
+                foreach (var mx in kv.Value) Graphics.DrawMesh(mesh0, mx, mat, 0); /* einzeln statt Instancing: braucht keine Instancing-Shadervariante (die fehlte im Build – Waren waren unsichtbar) */
             }
         }
 

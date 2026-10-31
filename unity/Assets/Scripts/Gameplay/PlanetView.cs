@@ -10,7 +10,8 @@ namespace LunarCleanup.Gameplay
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
         const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
-        class Chunk { public Texture2D tex; public Color32[] px; public int per, size; public bool dirty; public Material mat; }
+        class Chunk { public Texture2D tex, nrm; public Color32[] px; public int per, size; public bool dirty; public Material mat; }
+        int NT = 64; /* Pixel je Parzelle in der Reliefkarte */
         PState ps; PlanetData pd; Theme th;
         readonly List<Chunk> chunks = new List<Chunk>();
         int[] tileOf; // Platz der Zelle in ihrer Textur
@@ -19,8 +20,8 @@ namespace LunarCleanup.Gameplay
         public void Build(PState state)
         {
             ps = state; pd = ps.pd; th = ps.P.theme;
-            TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : 64;
-            foreach (Transform c in transform) Destroy(c.gameObject); chunks.Clear();
+            TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : 64; NT = pd.N > 7000 ? TILE / 2 + 4 : TILE; craters.Clear();
+            foreach (Transform c in transform) Destroy(c.gameObject); foreach (var oc in chunks) if (oc != null) { Destroy(oc.tex); if (oc.nrm) Destroy(oc.nrm); Destroy(oc.mat); } chunks.Clear(); /* alte Texturen freigeben (sonst wächst der Speicher bei jedem Planetenwechsel) */
             int F = pd.faceCenters.Length; var lists = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
             foreach (var cl in pd.cells) lists[cl.chunk].Add(cl.id);
             tileOf = new int[pd.N];
@@ -35,7 +36,8 @@ namespace LunarCleanup.Gameplay
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>(); mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // Hügel werfen keine langen schwarzen Schatten über den Planeten
                 var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .05f); m.SetFloat("_Metallic", 0); m.SetFloat("_SpecularHighlights", 0); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); m.SetFloat("_EnvironmentReflections", 0); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF"); // kein Blenden bei flachem Sonnenstand
-                m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 9, per * 9)); m.SetFloat("_DetailAlbedoMapScale", .3f); m.EnableKeyword("_DETAIL_MULX2");
+                ch.nrm = BuildNormal(ids, per); m.SetTexture("_BumpMap", ch.nrm); m.SetFloat("_BumpScale", 1f); m.EnableKeyword("_NORMALMAP"); /* kleine Krater, Steine und Plattenfugen reagieren auf das Sonnenlicht */
+                m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 13, per * 13)); m.SetFloat("_DetailAlbedoMapScale", .16f); /* feine Körnung statt grober Flecken */ m.EnableKeyword("_DETAIL_MULX2");
                 mr.sharedMaterial = m; ch.mat = m;
                 chunks.Add(ch);
                 foreach (int id in ids) PaintCell(id);
@@ -48,7 +50,7 @@ namespace LunarCleanup.Gameplay
         Mesh BuildMesh(List<int> ids, int per)
         {
             var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
-            float inv = 1f / per, pad = .5f / TILE;
+            float inv = 1f / per, pad = PAD;
             foreach (int id in ids)
             {
                 var cl = pd.cells[id]; int ti = tileOf[id]; float u0 = (ti % per) * inv, v0 = (ti / per) * inv;
@@ -97,7 +99,68 @@ namespace LunarCleanup.Gameplay
             return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, d, fx), fy) * 2 - 1;
         }
 
-        static readonly Color BaseLine = new Color(.31f, .46f, .9f), CleanLine = new Color(.36f, .92f, .68f), FrontLine = new Color(1f, .45f, .32f);
+        /* Fugen: dezent statt knallig – helle Stahlfuge an der Basis, warmes Bernstein an putzbaren Parzellen, Rot bei Meteoritenstaub */
+        static readonly Color BaseLine = new Color(.66f, .7f, .76f), FrontLine = new Color(1f, .74f, .38f), MeteorLine = new Color(1f, .42f, .3f);
+        const float PAD = 1.5f / 64f; // Rand je Feld in der Textur, damit beim Verkleinern (Mipmaps) keine Nachbarfarben durchscheinen
+        static float EdgeA(float ed, float w) => ed >= w ? 0 : ed <= w * .4f ? 1 : 1 - Mathf.SmoothStep(0, 1, (ed - w * .4f) / (w * .6f));
+
+        // ---------- Relief: kleine Einschläge und Steinchen (nur Optik; große Krater/Hügel stecken im Gelände selbst) ----------
+        readonly Dictionary<int, Vector4[]> craters = new Dictionary<int, Vector4[]>();
+        Vector4[] Craters(Cell cl)
+        {
+            if (craters.TryGetValue(cl.id, out var a)) return a;
+            if (cl.IsBase || cl.Wet) { a = new Vector4[0]; craters[cl.id] = a; return a; }
+            var r = new System.Random(cl.id * 7919 + 13); float H = cl.H; int n = Mathf.Clamp(Mathf.RoundToInt(H * H / 7f), 1, 8);
+            a = new Vector4[n];
+            for (int i = 0; i < n; i++)
+            {
+                float rad = .25f + Mathf.Pow((float)r.NextDouble(), 3f) * Mathf.Min(2f, H * .4f); float ang = (float)r.NextDouble() * 6.2832f, dist = Mathf.Sqrt((float)r.NextDouble()) * Mathf.Max(0, H * .82f - rad * .6f);
+                a[i] = new Vector4(Mathf.Cos(ang) * dist, Mathf.Sin(ang) * dist, rad, rad * (.1f + .07f * (float)r.NextDouble()));
+            }
+            craters[cl.id] = a; return a;
+        }
+        /// <summary>Reliefhöhe in Metern an (x, y) der Parzelle.</summary>
+        static float Relief(Vector4[] crs, float x, float y, float ed, float edgeW)
+        {
+            float h = .035f * Noise(x * 2.3f, y * 2.3f, 21) + .018f * Noise(x * 6.1f, y * 6.1f, 23);
+            foreach (var c in crs)
+            {
+                float dx = x - c.x, dy = y - c.y, d2 = dx * dx + dy * dy, r2 = c.z * c.z * 2.6f; if (d2 > r2) continue;
+                float q = Mathf.Sqrt(d2) / c.z; h += q < 1 ? c.w * (q * q - 1) : 0; h += c.w * .55f * Mathf.Exp(-(q - 1) * (q - 1) / .07f);
+            }
+            return h * Mathf.SmoothStep(0, 1, Mathf.Clamp01(ed / (edgeW * 3f)));
+        }
+        static float PanelRelief(int id, float x, float y)
+        {
+            float gx = Mathf.Abs(Mathf.Repeat(x + id * .37f, 2.4f) - 1.2f), gy = Mathf.Abs(Mathf.Repeat(y, 2.4f) - 1.2f); float g = Mathf.Max(gx, gy);
+            return g > 1.12f ? -.03f : g > 1.02f ? -.03f * (g - 1.02f) / .1f : .004f * Noise(x * 3f, y * 3f, id);
+        }
+        Texture2D BuildNormal(List<int> ids, int per)
+        {
+            int size = per * NT; var px = new Color32[size * size]; var hgt = new float[(NT + 2) * (NT + 2)];
+            for (int i = 0; i < size * size; i++) px[i] = new Color32(128, 128, 255, 255);
+            foreach (int id in ids)
+            {
+                var cl = pd.cells[id]; int ti = tileOf[id], ox = (ti % per) * NT, oy = (ti / per) * NT; float H = cl.H, edgeW = Mathf.Max(.13f, H * .024f); var crs = Craters(cl); int Kc = cl.poly.Length;
+                if (cl.Wet) continue; float step = 2 * H / (1 - 2 * PAD) / NT; // Meter je Pixel
+                for (int py = -1; py <= NT; py++) for (int pxi = -1; pxi <= NT; pxi++)
+                    {
+                        float y = -H + ((py + .5f) / NT - PAD) / (1 - 2 * PAD) * 2 * H, x = -H + ((pxi + .5f) / NT - PAD) / (1 - 2 * PAD) * 2 * H; float ed = 1e9f;
+                        for (int k = 0; k < Kc; k++) { var a = cl.poly[k]; var b = cl.poly[(k + 1) % Kc]; float ex = b.x - a.x, ey = b.y - a.y, d = (ex * (y - a.y) - ey * (x - a.x)) / Mathf.Sqrt(ex * ex + ey * ey); if (d < ed) ed = d; }
+                        hgt[(py + 1) * (NT + 2) + pxi + 1] = cl.IsBase ? PanelRelief(id, x, y) : Relief(crs, x, y, ed, edgeW);
+                    }
+                for (int py = 0; py < NT; py++) for (int pxi = 0; pxi < NT; pxi++)
+                    {
+                        int c = (py + 1) * (NT + 2) + pxi + 1; float dx = (hgt[c + 1] - hgt[c - 1]) / (2 * step), dy = (hgt[c + NT + 2] - hgt[c - NT - 2]) / (2 * step);
+                        var nn = new Vector3(-dx * 1.25f, -dy * 1.25f, 1).normalized;
+                        px[(oy + py) * size + ox + pxi] = new Color32((byte)Mathf.Clamp((nn.x * .5f + .5f) * 255, 0, 255), (byte)Mathf.Clamp((nn.y * .5f + .5f) * 255, 0, 255), (byte)Mathf.Clamp((nn.z * .5f + .5f) * 255, 0, 255), 255);
+                    }
+            }
+            /* linear (keine Gamma-Umrechnung); R=x, G=y, B=z, A=1: passt zu beiden Normal-Map-Formaten (RGB und AG) */
+            var t = new Texture2D(size, size, TextureFormat.RGBA32, true, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 };
+            t.SetPixels32(px); t.Apply(true, true); return t; // keine Kopie im Hauptspeicher behalten
+        }
+
 
         public void PaintCell(int id)
         {
@@ -109,21 +172,21 @@ namespace LunarCleanup.Gameplay
             Color c0 = th.clean.Length > 0 ? th.clean[0] : Color.gray, c1 = th.clean.Length > 1 ? th.clean[1] : c0, c2 = th.clean.Length > 2 ? th.clean[2] : c0;
             Color b0 = th.baseC.Length > 0 ? th.baseC[0] : Color.gray, b1 = th.baseC.Length > 1 ? th.baseC[1] : b0;
             Color kindTint = K.key == "rich" ? new Color(1.08f, 1.02f, .85f) : K.key == "industrial" ? new Color(.82f, .82f, .86f) : K.key == "anomaly" ? new Color(.95f, .85f, 1.12f) : Color.white;
-            float H = cl.H; int Kc = cl.poly.Length; float edgeW = Mathf.Max(.16f, H * .028f);
+            float H = cl.H; int Kc = cl.poly.Length; float edgeW = Mathf.Max(.13f, H * .024f); var crs = Craters(cl);
             for (int py = 0; py < TILE; py++)
             {
-                float y = -H + (py + .5f) / TILE * 2 * H;
+                float y = -H + ((py + .5f) / TILE - PAD) / (1 - 2 * PAD) * 2 * H;
                 for (int pxi = 0; pxi < TILE; pxi++)
                 {
-                    float x = -H + (pxi + .5f) / TILE * 2 * H;
+                    float x = -H + ((pxi + .5f) / TILE - PAD) / (1 - 2 * PAD) * 2 * H;
                     float ed = 1e9f;
                     for (int k = 0; k < Kc; k++) { var a = cl.poly[k]; var b = cl.poly[(k + 1) % Kc]; float ex = b.x - a.x, ey = b.y - a.y, d = (ex * (y - a.y) - ey * (x - a.x)) / Mathf.Sqrt(ex * ex + ey * ey); if (d < ed) ed = d; }
                     Color col;
                     if (isBase)
                     {
                         float gx = Mathf.Abs(Mathf.Repeat(x + id * .37f, 2.4f) - 1.2f), gy = Mathf.Abs(Mathf.Repeat(y, 2.4f) - 1.2f);
-                        col = Color.Lerp(b0, b1, .5f + .5f * Noise(x * .7f, y * .7f, id)); if (gx > 1.12f || gy > 1.12f) col *= .78f;
-                        if (ed < edgeW) col = Color.Lerp(col, BaseLine, .85f);
+                        int pid0 = Mathf.FloorToInt((x + id * .37f) / 2.4f) * 31 + Mathf.FloorToInt(y / 2.4f); col = Color.Lerp(b0, b1, .5f + .14f * Noise(x * .3f, y * .3f, id) + .1f * (Hash(pid0, id, 5) - .5f)) * (.97f + .05f * Noise(x * 4f, y * 4f, 2)); /* ruhige Platten, jede leicht anders getönt */ if (gx > 1.12f || gy > 1.12f) col *= .84f; else if (gx > 1.02f || gy > 1.02f) col *= 1.06f; // Fuge mit hellerer Kante
+                        float ea = EdgeA(ed, edgeW); if (ea > 0) col = Color.Lerp(col, BaseLine, ea * .6f);
                     }
                     else
                     {
@@ -149,7 +212,9 @@ namespace LunarCleanup.Gameplay
                             cleanC = Color.Lerp(liqC, cleanC, shore * .8f); dirtC = Color.Lerp(liqC, dirtC, .38f);
                         }
                         col = Color.Lerp(cleanC, dirtC, g);
-                        if (ed < edgeW) col = clean && act == null ? Color.Lerp(col, CleanLine, .8f) : front || (clean && act != null) ? Color.Lerp(col, FrontLine, .7f) : col * .72f;
+                        if (!cl.Wet) { float rh = Relief(crs, x, y, ed, edgeW); col *= 1 + Mathf.Clamp(rh * 1.8f, -.16f, .1f); } // Kraterböden dunkler, Ränder heller
+                        float ea = EdgeA(ed, edgeW);
+                        if (ea > 0) col = clean && act == null ? col * (1 - .16f * ea) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }
