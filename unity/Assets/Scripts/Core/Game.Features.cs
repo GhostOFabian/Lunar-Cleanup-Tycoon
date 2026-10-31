@@ -15,7 +15,7 @@ namespace LunarCleanup.Core
 
         // ---------- Parzelle fertig: Kombo, Funde, Wrack ----------
         static void OnCellDone(PState ps, int id, double bonus)
-        {
+        { S.stats.cells++;
             bool live = !Offline && ps.pid == S.planet;
             // Kombo: nur eigene Handreinigung
             if (live && strokeCells.Contains(id))

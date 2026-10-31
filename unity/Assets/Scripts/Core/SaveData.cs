@@ -6,10 +6,10 @@ using UnityEngine;
 namespace LunarCleanup.Core
 {
     [Serializable] public class KV { public string k; public int v; }
-    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts, crystals; public float handM2; }
+    [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts, crystals, cells; public float handM2; }
 
     [Serializable] public class StSave { public string id; public float[] buf; public int[] docks = new int[0]; public int cell = -1, dc = -1; [NonSerialized] public bool busy; }
-    [Serializable] public class VehSave { public int cr = -1; public float crT; public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; public float xp; public int spec, skin; public string vname = ""; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT, driveT, skipT; [NonSerialized] public int skipCell = -1; [NonSerialized] public float sweepT, sweepCheck; }
+    [Serializable] public class VehSave { public int cr = -1; public float crT; public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; public float xp; public int spec, skin; public string vname = ""; public int zone; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT, driveT, skipT; [NonSerialized] public int skipCell = -1; [NonSerialized] public float sweepT, sweepCheck; }
     [Serializable] public class DroneSave { public int id; public Vector3 d; public string mode = "idle", sid = "", tk = "v", tko = ""; public float[] tank; public int tgt = -1; public float wt; [NonSerialized] public bool busy; }
     [Serializable] public class LifterSave { public int id; public Vector3 d; public string mode = "idle"; public int veh = -1, cell = -1; }
     [Serializable] public class CrystalSave { public int id, cell, t, claim = -1; public float x, y, g; }
@@ -25,6 +25,9 @@ namespace LunarCleanup.Core
     [Serializable] public class StationSave { public string mod = ""; public int lv; }
     [Serializable] public class RouteSave { public string from = "", to = ""; public int mat = -1; public float t; }
 
+    [Serializable] public class WorkOrderSave { public int m = -1, n; public float got; public double r; }
+    [Serializable] public class ContractItem { public string type = ""; public double target, start, reward; public bool done; }
+    [Serializable] public class ContractSave { public int day; public List<ContractItem> list = new List<ContractItem>(); public bool bonus; }
     [Serializable] public class TeamSave { public string mode = "home"; public Vector3 d; public float t; public int cell = -1; public string key = ""; } // Suchtrupp (Bergung von Wracks und Kometentrümmern)
     [Serializable] public class CartSave { public bool owned; public Vector3 d; public string mode = "park", to = ""; public float[] tank; public float wt; }
 
@@ -62,6 +65,7 @@ namespace LunarCleanup.Core
         // Wirtschaft (wie im Browser-Prototyp): Produktionsplan, Verkaufsband je Produkt, Frachtauftrag, Verkaufsautomat, Betriebsbonus, Gebäudestufen
         public List<string> planOff = new List<string>();   // ausgeschaltete Rezepte (Plan-Schlüssel)
         public TeamSave team = new TeamSave();
+        public int exp, woDone; public string spec = ""; public WorkOrderSave wo = new WorkOrderSave(); public List<int> pgDone = new List<int>(); // Ausbaustufe, Ausrichtung, Werksaufträge, Planetenziele
         public List<int> sellYes = new List<int>();         // ausdrücklich zum Verkauf freigegebene Waren
         public List<int> autoOff = new List<int>();         // Produkte, die NICHT aufs Verkaufsband sollen
         public int order = -1; public bool autoOrder = true, autoDump;
@@ -81,6 +85,7 @@ namespace LunarCleanup.Core
         public List<PlanetSave> planets = new List<PlanetSave>();
         public long lastActive;
         public bool sound = true;
+        public ContractSave contracts = new ContractSave();
         public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe
         public float volSfx = .8f, volMusic = .6f; // Lautstärke Geräusche / Musik (0–1)
         public List<string> resDone = new List<string>();

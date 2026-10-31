@@ -22,25 +22,30 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 ## Offen – Stand 31.10.2026, 20 Uhr (Unity 0.18)
 
 ### A. Fabians Wünsche vom 31.10. (19:57) – Spielablauf
-1. [ ] **Menüs einfacher**: Kaufen (Gebäude, Fahrzeuge, Drohnen), Upgrades und Infos getrennt; Gebäude und Fahrzeuge als Karten mit Bild statt Listenzeilen; weniger Text pro Fenster.
-2. [ ] **Verkauf nur freigegebener Waren**: kein „Alles verkaufen“ mehr; jede Ware hat einen Schalter „zum Verkauf freigeben“; freigegebene Waren fahren übers Band in den Frachtraum und werden mit der Rakete verkauft (kein Sofortverkauf aus dem Lager).
+1. [x] **Menüs einfacher**: Kaufen (Gebäude, Fahrzeuge, Drohnen), Upgrades und Infos getrennt; Gebäude und Fahrzeuge als Karten mit Bild statt Listenzeilen; weniger Text pro Fenster.
+2. [x] **Verkauf nur freigegebener Waren**: kein „Alles verkaufen“ mehr; jede Ware hat einen Schalter „zum Verkauf freigeben“; freigegebene Waren fahren übers Band in den Frachtraum und werden mit der Rakete verkauft (kein Sofortverkauf aus dem Lager).
 3. [x] **Sammelbehälter**: mit Sammelwagen nur noch in den Wagen leeren (er wird gerufen), ohne Wagen direkt in Trichter/Lager.
-4. [ ] **Fahrzeug-Limit je Planet** (klare Obergrenze, im Fenster sichtbar) und **Selbstzerstörung** mit Animation (Countdown, Funken, Explosion, Teil der Kosten zurück), um kleine Fahrzeuge gegen größere zu tauschen.
-5. [ ] **Sinnvolle Shop-Angebote** statt Startgeld: z. B. Zeitsprung, dauerhaft +1 Fahrzeugplatz je Planet, zweite Rakete/Frachtraum, Kosmetik (Lackierungen, Basis-Themen, Leuchtfarben), Werbefrei, Saisonpass mit eigenen Zielen. Kein Geld-Paket.
+4. [x] **Fahrzeug-Limit je Planet** (klare Obergrenze, im Fenster sichtbar) und **Selbstzerstörung** mit Animation (Countdown, Funken, Explosion, Teil der Kosten zurück), um kleine Fahrzeuge gegen größere zu tauschen.
+5. [x] **Sinnvolle Shop-Angebote** (Inhalt fertig, echte Käufe erst mit der Handy-Version) statt Startgeld: z. B. Zeitsprung, dauerhaft +1 Fahrzeugplatz je Planet, zweite Rakete/Frachtraum, Kosmetik (Lackierungen, Basis-Themen, Leuchtfarben), Werbefrei, Saisonpass mit eigenen Zielen. Kein Geld-Paket.
 6. [x] Ereignis-Lichtstrahl dezenter · [x] Laternen heller und kaltweiß · [x] Ampeln sitzen auf den Dächern
 
 ### B. Inhalt aus dem Prototyp, noch nicht in Unity
-7. [ ] Ausbaustufen nach Basisstufe 5 (mehr Bohrtürme, größere Außenlager, mehr Fahrzeugplätze)
-8. [ ] Planetenziele (je Planet eigene Ziele) und tägliche Aufträge
-9. [ ] Statistik-Fenster mit Prognosen
-10. [ ] Fahrzeug-Feinheiten: Teamarbeit auf großen Parzellen, volle Stationen meiden, Arbeitsbereich festlegen
-11. [ ] Ausrichtung pro Planet (Bergbau/Industrie/Handel) und Werksaufträge mit Ruf
-12. [ ] Vibration (Handy)
+7. [x] Ausbaustufen nach Basisstufe 5 (mehr Bohrtürme, größere Außenlager, mehr Fahrzeugplätze)
+8. [x] Planetenziele (20 je Planet) (je Planet eigene Ziele) und tägliche Aufträge
+9. [x] Statistik (im Zielfenster) mit Prognosen
+10. [x] Fahrzeug-Feinheiten: Teamarbeit auf großen Parzellen, volle Stationen meiden, Arbeitsbereich festlegen
+11. [x] Ausrichtung pro Planet (Bergbau/Industrie/Handel) und Werksaufträge mit Ruf
+12. [x] Vibration (Handy)
+
+### Neu dazu (31.10. 20:11)
+- [x] Lautstärkeregler für Geräusche und Musik
+- [x] Kometeneinschlag mit Anzeige oben, Suchtrupp birgt Trümmer und Wracks (Credits, Leuchtkristalle)
+- [x] Hauptziele 44–57 freigeschaltet
 
 ### C. Prüfen / Kleinigkeiten
-13. [ ] Im Spiel ansehen: Nachlese der Fahrzeuge, neuer Band-Eingang der Maschinen, Wrack, Komet, Nordlicht, Raketenflamme
-14. [ ] Entladeanlage steht auf einigen Planeten nah an Nachbargebäuden; enge Bandführung auf Kepler-22b
-15. [ ] Boden aus nächster Nähe noch etwas blockig (Detailtextur)
+13. [~] Gesehen: Suchtrupp, Kometeneinschlag, Selbstzerstörung, Reiter-Menüs, Verkauf. Noch nicht gesehen: Nachlese der Fahrzeuge, neuer Band-Eingang der Maschinen, Wrack, Komet, Nordlicht, Raketenflamme
+14. [x] Entladeanlage rückt automatisch von zu nahen Nachbargebäuden ab · [ ] Kepler-Bandführung (unauffällig) – Entladeanlage steht auf einigen Planeten nah an Nachbargebäuden; enge Bandführung auf Kepler-22b
+15. [x] Boden aus nächster Nähe noch etwas blockig (Detailtextur)
 16. [ ] Spezialfahrzeug-Tabelle auf der Webseite am PC gequetscht
 
 ### D. Handy-Version (erst nach dem Browser-Test)

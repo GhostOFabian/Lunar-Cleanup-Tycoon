@@ -140,6 +140,7 @@ namespace LunarCleanup.Core
                     var rp = J.A(J.G(b, "rp")); var pts = new Vector2[rp.Count]; for (int i = 0; i < rp.Count; i++) pts[i] = V2(rp[i]);
                     L.belts.Add(new BeltDef { id = J.S(b, "id"), from = J.S(b, "from"), to = J.S(b, "to"), h = J.F(b, "h", .5f), stage = J.I(b, "stage"), L = J.F(b, "L"), rp = pts, port0 = V2(J.G(b, "port0")), port1 = V2(J.G(b, "port1")) });
                 }
+                Uncrowd(L);
                 Layouts[kv.Key] = L;
             }
             foreach (var kv in J.O(J.G(root, "cells")))
@@ -182,6 +183,21 @@ namespace LunarCleanup.Core
         static string[] ToStrings(object o) { var l = J.A(o); if (l == null) return new string[0]; var r = new string[l.Count]; for (int i = 0; i < l.Count; i++) r[i] = l[i] as string ?? ""; return r; }
         static int[] Ints(object o) { var d = J.Dv(o); var r = new int[d.Length]; for (int i = 0; i < d.Length; i++) r[i] = (int)d[i]; return r; }
         static int[] MapMats(object o) { var s = ToStrings(o); var r = new int[s.Length]; for (int i = 0; i < s.Length; i++) r[i] = MatIx[s[i]]; return r; }
+        /// <summary>Die Entladeanlage braucht mehr Platz als im alten Layout: steht sie zu nah an einem Nachbargebäude, rückt sie ein Stück weg (nur wenn dadurch nichts Neues zu eng wird).</summary>
+        static void Uncrowd(LayoutDef L)
+        {
+            if (!L.pos.ContainsKey("u1") || !Bld.ContainsKey("u1")) return; var u0 = L.pos["u1"];
+            for (int it = 0; it < 4; it++)
+            {
+                var u = L.pos["u1"]; string worst = null; float def = 0;
+                foreach (var kv in L.pos) { if (kv.Key.StartsWith("u") && kv.Key.Length == 2 || !Bld.ContainsKey(kv.Key)) continue; float need = Bld["u1"].fp + Bld[kv.Key].fp + .6f, d = (kv.Value - u).magnitude; if (need - d > def) { def = need - d; worst = kv.Key; } }
+                if (worst == null) break;
+                var dir = (u - L.pos[worst]); dir = dir.sqrMagnitude > 1e-4f ? dir.normalized : Vector2.right; var nu = u + dir * (def + .05f);
+                bool ok = nu.magnitude < 30; foreach (var kv in L.pos) { if (kv.Key.StartsWith("u") && kv.Key.Length == 2 || kv.Key == worst || !Bld.ContainsKey(kv.Key)) continue; if ((kv.Value - nu).magnitude < Bld["u1"].fp + Bld[kv.Key].fp + .6f - .01f && (kv.Value - nu).magnitude < (kv.Value - u).magnitude) ok = false; }
+                if (!ok) break;
+                foreach (var k in new[] { "u1", "u2", "u3" }) if (L.pos.ContainsKey(k) && (L.pos[k] - u).magnitude < .05f) L.pos[k] = nu; L.pos["u1"] = nu;
+            }
+        }
         static Vector2 V2(object o) { var d = J.Dv(o); return d.Length >= 2 ? new Vector2((float)d[0], (float)d[1]) : Vector2.zero; }
         static Vector3 V3(object o) { var d = J.Dv(o); return d.Length >= 3 ? new Vector3((float)d[0], (float)d[1], (float)d[2]) : Vector3.zero; }
         static Color[] HexArr(object o) { var s = ToStrings(o); var r = new Color[s.Length]; for (int i = 0; i < s.Length; i++) r[i] = Hex(s[i]); return r; }

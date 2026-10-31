@@ -20,7 +20,7 @@ namespace LunarCleanup.Gameplay
         public void Build(PState state)
         {
             ps = state; pd = ps.pd; th = ps.P.theme;
-            TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : 64; NT = pd.N > 7000 ? TILE / 2 + 4 : TILE; craters.Clear();
+            TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : pd.N > 1500 ? 64 : 96; /* kleine Planeten: feinere Textur, aus der Nähe nicht mehr blockig */ NT = pd.N > 7000 ? TILE / 2 + 4 : TILE; craters.Clear();
             foreach (Transform c in transform) Destroy(c.gameObject); foreach (var oc in chunks) if (oc != null) { Destroy(oc.tex); if (oc.nrm) Destroy(oc.nrm); Destroy(oc.mat); } chunks.Clear(); /* alte Texturen freigeben (sonst wächst der Speicher bei jedem Planetenwechsel) */
             int F = pd.faceCenters.Length; var lists = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
             foreach (var cl in pd.cells) lists[cl.chunk].Add(cl.id);
@@ -81,11 +81,11 @@ namespace LunarCleanup.Gameplay
 
         static Texture2D Detail()
         {
-            if (detail) return detail; int S = 128; detail = new Texture2D(S, S, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat };
+            if (detail) return detail; int S = 256; detail = new Texture2D(S, S, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear, anisoLevel = 4 };
             var px = new Color32[S * S]; var r = new System.Random(3);
             for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
                 {
-                    float nz = .5f + .22f * Noise(x * .11f, y * .11f, 7) + .14f * Noise(x * .37f, y * .37f, 9) + (float)(r.NextDouble() - .5) * .08f;
+                    float nz = .5f + .22f * Noise(x * .055f, y * .055f, 7) + .14f * Noise(x * .19f, y * .19f, 9) + .06f * Noise(x * .6f, y * .6f, 4);
                     byte g = (byte)Mathf.Clamp(nz * 255, 0, 255); px[y * S + x] = new Color32(g, g, g, 255);
                 }
             detail.SetPixels32(px); detail.Apply(true); return detail;
@@ -185,7 +185,7 @@ namespace LunarCleanup.Gameplay
                     if (isBase)
                     {
                         float gx = Mathf.Abs(Mathf.Repeat(x + id * .37f, 2.4f) - 1.2f), gy = Mathf.Abs(Mathf.Repeat(y, 2.4f) - 1.2f);
-                        int pid0 = Mathf.FloorToInt((x + id * .37f) / 2.4f) * 31 + Mathf.FloorToInt(y / 2.4f); col = Color.Lerp(b0, b1, .5f + .14f * Noise(x * .3f, y * .3f, id) + .1f * (Hash(pid0, id, 5) - .5f)) * (.97f + .05f * Noise(x * 4f, y * 4f, 2)); /* ruhige Platten, jede leicht anders getönt */ if (gx > 1.12f || gy > 1.12f) col *= .84f; else if (gx > 1.02f || gy > 1.02f) col *= 1.06f; // Fuge mit hellerer Kante
+                        int pid0 = Mathf.FloorToInt((x + id * .37f) / 2.4f) * 31 + Mathf.FloorToInt(y / 2.4f); col = Color.Lerp(b0, b1, .5f + .14f * Noise(x * .3f, y * .3f, id) + .1f * (Hash(pid0, id, 5) - .5f)) * (.97f + .05f * Noise(x * 1.7f, y * 1.7f, 2)); /* ruhige Platten, jede leicht anders getönt */ if (gx > 1.12f || gy > 1.12f) col *= .84f; else if (gx > 1.02f || gy > 1.02f) col *= 1.06f; // Fuge mit hellerer Kante
                         float ea = EdgeA(ed, edgeW); if (ea > 0) col = Color.Lerp(col, BaseLine, ea * .6f);
                     }
                     else
@@ -202,7 +202,7 @@ namespace LunarCleanup.Gameplay
                         float nz = Noise(x * .9f + id, y * .9f, 11), nz2 = Noise(x * 2.7f, y * 2.7f + id, 5);
                         Color cleanC = Color.Lerp(Color.Lerp(c1, c0, .5f + .5f * nz), c2, Mathf.Clamp01(nz2 - .55f) * 1.5f);
                         Color dirtC = Color.Lerp(D.darkC, D.baseC, .5f + .5f * nz); if (nz2 > .45f) dirtC = Color.Lerp(dirtC, D.lightC, (nz2 - .45f) * 1.6f);
-                        dirtC *= kindTint; dirtC *= .92f + .16f * Noise(x * 5.3f, y * 5.3f, 3);
+                        dirtC *= kindTint; dirtC *= .93f + .14f * Noise(x * 2.1f, y * 2.1f, 3); /* weiche Körnung statt Pixelrauschen */
                         if (cl.Wet)
                         {
                             // See: Wellenmuster in der Farbe der Flüssigkeit, hellerer Uferstreifen, Schmutz schwimmt als Film darauf

@@ -152,3 +152,12 @@
 ## Unity 0.17 (31.10.2026) – Browser-Build v=8 online
 - Nachbarkörper am Himmel wie die echten Vorbilder (berechnete Texturen, keine Bilddateien): Erde mit Kontinenten, Ozeanen, Polkappen, Wolkenschicht und Atmosphäre (vom Mond), Jupiter mit Bändern und Großem Rotem Fleck, Saturn mit Ringen und Cassini-Teilung, Neptun mit dunklem Fleck, Monde mit Kratern (Phobos, Charon mit roter Kappe, Dysnomia), rote Zwerge, nahe Sonne, Pulsar mit Strahlen. Langsame Eigendrehung.
 - Test: F1 im Testmodus fotografiert den Himmel aller Planeten (BasisCheck/Himmel).
+
+## Unity 0.19 (31.10.2026) – Browser-Build v=10
+- Menüs mit Reitern (Fahrzeuge: Kaufen/Flotte/Upgrades · Produktion: Ampel/Verkauf/Plan/Upgrades · Basis: Bauen/Ausbau/Upgrades · Upgrades: Hand/Fahrzeuge/Anlagen/Wirtschaft), Kaufbares als Karten.
+- Verkauf nur freigegebener Waren über den Frachtraum (kein Sofortverkauf mehr, vor den Bändern von Hand laden), Verkaufsautomat startet die Rakete bei vollen Lagern halb beladen.
+- Fahrzeug-Obergrenze 24 je Planet, Selbstzerstörung mit Funken und Explosion (30 % zurück), Arbeitsbereich je Fahrzeug, Teamarbeit +10 % je Partner.
+- Shop ohne Geld-Pakete (Fahrzeugplatz, großer Frachtraum, Langschläfer, Zeitsprung, Saisonpass, Kosmetik, Werbefrei).
+- Ausbaustufen, Ausrichtung, Werksaufträge, 20 Planetenziele, tägliche Aufträge, Statistik, Vibration, Hauptziele 44–57.
+- Kometeneinschlag + Suchtrupp (Anzeige oben, Rover birgt Trümmer und Wracks), Lautstärkeregler.
+- Kleine Planeten mit feinerer Bodentextur, Entladeanlage rückt von zu nahen Gebäuden ab.

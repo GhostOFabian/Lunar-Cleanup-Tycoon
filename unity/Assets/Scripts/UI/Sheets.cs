@@ -77,6 +77,7 @@ namespace LunarCleanup.UI
                     h.Row("   Spezialisierung / Selbstzerstörung", () => Game.VehLvl(vv) >= 2 ? "Spezialisierung: " + FeatureData.VehSpecName[vv.spec] : "Spezialisierung ab Stufe 2",
                         () => vv.mode == "boom" ? "Läuft …" : "Sprengen +" + Cr(Game.BoomRefund(ps, vv)), () => ps.sv.veh.Contains(vv) && vv.mode != "boom", () => Game.SelfDestruct(vv), false);
                     if (Game.VehLvl(vv) >= 2) h.Row("   Spezialisierung wechseln", () => "", () => "Wechseln", () => true, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
+                    h.Row("   Arbeitsbereich", () => Game.Zones[vv.zone] + " · Teamarbeit: mehrere Fahrzeuge auf einer Parzelle reinigen je Partner 10 % stärker", () => "Ändern", () => true, () => vv.zone = (vv.zone + 1) % Game.Zones.Length, false);
                 }
                 if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
                 return;
@@ -181,7 +182,8 @@ namespace LunarCleanup.UI
             {
                 h.Section("Basisstufe " + s + " · " + st[s - 1].name);
                 if (s < st.Count) { var nx = st[s]; h.Card("Stufe " + nx.n + ": " + nx.name, () => nx.txt, AccBld, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage(), "Basis ausbauen"); }
-                else h.Note("Höchste Basisstufe erreicht.");
+                else h.Card("Ausbaustufe " + (ps.sv.exp + 1), () => { string w = Game.ExpWhy(ps); return "+2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe. Es gibt kein Ende – jede Stufe kostet mehr." + (w != "" ? " " + w + "." : " Tiefe: " + Game.Fmt(Mathf.Min(ps.sv.deep, Game.ExpNeed(ps))) + " / " + Game.Fmt(Game.ExpNeed(ps)) + " E."); }, AccBld,
+                    () => Cr(Game.ExpCost(ps)), () => Game.ExpWhy(ps) == "" && Game.S.credits >= Game.ExpCost(ps), () => Game.BuyExp(), ps.sv.exp > 0 ? "Ausbaustufe " + ps.sv.exp : null);
                 h.Section("Gebäude");
                 int n = 0;
                 foreach (var id in GameData.BOrder)
@@ -194,12 +196,27 @@ namespace LunarCleanup.UI
             }
             if (tab == 1)
             {
+                Specialize(h); WorkOrder(h);
                 BaseMore(h);
                 h.Section("Steht schon");
                 h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
                 return;
             }
             foreach (var u in GameData.Upg.Where(x => (x.cat == "Basis" || x.cat == "Tiefenabbau" || x.cat == "Strahlenschutz") && UpVisible(x))) UpRow(h, u.id);
+        }
+        static void Specialize(Hud h)
+        {
+            h.Section("Ausrichtung");
+            if (Game.Gs(ps) < 3) { h.Note("Ab Basisstufe 3 gibst du jedem Planeten eine Ausrichtung: Bergbau, Industrie oder Handel."); return; }
+            string fit = Game.SpecFitOf(ps.pid); h.Note(ps.P.name + " passt am besten zu " + Game.Specs.First(x => x.id == fit).name + " – dort wirkt sie 1,5-mal so stark. " + (string.IsNullOrEmpty(ps.sv.spec) ? "Die erste Wahl ist kostenlos." : "Wechseln kostet " + Cr(Game.SpecCost(ps)) + "."));
+            foreach (var d in Game.Specs) { var dd = d; h.Row(d.name + (d.id == fit ? " (passt)" : ""), () => dd.desc, () => ps.sv.spec == dd.id ? "Aktiv" : string.IsNullOrEmpty(ps.sv.spec) ? "Wählen" : Cr(Game.SpecCost(ps)), () => ps.sv.spec != dd.id && Game.S.credits >= Game.SpecCost(ps), () => Game.SetSpec(dd.id), ps.sv.spec != dd.id && !string.IsNullOrEmpty(ps.sv.spec)); }
+        }
+        static void WorkOrder(Hud h)
+        {
+            if (Game.Gs(ps) < 2) return; if (ps.sv.wo == null || ps.sv.wo.n <= 0) Game.NewWorkOrder(ps); var w = ps.sv.wo; if (w == null || w.m < 0) return;
+            h.Section("Werksauftrag");
+            h.Row("Liefere " + Game.Fmt(w.n) + " " + GameData.Mats[w.m].name + " per Rakete", () => Game.Fmt(Mathf.Min(ps.sv.wo.got, ps.sv.wo.n)) + " / " + Game.Fmt(ps.sv.wo.n) + " · Belohnung " + Cr(ps.sv.wo.r) + " · erfüllt: " + ps.sv.woDone + " (Ruf +" + Mathf.RoundToInt((float)(Game.WoRep(ps) - 1) * 100) + " % auf alle Preise hier)");
+            h.Note("Gib die Ware zum Verkauf frei und stell den Produktionsplan so ein, dass sie entsteht.");
         }
         static void BaseMore(Hud h)
         {
@@ -230,6 +247,12 @@ namespace LunarCleanup.UI
         static void Planets(Hud h)
         {
             if (Game.S.done.Count > 0 || Game.S.stardust > 0) Stardust(h);
+            h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
+            for (int i = 0; i < Game.PlanetGoals.Length; i++)
+            {
+                int k = i; if (Game.PGoalClaimed(ps, k)) continue;
+                h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k));
+            }
             h.Section("Reiseziele");
             foreach (var pid in GameData.POrder)
             {
@@ -260,6 +283,13 @@ namespace LunarCleanup.UI
 
         static void Goals(Hud h)
         {
+            Game.DailyContracts(); var cs = Game.S.contracts;
+            h.Section("Tägliche Aufträge" + (cs.bonus ? " · alle geschafft" : " · alle drei: +50 % Bonus"));
+            for (int i = 0; i < cs.list.Count; i++) { int k = i; var it = cs.list[k]; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k)); }
+            h.Section("Statistik");
+            h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
+            h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
+            h.Row("Gesamt", () => Game.S.stats.cells + " Parzellen gereinigt · " + Game.S.planets.Sum(p => p.nRockets) + " Raketen · " + Game.S.stats.crystals + " Kristalle · " + Cr(Game.S.stats.sold) + " verkauft");
             var ev = ps.sv.ev;
             if (ev != null && ev.key != "")
             {
@@ -281,7 +311,7 @@ namespace LunarCleanup.UI
                 int q = i; var Q = GameData.Quests[i];
                 h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
             }
-            h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub).");
+            if (GameData.Quests.Count > Game.QuestsSupported) h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
@@ -413,6 +443,7 @@ namespace LunarCleanup.UI
             h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
             h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);
             h.Slider("Lautstärke Geräusche", () => Game.S.volSfx, v => Game.S.volSfx = v);
+            h.Row("Vibration", () => "Kurz bei Raketenstart, Funden und Explosionen (nur am Handy)", () => Game.S.vibrate ? "An" : "Aus", () => true, () => Game.S.vibrate = !Game.S.vibrate, false);
             h.Slider("Lautstärke Musik", () => Game.S.volMusic, v => Game.S.volMusic = v);
             h.Section("Spielstand");
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);

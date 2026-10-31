@@ -105,7 +105,7 @@ namespace LunarCleanup.Core
             { "u1", new[] { "urate", "ubuf" } }, { "u2", new[] { "urate", "ubuf" } }, { "u3", new[] { "urate", "ubuf" } },
             { "roh", new[] { "rohcap" } }, { "prod", new[] { "prodcap" } }, { "sell", new[] { "sellcap" } }, { "energy", new[] { "energy", "ecap" } } };
         public static int Blvl(PState ps, string id) { foreach (var kv in ps.sv.blvl) if (kv.k == id) return kv.v; return 0; }
-        public static int BlMax(PState ps) => 3 + (ps.sv.stage >= 5 ? 1 : 0) + (int)Mathf.Min(2, ps.sv.deep / 2);
+        public static int BlMax(PState ps) => 3 + ExpN(ps);
         public static float BlF(PState ps, string id) { int l = Blvl(ps, id); if (l == 0) return 1; return 1 + (GameData.Mach.ContainsKey(id) ? .5f : id == "energy" ? .3f : .4f) * l; }
         public static string BlEffect(string id) => GameData.Mach.ContainsKey(id) ? "Verarbeitungstempo und Puffer" : GameData.Stations.Contains(id) ? "Entladetempo und Trichter" : id == "energy" ? "Solarleistung und Speicher" : "Kapazität";
         public static int BlPct(string id) => GameData.Mach.ContainsKey(id) ? 50 : id == "energy" ? 30 : 40;
@@ -114,7 +114,7 @@ namespace LunarCleanup.Core
             if (!BLV_REQ.ContainsKey(id)) return "Dieses Gebäude hat keine Stufen"; if (!ps.bld.Contains(id)) return "Erst bauen";
             var miss = BLV_REQ[id].Where(u => GameData.Up.ContainsKey(u) && Lvl(u, ps) < GameData.Up[u].max).ToList();
             if (miss.Count > 0) return "Erst die Upgrades ausreizen: " + string.Join(", ", miss.Select(u => GameData.Up[u].name + " " + Lvl(u, ps) + "/" + GameData.Up[u].max));
-            if (Blvl(ps, id) >= BlMax(ps)) return "Höchste Gebäudestufe – Basisstufe 5 und Tiefenabbau erlauben mehr"; return "";
+            if (Blvl(ps, id) >= BlMax(ps)) return "Höchste Gebäudestufe – jede Ausbaustufe des Planeten erlaubt eine mehr"; return "";
         }
         public static double BlCost(PState ps, string id) => Math.Round(Math.Max(4000, GameData.Bld[id].cost * 15) * ps.P.diff * Math.Pow(3, Blvl(ps, id)));
         public static bool BuyBl(string id)

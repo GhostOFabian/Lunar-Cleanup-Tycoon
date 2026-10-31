@@ -34,11 +34,20 @@ namespace LunarCleanup.Gameplay
         void Start()
         {
             Game.OnFloat += (d, t, k) => { if (k == "big") Play("pop"); else if (t.StartsWith("Kombo")) Play("combo", 1 + .05f * Game.ComboN); else if (t.Contains("Kristall") || t.Contains("kristall")) Play("crystal"); };
-            Game.OnRocket += (p, v) => { Play("rocket"); Play("cash", 1, .1f); };
-            Game.OnFind += (n, d, c) => Play("find");
+            Game.OnRocket += (p, v) => { Play("rocket"); Play("cash", 1, .1f); Buzz(); };
+            Game.OnBoom += d => Buzz();
+            Game.OnFind += (n, d, c) => { Play("find"); Buzz(); };
             Game.OnToast += (t, k) => { if (k == "bad") Play("bad", 1, .2f); };
         }
 
+        /// <summary>Kurze Vibration am Handy (Raketenstart, Fund, Explosion) – in den Einstellungen abschaltbar.</summary>
+        public static void Buzz()
+        {
+            if (Game.S == null || !Game.S.vibrate || Game.Offline) return;
+#if UNITY_ANDROID || UNITY_IOS
+            Handheld.Vibrate();
+#endif
+        }
         public static void Wipe(bool on) { if (I) I.loopGoal = on ? .18f : 0; }
         public static void Play(string key, float pitch = 1, float vol = .5f) { if (I) I.PlayI(key, pitch, vol); }
         void PlayI(string key, float pitch, float vol)
