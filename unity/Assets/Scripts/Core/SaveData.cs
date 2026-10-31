@@ -55,6 +55,7 @@ namespace LunarCleanup.Core
         public List<CrystalSave> crystals = new List<CrystalSave>(); public float crT; public int crN; // Leuchtkristalle (wachsen nach)
         public float deep;
         public int nextDrone = 1;
+        public float met;                                   // Meteoritenschauer-Uhr
         public EventSave ev = new EventSave();            // B1 laufendes Ereignis
         public List<RuleSave> rules = new List<RuleSave>(); // F2 Automatik-Regeln
     }

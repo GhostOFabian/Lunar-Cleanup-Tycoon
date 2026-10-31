@@ -125,7 +125,7 @@ namespace LunarCleanup.Core
             }
             foreach (var a in sv.act)
             {
-                if (a.id < 0 || a.id >= N || ps.clean[a.id]) continue;
+                if (a.id < 0 || a.id >= N) continue; /* auch saubere Parzellen mit Meteoritenstaub */
                 var A = NewAct(ps, a.id); var bytes = string.IsNullOrEmpty(a.grid) ? null : Convert.FromBase64String(a.grid);
                 if (bytes != null && bytes.Length == A.grid.Length) { float s = 0; for (int k = 0; k < bytes.Length; k++) { A.grid[k] = A.cl.inside[k] ? bytes[k] / 255f : 0; s += A.grid[k]; } A.sum = s; }
                 ps.act[a.id] = A;
@@ -206,7 +206,7 @@ namespace LunarCleanup.Core
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
-            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid));
+            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1);
         }
         public static void Earn(double cr) { S.credits += cr; S.stats.earned += cr; }
         public static bool Fail(string t) { Toast(t, "bad"); return false; }
@@ -349,7 +349,7 @@ namespace LunarCleanup.Core
                 var a = EnsureAct(ps, sc); if (a == null) continue;
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
-                float k = 1 - Mathf.Exp(-.35f * Uv("power") * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
+                float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
                 float got = CleanAt(ps, a, l.x, l.y, r, k);
                 if (got <= 0) continue;
                 float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
@@ -697,7 +697,7 @@ namespace LunarCleanup.Core
         public static Vector3 CrystalDir(PState ps, CrystalSave c) => ps.pd.ToDir(ps.pd.cells[c.cell], c.x, c.y);
         static void CrystalStep(PState ps, float dt)
         {
-            var sv = ps.sv; if (sv.crystals == null) sv.crystals = new List<CrystalSave>(); foreach (var c in sv.crystals) if (c.g < 1) c.g = Mathf.Min(1, c.g + dt / CR_GROW);
+            var sv = ps.sv; if (sv.crystals == null) sv.crystals = new List<CrystalSave>(); foreach (var c in sv.crystals) if (c.g < 1) c.g = Mathf.Min(1, c.g + dt / CR_GROW * (Sd("crystal") ? 1.3f : 1));
             sv.crT += dt; if (sv.crT < CR_EVERY) return; sv.crT -= CR_EVERY; if (sv.crystals.Count >= CrystalMax(ps)) return;
             var rnd = new System.Random(ps.pid.GetHashCode() ^ (sv.crN * 7919 + 17)); var pd = ps.pd;
             for (int tr = 0; tr < 40; tr++)
@@ -1565,6 +1565,7 @@ namespace LunarCleanup.Core
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
             ResearchStep(dt);
+            AchievementStep(dt);
         }
         static void StepPlanet(PState ps, float dt)
         {
@@ -1581,10 +1582,11 @@ namespace LunarCleanup.Core
             for (int s = 0; s < sub; s++) { foreach (var b in ps.lay.belts) BeltStep(ps, b, sdt, f); foreach (var m in new[] { "presse", "schmelze", "raff" }) MachStep(ps, m, sdt, f); }
             SellStep(ps, dt);
             if (!Offline && ps.pid == S.planet) EventStep(ps, dt);
+            MeteorStep(ps, dt);
             List<int> done = null; foreach (var kv in ps.act) if (kv.Value.sum < kv.Value.cl.nIn * GameData.DONE) (done = done ?? new List<int>()).Add(kv.Key);
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
 
-        public static float OfflineCap => ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800;
+        public static float OfflineCap => (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
     }
 }

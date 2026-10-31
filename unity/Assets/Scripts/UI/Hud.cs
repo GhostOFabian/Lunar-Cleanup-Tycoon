@@ -15,7 +15,7 @@ namespace LunarCleanup.UI
     {
         public static Hud I;
         public Action<string> OnNav;              // Klick in der unteren Leiste
-        public Action OnMap, OnFocusQuest, OnFocusEvent;
+        public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto;
         RectTransform root, sheetPanel, sheetContent, toastBox, floatLayer;
         TextMeshProUGUI credits, rate, pname, pprog, goalKick, goalText, goalReward, handTxt, sheetKick, sheetTitle, offlineTxt;
         RectTransform goalFill, handFill; Image handImg, pdot; GameObject sheetGo, offlineGo, goalGo;

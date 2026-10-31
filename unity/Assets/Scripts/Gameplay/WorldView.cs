@@ -700,7 +700,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
@@ -861,6 +861,21 @@ namespace LunarCleanup.Gameplay
             tr.position = target;
         }
 
+        // Leuchtsäule über einem Ereignis-Ort (z. B. Wrack-Absturz)
+        GameObject beacon; Material beaconMat;
+        void UpdateBeacon()
+        {
+            var p = Game.EventPlace(ps);
+            if (!p.HasValue) { if (beacon) beacon.SetActive(false); return; }
+            if (!beacon)
+            {
+                beaconMat = MeshKit.Mat(new Color(1f, .55f, .2f), 0, .2f, new Color(1f, .5f, .15f) * 2.5f); beaconMat = new Material(beaconMat); MeshKit.MakeTransparent(beaconMat, true);
+                beacon = MeshKit.Cyl(transform, beaconMat, Vector3.zero, .6f, 1.2f, 40, 16); beacon.name = "Ereignis";
+                var r = beacon.GetComponent<MeshRenderer>(); r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false;
+            }
+            beacon.SetActive(!MapMode); var d = p.Value; beacon.transform.position = pd.Surf(d, 20); beacon.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+            beaconMat.SetColor("_BaseColor", new Color(1f, .55f, .2f, .18f + .1f * Mathf.Sin(Time.time * 3)));
+        }
         public void LaunchRocket() { rocketT = 0; }
 
         void AnimateBuildings()

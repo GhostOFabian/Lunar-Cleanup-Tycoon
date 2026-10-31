@@ -155,6 +155,7 @@ namespace LunarCleanup.UI
 
         static void Planets(Hud h)
         {
+            if (Game.S.done.Count > 0 || Game.S.stardust > 0) Stardust(h);
             h.Section("Reiseziele");
             foreach (var pid in GameData.POrder)
             {
@@ -173,6 +174,16 @@ namespace LunarCleanup.UI
             }
         }
 
+        static float prestigeT = -99;
+        static void Stardust(Hud h)
+        {
+            h.Section("Sternenstaub · " + Game.StardustFree() + " frei");
+            h.Note("Jeder komplett saubere Planet bringt Sternenstaub (später in der Reihe = mehr), dazu 1 je 10 Funde. Mit einem Neustart beginnst du wieder auf dem Mond – Sternenstaub, Boni, Funde und Tagesbonus bleiben.");
+            h.Row("Neustart", () => Time.unscaledTime - prestigeT < 4 ? "Wirklich? Noch einmal tippen setzt Planeten, Credits, Upgrades und Forschung zurück." : "Bringt jetzt +" + Game.StardustPending() + " Sternenstaub" + (Game.S.resets > 0 ? " · bisher " + Game.S.resets + " Neustarts" : ""),
+                () => Time.unscaledTime - prestigeT < 4 ? "Ja, neu starten" : "Neu starten", () => Game.StardustPending() > 0, () => { if (Time.unscaledTime - prestigeT < 4) { Game.Prestige(); h.CloseSheet(); } else prestigeT = Time.unscaledTime; }, false);
+            foreach (var n in FeatureData.Stardust) { var nn = n; h.Row(n.name, () => n.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
+        }
+
         static void Goals(Hud h)
         {
             var ev = ps.sv.ev;
@@ -187,6 +198,8 @@ namespace LunarCleanup.UI
                 if (!Game.P.ContainsKey(kv.Key)) continue; string pid = kv.Key; var al = kv.Value;
                 h.Row(GameData.Planets[pid].name + " · " + Game.FindsOn(pid) + "/" + al.Length, () => string.Join(" · ", al.Select((f, i) => Game.HasFind(pid, i) ? f.name : "???")) + (Game.FindsOn(pid) >= al.Length ? " · Album komplett: +5 % Erlös" : " · Funde gibt es beim Reinigen (3 %, auf seltsamen Parzellen 8 %)"));
             }
+            h.Section("Erfolge · " + Game.S.achievements.Count + "/" + Game.Achievements.Count);
+            foreach (var a in Game.Achievements) { var aa = a; h.Row(a.name, () => aa.desc + (Game.S.achievements.Contains(aa.id) ? " · geschafft" : "")); }
             if (Game.S.daily != null && Game.S.daily.streak > 0) h.Note("Tagesbonus: Tag " + Game.S.daily.streak + " von 7 – komm morgen wieder, die Belohnung steigt.");
             h.Section("Hauptziele");
             for (int i = 0; i < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count); i++)
@@ -320,6 +333,8 @@ namespace LunarCleanup.UI
         static float resetT;
         static void Settings(Hud h)
         {
+            h.Section("Foto-Modus");
+            h.Row("Oberfläche ausblenden", () => "Für schöne Bilder deiner Basis. Taste P oder ein Tipp oben links blendet sie wieder ein.", () => "Foto-Modus", () => true, () => { h.CloseSheet(); h.OnPhoto?.Invoke(); }, false);
             h.Section("Ton");
             h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
             h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);

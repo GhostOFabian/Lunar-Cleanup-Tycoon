@@ -128,7 +128,7 @@ namespace LunarCleanup.Gameplay
                     else
                     {
                         float g;
-                        if (clean) g = 0; else if (act == null) g = 1;
+                        if (act == null) g = clean ? 0 : 1; /* Meteoritenstaub: auch saubere Parzellen können wieder Schmutz haben */
                         else
                         {
                             float fx = (x + H) / cl.cs - .5f, fy = (y + H) / cl.cs - .5f; int ix = Mathf.Clamp(Mathf.FloorToInt(fx), 0, G - 1), iy = Mathf.Clamp(Mathf.FloorToInt(fy), 0, G - 1);
@@ -149,7 +149,7 @@ namespace LunarCleanup.Gameplay
                             cleanC = Color.Lerp(liqC, cleanC, shore * .8f); dirtC = Color.Lerp(liqC, dirtC, .38f);
                         }
                         col = Color.Lerp(cleanC, dirtC, g);
-                        if (ed < edgeW) col = clean ? Color.Lerp(col, CleanLine, .8f) : front ? Color.Lerp(col, FrontLine, .7f) : col * .72f;
+                        if (ed < edgeW) col = clean && act == null ? Color.Lerp(col, CleanLine, .8f) : front || (clean && act != null) ? Color.Lerp(col, FrontLine, .7f) : col * .72f;
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }
