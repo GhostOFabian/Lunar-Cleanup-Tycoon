@@ -365,6 +365,12 @@ namespace LunarCleanup.Core
             var ps = Cur; float tot = HandSum(); if (tot < .05f) { Fail("Dein Sammelbehälter ist leer"); return; }
             var c = ps.sv.cart;
             if (c.owned && c.mode == "wait") { LoadCart(ps); return; }
+            if (c.owned) /* mit Sammelwagen: nur noch in den Wagen leeren – er wird gerufen */
+            {
+                if (ps.pd.Arc(c.d, CartGoal) < 8 && c.mode != "back" && c.mode != "drop") { LoadCart(ps); return; }
+                if (c.mode == "park") { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); } else Toast(c.mode == "go" ? "Der Sammelwagen ist unterwegs zu dir" : "Der Sammelwagen bringt gerade eine Ladung weg und kommt danach", "good");
+                return;
+            }
             string best = null; float bf = 0;
             foreach (var s in GameData.Stations) if (ps.bld.Contains(s)) { float f = StBuf(ps, s) - Sum(ps.st[s].buf); if (f > bf) { bf = f; best = s; } }
             float free; float[] dst; string name;

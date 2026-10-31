@@ -1,6 +1,6 @@
 # Unity-Version – Was noch zu tun ist
 
-Stand: 31.10.2026, 17 Uhr · Unity-Version 0.15 · Unity ist die Hauptversion (Browser-Prototyp nur noch Nachschlagewerk) · Branch `claude/prototype-v3.5`
+Stand: 31.10.2026, 20 Uhr · Unity-Version 0.18 · Unity ist die Hauptversion (Browser-Prototyp nur noch Nachschlagewerk) · Branch `claude/prototype-v3.5`
 Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wird nach jedem Teil abgehakt.
 
 ## Fertig (in Unity getestet, im Editor)
@@ -18,6 +18,40 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 - [x] 0.11 Basis-Prüfung (F11 im Testmodus, alle 18 Planeten + alte Größen, Bericht + Fotos in `BasisCheck/`), Brücken und Weichen für Bänder, glattere Kurven, Raketenlandung von oben, neue Entladestationen mit Abkippgruben, Fahrzeuge verteilen sich und lösen sich, wenn sie hängen, Leuchtkristalle (5 Farben, wachsen nach, Antippen oder Fahrzeuge), Weltraum-Himmel je Planet mit farbigem Sternlicht, Konto-Speicher- und Shop-Platzhalter, Zoom per Tastatur (R/F)
 - [x] 0.12 Bänder rechtwinklig aus geraden Flächen mit Y-Zusammenführungen, Pipeline unterirdisch, Test-Knopf „Alles maximal ausbauen“ (F12), Fahrzeuge sammeln Kristalle unterwegs
 - [x] Testmodus im Editor (Menü **Lunar Cleanup → Testmodus**): eigener Test-Spielstand, Test-Tasten F5–F10 nur dort
+
+## Offen – Stand 31.10.2026, 20 Uhr (Unity 0.18)
+
+### A. Fabians Wünsche vom 31.10. (19:57) – Spielablauf
+1. [ ] **Menüs einfacher**: Kaufen (Gebäude, Fahrzeuge, Drohnen), Upgrades und Infos getrennt; Gebäude und Fahrzeuge als Karten mit Bild statt Listenzeilen; weniger Text pro Fenster.
+2. [ ] **Verkauf nur freigegebener Waren**: kein „Alles verkaufen“ mehr; jede Ware hat einen Schalter „zum Verkauf freigeben“; freigegebene Waren fahren übers Band in den Frachtraum und werden mit der Rakete verkauft (kein Sofortverkauf aus dem Lager).
+3. [x] **Sammelbehälter**: mit Sammelwagen nur noch in den Wagen leeren (er wird gerufen), ohne Wagen direkt in Trichter/Lager.
+4. [ ] **Fahrzeug-Limit je Planet** (klare Obergrenze, im Fenster sichtbar) und **Selbstzerstörung** mit Animation (Countdown, Funken, Explosion, Teil der Kosten zurück), um kleine Fahrzeuge gegen größere zu tauschen.
+5. [ ] **Sinnvolle Shop-Angebote** statt Startgeld: z. B. Zeitsprung, dauerhaft +1 Fahrzeugplatz je Planet, zweite Rakete/Frachtraum, Kosmetik (Lackierungen, Basis-Themen, Leuchtfarben), Werbefrei, Saisonpass mit eigenen Zielen. Kein Geld-Paket.
+6. [x] Ereignis-Lichtstrahl dezenter · [x] Laternen heller und kaltweiß · [x] Ampeln sitzen auf den Dächern
+
+### B. Inhalt aus dem Prototyp, noch nicht in Unity
+7. [ ] Ausbaustufen nach Basisstufe 5 (mehr Bohrtürme, größere Außenlager, mehr Fahrzeugplätze)
+8. [ ] Planetenziele (je Planet eigene Ziele) und tägliche Aufträge
+9. [ ] Statistik-Fenster mit Prognosen
+10. [ ] Fahrzeug-Feinheiten: Teamarbeit auf großen Parzellen, volle Stationen meiden, Arbeitsbereich festlegen
+11. [ ] Ausrichtung pro Planet (Bergbau/Industrie/Handel) und Werksaufträge mit Ruf
+12. [ ] Vibration (Handy)
+
+### C. Prüfen / Kleinigkeiten
+13. [ ] Im Spiel ansehen: Nachlese der Fahrzeuge, neuer Band-Eingang der Maschinen, Wrack, Komet, Nordlicht, Raketenflamme
+14. [ ] Entladeanlage steht auf einigen Planeten nah an Nachbargebäuden; enge Bandführung auf Kepler-22b
+15. [ ] Boden aus nächster Nähe noch etwas blockig (Detailtextur)
+16. [ ] Spezialfahrzeug-Tabelle auf der Webseite am PC gequetscht
+
+### D. Handy-Version (erst nach dem Browser-Test)
+17. [ ] Android-Build + Test in BlueStacks/am Handy (Touch, Pinch-Zoom, Safe Area, Leistung, Akku)
+18. [ ] Cloud-Speicher (Google Play Spiele / Game Center), Unity IAP mit den neuen Angeboten aus A5
+19. [ ] Spielstand-Code nur als Übergang · iOS-Build (Mac nötig)
+
+## Erledigt am 31.10.2026 (Auszug)
+Kombo, Funde + Album, Ereignisse, Tagesbonus, Fahrzeug-Erfahrung, Sound + Musik, Meteoritenschauer, Sternenstaub-Neustart, 19 Erfolge, Foto-Modus, Wetter, Astronauten, Bodenteile, Waren auf Bändern, Planeten bis 17.642 Parzellen, Boden mit Relief, Produktions-Ampel + Betriebsbonus, Produktionsplan, Frachtaufträge, Verkaufsautomat, Gebäudestufen, große Bänder-Prüfung, Nachlese, Wegfindung um die echten Bänder, Raketenflammen, Wrack, Komet, Nordlichter, Ampel-Lampen, echte Nachbarplaneten, neue Webseite.
+
+## Ältere Liste (Archiv)
 
 ## Nach Dringlichkeit (Stand 31.10.2026, 11 Uhr)
 

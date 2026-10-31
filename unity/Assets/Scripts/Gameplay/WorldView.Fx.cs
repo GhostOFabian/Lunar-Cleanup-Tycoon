@@ -165,11 +165,11 @@ namespace LunarCleanup.Gameplay
                 {
                     var rs = bp.root.GetComponentsInChildren<Renderer>(); if (rs.Length == 0) continue; var bb = rs[0].bounds; foreach (var r in rs) bb.Encapsulate(r.bounds);
                     var up = bp.root.transform.up; float top = Vector3.Dot(bb.max - bp.root.transform.position, up); top = Mathf.Max(top, 1.5f);
-                    var g = new GameObject("Ampel " + id); g.transform.SetParent(baseRoot, false); g.transform.position = bp.root.transform.position + up * (top + .2f); g.transform.rotation = bp.root.transform.rotation;
-                    MeshKit.Cyl(g.transform, MeshKit.Mat(new Color(.22f, .24f, .28f), .6f, .4f), new Vector3(0, .6f, 0), .08f, .1f, 1.2f, 8);
+                    var g = new GameObject("Ampel " + id); g.transform.SetParent(baseRoot, false); g.transform.position = bp.root.transform.position + up * (top - .05f); g.transform.rotation = bp.root.transform.rotation; /* sitzt direkt auf dem Dach */
+                    MeshKit.Box(g.transform, MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f), new Vector3(0, .12f, 0), new Vector3(.9f, .24f, .9f)); // Gehäuse
                     var mat = MeshKit.Mat(Color.gray, 0, .6f, Color.gray); mat = new Material(mat);
-                    var ball = MeshKit.Ball(g.transform, mat, new Vector3(0, 1.5f, 0), .85f); NoShadow(ball);
-                    var halo = MeshKit.Part(g.transform, MeshKit.Quad, Glow(Color.white, .6f), new Vector3(0, 1.5f, 0), new Vector3(3.2f, 3.2f, 1), Vector3.zero); NoShadow(halo); halo.AddComponent<Billboard>(); halo.name = "Schein";
+                    var ball = MeshKit.Ball(g.transform, mat, new Vector3(0, .52f, 0), .75f); NoShadow(ball);
+                    var halo = MeshKit.Part(g.transform, MeshKit.Quad, Glow(Color.white, .6f), new Vector3(0, .52f, 0), new Vector3(2.6f, 2.6f, 1), Vector3.zero); NoShadow(halo); halo.AddComponent<Billboard>(); halo.name = "Schein";
                     a = (g, mat); ampel[id] = a;
                 }
                 int l = lv.TryGetValue(id, out int x) ? x : -1; Color c = l == 2 ? new Color(1f, .25f, .2f) : l == 1 ? new Color(1f, .78f, .2f) : l == 0 ? new Color(.25f, 1f, .55f) : new Color(.5f, .55f, .6f);
@@ -178,6 +178,6 @@ namespace LunarCleanup.Gameplay
                 a.go.SetActive(!MapMode);
             }
         }
-        void Pulse() { foreach (var kv in ampel) if (kv.Value.go) { float s = 1 + .08f * Mathf.Sin(Time.time * 5); kv.Value.go.transform.localScale = Vector3.one * s; } }
+        void Pulse() { }
     }
 }

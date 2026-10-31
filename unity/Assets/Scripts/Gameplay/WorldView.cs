@@ -85,7 +85,7 @@ namespace LunarCleanup.Gameplay
                 MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8);
                 MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
                 var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
-                var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 24; L.color = new Color(1f, .82f, .6f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
+                var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 26; L.color = new Color(.93f, .96f, 1f); /* kaltweißes LED-Licht statt gelblich */ L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
                 var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(19, 19, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
             RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
@@ -715,12 +715,12 @@ namespace LunarCleanup.Gameplay
             sun.shadowStrength = .85f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.12f, .45f, Vector3.Dot(sd, cd))); // tiefe Sonne: keine meterlangen Schattenstreifen über den Planeten
             RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
-            foreach (var L in lamps) if (L) L.intensity = 3.4f * nf; /* hellere Laternen: die Basis liegt nachts im warmen Licht */
-            if (lampHead) lampHead.SetColor("_EmissionColor", new Color(1f, .78f, .45f) * (.1f + 2.2f * nf));
+            foreach (var L in lamps) if (L) L.intensity = 4.6f * nf; /* hellere Laternen: die Basis liegt nachts im warmen Licht */
+            if (lampHead) lampHead.SetColor("_EmissionColor", new Color(.92f, .96f, 1f) * (.1f + 3f * nf));
             foreach (var vp in vehs.Values) if (vp.head) { vp.head.intensity = 3f * nf; vp.head.enabled = nf > .02f; }
             foreach (var vp in vehs.Values) if (vp.headMat) vp.headMat.SetColor("_EmissionColor", new Color(1f, .94f, .78f) * (.15f + 2.85f * nf)); /* tagsüber nur schwach, nachts hell */
             glowRends.RemoveAll(r => !r); foreach (var r in glowRends) r.enabled = nf > .02f;
-            if (poolMat) poolMat.SetColor("_BaseColor", new Color(1f, .78f, .5f, .5f * nf)); if (beamMat) beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, .45f * nf));
+            if (poolMat) poolMat.SetColor("_BaseColor", new Color(.9f, .94f, 1f, .55f * nf)); if (beamMat) beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, .45f * nf));
         }
 
         void DrawItems()
@@ -873,11 +873,11 @@ namespace LunarCleanup.Gameplay
             if (!beacon)
             {
                 beaconMat = MeshKit.Mat(new Color(1f, .55f, .2f), 0, .2f, new Color(1f, .5f, .15f) * 2.5f); beaconMat = new Material(beaconMat); MeshKit.MakeTransparent(beaconMat, true);
-                beacon = MeshKit.Cyl(transform, beaconMat, Vector3.zero, .6f, 1.2f, 40, 16); beacon.name = "Ereignis";
+                beacon = MeshKit.Cyl(transform, beaconMat, Vector3.zero, .18f, .45f, 26, 16); /* dezenter Lichtstrahl */ beacon.name = "Ereignis";
                 var r = beacon.GetComponent<MeshRenderer>(); r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false;
             }
-            beacon.SetActive(!MapMode); var d = p.Value; beacon.transform.position = pd.Surf(d, 20); beacon.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
-            beaconMat.SetColor("_BaseColor", new Color(1f, .55f, .2f, .18f + .1f * Mathf.Sin(Time.time * 3)));
+            beacon.SetActive(!MapMode); var d = p.Value; beacon.transform.position = pd.Surf(d, 13); beacon.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+            beaconMat.SetColor("_BaseColor", new Color(1f, .6f, .3f, .07f + .04f * Mathf.Sin(Time.time * 3)));
         }
         public void LaunchRocket() { rocketT = 0; }
 
