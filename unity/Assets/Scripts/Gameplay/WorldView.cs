@@ -636,22 +636,8 @@ namespace LunarCleanup.Gameplay
                 var hm = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); hm.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(hm, true);
                 var gc = th.glow; gc.a = Mathf.Clamp01(th.glowOp * 2.2f); hm.SetColor("_BaseColor", gc); halo.GetComponent<MeshRenderer>().sharedMaterial = hm; halo.AddComponent<Billboard>();
             }
-            // Nachbarkörper am Himmel
-            string gi = th.giant; Vector3 gp = Vector3.zero; float gr = 0; Color gcol = Color.white;
-            if (ps.pid == "moon") { gp = new Vector3(-900, 500, -1500); gr = 120; gcol = GameData.Hex("#2a6fd6"); }
-            else if (gi == "jupiter") { gp = new Vector3(-1500, 700, -1900); gr = 420; gcol = GameData.Hex("#c49060"); }
-            else if (gi == "saturn") { gp = new Vector3(1300, 600, -1900); gr = 300; gcol = GameData.Hex("#e8d29a"); }
-            else if (gi == "neptune") { gp = new Vector3(-1200, 500, -1700); gr = 260; gcol = GameData.Hex("#3a6ad8"); }
-            else if (gi == "phobos" || gi == "charon" || gi == "dysnomia") { gp = new Vector3(900, 400, -1300); gr = 70; gcol = GameData.Hex("#9a9088"); }
-            else if (gi == "reddwarf" || gi == "trappist") { gp = new Vector3(1300, 650, -1900); gr = 140; gcol = GameData.Hex("#ff6a3a"); }
-            else if (gi == "sunclose") { gp = new Vector3(1100, 500, -1500); gr = 380; gcol = GameData.Hex("#fff0c8"); }
-            else if (gi == "pulsar") { gp = new Vector3(-1200, 600, -1700); gr = 30; gcol = GameData.Hex("#e8fff0"); }
-            if (gr > 0)
-            {
-                bool star = gi == "reddwarf" || gi == "trappist" || gi == "sunclose" || gi == "pulsar";
-                var gb = MeshKit.Ball(skyRoot, star ? MeshKit.Unlit(gcol) : MeshKit.Mat(gcol, 0, .2f, gcol * .25f), gp, gr * 2); gb.name = "Nachbar";
-                if (ps.pid == "moon") { var land = MeshKit.Ball(skyRoot, MeshKit.Mat(GameData.Hex("#4fa45a"), 0, .2f, GameData.Hex("#4fa45a") * .2f), gp + new Vector3(20, 30, 60), gr * 1.55f); land.name = "Kontinente"; }
-            }
+            // Nachbarkörper am Himmel: wie die echten Vorbilder (Erde, Jupiter, Saturn, Neptun, Monde, Sterne)
+            BuildSkyBody(ps.pid, th.giant);
         }
 
         // ---------- sichtbares Wetter (wie im Browser: Teilchen um die Kamera, Nebel, Blitze) ----------

@@ -136,6 +136,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots("moon"));
+            if (kb.f1Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(SkyShots());
             if (kb.f2Key.wasPressedThisFrame && Application.isEditor) { string wd = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Web")); System.IO.Directory.CreateDirectory(wd); string fn = System.IO.Path.Combine(wd, "web_" + System.DateTime.Now.ToString("HHmmss") + ".png"); ScreenCapture.CaptureScreenshot(fn, 2); Debug.Log("Lunar Cleanup: Webseiten-Foto " + fn); } /* F2: Bildschirmfoto mit HUD für die Webseite */
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
@@ -145,6 +146,22 @@ namespace LunarCleanup.Gameplay
 #endif
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         /// <summary>F4 (Testmodus, Editor): Nahaufnahmen der Bänder mit Waren und Stützen nach BasisCheck/band_*.png.</summary>
+        /// <summary>F1 (Testmodus, Editor): Nachbarkörper am Himmel auf allen Planeten fotografieren (BasisCheck/Himmel).</summary>
+        IEnumerator SkyShots()
+        {
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Himmel")); System.IO.Directory.CreateDirectory(dir);
+            if (uiRoot) uiRoot.SetActive(false);
+            foreach (var pid in GameData.POrder)
+            {
+                PState pv; try { pv = Game.Preview(pid, 0, 1); } catch (System.Exception e) { Debug.LogException(e); continue; }
+                preview = pv; world.Build(pv); yield return null; yield return null;
+                var body = FindObjectsByType<Transform>(FindObjectsSortMode.None).FirstOrDefault(t => t.name.StartsWith("Nachbar")); if (body == null) continue;
+                float R = pv.pd.R; var bd = body.position.normalized;
+                for (int k = 0; k < 3; k++) { yield return null; cam.transform.position = bd * (R + 6) - Vector3.Cross(bd, Vector3.up).normalized * 2; cam.transform.LookAt(body.position); }
+                yield return new WaitForEndOfFrame(); ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, pid + ".png"), 1); yield return null; yield return null;
+            }
+            preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet(); Debug.Log("Lunar Cleanup: Himmelsfotos fertig");
+        }
         IEnumerator BeltShots(string pid)
         {
             string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Baender")); System.IO.Directory.CreateDirectory(dir);
