@@ -200,3 +200,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 31.10.2026: Kamera beim Wischen: am Bildschirmrand dreht sich der Planet mit, Pfeiltasten/WASD verschieben, rechte Maustaste dreht ohne den Wisch zu beenden. Scheinwerfer, Lichtkegel und Laternen-Lichtflecken sind tagsüber aus; durchsichtige Teile werfen keine Schatten.
 - 31.10.2026 (Fabians Wunsch): Die Webseite bietet nur noch die Unity-Version an; der Browser-Prototyp bleibt als Referenz im Repo (prototype/), ist aber nirgends mehr verlinkt.
 - 31.10.2026 (Fabians Wunsch): Planeten viel größer, bis 17.642 Parzellen (freq 5, 8, 10, 12, 14 … 34, 37, 40, 42). Begonnene Planeten behalten ihre Größe (PREV_FREQ im Prototyp, zusätzliche Größen pid@freq im Export). Unity: Texturauflösung je Parzelle sinkt auf großen Planeten (64/48/32/24 px), weniger Bodenteile je Parzelle.
+- 31.10.2026: Die Unity-Version wird die neue Hauptversion; der Browser-Prototyp wird nicht mehr weiterentwickelt (bleibt nur als Nachschlagewerk im Repo).
+- 31.10.2026: Spielstand-Code (Export/Import) nur als Übergang, bis die Handy-Version mit Cloud-Speicher kommt – niedrige Priorität.
+- 31.10.2026: Claude darf die wichtigsten Tests selbst durchführen und abschließen (Testmodus, eigener Spielstand).
