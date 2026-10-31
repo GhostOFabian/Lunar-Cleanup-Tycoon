@@ -319,7 +319,7 @@ namespace LunarCleanup.Gameplay
                 lastPos = pos; return;
             }
             if (mode == Mode.Wipe) EndWipe();
-            if (mode == Mode.Pan && !moved && Time.time - downT < .4f) Tap(pos);
+            if (mode == Mode.Pan && !moved && Time.time - downT < .7f) Tap(pos);
             mode = Mode.None;
         }
         void EndWipe() { brush.SetActive(false); mode = Mode.None; }
@@ -343,6 +343,22 @@ namespace LunarCleanup.Gameplay
                     }
                 }
                 if (bc != null) { Game.HarvestCrystal(bc.id); return; }
+            }
+            /* Gebäude im Bild antippen: Mittelpunkt und Rand der Grundfläche in Bildschirmpunkte umrechnen – trifft auch das Dach hoher Gebäude */
+            {
+                string bb = null; float bs = 1e9f;
+                foreach (var id in ps.bld)
+                {
+                    if (!ps.lay.pos.ContainsKey(id) || (Game.IsUnit(id) && id != "u1")) continue; float fp = GameData.Bld[id].fp;
+                    var d0 = ps.pd.PlanDir(ps.lay.pos[id]); var d1 = ps.pd.PlanDir(ps.lay.pos[id] + new Vector2(fp, 0));
+                    foreach (float h in new[] { .5f, 2f })
+                    {
+                        var s0 = cam.WorldToScreenPoint(ps.pd.Surf(d0, h)); var s1 = cam.WorldToScreenPoint(ps.pd.Surf(d1, h)); if (s0.z <= 0) continue;
+                        float rad = Mathf.Max(28f, ((Vector2)s1 - (Vector2)s0).magnitude * 1.05f), dd = ((Vector2)s0 - pos).magnitude;
+                        if (dd < rad && dd / rad < bs) { bs = dd / rad; bb = id; }
+                    }
+                }
+                if (bb != null) { hud.OpenSheet("building", bb); return; }
             }
             if (!Hit(pos, out var dir)) return; var pl = ps.pd.PlanLocal(dir);
             string best = null; float bd = 1e9f;
