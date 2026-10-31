@@ -112,7 +112,6 @@ namespace LunarCleanup.Gameplay
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             HandleInput(dt);
-            if (urpA) urpA.shadowDistance = Mathf.Clamp(alt * 1.5f + 25f, 50f, 170f); /* Schatten reichen immer bis zum sichtbaren Teil des Planeten */
             var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
             if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
