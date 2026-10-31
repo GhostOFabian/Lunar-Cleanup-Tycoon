@@ -137,3 +137,7 @@
 - Boden: Reliefkarte (Normal Map) mit kleinen Kratern und Steinchen, Kraterböden dunkler/Ränder heller, dezente Fugen statt blauer/oranger Linien, ruhigere Basisplatten, feinere Detailkörnung, mehr Textur-Rand gegen Farbbluten.
 - Waren: Fässer rund, Kristalle als Kugel. Im Editor liegen die Waren auf dem Band, die Stützen enden unter dem Rahmen (Fotos mit F4 im Testmodus → BasisCheck/band_*.png).
 - Behoben: Bandfläche folgte Brückenrampen nur an den Knickpunkten – Stützen kamen durchs Band, Waren schwebten (Mond, Band Rohstofflager→Verkauf). Kristall-Objekte nach Neuaufbau repariert.
+
+## Unity 0.15 (31.10.2026) – Browser-Build v=6 online
+- Neu: Produktions-Ampel (Produktionsfenster + HUD „ENGPASS“/„STAU“) mit Betriebsbonus bis +30 %, Produktionsplan (Rezepte an/aus), Frachtauftrag (+60 %), Verkaufsband je Produkt, Verkaufsautomat (ab Basisstufe 3), Gebäudestufen (+50/+40/+30 %, Gebäude wachsen in die Höhe).
+- Große Basis-Prüfung (alle 18 Planeten, alle Teilausbauten, alle alten Größen): 29 Befunde, davon 28 Hinweise „Entladeanlage nah an Nachbargebäude“ (Mond, Venus, Kepler u. a., nur Abstand) und eine enge Bandführung auf Kepler-22b (b_pp/b_rap, im Bild unauffällig). Keine Stützen in Bändern, keine hängenden Enden mehr.
