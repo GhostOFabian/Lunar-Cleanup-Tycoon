@@ -43,6 +43,8 @@ namespace LunarCleanup.Gameplay
             var c = pd.cells[pd.baseCell]; var fwd = c.e1 * Mathf.Sin(yaw) - c.e2 * Mathf.Cos(yaw);
             fwd = (fwd - dir * Vector3.Dot(fwd, dir)).normalized; return Quaternion.LookRotation(fwd, dir);
         }
+        /// <summary>Gebäudestufe: das Gebäude wächst in die Höhe (Grundfläche bleibt, damit Bänder und Andockplätze passen).</summary>
+        static void Grow(Transform t, int lvl) { if (lvl > 0) t.localScale = new Vector3(t.localScale.x, t.localScale.y * (1 + .15f * lvl), t.localScale.z); }
         void Place(Transform t, Vector2 plan, float yaw, float lift = 0) { var d = pd.PlanDir(plan); t.position = d * (pd.R + lift); t.rotation = PlanRot(d, yaw); }
 
         // ---------- Basis ----------
@@ -59,13 +61,13 @@ namespace LunarCleanup.Gameplay
                     // Eine Entladeanlage: ein Modell am Platz der Stufe 1, Größe nach höchster gebauter Stufe; Gruben an allen Andockplätzen
                     if (id != "u1") continue; string top = ps.bld.Contains("u3") ? "u3" : ps.bld.Contains("u2") ? "u2" : ps.bld.Contains("u1") ? "u1" : null;
                     if (top == null) { if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "") { var s0 = Models.Site(B.fp); s0.transform.SetParent(baseRoot, false); Place(s0.transform, ps.lay.pos[id], yaw); } continue; }
-                    var ub = Models.Building(top, B.fp, acc, acc2); ub.root.name = "Entladeanlage"; ub.root.transform.SetParent(baseRoot, false); Place(ub.root.transform, ps.lay.pos[id], yaw); blds["u1"] = ub;
+                    var ub = Models.Building(top, B.fp, acc, acc2); ub.root.name = "Entladeanlage"; ub.root.transform.SetParent(baseRoot, false); Place(ub.root.transform, ps.lay.pos[id], yaw); blds["u1"] = ub; Grow(ub.root.transform, Mathf.Max(Game.Blvl(ps, "u1"), Mathf.Max(Game.Blvl(ps, "u2"), Game.Blvl(ps, "u3"))));
                     foreach (var u in Game.Units) if (ps.bld.Contains(u) && GameData.Bld[u].st != null) for (int k = 0; k < GameData.Bld[u].st.docks; k++) { var dp = Game.DockPos(ps, u, k); var cp = ps.lay.pos[u]; var dir2 = (dp - cp); var pp = cp + dir2.normalized * (dir2.magnitude - 1.3f); var lp = ub.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; var toC = ub.root.transform.InverseTransformPoint(pd.PlanDir(cp + (dp - cp).normalized * 0f) * pd.R); Kit.Pit(ub.root.transform, lp, new Vector3(-lp.x, 0, -lp.z), Kit.HouseW(top, B.fp)); }
                     continue;
                 }
                 if (ps.bld.Contains(id))
                 {
-                    var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], Mathf.Round(yaw / (Mathf.PI / 2)) * (Mathf.PI / 2)); blds[id] = bp; // Modelle achsparallel: Bänder treffen gerade Flächen
+                    var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], Mathf.Round(yaw / (Mathf.PI / 2)) * (Mathf.PI / 2)); blds[id] = bp; Grow(bp.root.transform, Game.Blvl(ps, id)); // Modelle achsparallel: Bänder treffen gerade Flächen
                     if (B.st != null && (id == "u1" || id == "u2" || id == "u3")) for (int k = 0; k < B.st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; var lp = bp.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; Kit.Pit(bp.root.transform, lp, -new Vector3(lp.x, 0, lp.z), Kit.HouseW(id, B.fp)); }
                 }
                 else if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "")

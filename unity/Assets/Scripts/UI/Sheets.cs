@@ -83,6 +83,7 @@ namespace LunarCleanup.UI
 
         static void Production(Hud h)
         {
+            Ampel(h);
             h.Section("Kette");
             h.Note("Fahrzeuge → Entladestation → Band → Rohstofflager → Band → " + GameData.MachName(ps.pid, "presse") + " → " + GameData.MachName(ps.pid, "schmelze") + " → Produktlager → Rakete");
             h.Section("Lager");
@@ -98,10 +99,19 @@ namespace LunarCleanup.UI
                         h.Row(GameData.MachName(ps.pid, m), () => Game.MachStatus(ps, mm) + " · hergestellt " + ps.mach[mm].made + " · " + string.Join(", ", rec.Select(r => r.n + " " + GameData.Mats[r.inp].name + " → " + GameData.Mats[r.outp].name)));
                     }
             }
+            Plan(h);
             h.Section("Rakete");
             h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst, wenn sie voll ist",
                 () => "Starten", () => ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0, () => Game.LaunchRocket(), false);
             if (Game.Gs(ps) < 2) h.Note("Ab Basisstufe 2 verbinden Förderbänder die Lager mit der Rakete – dann verkauft sie automatisch.");
+            else if (ps.bld.Contains("sell"))
+            {
+                h.Row("Frachtauftrag", () => { if (ps.sv.order < 0) Game.NewOrder(ps); return ps.sv.order >= 0 ? GameData.Mats[ps.sv.order].name + " bringt +60 % – jede Rakete hat einen neuen Auftrag" : "–"; });
+                h.Row("Mischfracht und Betriebsbonus", () => { int k = Enumerable.Range(0, ps.sv.sellBuf.Length).Count(m => ps.sv.sellBuf[m] > 1e-6f); return k + " Warensorten · +" + Mathf.RoundToInt((Mathf.Min(1.4f, 1 + .08f * Mathf.Max(0, k - 1)) - 1) * 100) + " % · Betriebsbonus +" + Mathf.RoundToInt((float)(Game.FlowBonus(ps) - 1) * 100) + " % (" + (ps.sv.flowLv == 2 ? "sinkt – Engpass beheben" : ps.sv.flowLv == 1 ? "hält – gelbe Ampel" : "steigt, solange die Ampel grün ist") + ")"; });
+                h.Row("Frachtauftrag automatisch bedienen", () => "Ist der Auftrag eine Rohware ohne Maschine hier, schickt das Band sie bevorzugt zur Rakete.", () => ps.sv.autoOrder ? "An" : "Aus", () => true, () => ps.sv.autoOrder = !ps.sv.autoOrder, false);
+                if (Game.Gs(ps) >= 3) h.Row("Verkaufsautomat", () => "Sobald ein Lager zu 90 % voll ist, wird sein Inhalt komplett verkauft – auch offline.", () => ps.sv.autoDump ? "An" : "Aus", () => true, () => Game.ToggleAutoDump(), false);
+                else h.Note("Ab Basisstufe 3: Verkaufsautomat – volle Lager werden automatisch verkauft.");
+            }
             h.Section("Waren");
             h.Row("Alles verkaufen", () => "Wert: " + Cr(Enumerable.Range(0, GameData.Mats.Count).Sum(m => (GameData.Mats[m].raw ? ps.sv.roh[m] : Mathf.Floor(ps.sv.prod[m] + 1e-6f)) * Game.MatValue(m, ps))), () => "Verkaufen",
                 () => Game.RohSum(ps) >= .5f || Game.ProdSum(ps) >= 1, () => Game.SellAll(), false);
@@ -110,9 +120,42 @@ namespace LunarCleanup.UI
                 int m = i; var M = GameData.Mats[m]; var st = M.raw ? ps.sv.roh : ps.sv.prod; if (st[m] < (M.raw ? .5f : 1)) continue;
                 h.Row(M.name, () => Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr", () => "Verkaufen",
                     () => (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.SellMat(m), false);
+                if (!M.raw && Game.Gs(ps) >= 2 && ps.bld.Contains("sell")) h.Row("  " + M.name + " aufs Verkaufsband", () => Game.AutoOn(ps, m) ? "Fährt automatisch zur Rakete" : "Bleibt im Produktlager (ab 90 % Füllung geht der Überschuss trotzdem mit)", () => Game.AutoOn(ps, m) ? "Band an" : "Band aus", () => true, () => Game.ToggleAuto(m), false);
             }
             h.Section("Upgrades");
             foreach (var u in GameData.Upg.Where(x => (x.cat == "Förderbänder" || x.cat == "Maschinen" || x.cat == "Entladestationen" || x.cat == "Verkauf" || x.cat == "Lager") && UpVisible(x))) UpRow(h, u.id);
+        }
+        // Produktions-Ampel: Engpässe mit Ursache und den passenden Upgrades
+        static void Ampel(Hud h)
+        {
+            var r = Game.FlowReport(ps); var bad = r.Where(n => n.lvl > 0).OrderByDescending(n => n.lvl).ToList();
+            h.Section("Ampel");
+            if (bad.Count == 0) { h.Note("", () => { var rr = Game.FlowReport(ps); return Game.FlowLevel(rr) == 0 ? "Grün: alles im Fluss, kein Stau." : "Ampel hat sich geändert – Fenster neu öffnen."; }); return; }
+            foreach (var n in bad) h.Row((n.lvl == 2 ? "Rot: " : "Gelb: ") + n.name, () => n.why);
+            var fixes = bad.SelectMany(n => n.fix).Distinct().Where(id => GameData.Up.ContainsKey(id) && UpVisible(GameData.Up[id])).Take(5).ToList();
+            if (fixes.Count > 0) { h.Section("Hilft gegen den Stau"); foreach (var f in fixes) UpRow(h, f); }
+        }
+        // Produktionsplan: Rezepte an/aus
+        static void Plan(Hud h)
+        {
+            if (!ps.bld.Contains("presse")) return;
+            var raws = Game.PlanetRaws(ps).ToList();
+            h.Section("Produktionsplan");
+            h.Note("Veredeln bringt mehr pro Einheit, kostet aber Zeit, Energie und Maschinen. Was du nicht veredelst, bleibt im Rohstofflager und wird roh verkauft. Endprodukte hier: " + string.Join(", ", raws.Select(m => GameData.Mats[Game.EndGood(ps, m)].name).Distinct()) + ".");
+            string Pct(Recipe rc) => "+" + Mathf.RoundToInt((GameData.Mats[rc.outp].v * rc.k / Mathf.Max(.01f, GameData.Mats[rc.inp].v * rc.n) - 1) * 100) + " % Wert";
+            var keys = new List<(string key, string label, string desc)>();
+            foreach (var rc in ps.line.presse.Where(x => raws.Contains(x.inp))) keys.Add((rc.plan, GameData.MachName(ps.pid, "presse") + ": " + GameData.Mats[rc.inp].name, rc.n + " " + GameData.Mats[rc.inp].name + " → " + rc.k + " " + GameData.Mats[rc.outp].name + " (" + Pct(rc) + ")"));
+            if (ps.bld.Contains("schmelze")) { var sm = ps.line.schmelze.Where(x => ps.line.presse.Any(q => q.outp == x.inp && raws.Contains(q.inp))).ToList(); if (sm.Count > 0) keys.Add(("smelt", GameData.MachName(ps.pid, "schmelze"), string.Join(" · ", sm.Select(x => x.n + " " + GameData.Mats[x.inp].name + " → " + x.k + " " + GameData.Mats[x.outp].name + " (" + Pct(x) + ")")))); }
+            if (ps.bld.Contains("raff")) { var rf = ps.line.raff.Where(x => raws.Contains(x.inp)).ToList(); if (rf.Count > 0) keys.Add(("refine", GameData.MachName(ps.pid, "raff"), string.Join(" · ", rf.Select(x => x.n + " " + GameData.Mats[x.inp].name + " → " + x.k + " " + GameData.Mats[x.outp].name + " (" + Pct(x) + ")")))); }
+            foreach (var (key, label, desc) in keys.GroupBy(k => k.key).Select(g => g.First())) { var kk = key; h.Row(label, () => desc, () => Game.PlanOn(ps, kk) ? "An" : "Aus", () => true, () => Game.TogglePlan(kk), false); }
+        }
+        // Gebäudestufe
+        static void BuildingLevel(Hud h, string id)
+        {
+            if (!Game.BLV_REQ.ContainsKey(id) || !ps.bld.Contains(id)) return;
+            h.Section("Gebäudestufe");
+            h.Row("Stufe " + Game.Blvl(ps, id) + " von " + Game.BlMax(ps), () => { string w = Game.BlWhy(ps, id); return "Sind alle Upgrades dieses Gebäudes ausgereizt, wächst es eine Stufe: sichtbar größer und +" + Game.BlPct(id) + " % " + Game.BlEffect(id) + " je Stufe." + (Game.Blvl(ps, id) > 0 ? " Jetzt ×" + Dec(Game.BlF(ps, id), 1) + "." : "") + (w != "" ? " " + w + "." : ""); },
+                () => Game.BlWhy(ps, id) == "" ? "Ausbauen · " + Cr(Game.BlCost(ps, id)) : "Gesperrt", () => Game.BlWhy(ps, id) == "" && Game.S.credits >= Game.BlCost(ps, id), () => Game.BuyBl(id), true, () => "Stufe " + Game.Blvl(ps, id) + " von " + Game.BlMax(ps));
         }
         static string Mats(float[] a) { var l = Enumerable.Range(0, a.Length).Where(i => a[i] >= .5f).Select(i => GameData.Mats[i].name + " " + Game.Fmt(a[i])).ToList(); return l.Count == 0 ? "leer" : string.Join(", ", l); }
 
@@ -387,7 +430,7 @@ namespace LunarCleanup.UI
         static void Building(Hud h, string id)
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
-            BuildingUpgrades(h, id);
+            BuildingUpgrades(h, id); BuildingLevel(h, id);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "research") { Research(h); return; }

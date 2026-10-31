@@ -60,7 +60,7 @@ namespace LunarCleanup.UI
             Meter(mr, "ENERGIE", new Color(1f, .85f, .3f), () => Game.Fmt(Game.Cur.sv.energy), () => Game.Cur.sv.energy / Game.EnergyCap(Game.Cur),
                 () => Game.IsDay(Game.Cur) ? "TAG" : "NACHT", () => OpenSheet("energy"));
             Meter(mr, "ROH", Pal.Clean, () => Game.Fmt(Game.RohSum(Game.Cur)) + "/" + Game.Fmt(Game.RohCap(Game.Cur)), () => Game.RohSum(Game.Cur) / Game.RohCap(Game.Cur));
-            Meter(mr, "PROD", Pal.Prod, () => Game.Cur.bld.Contains("prod") ? Game.Fmt(Game.ProdSum(Game.Cur)) + "/" + Game.Fmt(Game.ProdCap(Game.Cur)) : "–", () => Game.ProdSum(Game.Cur) / Game.ProdCap(Game.Cur));
+            Meter(mr, "PROD", Pal.Prod, () => Game.Cur.bld.Contains("prod") ? Game.Fmt(Game.ProdSum(Game.Cur)) + "/" + Game.Fmt(Game.ProdCap(Game.Cur)) : "–", () => Game.ProdSum(Game.Cur) / Game.ProdCap(Game.Cur), () => Game.Gs(Game.Cur) < 2 ? "PROD" : Game.Cur.sv.flowLv == 2 ? "STAU" : Game.Cur.sv.flowLv == 1 ? "ENGPASS" : "PROD"); /* Ampel im HUD */
         }
         void Meter(Transform p, string label, Color col, Func<string> val, Func<float> f, Func<string> labelLive = null, Action click = null)
         {
@@ -68,7 +68,7 @@ namespace LunarCleanup.UI
             var v = UiKit.Text(m.transform, "Wert", "", 11.5f, Pal.Ink, true); v.rectTransform.Anchor(.3f, 0, 1, 1, 0, 0, 10, 0); v.alignment = TextAlignmentOptions.MidlineRight; v.textWrappingMode = TextWrappingModes.NoWrap;
             var bar = UiKit.Bar(m.transform, "Balken", col, out var fill, 3); bar.Anchor(0, 0, 1, 0, 10, 4, 10, -7);
             meters.Add((v, fill, val, f));
-            if (labelLive != null) { var lo = l; liveLabels.Add(() => { string t = labelLive(); lo.text = t; lo.color = t == "NACHT" ? new Color(.62f, .71f, 1f) : Pal.Ink2; }); }
+            if (labelLive != null) { var lo = l; liveLabels.Add(() => { string t = labelLive(); lo.text = t; lo.color = t == "NACHT" ? new Color(.62f, .71f, 1f) : t == "STAU" ? new Color(1f, .42f, .36f) : t == "ENGPASS" ? new Color(1f, .82f, .3f) : Pal.Ink2; }); }
             if (lowWarn == null && label == "ENERGIE") { var img = m.GetComponent<Image>(); lowWarn = () => img.color = Game.Cur.ef < .99f && (Game.Cur.sv.veh.Count > 0 || Game.Cur.bld.Contains("presse")) ? new Color(.35f, .1f, .1f, .9f) : Pal.Glass; }
         }
 

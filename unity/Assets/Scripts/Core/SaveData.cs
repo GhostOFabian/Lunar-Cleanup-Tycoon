@@ -58,6 +58,12 @@ namespace LunarCleanup.Core
         public float met;                                   // Meteoritenschauer-Uhr
         public EventSave ev = new EventSave();            // B1 laufendes Ereignis
         public List<RuleSave> rules = new List<RuleSave>(); // F2 Automatik-Regeln
+        // Wirtschaft (wie im Browser-Prototyp): Produktionsplan, Verkaufsband je Produkt, Frachtauftrag, Verkaufsautomat, Betriebsbonus, Gebäudestufen
+        public List<string> planOff = new List<string>();   // ausgeschaltete Rezepte (Plan-Schlüssel)
+        public List<int> autoOff = new List<int>();         // Produkte, die NICHT aufs Verkaufsband sollen
+        public int order = -1; public bool autoOrder = true, autoDump;
+        public float flowB, fbT; public int flowLv;
+        public List<KV> blvl = new List<KV>();
     }
 
     [Serializable]
