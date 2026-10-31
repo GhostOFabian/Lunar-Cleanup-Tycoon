@@ -116,3 +116,8 @@
 - Browser-Version neu gebaut.
 - Fenstertitel verkleinern sich automatisch (13–26 pt, eine Zeile).
 - Neuer Bohrturm (Gittermast, Drehtisch, Gestänge fährt/dreht) und neuer Erzbagger (Ketten, drehender Oberwagen, Ausleger/Stiel/Schaufel graben).
+
+## Webseite + Unity-Version online (31.10.2026)
+- GitHub Pages: Startseite mit zwei Knöpfen – „Prototyp spielen“ (`prototype/index.html`) und „Unity-Version spielen (3D, Beta)“ (`play-unity/index.html`), neuer Abschnitt „Der Weg aufs Handy“ mit Unity-Bildern.
+- `play-unity/`: WebGL-Build der Unity-Fassung 0.13 (Development-Build, ~100 MB, unkomprimiert, Testmodus mit eigenem Spielstand), eigene deutsche Ladeseite. Headless (Chromium/SwiftShader) gestartet: läuft.
+- Neuer Menüpunkt „Browser-Version für GitHub bauen“ (Release, gzip mit Entpacken im Browser, ohne Testmodus). Erster Versuch brach ab, weil Unity während des Builds beendet wurde – noch einmal starten, dann `play-unity/Build` ersetzen (deutlich kleiner).
