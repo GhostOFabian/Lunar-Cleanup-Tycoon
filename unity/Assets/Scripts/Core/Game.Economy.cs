@@ -12,8 +12,22 @@ namespace LunarCleanup.Core
         // ---------- Produktionsplan ----------
         public static bool PlanOn(PState ps, string key) => string.IsNullOrEmpty(key) || !ps.sv.planOff.Contains(key);
         public static void TogglePlan(string key) { var sv = Cur.sv; if (sv.planOff.Contains(key)) sv.planOff.Remove(key); else sv.planOff.Add(key); Toast(PlanOn(Cur, key) ? "Rezept eingeschaltet" : "Rezept ausgeschaltet – die Ware bleibt roh"); }
-        public static bool AutoOn(PState ps, int m) => !ps.sv.autoOff.Contains(m);
-        public static void ToggleAuto(int m) { var sv = Cur.sv; if (sv.autoOff.Contains(m)) sv.autoOff.Remove(m); else sv.autoOff.Add(m); Toast(GameData.Mats[m].name + (AutoOn(Cur, m) ? " fährt zur Rakete" : " bleibt im Produktlager")); }
+        /// <summary>Ist die Ware zum Verkauf freigegeben? Standard: alle Produkte und Rohstoffe, die keine Maschine hier veredelt.</summary>
+        public static bool SellOn(PState ps, int m) => ps.sv.sellYes.Contains(m) || (!ps.sv.autoOff.Contains(m) && (!GameData.Mats[m].raw || !RawRoute(ps, m)));
+        public static bool AutoOn(PState ps, int m) => SellOn(ps, m);
+        public static void ToggleAuto(int m)
+        {
+            var sv = Cur.sv; bool on = SellOn(Cur, m); sv.sellYes.Remove(m); sv.autoOff.Remove(m); if (on) sv.autoOff.Add(m); else sv.sellYes.Add(m);
+            Toast(GameData.Mats[m].name + (SellOn(Cur, m) ? " ist zum Verkauf freigegeben – fährt in den Frachtraum der Rakete" : " ist gesperrt – bleibt im Lager"));
+        }
+        /// <summary>Freigegebene Ware von Hand in den Frachtraum laden (vor allem bevor es Förderbänder gibt).</summary>
+        public static void LoadRocket(int m)
+        {
+            var ps = Cur; var sv = ps.sv; if (!SellOn(ps, m)) { Fail("Erst zum Verkauf freigeben"); return; } if (sv.rk > 0) { Fail("Die Rakete ist unterwegs"); return; }
+            bool raw = GameData.Mats[m].raw; var store = raw ? sv.roh : sv.prod; float room = SellCap(ps) - Sum(sv.sellBuf); float u = Mathf.Min(store[m], room); if (!raw) u = Mathf.Floor(u + 1e-6f);
+            if (u <= .01f) { Fail(room <= .01f ? "Der Frachtraum ist voll – starte die Rakete" : "Nichts auf Lager"); return; }
+            store[m] -= u; sv.sellBuf[m] += u; Toast(Fmt(u) + " " + GameData.Mats[m].name + " in den Frachtraum geladen", "good");
+        }
 
         // ---------- Frachtauftrag ----------
         public const double ORDER_BONUS = 1.6;
@@ -32,20 +46,10 @@ namespace LunarCleanup.Core
         }
 
         // ---------- Verkaufsautomat (ab Basisstufe 3): volle Lager werden komplett verkauft, auch offline ----------
-        static void AutoDumpStep(PState ps)
-        {
-            if (!ps.sv.autoDump || !ps.bld.Contains("sell") || Gs(ps) < 3) return;
-            if (RohSum(ps) >= RohCap(ps) * .9f) DumpStore(ps, true);
-            if (ps.bld.Contains("prod") && ProdSum(ps) >= ProdCap(ps) * .9f) DumpStore(ps, false);
-        }
-        static void DumpStore(PState ps, bool raw)
-        {
-            var store = raw ? ps.sv.roh : ps.sv.prod; double tot = 0;
-            foreach (int m in raw ? GameData.Raw : GameData.Prods) { float u = store[m]; if (!raw) u = Mathf.Floor(u + 1e-6f); if (u <= 0) continue; store[m] -= u; tot += u * MatValue(m, ps); }
-            if (tot <= 0) return; Earn(tot); ps.sv.soldP += tot; S.stats.sold += tot;
-            if (!Offline && ps.pid == S.planet) Toast("Verkaufsautomat: " + (raw ? "Rohstofflager" : "Produktlager") + " verkauft · +" + Fmt(tot) + " Cr", "good");
-        }
-        public static void ToggleAutoDump() { var sv = Cur.sv; sv.autoDump = !sv.autoDump; Toast(sv.autoDump ? "Verkaufsautomat an – volle Lager werden verkauft" : "Verkaufsautomat aus"); }
+        /// <summary>Verkaufsautomat (ab Basisstufe 3): sind die Lager fast voll, startet die Rakete schon halb beladen – verkauft wird trotzdem nur, was im Frachtraum ist.</summary>
+        static void AutoDumpStep(PState ps) { }
+        public static bool EarlyLaunch(PState ps) => ps.sv.autoDump && Gs(ps) >= 3 && (RohSum(ps) >= RohCap(ps) * .9f || (ps.bld.Contains("prod") && ProdSum(ps) >= ProdCap(ps) * .9f));
+        public static void ToggleAutoDump() { var sv = Cur.sv; sv.autoDump = !sv.autoDump; Toast(sv.autoDump ? "Verkaufsautomat an – bei vollen Lagern startet die Rakete schon halb beladen" : "Verkaufsautomat aus"); }
 
         // ---------- Produktions-Ampel ----------
         public class FlowItem { public string id, name, why; public int lvl; public string[] fix; }

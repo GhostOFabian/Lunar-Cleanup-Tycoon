@@ -15,7 +15,8 @@ namespace LunarCleanup.Core
         public const float EV_MIN = 360, EV_MAX = 720; // Abstand in Sekunden Spielzeit (nur live)
         public static readonly EventDef[] Events =
         {
-            new EventDef { key = "wreck", name = "Wrack-Absturz", hint = "Ein Wrack ist abgestürzt – reinige die Parzelle in 8 Minuten für den dreifachen Erlös", dur = 480, w = 3 },
+            new EventDef { key = "wreck", name = "Wrack-Absturz", hint = "Ein Wrack ist abgestürzt – der Suchtrupp ist unterwegs und birgt es", dur = 480, w = 3 },
+            new EventDef { key = "impact", name = "Kometeneinschlag", hint = "Ein Kometenbrocken ist eingeschlagen – der Suchtrupp birgt die Trümmer (Credits, Kristalle, vielleicht ein Fund)", dur = 600, w = 2.5f },
             new EventDef { key = "comet", name = "Kometenschweif", hint = "Ein Kometenschweif lässt Leuchtkristalle wachsen", dur = 180, w = 2 },
             new EventDef { key = "solar", name = "Sonnensturm", hint = "Sonnensturm: Solarstrom doppelt, Fahrzeuge etwas langsamer", dur = 300, w = 2 },
             new EventDef { key = "vein", name = "Erzader", hint = "Eine Erzader: Bohrturm und Bagger fördern doppelt", dur = 600, w = 1.5f },

@@ -52,15 +52,25 @@ namespace LunarCleanup.Core
         }
 
         /// <summary>Platzhalter-Angebote. Preise sind Beispiele; echte Preise kommen später aus dem Store (Unity IAP).</summary>
+        /// <summary>Angebote ohne Geld-Pakete: Komfort, Platz, Zeit und Aussehen – nichts, was man in Minuten selbst erspielt.</summary>
         public static readonly List<ShopOffer> Offers = new List<ShopOffer>
         {
-            new ShopOffer { id = "starter", name = "Starterpaket", desc = "50.000 Cr, ein Industriesauger und 2 Stunden doppelter Ertrag", price = "2,99 €" },
-            new ShopOffer { id = "crystals_s", name = "Kristallbeutel", desc = "Sofort 20 Leuchtkristalle auf deinem aktuellen Planeten", price = "0,99 €", consumable = true },
-            new ShopOffer { id = "timeskip", name = "Zeitsprung 4 h", desc = "Deine Basis arbeitet sofort 4 Stunden (wie offline)", price = "1,99 €", consumable = true },
+            new ShopOffer { id = "slot", name = "Zusätzlicher Fahrzeugplatz", desc = "+1 Fahrzeug über der Obergrenze – auf jedem Planeten, dauerhaft (bis zu 3-mal)", price = "1,99 €" },
+            new ShopOffer { id = "cargo2", name = "Großer Frachtraum", desc = "Jede Rakete fasst dauerhaft 50 % mehr", price = "2,99 €" },
             new ShopOffer { id = "offline24", name = "Langschläfer", desc = "Offline-Zeit dauerhaft auf 24 Stunden", price = "4,99 €" },
-            new ShopOffer { id = "noads", name = "Werbefrei", desc = "Für immer ohne Werbung – Bonus-Belohnungen gibt es trotzdem", price = "3,99 €" },
+            new ShopOffer { id = "timeskip", name = "Zeitsprung 4 h", desc = "Deine Basis arbeitet sofort 4 Stunden (wie offline)", price = "1,99 €", consumable = true },
+            new ShopOffer { id = "season", name = "Saisonpass", desc = "Eigene Saisonziele mit Lackierungen, Leuchtfarben und Basis-Themen als Belohnung", price = "4,99 €" },
             new ShopOffer { id = "skin_gold", name = "Goldflotte", desc = "Goldene Lackierung für alle Fahrzeuge und Drohnen", price = "1,99 €" },
+            new ShopOffer { id = "theme_neon", name = "Neon-Basis", desc = "Leuchtende Kanten an Gebäuden und Bändern bei Nacht", price = "1,99 €" },
+            new ShopOffer { id = "noads", name = "Werbefrei", desc = "Für immer ohne Werbung – Bonus-Belohnungen gibt es trotzdem", price = "3,99 €" },
         };
+        /// <summary>Wirkung eines bestätigten Kaufs (wird erst nach echter Store-Bestätigung aufgerufen).</summary>
+        public static void Grant(string id)
+        {
+            var S = Game.S; if (S == null) return;
+            if (id == "slot") { if (S.extraSlots < 3) S.extraSlots++; return; }
+            if (!S.owned.Contains(id)) S.owned.Add(id);
+        }
 
         /// <summary>Kauf auslösen. Bis Unity IAP eingebunden ist, wird nichts berechnet und nichts vergeben.</summary>
         public static void Buy(ShopOffer o, Action<bool> done)

@@ -25,6 +25,7 @@ namespace LunarCleanup.Core
     [Serializable] public class StationSave { public string mod = ""; public int lv; }
     [Serializable] public class RouteSave { public string from = "", to = ""; public int mat = -1; public float t; }
 
+    [Serializable] public class TeamSave { public string mode = "home"; public Vector3 d; public float t; public int cell = -1; public string key = ""; } // Suchtrupp (Bergung von Wracks und Kometentrümmern)
     [Serializable] public class CartSave { public bool owned; public Vector3 d; public string mode = "park", to = ""; public float[] tank; public float wt; }
 
     [Serializable]
@@ -60,6 +61,8 @@ namespace LunarCleanup.Core
         public List<RuleSave> rules = new List<RuleSave>(); // F2 Automatik-Regeln
         // Wirtschaft (wie im Browser-Prototyp): Produktionsplan, Verkaufsband je Produkt, Frachtauftrag, Verkaufsautomat, Betriebsbonus, Gebäudestufen
         public List<string> planOff = new List<string>();   // ausgeschaltete Rezepte (Plan-Schlüssel)
+        public TeamSave team = new TeamSave();
+        public List<int> sellYes = new List<int>();         // ausdrücklich zum Verkauf freigegebene Waren
         public List<int> autoOff = new List<int>();         // Produkte, die NICHT aufs Verkaufsband sollen
         public int order = -1; public bool autoOrder = true, autoDump;
         public float flowB, fbT; public int flowLv;
@@ -78,6 +81,8 @@ namespace LunarCleanup.Core
         public List<PlanetSave> planets = new List<PlanetSave>();
         public long lastActive;
         public bool sound = true;
+        public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe
+        public float volSfx = .8f, volMusic = .6f; // Lautstärke Geräusche / Musik (0–1)
         public List<string> resDone = new List<string>();
         public string resAct = "";
         public List<string> wrecks = new List<string>();

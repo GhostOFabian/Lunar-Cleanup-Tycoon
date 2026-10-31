@@ -20,7 +20,7 @@ namespace LunarCleanup.Gameplay
         void UpdateFx()
         {
             if (ps == null) return;
-            RocketFlame(); VehicleDust(); EventFx(); Aurora(); Ampeln();
+            RocketFlame(); VehicleDust(); EventFx(); TeamFx(); Aurora(); Ampeln();
         }
 
         // ---------- Raketenflammen beim Start und bei der Landung ----------
@@ -51,6 +51,11 @@ namespace LunarCleanup.Gameplay
         void VehicleDust()
         {
             if (MapMode || !dust) return; vdT += Time.deltaTime; if (vdT < .07f) return; vdT = 0; int n = 0;
+            foreach (var v in ps.sv.veh) if (v.mode == "boom") /* Selbstzerstörung: Funken und Rauch werden immer heftiger */
+                {
+                    float k = 1 - Mathf.Clamp01(v.repT / 4f); var p0 = pd.Surf(v.d, .6f);
+                    for (int q = 0; q < 2 + (int)(k * 6); q++) dust.Emit(new ParticleSystem.EmitParams { position = p0 + Random.insideUnitSphere * .5f, velocity = v.d * Random.Range(1f, 3f) + Random.insideUnitSphere * (2 + 4 * k), startColor = Random.value < .6f ? new Color(1f, .75f, .3f, 1) : new Color(.25f, .25f, .27f, .7f), startSize = Random.Range(.1f, .35f) * (1 + k), startLifetime = Random.Range(.4f, 1f), applyShapeToPosition = false }, 1);
+                }
             foreach (var v in ps.sv.veh)
             {
                 if (n > 40) break; bool sweeping = v.mode == "sweep" && v.sweepT > 0; if (v.mode != "clean" && !sweeping) continue; if (v.cell < 0 || v.cell >= pd.N) continue; n++;
@@ -64,8 +69,8 @@ namespace LunarCleanup.Gameplay
         GameObject wreck, comet; int wreckCell = -1; ParticleSystem cometPs;
         void EventFx()
         {
-            var ev = ps.sv.ev; bool wOn = ev != null && ev.key == "wreck" && ev.t > 0 && ev.cell >= 0 && ev.cell < pd.N;
-            if (wOn && (!wreck || wreckCell != ev.cell)) { if (wreck) Destroy(wreck); wreck = BuildWreck(ev.cell); wreckCell = ev.cell; }
+            var ev = ps.sv.ev; bool wOn = ev != null && (ev.key == "wreck" || ev.key == "impact") && ev.t > 0 && ev.cell >= 0 && ev.cell < pd.N;
+            if (wOn && (!wreck || wreckCell != ev.cell)) { if (wreck) Destroy(wreck); wreck = ev.key == "impact" ? BuildImpact(ev.cell) : BuildWreck(ev.cell); wreckCell = ev.cell; }
             if (!wOn && wreck) { EmitDust(wreck.transform.position.normalized, new Color(.8f, .75f, .7f), 20); Destroy(wreck); wreck = null; wreckCell = -1; }
             if (wreck) { wreck.SetActive(!MapMode); if (!MapMode && Random.value < .3f) dust.Emit(new ParticleSystem.EmitParams { position = wreck.transform.position + wreck.transform.up * 1.2f, velocity = wreck.transform.up * 1.5f + Random.insideUnitSphere * .3f, startColor = new Color(.35f, .33f, .32f, .5f), startSize = Random.Range(.5f, 1f), startLifetime = 2.5f, applyShapeToPosition = false }, 1); }
 
@@ -95,6 +100,35 @@ namespace LunarCleanup.Gameplay
             for (int i = 0; i < 6; i++) { float an = i * 1.05f + cell; MeshKit.Box(g.transform, i % 2 == 0 ? dark : hull, new Vector3(Mathf.Cos(an) * (2 + i * .3f), .08f, Mathf.Sin(an) * (2 + i * .3f)), new Vector3(.35f, .12f, .25f), new Vector3(0, i * 40, 0)); } // Trümmer
             var crater = MeshKit.Part(g.transform, MeshKit.Quad, Glow(new Color(.05f, .04f, .03f), .6f), new Vector3(0, .05f, 0), new Vector3(5.5f, 5.5f, 1), new Vector3(90, 0, 0)); NoShadow(crater);
             return g;
+        }
+        GameObject BuildImpact(int cell)
+        {
+            var cl = pd.cells[cell]; var g = new GameObject("Kometeneinschlag"); g.transform.SetParent(transform, false);
+            var d = cl.c; g.transform.position = pd.Surf(d, -.1f); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d)) * Quaternion.Euler(0, cell * 53 % 360, 0);
+            var scorch = MeshKit.Part(g.transform, MeshKit.Quad, Glow(new Color(.04f, .03f, .03f), .8f), new Vector3(0, .06f, 0), new Vector3(9, 9, 1), new Vector3(90, 0, 0)); NoShadow(scorch);
+            var hot = MeshKit.Part(g.transform, MeshKit.Quad, Glow(new Color(1f, .45f, .15f), .55f), new Vector3(0, .08f, 0), new Vector3(3.5f, 3.5f, 1), new Vector3(90, 0, 0)); NoShadow(hot);
+            var ice = MeshKit.Mat(new Color(.55f, .8f, 1f), .1f, .9f, new Color(.3f, .7f, 1f) * 1.6f); var rock = MeshKit.Mat(new Color(.18f, .17f, .2f), .2f, .3f);
+            MeshKit.Ball(g.transform, rock, new Vector3(0, .35f, 0), 1.4f).transform.localScale = new Vector3(1.6f, 1.1f, 1.3f); // Kometenkern
+            for (int i = 0; i < 9; i++) { float an = i * .7f + cell, r = 1.2f + (i % 4) * .7f; var f = MeshKit.Box(g.transform, i % 3 == 0 ? rock : ice, new Vector3(Mathf.Cos(an) * r, .2f, Mathf.Sin(an) * r), new Vector3(.35f, .5f + (i % 3) * .2f, .3f), new Vector3(20 * (i % 3), i * 41, 15)); NoShadow(f); } // leuchtende Eisbrocken
+            var lg = new GameObject("Glut"); lg.transform.SetParent(g.transform, false); lg.transform.localPosition = new Vector3(0, 1.5f, 0); var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.color = new Color(.5f, .8f, 1f); L.range = 10; L.intensity = 2.5f; L.shadows = LightShadows.None;
+            return g;
+        }
+        // ---------- Suchtrupp ----------
+        GameObject teamGo; Light teamLight;
+        void TeamFx()
+        {
+            var t = ps.sv.team; if (t == null || t.d == Vector3.zero || MapMode) { if (teamGo) teamGo.SetActive(false); return; }
+            if (!teamGo)
+            {
+                var vp = Models.Vehicle(GameData.Veh["buggy"], new Color(1f, .45f, .1f)); teamGo = vp.root; teamGo.name = "Suchtrupp"; teamGo.transform.SetParent(vehRoot, false);
+                var mast = MeshKit.Cyl(teamGo.transform, MeshKit.Mat(new Color(.3f, .3f, .32f), .6f, .4f), new Vector3(0, 1.6f, -.3f), .03f, .03f, 1.2f, 6);
+                var lamp = MeshKit.Ball(teamGo.transform, MeshKit.Mat(new Color(1f, .5f, .1f), 0, .5f, new Color(1f, .45f, .1f) * 3), new Vector3(0, 2.25f, -.3f), .22f); NoShadow(lamp); // Rundumleuchte
+                var lg = new GameObject("Licht"); lg.transform.SetParent(teamGo.transform, false); lg.transform.localPosition = new Vector3(0, 2.3f, -.3f); teamLight = lg.AddComponent<Light>(); teamLight.type = LightType.Point; teamLight.color = new Color(1f, .5f, .15f); teamLight.range = 7; teamLight.shadows = LightShadows.None;
+            }
+            teamGo.SetActive(true); var prev = teamGo.transform.position; var pos = pd.Surf(t.d, 0); teamGo.transform.position = pos;
+            var mv = Vector3.ProjectOnPlane(pos - prev, t.d); if (mv.sqrMagnitude > 1e-5f) teamGo.transform.rotation = Quaternion.Slerp(teamGo.transform.rotation, Quaternion.LookRotation(mv.normalized, t.d), .2f);
+            bool busy = t.mode == "go" || t.mode == "salvage" || t.mode == "back"; teamLight.intensity = busy ? 2f + 1.5f * Mathf.Sin(Time.time * 8) : 0;
+            if (t.mode == "salvage" && dust && Random.value < .6f) dust.Emit(new ParticleSystem.EmitParams { position = pos + t.d * .8f + Random.insideUnitSphere * .5f, velocity = t.d * 2 + Random.insideUnitSphere * 2.5f, startColor = new Color(1f, .8f, .4f, 1), startSize = .12f, startLifetime = .5f, applyShapeToPosition = false }, 3); // Schweißfunken
         }
         GameObject BuildComet()
         {

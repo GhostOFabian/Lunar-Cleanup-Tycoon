@@ -82,7 +82,7 @@ namespace LunarCleanup.UI
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
-            var w = UiKit.Btn(root, "Warnung", () => OpenSheet(warnTarget), new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
             ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -228, 12, 196);
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
@@ -90,8 +90,9 @@ namespace LunarCleanup.UI
         GameObject warnGo; Image warnImg; TextMeshProUGUI warnTxt; string warnTarget = "hazard";
         void UpdateWarn(PState ps)
         {
-            string t = null; var st = ps.P.storm;
-            if (st != null && Game.StormOn(ps)) { t = st.name + (ps.shOn ? " · Schild hält 80 % ab" : " · " + Game.StormFx(st)) + " · noch " + Mathf.CeilToInt(ps.sv.hzOn) + " s"; warnTarget = "hazard"; }
+            string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
+            if (tt != null) { t = tt; warnTarget = "focus"; }
+            else if (st != null && Game.StormOn(ps)) { t = st.name + (ps.shOn ? " · Schild hält 80 % ab" : " · " + Game.StormFx(st)) + " · noch " + Mathf.CeilToInt(ps.sv.hzOn) + " s"; warnTarget = "hazard"; }
             else if (st != null && Game.StormIn(ps) <= 30) { t = "Achtung: " + st.name + " in " + Mathf.CeilToInt(Game.StormIn(ps)) + " s" + (Game.ResDone("shield") ? (ps.sv.shield ? " · Schild bereit" : " · Tippen: Schild einschalten") : " · Tippen für Infos"); warnTarget = "hazard"; }
             else if (ps.sv.veh.Any(v => v.mode == "broken" || v.mode == "fieldRepair")) { int n = ps.sv.veh.Count(v => v.mode == "broken" || v.mode == "fieldRepair"); t = n + (n > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen" + (ps.bld.Contains("werkstatt") ? " – fährt zur Werkstatt" : " – baue eine Roboterwerkstatt (Basisstufe 3)"); warnTarget = "vehicles"; }
             else if (ps.sv.veh.Count > 0 && !Game.PowOK(ps)) { t = "Fahrzeuge zu schwach für " + ps.P.name + " (nur 30 %): Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig"; warnTarget = "vehicles"; }
@@ -190,6 +191,51 @@ namespace LunarCleanup.UI
             var t = UiKit.Text(b.transform, "Text", label, 16, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1);
             var cg = b.gameObject.AddComponent<CanvasGroup>();
             binders.Add(() => { bool on = enabled == null || enabled(); b.interactable = on; cg.alpha = on ? 1 : .38f; });
+        }
+        /// <summary>Reiter oben im Fenster (Kaufen / Flotte / Upgrades …). Die Auswahl steckt im Fenster-Argument.</summary>
+        public int Tab => int.TryParse(sheetArg, out int t) ? t : 0;
+        public void Tabs(params string[] names)
+        {
+            int sel = Mathf.Clamp(Tab, 0, names.Length - 1);
+            var row = UiKit.Rt(sheetContent, "Reiter"); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 6; hl.childControlHeight = true; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.padding = new RectOffset(0, 0, 4, 8); UiKit.LE(row, 46, 46);
+            for (int i = 0; i < names.Length; i++)
+            {
+                int k = i; bool on = i == sel; string kind = sheetKind;
+                var b = UiKit.Btn(row, names[i], () => OpenSheet(kind, k.ToString()), on ? new Color(.43f, .95f, .82f, .22f) : new Color(1, 1, 1, .05f), 12); UiKit.LE(b, 38, 38, 1);
+                var t = UiKit.Text(b.transform, "Text", names[i], 13, on ? Pal.Clean : Pal.Ink2, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 0, 4, 0); t.enableAutoSizing = true; t.fontSizeMin = 9; t.fontSizeMax = 13; t.textWrappingMode = TextWrappingModes.NoWrap;
+            }
+        }
+        /// <summary>Karte für Kaufbares (Gebäude, Fahrzeuge, Drohnen): eigener Kasten mit Farbstreifen – deutlich anders als Upgrade-Zeilen.</summary>
+        public void Card(string title, Func<string> desc, Color accent, Func<string> btn, Func<bool> enabled, Action click, string badge = null)
+        {
+            var card = UiKit.Glass(sheetContent, "Karte " + title, new Color(.07f, .11f, .2f, .95f), 14);
+            var hl = card.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 12; hl.childControlHeight = true; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.padding = new RectOffset(0, 12, 0, 0); hl.childAlignment = TextAnchor.MiddleLeft;
+            var stripe = UiKit.Glass(card.transform, "Streifen", accent, 6); UiKit.LE(stripe, 70, -1, -1, 8).minWidth = 8;
+            var col = UiKit.Rt(card.transform, "Text"); var vl = col.gameObject.AddComponent<VerticalLayoutGroup>(); vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.spacing = 3; vl.padding = new RectOffset(0, 0, 12, 12); UiKit.LE(col, -1, -1, 1);
+            var tt = UiKit.Text(col, "Titel", title + (badge != null ? "  <color=#6ff2d2><size=11>" + badge + "</size></color>" : ""), 17, Pal.Ink, true, FontStyles.Bold); UiKit.Add<ContentSizeFitter>(tt).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var dd = UiKit.Text(col, "Beschreibung", desc != null ? desc() : "", 13, Pal.Ink2); UiKit.Add<ContentSizeFitter>(dd).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (desc != null) binders.Add(() => dd.text = desc());
+            if (btn != null)
+            {
+                var b = UiKit.Btn(card.transform, "Knopf", () => { click?.Invoke(); Rebuild(); }, Pal.Credit, 14); UiKit.LE(b, 50, 50, -1, 122).minWidth = 108;
+                var bt = UiKit.Text(b.transform, "Text", btn(), 14, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, 0, 1, 1, 8, 2, 8, 2); bt.enableAutoSizing = true; bt.fontSizeMin = 9; bt.fontSizeMax = 15; bt.textWrappingMode = TextWrappingModes.NoWrap;
+                var cg = b.gameObject.AddComponent<CanvasGroup>();
+                binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); b.interactable = on; cg.alpha = on ? 1 : .38f; });
+            }
+            var gap = UiKit.Rt(sheetContent, "Abstand"); UiKit.LE(gap, 8, 8);
+        }
+        /// <summary>Schieberegler (0–1), z. B. Lautstärke.</summary>
+        public void Slider(string title, Func<float> get, Action<float> set)
+        {
+            var row = UiKit.Rt(sheetContent, title); var vl = row.gameObject.AddComponent<VerticalLayoutGroup>(); vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.spacing = 6; vl.padding = new RectOffset(0, 0, 8, 10);
+            var tt = UiKit.Text(row, "Titel", title + " · " + Mathf.RoundToInt(get() * 100) + " %", 15, Pal.Ink, true, FontStyles.Bold); UiKit.LE(tt, 22, 22);
+            var bar = UiKit.Glass(row, "Spur", new Color(1, 1, 1, .1f), 6); UiKit.LE(bar, 26, 26);
+            var fillArea = UiKit.Rt(bar.transform, "Füllbereich"); fillArea.Anchor(0, 0, 1, 1, 6, 8, 6, 8);
+            var fill = UiKit.Glass(fillArea, "Füllung", Pal.Clean, 4); fill.rectTransform.Anchor(0, 0, 0, 1);
+            var hArea = UiKit.Rt(bar.transform, "Griffbereich"); hArea.Anchor(0, 0, 1, 1, 10, 0, 10, 0);
+            var handle = UiKit.Glass(hArea, "Griff", Pal.Ink, 12); handle.rectTransform.sizeDelta = new Vector2(22, 0); handle.rectTransform.anchorMin = new Vector2(0, 0); handle.rectTransform.anchorMax = new Vector2(0, 1);
+            var sl = bar.gameObject.AddComponent<UnityEngine.UI.Slider>(); sl.fillRect = fill.rectTransform; sl.handleRect = handle.rectTransform; sl.targetGraphic = handle; sl.minValue = 0; sl.maxValue = 1; sl.value = get(); bar.raycastTarget = true;
+            sl.onValueChanged.AddListener(v => { set(v); tt.text = title + " · " + Mathf.RoundToInt(v * 100) + " %"; });
         }
         void Bind() { foreach (var b in binders) b(); }
 

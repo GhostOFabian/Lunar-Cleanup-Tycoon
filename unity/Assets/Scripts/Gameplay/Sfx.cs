@@ -44,17 +44,17 @@ namespace LunarCleanup.Gameplay
         void PlayI(string key, float pitch, float vol)
         {
             if (Game.S == null || !Game.S.sound || Game.Offline) return; if (!clips.TryGetValue(key, out var c)) return;
-            one.pitch = pitch; one.PlayOneShot(c, vol);
+            one.pitch = pitch; one.PlayOneShot(c, vol * Game.S.volSfx);
         }
 
         void Update()
         {
             bool snd = Game.S != null && Game.S.sound;
-            float g = snd ? loopGoal : 0; loop.volume = Mathf.MoveTowards(loop.volume, g, Time.unscaledDeltaTime * 1.5f);
+            float g = snd ? loopGoal * Game.S.volSfx : 0; loop.volume = Mathf.MoveTowards(loop.volume, g, Time.unscaledDeltaTime * 1.5f);
             if (loop.volume > .001f && !loop.isPlaying) loop.Play(); else if (loop.volume <= .001f && loop.isPlaying) loop.Pause();
             // Musik: leiser Klangteppich, lauter wenn die Basis arbeitet
             bool mus = snd && Game.S != null && Game.S.music; float mg = 0;
-            if (mus) { var ps = Game.Cur; mg = .05f + .05f * Mathf.Clamp01(ps.ef) * (ps.sv.veh.Count > 0 ? 1 : .4f); }
+            if (mus) { var ps = Game.Cur; mg = (.05f + .05f * Mathf.Clamp01(ps.ef) * (ps.sv.veh.Count > 0 ? 1 : .4f)) * Game.S.volMusic * 1.6f; }
             music.volume = Mathf.MoveTowards(music.volume, mg, Time.unscaledDeltaTime * .1f);
             if (music.volume > .001f && !music.isPlaying) music.Play(); else if (music.volume <= .001f && music.isPlaying) music.Pause();
         }

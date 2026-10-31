@@ -24,7 +24,7 @@ namespace LunarCleanup.Core
                 if (ComboN > 1) { double extra = bonus * FeatureData.COMBO_STEP * (ComboN - 1); Earn(extra); FloatTxt(ps.pd.cells[id].c, "Kombo ×" + ComboN + " · +" + Fmt(extra), "good"); }
             }
             // Wrack-Ereignis: rechtzeitig sauber = Bonus
-            var ev = ps.sv.ev; if (ev != null && ev.key == "wreck" && ev.cell == id && ev.t > 0) { double w = FeatureData.WRECK_BONUS * ps.P.diff + bonus * (FeatureData.WRECK_AMT - 1); Earn(w); if (live) Toast("Wrack geborgen · +" + Fmt(w) + " Cr", "good"); EvEnd(ps, null); }
+            var ev = ps.sv.ev; if (false && ev != null && ev.key == "wreck" && ev.cell == id && ev.t > 0) { double w = FeatureData.WRECK_BONUS * ps.P.diff + bonus * (FeatureData.WRECK_AMT - 1); Earn(w); if (live) Toast("Wrack geborgen · +" + Fmt(w) + " Cr", "good"); EvEnd(ps, null); }
             // Schatzfund
             if (!FeatureData.Finds.TryGetValue(ps.pid, out var album)) return;
             float ch = (GameData.Kinds[ps.pd.cells[id].kind].key == "anomaly" ? FeatureData.FIND_CHANCE_ANOMALY : FeatureData.FIND_CHANCE) * (Sd("find") ? 1.1f : 1);
@@ -49,7 +49,7 @@ namespace LunarCleanup.Core
             if (ev.key != "")
             {
                 ev.t -= dt;
-                if (ev.t <= 0) { string n = EvDef(ev.key)?.name ?? "Ereignis"; if (ev.key == "wreck" && ev.cell >= 0 && !ps.clean[ev.cell]) Toast("Das Wrack ist weggesunken – nächstes Mal schneller!"); EvEnd(ps, ev.key == "wreck" ? null : n + " ist vorbei"); }
+                if (ev.t <= 0) { string n = EvDef(ev.key)?.name ?? "Ereignis"; if ((ev.key == "wreck" || ev.key == "impact") && ps.sv.team.mode != "back") Toast(ev.key == "wreck" ? "Das Wrack ist weggesunken – der Suchtrupp kam zu spät" : "Die Kometentrümmer sind verglüht"); EvEnd(ps, ev.key == "wreck" ? null : n + " ist vorbei"); }
                 return;
             }
             if (S.evNext < 0) S.evNext = Mathf.Lerp(FeatureData.EV_MIN, FeatureData.EV_MAX, (float)fr.NextDouble());
@@ -74,12 +74,18 @@ namespace LunarCleanup.Core
                 if (IsFront(ps, id)) ps.front.Add(id); foreach (int b in pd.cells[id].nb) { ps.dirtyCells.Add(b); if (ps.front.Contains(b) && !IsFront(ps, b)) ps.front.Remove(b); }
                 OnBoom?.Invoke(pd.cells[id].c);
             }
+            else if (E.key == "impact")
+            {
+                var cand = new List<int>(); for (int i = 0; i < pd.N; i++) { var c = pd.cells[i]; if (ps.clean[i] && !c.IsBase && !c.Wet && c.ring >= 3 && c.ring <= 9 && !ps.sv.rigs.Any(x => x.cell == i) && !ps.sv.outposts.Any(o => o.cell == i)) cand.Add(i); }
+                if (cand.Count == 0) { ev.key = ""; return false; }
+                ev.cell = cand[fr.Next(cand.Count)]; OnBoom?.Invoke(pd.cells[ev.cell].c);
+            }
             else if (E.key == "comet")
             {
                 int n = FeatureData.COMET_MIN + fr.Next(FeatureData.COMET_MAX - FeatureData.COMET_MIN + 1);
                 for (int k = 0, tr = 0; k < n && tr < 400; tr++) { int id = fr.Next(pd.N); var cl = pd.cells[id]; if (cl.IsBase || cl.ring < 2 || cl.Wet || !ps.clean[id] || ps.sv.crystals.Any(c => c.cell == id)) continue; float a = (float)fr.NextDouble() * 6.283f, rr = (float)fr.NextDouble() * cl.H * .5f; ps.sv.crystals.Add(new CrystalSave { id = ++ps.sv.crN, cell = id, t = fr.Next(CrystalTypes.Length), x = Mathf.Cos(a) * rr, y = Mathf.Sin(a) * rr, g = 1 }); k++; }
             }
-            if (!Offline && ps.pid == S.planet) Toast(E.name + "! " + E.hint, "good");
+            if (!Offline && ps.pid == S.planet) Toast(E.name + "! " + E.hint, "good"); if (E.key == "wreck" || E.key == "impact") SendTeam(ps);
             return true;
         }
         public static Vector3? EventPlace(PState ps) { var ev = ps.sv.ev; if (ev == null || ev.key == "" || ev.cell < 0) return null; return ps.pd.cells[ev.cell].c; }

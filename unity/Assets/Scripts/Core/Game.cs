@@ -197,7 +197,7 @@ namespace LunarCleanup.Core
         public static int Gs(PState ps) => Math.Max(ps.sv.stage, ps.sv.techF);
         public static float RohCap(PState ps) => Uv("rohcap", ps) * BlF(ps, "roh");
         public static float ProdCap(PState ps) => Uv("prodcap", ps) * BlF(ps, "prod");
-        public static float SellCap(PState ps) => Uv("sellcap", ps) * BlF(ps, "sell");
+        public static float SellCap(PState ps) => Uv("sellcap", ps) * BlF(ps, "sell") * (S != null && S.owned.Contains("cargo2") ? 1.5f : 1);
         public static float HandCap() => Uv("handcap");
         public static float Sum(float[] a) { float s = 0; for (int i = 0; i < a.Length; i++) s += a[i]; return s; }
         public static float RohSum(PState ps) { float s = 0; foreach (int m in GameData.Raw) s += ps.sv.roh[m]; return s; }
@@ -532,8 +532,8 @@ namespace LunarCleanup.Core
                 if (Pick(buf, keys, Mathf.Min(1, P0), P0, false, out m, out a)) return true;
                 float tot = 0; foreach (int x in keys) tot += buf[x]; return tot > 0 && tot < 1 && Pick(buf, keys, 1e-6f, P0, false, out m, out a);
             }
-            if (b.from == "roh" && b.to == "sell") { bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && !RawRoute(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => !RawRoute(ps, x) || over), 1, P0, false, out m, out a); }
-            if (b.from == "prod" && b.to == "sell") { bool overP = ProdSum(ps) >= ProdCap(ps) * .9f; return PB >= 1 && Pick(sv.prod, GameData.Prods.Where(x => !sv.autoOff.Contains(x) || overP), 1, PB, true, out m, out a); }
+            if (b.from == "roh" && b.to == "sell") { bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, out m, out a); /* nur freigegebene Rohstoffe */ }
+            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, GameData.Prods.Where(x => SellOn(ps, x)), 1, PB, true, out m, out a); } /* nur freigegebene Produkte */
             if (b.from == "roh")
             {
                 List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine")) return false;
@@ -650,7 +650,7 @@ namespace LunarCleanup.Core
             if (sv.rk > 0) { sv.rk = Mathf.Max(0, sv.rk - dt); return; }
             float tot = Sum(sv.sellBuf); if (tot <= 1e-6f) { sv.rkGo = false; return; }
             bool jamS = false; foreach (var b in ps.lay.belts) if (b.to == "sell" && ps.jam.TryGetValue(b.id, out bool j) && j) jamS = true; /* passt das nächste Paket nicht mehr hinein, startet sie schon ab 60 % – sonst steht alles */
-            if (tot < SellCap(ps) * .98f && !sv.rkGo && !(jamS && tot >= SellCap(ps) * .6f)) return;
+            if (tot < SellCap(ps) * .98f && !sv.rkGo && !(jamS && tot >= SellCap(ps) * .6f) && !(EarlyLaunch(ps) && tot >= SellCap(ps) * .5f)) return;
             bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } int om0 = sv.order; bool hadOrder = om0 >= 0 && om0 < NM && sv.sellBuf[om0] > 1e-6f; Array.Clear(sv.sellBuf, 0, NM); NewOrder(ps);
             Earn(val); sv.soldP += val; S.stats.sold += val; sv.nRockets++; sv.rk = RocketTime(ps);
             if (!Offline && ps.pid == S.planet) { OnRocket?.Invoke(ps.pid, val); if (man) Toast("Rakete gestartet · +" + Fmt(val) + " Cr" + (hadOrder ? " · Auftrag " + GameData.Mats[om0].name + " erfüllt" : ""), "good"); }
@@ -658,7 +658,7 @@ namespace LunarCleanup.Core
 
         // ================= Fahrzeuge =================
         public static double VehCost(PState ps, string t) { int n = ps.sv.veh.Count(v => v.type == t); return Math.Round(GameData.Veh[t].cost * ps.P.diff * Math.Pow(1.22, n)); }
-        public static int VehSlots(PState ps) => (Gs(ps) >= 2 ? 4 : 0) + (ps.bld.Contains("werkstatt") ? 4 : 0) + (ps.sv.stage >= 4 ? 4 : 0) + (ps.sv.stage >= 5 ? 6 : 0) + (int)Uv("slots", ps) + DoneCount();
+        public static int VehSlots(PState ps) => Math.Min(VehMax(ps), (Gs(ps) >= 2 ? 4 : 0) + (ps.bld.Contains("werkstatt") ? 4 : 0) + (ps.sv.stage >= 4 ? 4 : 0) + (ps.sv.stage >= 5 ? 6 : 0) + (int)Uv("slots", ps) + DoneCount());
         public static string VehWhy(PState ps, string t)
         {
             var T = GameData.Veh[t]; if (Gs(ps) < T.stage) return "Erst Basisstufe " + T.stage;
@@ -785,6 +785,7 @@ namespace LunarCleanup.Core
                         if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
                 case "sweep": SweepStep(ps, v, dt, spd, tank, cap); break;
+                case "boom": BoomStep(ps, v, dt); return;
                 case "drive":
                 case "clean":
                     {
@@ -1236,7 +1237,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "sweep": return v.sweepT > 0 && v.cell >= 0 && ps.pd.Arc(v.d, ps.pd.cells[v.cell].c) < ps.pd.cells[v.cell].H ? "Nachlese: sammelt Reststaub und Kleinteile" : "Fährt zur Nachlese"; case "toCrystal": return "Fährt zu einem Leuchtkristall"; case "mineCr": return "Baut einen Leuchtkristall ab"; case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
+            switch (v.mode) { case "boom": return "Selbstzerstörung in " + Mathf.CeilToInt(v.repT) + " s"; case "sweep": return v.sweepT > 0 && v.cell >= 0 && ps.pd.Arc(v.d, ps.pd.cells[v.cell].c) < ps.pd.cells[v.cell].H ? "Nachlese: sammelt Reststaub und Kleinteile" : "Fährt zur Nachlese"; case "toCrystal": return "Fährt zu einem Leuchtkristall"; case "mineCr": return "Baut einen Leuchtkristall ab"; case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
@@ -1591,12 +1592,12 @@ namespace LunarCleanup.Core
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;
             for (int s = 0; s < sub; s++) { foreach (var b in ps.lay.belts) BeltStep(ps, b, sdt, f); foreach (var m in new[] { "presse", "schmelze", "raff" }) MachStep(ps, m, sdt, f); }
             SellStep(ps, dt); AutoDumpStep(ps); FlowTick(ps, dt);
-            if (!Offline && ps.pid == S.planet) EventStep(ps, dt);
+            if (!Offline && ps.pid == S.planet) EventStep(ps, dt); TeamStep(ps, dt);
             MeteorStep(ps, dt);
             List<int> done = null; foreach (var kv in ps.act) if (kv.Value.sum < kv.Value.cl.nIn * GameData.DONE) (done = done ?? new List<int>()).Add(kv.Key);
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
 
-        public static float OfflineCap => (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
+        public static float OfflineCap => S != null && S.owned.Contains("offline24") ? 86400 : (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
     }
 }

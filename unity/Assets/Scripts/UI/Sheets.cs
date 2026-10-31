@@ -42,50 +42,66 @@ namespace LunarCleanup.UI
         static readonly string[] NotPorted = { };
         static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
 
+        static readonly Color AccVeh = new Color(.43f, .95f, .82f), AccBld = new Color(1f, .75f, .3f), AccDrone = new Color(.5f, .7f, 1f);
         static void Vehicles(Hud h)
         {
-            h.Section("Sammelwagen");
-            var c = ps.sv.cart;
-            if (!c.owned) h.Row("Sammelwagen", () => "Holt deinen vollen Behälter bei dir ab und bringt die Ladung zur Entladestation mit dem meisten Platz.", () => Cr(Game.CartCost(ps)), () => Game.S.credits >= Game.CartCost(ps), () => Game.BuyCart());
-            else h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E");
-            h.Section("Fahrzeuge kaufen · " + ps.sv.veh.Count + "/" + Game.VehSlots(ps) + " Plätze");
-            foreach (var t in GameData.VehOrder)
+            h.Tabs("Kaufen", "Flotte " + ps.sv.veh.Count + "/" + Game.VehSlots(ps), "Upgrades");
+            int tab = h.Tab;
+            if (tab == 0)
             {
-                var T = GameData.Veh[t]; if (!string.IsNullOrEmpty(T.planet) && T.planet != ps.pid && !(T.home ?? new string[0]).Contains(ps.pid) && !Game.P.ContainsKey(T.planet)) continue;
-                string key = t;
-                h.Row(T.name, () => { string w = Game.VehWhy(ps, key); return (w != "" ? w + " · " : "") + T.desc + " Tank " + Game.Fmt(T.tank) + " E."; },
-                    () => Cr(Game.VehCost(ps, key)), () => Game.VehWhy(ps, key) == "" && Game.S.credits >= Game.VehCost(ps, key), () => Game.BuyVehicle(key));
+                var c = ps.sv.cart;
+                if (!c.owned) h.Card("Sammelwagen", () => "Kommt zu dir, wenn dein Behälter voll ist, und bringt die Ladung zur Entladestation. Danach leerst du den Behälter nur noch in den Wagen.", AccVeh, () => Cr(Game.CartCost(ps)), () => Game.S.credits >= Game.CartCost(ps), () => Game.BuyCart());
+                h.Section("Fahrzeuge · " + ps.sv.veh.Count + " von " + Game.VehSlots(ps) + " Plätzen (höchstens " + Game.VehMax(ps) + ")");
+                foreach (var t in GameData.VehOrder)
+                {
+                    var T = GameData.Veh[t]; if (!string.IsNullOrEmpty(T.planet) && T.planet != ps.pid && !(T.home ?? new string[0]).Contains(ps.pid) && !Game.P.ContainsKey(T.planet)) continue;
+                    string key = t; int have = ps.sv.veh.Count(v => v.type == key);
+                    h.Card(T.name, () => { string w = Game.VehWhy(ps, key); return (w != "" ? w + " · " : "") + T.desc + " Tank " + Game.Fmt(T.tank) + " E."; }, AccVeh,
+                        () => Cr(Game.VehCost(ps, key)), () => Game.VehWhy(ps, key) == "" && Game.S.credits >= Game.VehCost(ps, key), () => Game.BuyVehicle(key), have > 0 ? have + "× im Einsatz" : null);
+                }
+                return;
             }
-            if (ps.sv.veh.Count > 0)
+            if (tab == 1)
             {
-                h.Section("Im Einsatz");
+                var c = ps.sv.cart;
+                if (c.owned) h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E");
+                if (ps.sv.veh.Count == 0) { h.Note("Noch keine Fahrzeuge. Unter „Kaufen“ findest du alle, die hier fahren können."); return; }
+                h.Note("Zu viele kleine Fahrzeuge? Mit der Selbstzerstörung machst du Platz für größere – 30 % des Kaufpreises kommen zurück.");
                 foreach (var v in ps.sv.veh)
                 {
                     var vv = v;
-                    h.Row(GameData.Veh[v.type].name + " #" + v.id, () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + (GameData.Veh[vv.type].batt > 0 ? " · Akku " + Mathf.RoundToInt((vv.bat < 0 ? 1 : vv.bat / Game.BattCap(ps, vv)) * 100) + " %" : "")
-                        + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " % · Reparaturen übrig " + Game.RepsLeft(vv) : ""),
+                    h.Row(Game.VehName(v), () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + " · Stufe " + Game.VehLvl(vv) + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " %" : ""),
                         () => Game.Gs(ps) < 3 || !ps.sv.veh.Contains(vv) ? "–" : vv.mode == "toShop" || vv.mode == "repair" ? "In Werkstatt" : Game.RepsLeft(vv) <= 0 ? "Ersetzen " + Cr(Game.ReplaceCost(ps, vv)) : "Warten " + Cr(Game.RepCost(ps, vv)),
-                        () => Game.Gs(ps) >= 3 && ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
+                        () => Game.Gs(ps) >= 3 && ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && vv.mode != "boom" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
                         () => { if (Game.RepsLeft(vv) <= 0) Game.ReplaceVeh(ps, vv, false); else if (Game.SendToShop(ps, vv, false)) Game.Toast("Fährt zur Werkstatt", "good"); }, false);
+                    h.Row("   Spezialisierung / Selbstzerstörung", () => Game.VehLvl(vv) >= 2 ? "Spezialisierung: " + FeatureData.VehSpecName[vv.spec] : "Spezialisierung ab Stufe 2",
+                        () => vv.mode == "boom" ? "Läuft …" : "Sprengen +" + Cr(Game.BoomRefund(ps, vv)), () => ps.sv.veh.Contains(vv) && vv.mode != "boom", () => Game.SelfDestruct(vv), false);
+                    if (Game.VehLvl(vv) >= 2) h.Row("   Spezialisierung wechseln", () => "", () => "Wechseln", () => true, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
                 }
-                h.Section("Erfahrung und Spezialisierung");
-                foreach (var v in ps.sv.veh)
-                {
-                    var vv = v;
-                    h.Row(Game.VehName(v), () => { int l = Game.VehLvl(vv); string nx = l < FeatureData.VehXp.Length ? " · nächste Stufe bei " + Game.Fmt(FeatureData.VehXp[l]) + " m²" : " · höchste Stufe"; return "Stufe " + l + " (+" + Mathf.RoundToInt(FeatureData.VEH_LVL_BONUS * l * 100) + " % Tempo und Saugkraft) · " + Game.Fmt(vv.xp) + " m² gereinigt" + nx + " · " + FeatureData.VehSpecName[vv.spec]; },
-                        () => Game.VehLvl(vv) < 2 ? "ab Stufe 2" : "Wechseln", () => Game.VehLvl(vv) >= 2, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
-                }
-                if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt. Ohne Wartung droht ein Totalschaden.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
+                if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
+                return;
             }
-            h.Section("Upgrades für Fahrzeuge");
-            foreach (var u in GameData.Upg.Where(x => x.cat == "Fahrzeuge" && UpVisible(x))) UpRow(h, u.id);
+            foreach (var u in GameData.Upg.Where(x => (x.cat == "Fahrzeuge" || x.cat == "Drohnen") && UpVisible(x))) UpRow(h, u.id);
         }
 
         static void Production(Hud h)
         {
+            h.Tabs("Ampel", "Verkauf", "Plan", "Upgrades");
+            int tab = h.Tab;
+            if (tab == 0) { ProductionOverview(h); return; }
+            if (tab == 1) { Selling(h); return; }
+            if (tab == 2) { if (!ps.bld.Contains("presse")) h.Note("Baue die Staubpresse (Basisstufe 2), um mit der Veredelung zu beginnen."); Plan(h); return; }
+            foreach (var cat in new[] { "Entladestationen", "Förderbänder", "Maschinen", "Lager", "Verkauf", "Außenlager" })
+            {
+                var list = GameData.Upg.Where(u => u.cat == cat && UpVisible(u)).ToList(); if (list.Count == 0) continue;
+                h.Section(cat); foreach (var u in list) UpRow(h, u.id);
+            }
+        }
+        static void ProductionOverview(Hud h)
+        {
             Ampel(h);
             h.Section("Kette");
-            h.Note("Fahrzeuge → Entladestation → Band → Rohstofflager → Band → " + GameData.MachName(ps.pid, "presse") + " → " + GameData.MachName(ps.pid, "schmelze") + " → Produktlager → Rakete");
+            h.Note("Fahrzeuge → Entladeanlage → Band → Rohstofflager → Band → " + GameData.MachName(ps.pid, "presse") + " → " + GameData.MachName(ps.pid, "schmelze") + " → Produktlager → Rakete");
             h.Section("Lager");
             h.Row(GameData.Bld["roh"].name, () => Game.Fmt(Game.RohSum(ps)) + " / " + Game.Fmt(Game.RohCap(ps)) + " E · " + Mats(ps.sv.roh));
             if (ps.bld.Contains("prod")) h.Row(GameData.Bld["prod"].name, () => Game.Fmt(Game.ProdSum(ps)) + " / " + Game.Fmt(Game.ProdCap(ps)) + " · " + Mats(ps.sv.prod));
@@ -99,31 +115,29 @@ namespace LunarCleanup.UI
                         h.Row(GameData.MachName(ps.pid, m), () => Game.MachStatus(ps, mm) + " · hergestellt " + ps.mach[mm].made + " · " + string.Join(", ", rec.Select(r => r.n + " " + GameData.Mats[r.inp].name + " → " + GameData.Mats[r.outp].name)));
                     }
             }
-            Plan(h);
+        }
+        /// <summary>Verkauf: nur freigegebene Waren gehen in den Frachtraum der Rakete – verkauft wird erst beim Start.</summary>
+        static void Selling(Hud h)
+        {
             h.Section("Rakete");
             h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst, wenn sie voll ist",
                 () => "Starten", () => ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0, () => Game.LaunchRocket(), false);
-            if (Game.Gs(ps) < 2) h.Note("Ab Basisstufe 2 verbinden Förderbänder die Lager mit der Rakete – dann verkauft sie automatisch.");
-            else if (ps.bld.Contains("sell"))
+            if (ps.bld.Contains("sell"))
             {
                 h.Row("Frachtauftrag", () => { if (ps.sv.order < 0) Game.NewOrder(ps); return ps.sv.order >= 0 ? GameData.Mats[ps.sv.order].name + " bringt +60 % – jede Rakete hat einen neuen Auftrag" : "–"; });
-                h.Row("Mischfracht und Betriebsbonus", () => { int k = Enumerable.Range(0, ps.sv.sellBuf.Length).Count(m => ps.sv.sellBuf[m] > 1e-6f); return k + " Warensorten · +" + Mathf.RoundToInt((Mathf.Min(1.4f, 1 + .08f * Mathf.Max(0, k - 1)) - 1) * 100) + " % · Betriebsbonus +" + Mathf.RoundToInt((float)(Game.FlowBonus(ps) - 1) * 100) + " % (" + (ps.sv.flowLv == 2 ? "sinkt – Engpass beheben" : ps.sv.flowLv == 1 ? "hält – gelbe Ampel" : "steigt, solange die Ampel grün ist") + ")"; });
-                h.Row("Frachtauftrag automatisch bedienen", () => "Ist der Auftrag eine Rohware ohne Maschine hier, schickt das Band sie bevorzugt zur Rakete.", () => ps.sv.autoOrder ? "An" : "Aus", () => true, () => ps.sv.autoOrder = !ps.sv.autoOrder, false);
-                if (Game.Gs(ps) >= 3) h.Row("Verkaufsautomat", () => "Sobald ein Lager zu 90 % voll ist, wird sein Inhalt komplett verkauft – auch offline.", () => ps.sv.autoDump ? "An" : "Aus", () => true, () => Game.ToggleAutoDump(), false);
-                else h.Note("Ab Basisstufe 3: Verkaufsautomat – volle Lager werden automatisch verkauft.");
+                h.Row("Mischfracht und Betriebsbonus", () => { int k = Enumerable.Range(0, ps.sv.sellBuf.Length).Count(m => ps.sv.sellBuf[m] > 1e-6f); return k + " Warensorten · +" + Mathf.RoundToInt((Mathf.Min(1.4f, 1 + .08f * Mathf.Max(0, k - 1)) - 1) * 100) + " % · Betriebsbonus +" + Mathf.RoundToInt((float)(Game.FlowBonus(ps) - 1) * 100) + " %"; });
+                if (Game.Gs(ps) >= 2) h.Row("Frachtauftrag bevorzugen", () => "Ist der Auftrag eine freigegebene Rohware, schickt das Band sie zuerst.", () => ps.sv.autoOrder ? "An" : "Aus", () => true, () => ps.sv.autoOrder = !ps.sv.autoOrder, false);
+                if (Game.Gs(ps) >= 3) h.Row("Verkaufsautomat", () => "Sind die Lager zu 90 % voll, startet die Rakete schon halb beladen.", () => ps.sv.autoDump ? "An" : "Aus", () => true, () => Game.ToggleAutoDump(), false);
             }
             h.Section("Waren");
-            h.Row("Alles verkaufen", () => "Wert: " + Cr(Enumerable.Range(0, GameData.Mats.Count).Sum(m => (GameData.Mats[m].raw ? ps.sv.roh[m] : Mathf.Floor(ps.sv.prod[m] + 1e-6f)) * Game.MatValue(m, ps))), () => "Verkaufen",
-                () => Game.RohSum(ps) >= .5f || Game.ProdSum(ps) >= 1, () => Game.SellAll(), false);
+            h.Note(Game.Gs(ps) < 2 ? "Gib eine Ware frei und lade sie in den Frachtraum. Verkauft wird beim Raketenstart. Ab Basisstufe 2 fahren freigegebene Waren übers Band von selbst hin." : "Nur freigegebene Waren fahren übers Band in den Frachtraum. Gesperrte bleiben im Lager – zum Beispiel, weil eine Maschine sie noch veredeln soll.");
             for (int i = 0; i < GameData.Mats.Count; i++)
             {
-                int m = i; var M = GameData.Mats[m]; var st = M.raw ? ps.sv.roh : ps.sv.prod; if (st[m] < (M.raw ? .5f : 1)) continue;
-                h.Row(M.name, () => Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr", () => "Verkaufen",
-                    () => (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.SellMat(m), false);
-                if (!M.raw && Game.Gs(ps) >= 2 && ps.bld.Contains("sell")) h.Row("  " + M.name + " aufs Verkaufsband", () => Game.AutoOn(ps, m) ? "Fährt automatisch zur Rakete" : "Bleibt im Produktlager (ab 90 % Füllung geht der Überschuss trotzdem mit)", () => Game.AutoOn(ps, m) ? "Band an" : "Band aus", () => true, () => Game.ToggleAuto(m), false);
+                int m = i; var M = GameData.Mats[m]; var st = M.raw ? ps.sv.roh : ps.sv.prod; if (st[m] < (M.raw ? .5f : 1) && !Game.PlanetRaws(ps).Contains(m)) continue;
+                h.Row(M.name, () => Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr · " + (Game.SellOn(ps, m) ? "freigegeben" : "gesperrt"),
+                    () => Game.SellOn(ps, m) ? "Sperren" : "Freigeben", () => true, () => Game.ToggleAuto(m), false);
+                if (Game.Gs(ps) < 2) h.Row("   In den Frachtraum laden", () => "", () => "Laden", () => Game.SellOn(ps, m) && ps.sv.rk <= 0 && (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.LoadRocket(m), false);
             }
-            h.Section("Upgrades");
-            foreach (var u in GameData.Upg.Where(x => (x.cat == "Förderbänder" || x.cat == "Maschinen" || x.cat == "Entladestationen" || x.cat == "Verkauf" || x.cat == "Lager") && UpVisible(x))) UpRow(h, u.id);
         }
         // Produktions-Ampel: Engpässe mit Ursache und den passenden Upgrades
         static void Ampel(Hud h)
@@ -161,16 +175,34 @@ namespace LunarCleanup.UI
 
         static void Base(Hud h)
         {
-            var st = GameData.Stages; int s = ps.sv.stage;
-            h.Section("Basisstufe " + s + " · " + st[s - 1].name);
-            if (s < st.Count) { var nx = st[s]; h.Row("Stufe " + nx.n + ": " + nx.name, () => nx.txt, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage()); }
-            else h.Note("Höchste Basisstufe erreicht.");
-            h.Section("Gebäude");
-            foreach (var id in GameData.BOrder)
+            h.Tabs("Bauen", "Ausbau", "Upgrades");
+            int tab = h.Tab; var st = GameData.Stages; int s = ps.sv.stage;
+            if (tab == 0)
             {
-                var B = GameData.Bld[id]; if (ps.bld.Contains(id) || B.stage > s + 1) continue; string key = id;
-                h.Row(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key));
+                h.Section("Basisstufe " + s + " · " + st[s - 1].name);
+                if (s < st.Count) { var nx = st[s]; h.Card("Stufe " + nx.n + ": " + nx.name, () => nx.txt, AccBld, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage(), "Basis ausbauen"); }
+                else h.Note("Höchste Basisstufe erreicht.");
+                h.Section("Gebäude");
+                int n = 0;
+                foreach (var id in GameData.BOrder)
+                {
+                    var B = GameData.Bld[id]; if (ps.bld.Contains(id) || B.stage > s + 1) continue; string key = id; n++;
+                    h.Card(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, AccBld, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key));
+                }
+                if (n == 0) h.Note("Alles gebaut, was diese Basisstufe erlaubt.");
+                return;
             }
+            if (tab == 1)
+            {
+                BaseMore(h);
+                h.Section("Steht schon");
+                h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
+                return;
+            }
+            foreach (var u in GameData.Upg.Where(x => (x.cat == "Basis" || x.cat == "Tiefenabbau" || x.cat == "Strahlenschutz") && UpVisible(x))) UpRow(h, u.id);
+        }
+        static void BaseMore(Hud h)
+        {
             if (Game.IsDone(ps.pid))
             {
                 h.Section("Tiefenabbau");
@@ -180,16 +212,15 @@ namespace LunarCleanup.UI
                 foreach (var r in ps.sv.rigs) { var rr = r; h.Row((r.bag ? "Erzbagger" : "Bohrturm Stufe " + r.lv) + " · " + GameData.Mats[Game.RigMat(ps, r.cell)].name, () => Game.RigStatus(ps, rr), () => "Öffnen", () => true, () => h.OpenSheet("rig", rr.cell.ToString()), false); }
             }
             if (Game.HasLab()) h.Row("Forschung", () => Game.ResActive != null ? "Läuft: " + Game.ResActive.name + " · " + Mathf.FloorToInt(Game.S.resT / Game.ResActive.time * 100) + " %" : "Kein Projekt aktiv", () => "Öffnen", () => true, () => h.OpenSheet("research"), false);
-            h.Section("Steht schon");
-            h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
-            h.Section("Upgrades");
-            foreach (var u in GameData.Upg.Where(x => x.cat == "Basis" && UpVisible(x))) UpRow(h, u.id);
         }
 
         static void Upgrades(Hud h)
         {
-            h.Note("Handgerät, Drohnen und Wirtschaft gelten überall. Fahrzeug- und Anlagen-Upgrades und die Technikstufe baust du auf jedem Planeten neu auf – sie kosten dort auch mehr.");
-            foreach (var cat in GameData.Upg.Select(u => u.cat).Distinct())
+            h.Tabs("Hand", "Fahrzeuge", "Anlagen", "Wirtschaft");
+            string[][] groups = { new[] { "Handgerät", "Basis" }, new[] { "Fahrzeuge", "Drohnen" }, new[] { "Entladestationen", "Förderbänder", "Maschinen", "Lager", "Außenlager" }, new[] { "Wirtschaft", "Verkauf", "Tiefenabbau", "Strahlenschutz" } };
+            int tab = Mathf.Clamp(h.Tab, 0, groups.Length - 1);
+            if (tab == 0) h.Note("Handgerät und Wirtschaft gelten überall. Fahrzeug- und Anlagen-Upgrades baust du auf jedem Planeten neu auf.");
+            foreach (var cat in groups[tab])
             {
                 var list = GameData.Upg.Where(u => u.cat == cat && UpVisible(u)).ToList(); if (list.Count == 0) continue;
                 h.Section(cat); foreach (var u in list) UpRow(h, u.id);
@@ -381,6 +412,8 @@ namespace LunarCleanup.UI
             h.Section("Ton");
             h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
             h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);
+            h.Slider("Lautstärke Geräusche", () => Game.S.volSfx, v => Game.S.volSfx = v);
+            h.Slider("Lautstärke Musik", () => Game.S.volMusic, v => Game.S.volMusic = v);
             h.Section("Spielstand");
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
@@ -431,13 +464,13 @@ namespace LunarCleanup.UI
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
             BuildingUpgrades(h, id); BuildingLevel(h, id);
-            if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { Production(h); return; }
+            if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { ProductionOverview(h); if (id == "sell" || id == "roh" || id == "prod") Selling(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }
             if (id == "research") { Research(h); return; }
             if (id == "hangar") { Hangar(h); return; }
             if (id == "lifter") { Lifter(h); return; }
-            if (id == "hq") { Base(h); return; }
-            if (id == "werkstatt") { Vehicles(h); return; }
+            if (id == "hq") { BaseMore(h); return; }
+            if (id == "werkstatt") { h.Note("Fahrzeuge und Wartung findest du unten unter „Fahrzeuge“."); return; }
         }
     }
 }
