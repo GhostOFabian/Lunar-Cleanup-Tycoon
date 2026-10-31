@@ -132,3 +132,8 @@
 - Planeten bis 17.642 Parzellen; alte Spielstände behalten ihre Größe.
 - Boden wieder hell (DetailTex in ShaderKeep).
 - Ungetestet im Browser durch den Spieler: alle neuen Funktionen, große Planeten (Leistung), großer Basis-Check.
+
+## Unity 0.14 (31.10.2026, noch nicht als Browser-Build online)
+- Boden: Reliefkarte (Normal Map) mit kleinen Kratern und Steinchen, Kraterböden dunkler/Ränder heller, dezente Fugen statt blauer/oranger Linien, ruhigere Basisplatten, feinere Detailkörnung, mehr Textur-Rand gegen Farbbluten.
+- Waren: Fässer rund, Kristalle als Kugel. Im Editor liegen die Waren auf dem Band, die Stützen enden unter dem Rahmen (Fotos mit F4 im Testmodus → BasisCheck/band_*.png).
+- Offen: Stelle mit Stützen im Band / schwebenden Waren aus Fabians Screenshot (Planet unbekannt), Build v=5 (PC ging während des Builds aus).
