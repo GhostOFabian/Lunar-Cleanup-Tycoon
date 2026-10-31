@@ -91,6 +91,18 @@ MATS = {
     "kiste1":  ("#d9a441", 0.10, 0.70, None, 0),
     "kiste2":  ("#5b8fd9", 0.30, 0.50, None, 0),
     "kiste3":  ("#9ad1c4", 0.20, 0.30, None, 0),
+    "fels":    ("#8a8378", 0.00, 0.90, None, 0),
+    "felsdkl": ("#4d4943", 0.00, 0.90, None, 0),
+    "rost":    ("#8a4a2a", 0.40, 0.80, None, 0),
+    "schleim": ("#7fbf3a", 0.00, 0.20, "#7fbf3a", 0.4),
+    "schwefel": ("#e8d040", 0.00, 0.70, None, 0),
+    "lavastein": ("#2a2422", 0.00, 0.85, None, 0),
+    "russ":    ("#15130f", 0.00, 0.95, None, 0),
+    "kaltlicht": ("#eaf4ff", 0.00, 0.30, "#eaf4ff", 8.0),
+    "kristall": ("#b98cff", 0.10, 0.10, "#b98cff", 2.5),
+    "visier":  ("#ffb347", 0.90, 0.10, None, 0),
+    "kometeis": ("#dfefff", 0.05, 0.25, "#9fdcff", 0.25),
+    "band":    ("#23272e", 0.10, 0.75, None, 0),
 }
 
 # Grundkreis-Radien aus gamedata.json (bld.fp)
@@ -296,6 +308,58 @@ class Mesh:
             for p in pts[1:-1]:
                 self.sphere(mat, (p[0], p[1], p[2]), r * 1.08, seg, 4)
         return self
+
+    def sweep(self, mat, path, prof):
+        """Profil (u = seitlich, v = nach oben) entlang eines Pfades (3D-Punkte). Seite = Tangente × Z."""
+        n = len(path)
+        frames = []
+        for i in range(n):
+            a, b = path[max(0, i - 1)], path[min(n - 1, i + 1)]
+            t = _norm(_sub(b, a))
+            sd = _norm(_cross(t, (0, 0, 1)))
+            up = _cross(sd, t)
+            frames.append((sd, up))
+        m = len(prof)
+        v, f = [], []
+        for i, p in enumerate(path):
+            sd, up = frames[i]
+            for (u, w) in prof:
+                v.append(_add(p, _add(_mul(sd, u), _mul(up, w))))
+        for i in range(n - 1):
+            for k in range(m):
+                k1 = (k + 1) % m
+                f.append((i * m + k, i * m + k1, (i + 1) * m + k1, (i + 1) * m + k))
+        f.append(tuple(range(m - 1, -1, -1)))
+        f.append(tuple((n - 1) * m + k for k in range(m)))
+        # Wicklung prüfen: Volumen muss positiv sein
+        vol = 0.0
+        for fc in f:
+            p0 = v[fc[0]]
+            for j in range(1, len(fc) - 1):
+                vol += _dot(p0, _cross(v[fc[j]], v[fc[j + 1]]))
+        if vol < 0:
+            f = [tuple(reversed(fc)) for fc in f]
+        return self.add(v, f, mat)
+
+    def blob(self, mat, pos, r, seed, scale=(1, 1, 0.7), rough=0.3, seg=10, rings=6, rot=None, facet=0.12):
+        """Unregelmäßiger Brocken (Fels, Eis, Komet): Kugel, deren Oberfläche mit weichem Rauschen
+        (Summe von Wellen in zufälliger Richtung) ein- und ausgebeult wird – keine Stacheln."""
+        import random
+        rnd = random.Random(seed)
+        waves = []
+        for i in range(5):
+            d = _norm((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 1)))
+            waves.append((d, 1.5 + i * 1.3, rnd.random() * 6.283, 1.0 / (1 + i * 0.8)))
+        tot = sum(w[3] for w in waves)
+        tmp = Mesh("tmp")
+        tmp.sphere(mat, (0, 0, 0), 1.0, seg, rings)
+        v = []
+        for p in tmp.v:
+            n = _norm(p)
+            h = sum(a * math.sin(_dot(n, d) * f + ph) for d, f, ph, a in waves) / tot
+            k = r * (1.0 + rough * h + facet * (rnd.random() - 0.5))  # weiche Form + kantige Facetten
+            v.append((n[0] * k * scale[0], n[1] * k * scale[1], n[2] * k * scale[2]))
+        return self.add(v, tmp.f, mat, pos, rot)
 
 
 class Model:
@@ -1487,6 +1551,675 @@ def d_drone(heavy=False):
     return m
 
 
+# ============================== Förderbänder ================================
+# Maße wie im Spiel (WorldView.cs): halbe Bandbreite 0,42 m, Lauffläche 0,55 m
+# über dem Boden, goldene Banden, dunkler Rahmen darunter. Bänder laufen
+# entlang +Y, beginnen bei y = 0 und liegen mittig auf x = 0.
+BW, DECK = 0.42, 0.55
+
+
+def _arc(R, deg, right=True, n=None, z=DECK):
+    n = n or max(4, int(abs(deg) / 7.5))
+    pts = []
+    for i in range(n + 1):
+        a = math.radians(deg) * i / n
+        x = R - R * math.cos(a)
+        pts.append(((x if right else -x), R * math.sin(a), z))
+    return pts
+
+
+def _line(L, z=DECK, n=None):
+    n = n or max(1, int(L / 0.5))
+    return [(0.0, L * i / n, z) for i in range(n + 1)]
+
+
+def belt_on_path(M, path, cleats=True, left=True, right=True):
+    """Lauffläche, Banden, Rahmen und Mitnehmer entlang eines Pfades (Pfad = Oberkante Lauffläche)."""
+    M.sweep("band", path, [(-BW, -0.04), (BW, -0.04), (BW, 0.0), (-BW, 0.0)])
+    if left:
+        M.sweep("akzent", path, [(-BW - 0.09, -0.06), (-BW, -0.06), (-BW, 0.2), (-BW - 0.09, 0.2)])
+    if right:
+        M.sweep("akzent", path, [(BW, -0.06), (BW + 0.09, -0.06), (BW + 0.09, 0.2), (BW, 0.2)])
+    M.sweep("dunkel", path, [(-BW - 0.06, -0.32), (BW + 0.06, -0.32), (BW + 0.06, -0.05), (-BW - 0.06, -0.05)])
+    if cleats:  # Mitnehmer-Pfeile (laufen im Spiel als Textur mit)
+        L = sum(_len(_sub(b, a)) for a, b in zip(path, path[1:]))
+        acc, j, nxt = 0.0, 0, 0.25
+        for a, b in zip(path, path[1:]):
+            seg = _len(_sub(b, a))
+            while nxt <= acc + seg and nxt < L - 0.1:
+                t = (nxt - acc) / seg
+                p = _add(a, _mul(_sub(b, a), t))
+                tg = _norm(_sub(b, a))
+                yaw = math.degrees(math.atan2(-tg[0], tg[1]))
+                pitch = math.degrees(math.asin(max(-1, min(1, tg[2]))))
+                R = _mm(_rot(0, 0, yaw), _rot(pitch, 0, 0))
+                for sx in (-1, 1):
+                    q = _add(p, _mv(R, (sx * 0.17, 0, 0.012)))
+                    M.box("platte", q, (0.36, 0.06, 0.025), R=_mm(R, _rot(0, 0, sx * 35)))
+                nxt += 0.5
+            acc += seg
+
+
+def support(M, p, top, yaw=0.0):
+    """Bandstütze: zwei Pfosten bis unter den Rahmen, Querträger, Fußplatten."""
+    R = _rot(0, 0, yaw)
+    for sx in (-1, 1):
+        q = _add(p, _mv(R, (sx * (BW - 0.1), 0, 0)))
+        M.cyl("dunkel", q, 0.07, top, 8, r2=0.06)
+        M.cyl("stahl", q, 0.16, 0.06, 10, r2=0.14)
+        for k in range(4):
+            a = math.radians(45 + 90 * k)
+            M.cyl("dunkel", (q[0] + 0.11 * math.cos(a), q[1] + 0.11 * math.sin(a), q[2] + 0.06), 0.02, 0.025, 6)
+    M.box("stahl", _add(p, (0, 0, top * 0.45)), ((BW - 0.1) * 2 + 0.12, 0.1, 0.08), R=R)
+    M.box("dunkel", _add(p, (0, 0, top - 0.02)), ((BW - 0.1) * 2 + 0.2, 0.18, 0.06), R=R)
+
+
+def bm(key, name):
+    return Model(key, name, "Foerderband")
+
+
+def f_gerade(L):
+    m = bm("band_gerade_%dm" % L, "Förderband gerade %d m" % L)
+    belt_on_path(m.body, _line(L))
+    return m
+
+
+def f_kurve(deg, R):
+    m = bm("band_kurve_%d_r%s" % (deg, str(R).replace(".", "_")), "Förderband Kurve %d° (Radius %s m)" % (deg, str(R).replace(".", ",")))
+    belt_on_path(m.body, _arc(R, deg, True))
+    return m
+
+
+def f_rampe(rise=1.0, L=3.0):
+    m = bm("band_rampe", "Förderband Rampe (+%s m auf %s m)" % (str(rise).replace(".", ","), str(L).replace(".", ",")))
+    n = 12
+    path = [(0.0, L * i / n, DECK + rise * (3 * (i / n) ** 2 - 2 * (i / n) ** 3)) for i in range(n + 1)]
+    belt_on_path(m.body, path)
+    support(m.body, (0, L * 0.55, 0), DECK + rise * 0.6 - 0.32)
+    return m
+
+
+def f_bruecke(L=4.0, lift=1.0):
+    m = bm("band_bruecke", "Förderband Brücke (%s m hoch)" % str(lift).replace(".", ","))
+    belt_on_path(m.body, _line(L, DECK + lift))
+    for y in (0.4, L - 0.4):
+        support(m.body, (0, y, 0), DECK + lift - 0.32)
+        m.body.tube("stahl", (-(BW - 0.1), y, 0.3), (-(BW - 0.1), y + (0.8 if y < 1 else -0.8), DECK + lift - 0.4), 0.03, 6)
+        m.body.tube("stahl", ((BW - 0.1), y, 0.3), ((BW - 0.1), y + (0.8 if y < 1 else -0.8), DECK + lift - 0.4), 0.03, 6)
+    return m
+
+
+def f_ende():
+    m = bm("band_ende", "Förderband Ende (Umlenkrolle)")
+    M = m.body
+    belt_on_path(M, _line(0.8), cleats=False)
+    M.cyl("stahl", (-BW - 0.02, 0.8, DECK - 0.14), 0.16, BW * 2 + 0.04, 16, rot=(0, 90, 0))
+    for sx in (-1, 1):
+        M.box("dunkel", (sx * (BW + 0.1), 0.75, DECK - 0.14), (0.06, 0.4, 0.3))
+        M.cyl("akzent", (sx * (BW + 0.13), 0.8, DECK - 0.14), 0.07, 0.03, 10, rot=(0, 90 * sx, 0))
+    return m
+
+
+def f_weiche():
+    m = bm("band_weiche_y", "Förderband Y-Weiche")
+    M = m.body
+    belt_on_path(M, _line(3.0, n=6), left=False)
+    for a, b in ((0.0, 1.2), (2.75, 3.0)):  # linke Bande mit Lücke für den Zulauf
+        M.sweep("akzent", [(0.0, a, DECK), (0.0, b, DECK)], [(-BW - 0.09, -0.06), (-BW, -0.06), (-BW, 0.2), (-BW - 0.09, 0.2)])
+    P0, P1, P2, P3 = (-1.9, 0.0), (-1.9, 1.0), (-0.9, 1.5), (-0.45, 2.1)
+    pts = []
+    for i in range(13):
+        t = i / 12
+        x = (1 - t) ** 3 * P0[0] + 3 * (1 - t) ** 2 * t * P1[0] + 3 * (1 - t) * t * t * P2[0] + t ** 3 * P3[0]
+        y = (1 - t) ** 3 * P0[1] + 3 * (1 - t) ** 2 * t * P1[1] + 3 * (1 - t) * t * t * P2[1] + t ** 3 * P3[1]
+        pts.append((x, y, DECK + 0.005))
+    belt_on_path(M, pts)
+    M.box("dunkel", (-BW - 0.05, 1.95, DECK - 0.03), (0.16, 1.5, 0.05))  # Übergangsblech
+    return m
+
+
+def f_stuetze(lift=0.0):
+    key = "band_stuetze" if lift == 0 else "band_stuetze_hoch"
+    m = bm(key, "Bandstütze" + ("" if lift == 0 else " hoch (+%s m)" % str(lift).replace(".", ",")))
+    support(m.body, (0, 0, 0), DECK + lift - 0.32)
+    return m
+
+
+def f_anschluss(out):
+    """Wandanschluss am Gebäude: Rahmen mit dunkler Öffnung. Wand liegt bei y = +0,1, das Band kommt von −Y."""
+    m = bm("anschluss_" + ("ausgang" if out else "eingang"), "Gebäude-" + ("Ausgang" if out else "Eingang") + " (Bandanschluss)")
+    M = m.body
+    H = DECK
+    w = BW * 2 + 0.5
+    M.box("stahl", (0, 0.05, H + 0.5), (w, 0.7, 0.16))
+    M.box("stahl", (0, 0.05, H - 0.36), (w, 0.7, 0.12))
+    for sx in (-1, 1):
+        M.box("stahl", (sx * (w / 2 - 0.08), 0.05, H + 0.07), (0.16, 0.7, 0.98))
+    M.box("russ", (0, 0.14, H + 0.1), (w - 0.3, 0.32, 0.74))
+    M.box("akzent", (0, -0.28, H + 0.6), (w, 0.06, 0.05))
+    for i in range(4):
+        M.box("dunkel", (-w / 2 + 0.3 + i * (w - 0.6) / 3, -0.22, H + 0.3), (0.08, 0.02, 0.4))
+    # Pfeil auf dem Sturz: Eingang zeigt hinein (+Y), Ausgang heraus (−Y)
+    d = -1 if out else 1
+    arrow = [(-0.12, -0.1 * d), (0.12, -0.1 * d), (0.12, 0.02 * d), (0.22, 0.02 * d), (0.0, 0.2 * d), (-0.22, 0.02 * d), (-0.12, 0.02 * d)]
+    M.extrude("akzent" if out else "mint", (0, -0.05, H + 0.58), arrow, 0.015, "XY")
+    M.sphere("glut" if out else "mint", (w / 2 - 0.08, -0.29, H + 0.55), 0.05, 8, 4)
+    belt_on_path(M, [(0.0, -0.9, DECK), (0.0, -0.45, DECK), (0.0, 0.1, DECK)])
+    return m
+
+
+def f_uebergabe():
+    m = bm("uebergabe_saeule", "Übergabesäule (Band ohne Wand)")
+    M = m.body
+    H = DECK
+    w = BW * 2 + 0.5
+    M.box("stahl", (0, 0.25, (H + 0.35) / 2), (w, 0.7, H + 0.35))
+    M.box("russ", (0, -0.11, H + 0.1), (w - 0.3, 0.04, 0.5))
+    M.box("akzent", (0, 0.25, H + 0.38), (w + 0.04, 0.74, 0.06))
+    vents(M, (0, -0.11, 0.3), w - 0.4, 0.3, 3)
+    belt_on_path(M, [(0.0, -0.9, DECK), (0.0, -0.1, DECK)])
+    return m
+
+
+def f_zulauf(L=2.0):
+    m = bm("zulauf_tunnel", "Zulauf-Tunnel (Band unter Haube)")
+    M = m.body
+    path = _line(L)
+    belt_on_path(M, path)
+    hood = [(-BW - 0.25, -0.42), (-BW - 0.15, -0.42), (-BW - 0.15, 0.48), (BW + 0.15, 0.48), (BW + 0.15, -0.42), (BW + 0.25, -0.42), (BW + 0.25, 0.58), (-BW - 0.25, 0.58)]
+    M.sweep("hell", path, hood)
+    M.sweep("akzent", path, [(-BW - 0.27, 0.5), (BW + 0.27, 0.5), (BW + 0.27, 0.62), (-BW - 0.27, 0.62)])
+    for y in (0.3, L - 0.3):
+        M.sphere("lampe", (BW + 0.27, y, DECK + 0.3), 0.04, 6, 3)
+    return m
+
+
+# ================================ Produkte ==================================
+# Alle Waren aus gamedata.json (Schlüssel, Name, Form, Farbe). Größe wie auf
+# dem Band im Spiel; die Ware liegt mit der Unterseite auf z = 0, längs zu Y.
+PRODUCTS = [
+    ("staub", "Staub", "crate", "#a49c8e"), ("metall", "Metallschrott", "crate", "#9aa3ab"), ("kristall", "Kristallsplitter", "crate", "#b98cff"),
+    ("chemie", "Chemieschlamm", "crate", "#9bd35a"), ("staubBrick", "Staub-Brick", "brick", "#cfc3ad"), ("metallBrick", "Metall-Brick", "brick", "#7d8790"),
+    ("barren", "Metallbarren", "ingot", "#eef2f6"), ("reinkristall", "Reinkristall", "gem", "#e2d4ff"), ("polymer", "Polymer", "barrel", "#6ff2d2"),
+    ("isotop", "Strahlenerz", "crate", "#8aff5a"), ("marsstahl", "Marsstahl", "ingot", "#c8704a"), ("hitzekachel", "Hitzeschild-Kachel", "brick", "#e8d0b0"),
+    ("treibstoff", "Raketentreibstoff", "barrel", "#ff9a4a"), ("eisblock", "Eisblock", "brick", "#cfe8ff"), ("kryolinse", "Kryolinse", "gem", "#9fe0ff"),
+    ("bitumen", "Bitumenblock", "brick", "#5a4a30"), ("kohlefaser", "Kohlefaser", "ingot", "#3a3a3a"), ("methanol", "Methanol", "barrel", "#ffcf6a"),
+    ("lavaziegel", "Lavaziegel", "brick", "#6a3a2a"), ("schwefelstahl", "Schwefelstahl", "ingot", "#e0d060"), ("schwefelsaeure", "Schwefelsäure", "barrel", "#f2e23c"),
+    ("titanleg", "Titanlegierung", "ingot", "#d8d0c0"), ("basaltfaser", "Basaltfaser", "brick", "#7a6050"), ("hitzelack", "Hitzelack", "barrel", "#ffb070"),
+    ("magnetrohling", "Magnetrohling", "brick", "#6a7a9a"), ("supraleiter", "Supraleiter", "ingot", "#9fc4ff"), ("magnetkristall", "Magnetkristall", "gem", "#8fb0ff"),
+    ("salzblock", "Salzblock", "brick", "#f0ece0"), ("elektrolyt", "Elektrolyt", "barrel", "#c0f0ff"), ("reinwasser", "Reinwasser", "barrel", "#bfe8ff"),
+    ("stickstoffblock", "Stickstoffblock", "brick", "#f0d8e0"), ("kryostahl", "Kryostahl", "ingot", "#c0d0e8"), ("kuehlmittel", "Kühlmittel", "barrel", "#7fe0c8"),
+    ("tholinziegel", "Tholinziegel", "brick", "#9a6a4a"), ("tholinharz", "Tholinharz", "barrel", "#c07a40"), ("methankristall", "Methankristall", "gem", "#f0e8e0"),
+    ("eiskern", "Eiskern", "brick", "#e0e8ff"), ("frostglas", "Frostglas", "gem", "#dff4ff"), ("rotharz", "Rotharz-Block", "brick", "#a04030"),
+    ("sednit", "Sednit-Verbund", "ingot", "#d86a4a"), ("pellet", "Isotopenpellet", "brick", "#9aff5a"), ("brennelement", "Brennelement", "ingot", "#c8ff9a"),
+    ("brennstab", "Brennstab", "barrel", "#7aff7a"), ("ozeaneis", "Ozeaneis-Block", "brick", "#bfe4f4"), ("biokristall", "Biokristall", "gem", "#7affc8"),
+    ("algenoel", "Algenöl", "barrel", "#4ad07a"), ("torfblock", "Torfblock", "brick", "#4a3a24"), ("graphen", "Graphen", "ingot", "#2a2e34"),
+    ("biosprit", "Biosprit", "barrel", "#c8d04a"), ("rohdiamant", "Rohdiamant-Block", "brick", "#e8e8f0"), ("diamant", "Industriediamant", "gem", "#ffffff"),
+    ("graphit", "Graphitplatte", "brick", "#3a3634"), ("druckeis", "Druckeis-Block", "brick", "#a8d0ee"), ("superionik", "Superionisches Eis", "gem", "#7ad8ff"),
+    ("kondensat", "Druckkondensat", "barrel", "#a8e8f0"), ("reaktorkern", "Reaktorkern", "ingot", "#7dff6a"), ("strahlstahl", "Strahlenschutzstahl", "ingot", "#9aa89a"),
+]
+_GLOW = {"isotop", "pellet", "brennelement", "brennstab", "reaktorkern", "polymer"}
+_ICE = {"eisblock", "eiskern", "ozeaneis", "druckeis", "stickstoffblock", "frostglas", "kryolinse", "superionik"}
+
+
+def _pmat(key, shape, col):
+    name = "p_" + key
+    if name not in MATS:
+        if shape == "gem":
+            MATS[name] = (col, 0.1, 0.08, col, 1.2)
+        elif shape == "ingot":
+            MATS[name] = (col, 0.9, 0.3, col if key in _GLOW else None, 1.5 if key in _GLOW else 0)
+        elif key in _ICE:
+            MATS[name] = (col, 0.05, 0.12, "#9fdcff", 0.2)
+        elif key in _GLOW:
+            MATS[name] = (col, 0.2, 0.4, col, 1.5)
+        else:
+            MATS[name] = (col, 0.25 if shape == "barrel" else 0.05, 0.45 if shape == "barrel" else 0.75, None, 0)
+    return name
+
+
+def product(key, name, shape, col):
+    m = Model("ware_" + key, name, "Produkte"); M = m.body
+    pm = _pmat(key, shape, col)
+    if shape == "brick":
+        prof = [(-0.15, 0), (0.15, 0), (0.15, 0.17), (0.12, 0.2), (-0.12, 0.2), (-0.15, 0.17)]
+        M.extrude(pm, (0, 0, 0), prof, 0.5, "XZ")
+        M.box("dunkel", (0, 0, 0.2), (0.14, 0.3, 0.012))
+        for y in (-0.18, 0.18):
+            M.box(pm, (0, y, 0.205), (0.2, 0.04, 0.012))
+    elif shape == "ingot":
+        prof = [(-0.11, 0), (0.11, 0), (0.085, 0.16), (-0.085, 0.16)]
+        M.extrude(pm, (0, 0, 0), prof, 0.55, "XZ")
+        M.box("dunkel", (0, 0.12, 0.16), (0.08, 0.12, 0.01))
+        M.box("akzent", (0, -0.12, 0.16), (0.08, 0.06, 0.01))
+    elif shape == "gem":
+        M.lathe(pm, (0, 0, 0.02), [(0.0, 0.0), (0.085, 0.06), (0.085, 0.2), (0.0, 0.3)], 6)
+        M.lathe(pm, (0.07, 0.04, 0.0), [(0.0, 0.0), (0.05, 0.04), (0.05, 0.12), (0.0, 0.19)], 6, rot=(0, 28, 20))
+        M.lathe(pm, (-0.06, -0.05, 0.0), [(0.0, 0.0), (0.045, 0.03), (0.045, 0.1), (0.0, 0.16)], 6, rot=(-25, -18, 0))
+        M.lathe("felsdkl", (0, 0, 0), [(0.13, 0), (0.1, 0.04), (0, 0.045)], 8)
+    elif shape == "barrel":
+        M.lathe(pm, (0, 0, 0), [(0.0, 0.0), (0.15, 0.0), (0.16, 0.02), (0.16, 0.38), (0.15, 0.4), (0.0, 0.4)], 18)
+        for z in (0.1, 0.3):
+            M.torus("stahl", (0, 0, z), 0.162, 0.012, 18, 5)
+        M.lathe("weiss", (0, 0, 0.17), [(0.163, 0), (0.163, 0.06)], 18)
+        M.cyl("dunkel", (0.07, 0, 0.4), 0.03, 0.02, 8)
+    else:  # crate: Rohstoffkiste mit Inhalt
+        M.box("stahl", (0, 0, 0.14), (0.42, 0.42, 0.28))
+        for sx in (-1, 1):
+            M.box(pm, (sx * 0.211, 0, 0.14), (0.01, 0.36, 0.22))
+            M.box(pm, (0, sx * 0.211, 0.14), (0.36, 0.01, 0.22))
+        M.box("dunkel", (0, 0, 0.27), (0.38, 0.38, 0.02))
+        if key in ("staub", "isotop"):
+            M.lathe(pm, (0, 0, 0.27), [(0.18, 0), (0.14, 0.05), (0.06, 0.08), (0, 0.085)], 12)
+        elif key == "chemie":
+            M.cyl(pm, (0, 0, 0.27), 0.17, 0.03, 14)
+            for i, (x, y) in enumerate(((0.05, 0.04), (-0.07, -0.02), (0.02, -0.09))):
+                M.sphere(pm, (x, y, 0.3), 0.03 + 0.01 * i, 8, 4)
+        else:
+            for i, (x, y, r) in enumerate(((0.06, 0.05, 0.07), (-0.08, 0.02, 0.06), (0.0, -0.09, 0.065), (0.1, -0.08, 0.05))):
+                if key == "kristall":
+                    M.lathe(pm, (x, y, 0.27), [(0.0, 0.0), (0.03, 0.02), (0.03, 0.06), (0.0, 0.1)], 6, rot=(10 * i, -12 * i, 0))
+                else:
+                    M.blob(pm, (x, y, 0.3), r, 17 + i, (1, 0.8, 0.55), 0.45, 8, 4)
+    return m
+
+
+# ============================ Schmutz auf Parzellen ==========================
+# Neun Schmutzarten (deb in gamedata.json): rock, scrap, sat, crystal, barrel,
+# ice, goo, sulfur, lava – je zwei bis drei Varianten, ca. 0,4–1,2 m groß.
+def sm(key, name):
+    return Model("schmutz_" + key, name, "Schmutz")
+
+
+def d_rock(v):
+    m = sm("fels_%d" % v, "Felsbrocken %d" % v); M = m.body
+    import random
+    r = random.Random(100 + v)
+    for i in range(2 + v):
+        a = r.random() * 6.28
+        d = 0.0 if i == 0 else 0.25 + r.random() * 0.3
+        s = (0.45 if i == 0 else 0.18 + r.random() * 0.15) * (1 + 0.2 * v)
+        M.blob("fels" if i % 2 == 0 else "felsdkl", (d * math.cos(a), d * math.sin(a), s * 0.35), s, 7 * v + i, (1, 0.85, 0.65), 0.35, 10, 6)
+    return m
+
+
+def d_scrap(v):
+    m = sm("schrott_%d" % v, "Metallschrott %d" % v); M = m.body
+    if v == 1:  # Doppel-T-Träger + verbogenes Blech
+        prof = [(-0.08, 0), (0.08, 0), (0.08, 0.02), (0.015, 0.02), (0.015, 0.14), (0.08, 0.14), (0.08, 0.16), (-0.08, 0.16), (-0.08, 0.14), (-0.015, 0.14), (-0.015, 0.02), (-0.08, 0.02)]
+        M.extrude("rost", (0, 0, 0.02), prof, 1.1, "XZ", rot=(0, 0, 25))
+        M.box("stahl", (0.2, 0.25, 0.1), (0.5, 0.35, 0.02), rot=(18, -12, 40))
+        M.box("rost", (-0.25, -0.2, 0.06), (0.35, 0.3, 0.02), rot=(-8, 22, -30))
+    elif v == 2:  # Zahnrad + Rohrstück
+        M.cyl("rost", (0, 0, 0.0), 0.22, 0.06, 20)
+        for k in range(12):
+            a = k * 30
+            M.box("rost", _add((0, 0, 0.03), _mv(_rot(0, 0, a), (0.24, 0, 0))), (0.07, 0.06, 0.06), rot=(0, 0, a))
+        M.cyl("dunkel", (0, 0, 0.06), 0.06, 0.02, 10)
+        M.lathe("stahl", (0.35, 0.1, 0.09), [(0.09, -0.3), (0.09, 0.3), (0.07, 0.3), (0.07, -0.3)], 12, rot=(90, 0, 35), closed_loop=True)
+    else:  # Maschinengehäuse, halb im Staub
+        M.box("rost", (0, 0, 0.15), (0.6, 0.4, 0.35), rot=(0, 12, 8))
+        M.box("dunkel", (0.0, -0.21, 0.2), (0.3, 0.02, 0.15), rot=(0, 12, 8))
+        M.pipe("stahl", [(0.3, 0.1, 0.25), (0.55, 0.15, 0.3), (0.7, 0.05, 0.05)], 0.03, 8)
+        M.blob("fels", (-0.3, 0.2, 0.02), 0.25, 41, (1.4, 1, 0.3), 0.3, 10, 5)
+    return m
+
+
+def d_sat(v):
+    m = sm("satellit_%d" % v, "Satellitentrümmer %d" % v); M = m.body
+    if v == 1:
+        M.box("hell", (0, 0, 0.18), (0.45, 0.45, 0.4), rot=(15, 20, 30))
+        M.box("kupfer", (0, 0, 0.18), (0.47, 0.3, 0.3), rot=(15, 20, 30))
+        M.box("solar", (0.55, 0.2, 0.05), (0.7, 0.35, 0.02), rot=(5, -10, 30))
+        M.box("dunkel", (0.55, 0.2, 0.04), (0.72, 0.37, 0.015), rot=(5, -10, 30))
+        M.tube("stahl", (-0.1, 0.1, 0.35), (-0.4, 0.3, 0.7), 0.015, 5)
+    else:
+        dish(M, (0, 0, 0.08), 0.4, 0.14, "weiss", 70, 20)
+        M.box("solar", (-0.4, -0.3, 0.04), (0.5, 0.3, 0.02), rot=(0, 8, -15))
+        M.box("solar", (0.35, -0.45, 0.03), (0.3, 0.25, 0.02), rot=(-6, 0, 40))
+    return m
+
+
+def d_crystal(v):
+    m = sm("kristall_%d" % v, "Kristallablagerung %d" % v); M = m.body
+    import random
+    r = random.Random(300 + v)
+    M.blob("felsdkl", (0, 0, 0.05), 0.4, 300 + v, (1.2, 1, 0.3), 0.3, 10, 5)
+    for i in range(5 + 2 * v):
+        a, d = r.random() * 6.28, r.random() * 0.3
+        h = 0.25 + r.random() * 0.4
+        M.lathe("kristall", (d * math.cos(a), d * math.sin(a), 0.05), [(0, 0), (0.05 + h * 0.1, h * 0.15), (0.05 + h * 0.1, h * 0.75), (0, h)], 6,
+                rot=((r.random() - 0.5) * 50, (r.random() - 0.5) * 50, r.random() * 60))
+    return m
+
+
+def d_barrel(v):
+    m = sm("fass_%d" % v, "Altfässer %d" % v); M = m.body
+    cols = ["rost", "akzent", "rot"]
+    for i in range(v + 1):
+        c = cols[i % 3]
+        if i == 0:
+            M.lathe(c, (0.15, 0, 0.18), [(0, -0.3), (0.18, -0.3), (0.18, 0.3), (0, 0.3)], 16, rot=(90, 0, 30))
+            M.cyl("schleim", (0.5, -0.25, 0), 0.32, 0.02, 16)
+        else:
+            M.lathe(c, (-0.3 * i, 0.25 * i, 0), [(0, 0), (0.18, 0), (0.18, 0.55), (0, 0.55)], 16)
+            M.torus("dunkel", (-0.3 * i, 0.25 * i, 0.15), 0.182, 0.012, 16, 4)
+            M.torus("dunkel", (-0.3 * i, 0.25 * i, 0.4), 0.182, 0.012, 16, 4)
+    return m
+
+
+def d_ice(v):
+    m = sm("eis_%d" % v, "Eisablagerung %d" % v); M = m.body
+    import random
+    r = random.Random(500 + v)
+    for i in range(3 + v):
+        a, d = r.random() * 6.28, (0 if i == 0 else 0.2 + r.random() * 0.25)
+        h = 0.3 + r.random() * 0.4
+        M.lathe("kometeis", (d * math.cos(a), d * math.sin(a), 0), [(0, 0), (0.12, 0.08), (0.08, h * 0.8), (0, h)], 5,
+                rot=((r.random() - 0.5) * 40, (r.random() - 0.5) * 40, r.random() * 72))
+    M.blob("eis", (0, 0, 0.02), 0.45, 500 + v, (1.2, 1, 0.12), 0.3, 10, 4)
+    return m
+
+
+def d_goo(v):
+    m = sm("schleim_%d" % v, "Schlamm %d" % v); M = m.body
+    import random
+    r = random.Random(700 + v)
+    M.blob("schleim", (0, 0, 0.0), 0.5, 700 + v, (1.3, 1, 0.12), 0.3, 12, 4)
+    for i in range(4 + v):
+        a, d = r.random() * 6.28, r.random() * 0.4
+        M.sphere("schleim", (d * math.cos(a), d * math.sin(a), 0.04), 0.04 + r.random() * 0.06, 10, 5, zcut=0)
+    return m
+
+
+def d_sulfur(v):
+    m = sm("schwefel_%d" % v, "Schwefelkruste %d" % v); M = m.body
+    import random
+    r = random.Random(900 + v)
+    M.blob("fels", (0, 0, 0.0), 0.45, 900 + v, (1.2, 1, 0.15), 0.3, 10, 4)
+    for i in range(6 + 2 * v):
+        a, d = r.random() * 6.28, r.random() * 0.4
+        M.cyl("schwefel", (d * math.cos(a), d * math.sin(a), 0.02), 0.06 + r.random() * 0.06, 0.04 + r.random() * 0.08, 6, rot=(0, 0, r.random() * 60))
+    return m
+
+
+def d_lava(v):
+    m = sm("lava_%d" % v, "Lavagestein %d" % v); M = m.body
+    import random
+    r = random.Random(1100 + v)
+    for i in range(2 + v):
+        a, d = r.random() * 6.28, (0 if i == 0 else 0.3 + r.random() * 0.2)
+        s = 0.4 if i == 0 else 0.22
+        p = (d * math.cos(a), d * math.sin(a), s * 0.3)
+        sc = (1, 0.9, 0.6)
+        M.blob("lavastein", p, s, 1100 + 10 * v + i, sc, 0.45, 12, 7)
+        M.blob("glut", p, s * 0.955, 1500 + 10 * v + i, sc, 0.12, 12, 7, facet=0.04)  # Glut scheint in den Senken durch
+    return m
+
+
+# =============================== Ereignisse =================================
+def e_wrack():
+    m = Model("wrack_raumschiff", "Raumschiff-Wrack (Absturz)", "Ereignisse"); M = m.body
+    M.cyl("russ", (0, 0, 0), 3.2, 0.02, 32)  # Brandfleck
+    # Rumpf, schräg eingegraben
+    hull = [(0.0, -2.4), (0.45, -2.2), (0.85, -1.6), (0.95, -0.6), (0.95, 1.2), (0.8, 1.7), (0.86, 1.9), (0.7, 2.0), (0.82, 2.2), (0.5, 2.3), (0.0, 2.3)]
+    M.lathe("hell", (0, 0, 0.55), [(r, z) for r, z in hull], 18, rot=(78, 0, 25))
+    R = _rot(78, 0, 25)
+    for z in (-1.0, 0.0, 1.0):
+        M.lathe("dunkel", _add((0, 0, 0.55), _mv(R, (0, 0, z))), [(0.98, -0.05), (0.98, 0.05)], 18, R=R)
+    M.box("glas", _add((0, 0, 0.55), _mv(R, (0, -0.8, -1.7))), (0.6, 0.05, 0.35), R=_mm(R, _rot(-25, 0, 0)))
+    # Abgerissener Flügel, Triebwerk, Platten
+    M.extrude("hell", (1.9, 1.2, 0.08), [(0, 0), (1.6, 0.3), (1.4, 0.7), (0.2, 0.6)], 0.08, "XY", rot=(6, -10, 10))
+    M.extrude("rot", (1.95, 1.25, 0.17), [(0.1, 0.2), (1.4, 0.4), (1.3, 0.5), (0.15, 0.4)], 0.02, "XY", rot=(6, -10, 10))
+    M.lathe("dunkel", (-1.9, -1.3, 0.45), [(0.25, 0), (0.45, 0.6), (0.4, 0.62), (0.2, 0.05)], 16, rot=(100, 0, -60), closed_loop=True)
+    M.cyl("glut", (-1.9, -1.3, 0.45), 0.22, 0.04, 16, rot=(100, 0, -60))
+    for i, (x, y, a) in enumerate(((1.0, -1.8, 20), (-1.4, 1.2, -35), (2.6, -0.4, 60), (-2.4, 0.4, 10))):
+        M.box("hell" if i % 2 else "dunkel", (x, y, 0.05), (0.6, 0.4, 0.03), rot=(8 * i, -6, a))
+    for i in range(6):  # Glutnester
+        a = i * 1.1
+        M.sphere("glut", (1.8 * math.cos(a), 1.8 * math.sin(a), 0.03), 0.06, 6, 3)
+    beacon(M, (0.4, -0.9, 0.0), 0.9, "warn")
+    return m
+
+
+def e_satwrack():
+    m = Model("wrack_satellit", "Satelliten-Wrack", "Ereignisse"); M = m.body
+    M.cyl("russ", (0, 0, 0), 2.4, 0.02, 28)
+    R = _rot(12, 6, 30)
+    M.box("weiss", (0, 0, 1.0), (1.2, 1.2, 1.4), R=R)
+    M.box("kupfer", (0, 0, 1.0), (1.24, 0.9, 1.0), R=R)
+    M.box("dunkel", _add((0, 0, 1.0), _mv(R, (0, 0, 1.0))), (0.8, 0.8, 0.12), R=R)
+    dish(M, _add((0, 0, 1.0), _mv(R, (0, 0, 0.8))), 0.6, 0.2, "weiss", 25, 30)
+    for side in (-1, 1):  # Solarflügel, einer abgeknickt
+        Rw = _mm(R, _rot(0, 0 if side > 0 else -18, 0))
+        base = _add((0, 0, 1.0), _mv(R, (side * 0.62, 0, 0)))
+        M.tube("stahl", base, _add(base, _mv(Rw, (side * 0.5, 0, 0))), 0.03, 6)
+        for k in range(3):
+            c = _add(base, _mv(Rw, (side * (0.95 + k * 0.72), 0, 0)))
+            M.box("dunkel", c, (0.7, 0.95, 0.04), R=Rw)
+            M.box("solar", _add(c, _mv(Rw, (0, 0, 0.025))), (0.64, 0.88, 0.01), R=Rw)
+    M.tube("stahl", (0.3, 0.3, 1.5), (0.9, 1.1, 2.2), 0.02, 5)
+    M.sphere("warn", (0.9, 1.1, 2.22), 0.05, 6, 3)
+    return m
+
+
+def e_frachter():
+    m = Model("frachter", "Frachter (in Not)", "Ereignisse"); M = m.body
+    M.lathe("weiss", (0, 0, 1.2), [(0, -3.0), (0.6, -2.7), (0.9, -1.8), (0.9, 2.2), (0.7, 2.6), (0, 2.7)], 20, rot=(90, 0, 0))
+    for y in (-1.4, -0.3, 0.8, 1.9):
+        M.box("akzent", (0, y, 1.2), (2.2, 0.8, 0.9))
+        M.box("dunkel", (0, y, 1.2), (2.24, 0.06, 0.94))
+    M.box("glas", (0, -2.7, 1.4), (0.6, 0.05, 0.25), rot=(-30, 0, 0))
+    for sx in (-1, 1):
+        M.lathe("dunkel", (sx * 0.6, 2.7, 1.2), [(0.25, 0), (0.4, 0.5), (0.35, 0.52), (0.2, 0.05)], 14, rot=(-90, 0, 0), closed_loop=True)
+        M.cyl("glut", (sx * 0.6, 2.75, 1.2), 0.22, 0.04, 14, rot=(-90, 0, 0))
+        M.extrude("hell", (sx * 0.9, 1.0, 1.2), [(0, -0.8), (0.9 * sx, -0.2), (0.9 * sx, 0.6), (0, 0.9)], 0.06, "XY")
+    M.sphere("warn", (0, 0, 2.15), 0.08, 8, 4)
+    return m
+
+
+def e_komet():
+    m = Model("komet", "Komet (Kern)", "Ereignisse"); M = m.body
+    M.blob("kometeis", (0, 0, 1.4), 1.3, 2024, (1.25, 1, 0.9), 0.6, 16, 10, facet=0.15)
+    import random
+    r = random.Random(77)
+    for i in range(9):
+        a, b = r.random() * 6.28, (r.random() - 0.3) * 1.2
+        p = (1.65 * math.cos(a) * math.cos(b), 1.35 * math.sin(a) * math.cos(b), 1.4 + 1.2 * math.sin(b))
+        M.blob("felsdkl" if i % 2 else "lavastein", p, 0.3 + r.random() * 0.25, 2100 + i, (1, 1, 0.8), 0.4, 8, 5)
+    for i in range(6):
+        a = r.random() * 6.28
+        M.lathe("kometeis", (1.1 * math.cos(a), 1.0 * math.sin(a), 1.6), [(0, 0), (0.1, 0.1), (0, 0.6)], 5, rot=(r.random() * 60 - 30, r.random() * 60 - 30, 0))
+    return m
+
+
+def e_einschlag():
+    m = Model("kometeneinschlag", "Kometeneinschlag (Krater)", "Ereignisse"); M = m.body
+    rim = [(2.6, 0.0), (2.3, 0.35), (2.0, 0.45), (1.6, 0.2), (1.0, -0.15), (0.0, -0.2)]
+    M.lathe("felsdkl", (0, 0, 0.2), [(2.6, -0.2)] + rim, 32)
+    M.lathe("russ", (0, 0, 0.2), [(1.65, 0.14), (1.2, -0.02), (0.0, -0.08), (0.0, -0.1), (1.2, -0.04), (1.65, 0.12)], 28, closed_loop=True)
+    M.blob("kometeis", (0, 0, 0.35), 0.6, 31, (1, 1, 0.8), 0.4, 12, 8)
+    for k in range(6):
+        a = k * 60
+        M.box("glut", _add((0, 0, 0.3), _mv(_rot(0, 0, a), (0.75, 0, 0))), (0.6, 0.05, 0.03), rot=(0, 0, a))
+    import random
+    r = random.Random(5)
+    for i in range(10):
+        a, d = r.random() * 6.28, 2.0 + r.random() * 1.2
+        M.blob("fels" if i % 3 else "kometeis", (d * math.cos(a), d * math.sin(a), 0.12), 0.12 + r.random() * 0.18, 400 + i, (1, 1, 0.7), 0.4, 8, 5)
+    return m
+
+
+def e_meteorit():
+    m = Model("meteorit", "Meteorit", "Ereignisse"); M = m.body
+    M.lathe("felsdkl", (0, 0, 0), [(1.0, 0), (0.85, 0.12), (0.6, 0.05), (0, 0.04)], 20)
+    M.blob("lavastein", (0, 0, 0.45), 0.5, 88, (1, 0.9, 0.85), 0.38, 14, 9)
+    M.blob("glut", (0, 0, 0.45), 0.44, 91, (1, 0.9, 0.85), 0.12, 14, 9, facet=0.04)
+    return m
+
+
+def e_erzader():
+    m = Model("erzader", "Erzader", "Ereignisse"); M = m.body
+    M.blob("felsdkl", (0, 0, 0.05), 1.4, 61, (1.3, 0.7, 0.12), 0.25, 14, 5)
+    for i, (x, y, a) in enumerate(((-0.9, -0.1, 15), (-0.3, 0.05, -10), (0.3, -0.05, 20), (0.9, 0.1, -5))):
+        M.box("kupfer", (x, y, 0.16), (0.7, 0.12, 0.08), rot=(0, 0, a))
+        M.box("glut", (x, y, 0.2), (0.5, 0.05, 0.02), rot=(0, 0, a))
+    for k in range(3):
+        M.lathe("kristall", (0.2 * k - 0.2, 0.25, 0.1), [(0, 0), (0.05, 0.04), (0.05, 0.2), (0, 0.3)], 6, rot=(15 * k - 15, 10, 0))
+    return m
+
+
+# =============================== Weltobjekte ================================
+def w_leuchtkristall():
+    m = Model("leuchtkristall", "Leuchtkristall (erntbar)", "Welt"); M = m.body
+    import random
+    r = random.Random(9)
+    M.blob("felsdkl", (0, 0, 0.05), 0.55, 9, (1.1, 1, 0.3), 0.3, 10, 5)
+    for i in range(7):
+        a, d = r.random() * 6.28, (0 if i == 0 else 0.15 + r.random() * 0.25)
+        h = 1.3 if i == 0 else 0.4 + r.random() * 0.6
+        M.lathe("kristall", (d * math.cos(a), d * math.sin(a), 0.08), [(0, 0), (0.06 + h * 0.08, h * 0.12), (0.06 + h * 0.08, h * 0.78), (0, h)], 6,
+                rot=((r.random() - 0.5) * (10 if i == 0 else 60), (r.random() - 0.5) * (10 if i == 0 else 60), r.random() * 60))
+    return m
+
+
+def w_laterne():
+    m = Model("laterne", "Laterne (Lichtmast)", "Welt"); M = m.body
+    M.cyl("platte", (0, 0, 0), 0.35, 0.12, 16, r2=0.3)
+    M.cyl("dunkel", (0, 0, 0.12), 0.08, 3.0, 10, r2=0.06)
+    M.box("akzent", (0, 0, 0.6), (0.18, 0.18, 0.5))
+    M.tube("dunkel", (0, 0, 3.0), (0, -0.7, 3.25), 0.04, 8)
+    M.box("dunkel", (0, -0.8, 3.25), (0.4, 0.5, 0.12))
+    M.box("kaltlicht", (0, -0.8, 3.185), (0.32, 0.42, 0.01))
+    M.sphere("warn", (0, 0, 3.15), 0.05, 6, 3)
+    return m
+
+
+def w_astronaut():
+    m = Model("astronaut", "Astronaut", "Welt"); M = m.body
+    for sx in (-1, 1):
+        M.cyl("weiss", (sx * 0.11, 0, 0.05), 0.075, 0.75, 10, r2=0.085)
+        M.box("dunkel", (sx * 0.11, -0.03, 0.06), (0.14, 0.24, 0.12))
+        M.tube("weiss", (sx * 0.24, 0, 1.38), (sx * 0.3, -0.05, 0.95), 0.06, 8)
+        M.sphere("dunkel", (sx * 0.3, -0.06, 0.92), 0.06, 8, 4)
+    M.lathe("weiss", (0, 0, 0.78), [(0.0, 0.0), (0.2, 0.02), (0.24, 0.3), (0.25, 0.55), (0.2, 0.66), (0.0, 0.68)], 14)
+    M.box("akzent", (0, -0.2, 1.15), (0.22, 0.06, 0.14))
+    M.box("mint", (0.05, -0.235, 1.17), (0.04, 0.01, 0.03))
+    M.box("hell", (0, 0.2, 1.12), (0.36, 0.2, 0.5))
+    M.sphere("weiss", (0, 0, 1.6), 0.17, 16, 8)
+    M.sphere("visier", (0, -0.05, 1.62), 0.145, 14, 6, zcut=-0.2)
+    M.lathe("dunkel", (0, 0, 1.43), [(0.13, 0), (0.13, 0.05)], 14)
+    M.tube("stahl", (0.12, 0.25, 1.35), (0.12, 0.28, 1.75), 0.008, 4)
+    return m
+
+
+def w_sammelwagen():
+    m = Model("sammelwagen", "Sammelwagen", "Welt"); M = m.body
+    M.box("dunkel", (0, 0, 0.35), (0.9, 1.3, 0.12))
+    M.lathe("akzent", (0, 0.1, 0.4), [(0.42, 0), (0.5, 0.45), (0.45, 0.45), (0.37, 0.05)], 16, closed_loop=True)
+    M.cyl("russ", (0, 0.1, 0.42), 0.38, 0.03, 16)
+    M.tube("stahl", (0, -0.65, 0.35), (0, -1.05, 0.35), 0.03, 6)
+    M.torus("stahl", (0, -1.1, 0.35), 0.06, 0.015, 10, 4, rot=(0, 90, 0))
+    M.sphere("warn", (0.4, 0.62, 0.45), 0.035, 6, 3)
+    M.sphere("warn", (-0.4, 0.62, 0.45), 0.035, 6, 3)
+    for i, (x, y) in enumerate(((-1, -1), (1, -1), (-1, 1), (1, 1))):
+        wheel(m, i, (x * 0.5, y * 0.42, 0.2), 0.2, 0.14, lugs=10)
+    return m
+
+
+def w_aussenlager():
+    m = Model("aussenlager", "Außenlager (Pumpstation)", "Welt", 2.4); M = m.body
+    h0 = pad(M, 2.4)
+    tank_h(M, (-0.6, 0.6, h0 + 0.5), 0.45, 1.3, "weiss", 0, 2)
+    tank_h(M, (-0.6, -0.5, h0 + 0.5), 0.45, 1.3, "weiss", 0, 2)
+    M.box("hell", (1.0, 0.0, h0 + 0.55), (0.9, 1.2, 1.1))
+    M.box("akzent", (1.0, 0.0, h0 + 1.13), (0.95, 1.25, 0.06))
+    vents(M, (1.0, -0.61, h0 + 0.6), 0.6, 0.45, 3)
+    M.pipe("kupfer", [(0.2, 0.6, h0 + 0.5), (0.55, 0.6, h0 + 0.5), (0.55, 0.0, h0 + 0.5)], 0.07, 8)
+    M.pipe("kupfer", [(0.2, -0.5, h0 + 0.5), (0.55, -0.5, h0 + 0.5)], 0.07, 8)
+    M.pipe("stahl", [(1.45, 0.3, h0 + 0.3), (2.1, 0.3, h0 + 0.3), (2.1, 0.3, 0.05)], 0.09, 10)
+    beacon(M, (1.6, 1.2, h0), 1.8, "warn")
+    M.box("lampe", (1.6, 1.15, h0 + 1.55), (0.25, 0.04, 0.12))
+    return m
+
+
+def w_bauplatz():
+    m = Model("bauplatz", "Bauplatz", "Welt", 2.5); M = m.body
+    M.cyl("platte", (0, 0, 0), 2.5, 0.06, 32)
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        M.box("akzent", (2.25 * math.cos(a), 2.25 * math.sin(a), 0.07), (0.18, 0.9, 0.03), rot=(0, 0, math.degrees(a)))
+    for k in range(8):  # Absperrpfosten mit Band
+        a = 2 * math.pi * (k + 0.5) / 8
+        M.cyl("akzent", (2.4 * math.cos(a), 2.4 * math.sin(a), 0.06), 0.04, 0.8, 6)
+    ring = [(2.4 * math.cos(2 * math.pi * (k + 0.5) / 8), 2.4 * math.sin(2 * math.pi * (k + 0.5) / 8), 0.75) for k in range(9)]
+    M.pipe("rot", ring, 0.015, 4, joints=False)
+    for i, (x, y) in enumerate(((-0.8, 0.6), (-0.4, 0.6), (-0.6, 0.6))):  # Trägerstapel
+        M.box("stahl", (x, y, 0.12 + 0.0 * i), (0.12, 1.4, 0.12))
+    M.box("stahl", (-0.6, 0.6, 0.24), (0.55, 1.4, 0.08))
+    for i in range(3):
+        crate(M, (0.8, -0.6 + 0.5 * i, 0.26), 0.4, ["kiste1", "kiste2", "kiste3"][i])
+    lattice(M, (1.3, 1.1, 0.06), (1.3, 1.1, 3.0), 0.4, 0.3, 5, "akzent", 0.03)  # Baukran
+    M.box("akzent", (0.6, 1.1, 3.05), (2.4, 0.18, 0.18))
+    M.box("dunkel", (2.0, 1.1, 2.9), (0.4, 0.3, 0.3))
+    M.tube("stahl", (0.0, 1.1, 2.95), (0.0, 1.1, 1.3), 0.012, 4)
+    M.box("stahl", (0.0, 1.1, 1.25), (0.15, 0.15, 0.1))
+    for p in ((-1.5, -1.2), (1.6, -1.3)):  # Leitkegel
+        M.lathe("akzent", (p[0], p[1], 0.06), [(0.12, 0), (0.03, 0.35), (0, 0.36)], 10)
+    return m
+
+
+def w_grube():
+    m = Model("grube", "Grube (am Andockplatz)", "Welt"); M = m.body
+    M.lathe("felsdkl", (0, 0, 0), [(1.2, 0.0), (1.0, 0.18), (0.8, 0.12), (0.7, -0.3), (0.0, -0.35), (0.0, -0.45), (1.2, -0.1)], 24, closed_loop=True)
+    M.lathe("russ", (0, 0, 0), [(0.69, -0.27), (0.0, -0.31), (0.0, -0.33), (0.7, -0.29)], 20, closed_loop=True)
+    for k in range(10):
+        a = 2 * math.pi * k / 10
+        M.box("akzent" if k % 2 else "dunkel", (1.0 * math.cos(a), 1.0 * math.sin(a), 0.2), (0.12, 0.6, 0.04), rot=(0, 0, math.degrees(a)))
+    ladder(M, (0, -0.75, -0.3), 0.6, (0, -1, 0), 0.3)
+    return m
+
+
+def w_pipeline():
+    m = Model("pipeline_trasse", "Pipeline-Trasse (4 m)", "Welt"); M = m.body
+    for y in (0.3, 2.0, 3.7):
+        for sx in (-1, 1):
+            M.box("dunkel", (sx * 0.4, y, 0.4), (0.1, 0.1, 0.8))
+        M.box("stahl", (0, y, 0.82), (1.0, 0.14, 0.08))
+        M.box("platte", (0, y, 0.02), (1.1, 0.3, 0.04))
+    for x, r, c in ((-0.22, 0.14, "kupfer"), (0.22, 0.1, "stahl")):
+        M.cyl(c, (x, 0.0, 0.86 + r), r, 4.0, 14, rot=(-90, 0, 0))
+        for y in (0.3, 2.0, 3.7):
+            M.torus("dunkel", (x, y, 0.86 + r), r + 0.01, 0.015, 14, 4, rot=(90, 0, 0))
+    return m
+
+
+def w_ampel():
+    m = Model("ampel", "Ampel (Dachlampe)", "Welt"); M = m.body
+    M.box("dunkel", (0, 0, 0.12), (0.9, 0.9, 0.24))
+    M.box("akzent", (0, 0, 0.245), (0.92, 0.92, 0.03))
+    L = m.part("Licht", (0, 0, 0.52))
+    L.sphere("mint", (0, 0, 0.52), 0.375, 16, 8)
+    return m
+
+
+def w_fels(v):
+    m = Model("deko_fels_%d" % v, "Deko-Felsen %d" % v, "Welt"); M = m.body
+    import random
+    r = random.Random(1300 + v)
+    for i in range(1 + v):
+        a, d = r.random() * 6.28, (0 if i == 0 else 0.8 + r.random() * 0.6)
+        s = (1.0 if i == 0 else 0.4 + r.random() * 0.3) * (0.7 + 0.3 * v)
+        M.blob("fels" if i % 2 == 0 else "felsdkl", (d * math.cos(a), d * math.sin(a), s * 0.3), s, 1300 + 10 * v + i, (1.1, 0.9, 0.7), 0.4, 12, 8)
+    return m
+
+
+def w_krater():
+    m = Model("deko_krater", "Deko-Krater", "Welt"); M = m.body
+    M.lathe("felsdkl", (0, 0, 0), [(2.2, 0.0), (1.9, 0.3), (1.6, 0.35), (1.3, 0.05), (0.7, -0.25), (0.0, -0.3), (0.0, -0.4), (2.2, -0.05)], 32, closed_loop=True)
+    return m
+
+
 # ============================== Verzeichnis =================================
 def all_models():
     """(Schlüssel, Bauer) in der Reihenfolge, in der sie in der Szene stehen."""
@@ -1502,6 +2235,28 @@ def all_models():
         ("schwebe", v_schwebe), ("magnetgleiter", v_magnetgleiter), ("kryokoloss", v_kryokoloss),
         ("suchtrupp", lambda: v_buggy("suchtrupp", "Suchtrupp", "orange", crane=True)),
         ("drohne", lambda: d_drone(False)), ("lastdrohne", lambda: d_drone(True)),
+        # Förderbänder und Anschlüsse
+        ("band_gerade_1m", lambda: f_gerade(1)), ("band_gerade_2m", lambda: f_gerade(2)), ("band_gerade_4m", lambda: f_gerade(4)),
+        ("band_kurve_90_r1_5", lambda: f_kurve(90, 1.5)), ("band_kurve_90_r3", lambda: f_kurve(90, 3)), ("band_kurve_45_r3", lambda: f_kurve(45, 3)),
+        ("band_rampe", f_rampe), ("band_bruecke", f_bruecke), ("band_ende", f_ende), ("band_weiche_y", f_weiche),
+        ("band_stuetze", lambda: f_stuetze(0.0)), ("band_stuetze_hoch", lambda: f_stuetze(1.0)),
+        ("anschluss_eingang", lambda: f_anschluss(False)), ("anschluss_ausgang", lambda: f_anschluss(True)),
+        ("uebergabe_saeule", f_uebergabe), ("zulauf_tunnel", f_zulauf),
+    ] + [("ware_" + k, (lambda k=k, n=n, sh=sh, c=c: product(k, n, sh, c))) for k, n, sh, c in PRODUCTS] + [
+        ("schmutz_fels_1", lambda: d_rock(1)), ("schmutz_fels_2", lambda: d_rock(2)), ("schmutz_fels_3", lambda: d_rock(3)),
+        ("schmutz_schrott_1", lambda: d_scrap(1)), ("schmutz_schrott_2", lambda: d_scrap(2)), ("schmutz_schrott_3", lambda: d_scrap(3)),
+        ("schmutz_satellit_1", lambda: d_sat(1)), ("schmutz_satellit_2", lambda: d_sat(2)),
+        ("schmutz_kristall_1", lambda: d_crystal(1)), ("schmutz_kristall_2", lambda: d_crystal(2)),
+        ("schmutz_fass_1", lambda: d_barrel(1)), ("schmutz_fass_2", lambda: d_barrel(2)),
+        ("schmutz_eis_1", lambda: d_ice(1)), ("schmutz_eis_2", lambda: d_ice(2)),
+        ("schmutz_schleim_1", lambda: d_goo(1)), ("schmutz_schleim_2", lambda: d_goo(2)),
+        ("schmutz_schwefel_1", lambda: d_sulfur(1)), ("schmutz_schwefel_2", lambda: d_sulfur(2)),
+        ("schmutz_lava_1", lambda: d_lava(1)), ("schmutz_lava_2", lambda: d_lava(2)),
+        ("wrack_raumschiff", e_wrack), ("wrack_satellit", e_satwrack), ("frachter", e_frachter),
+        ("komet", e_komet), ("kometeneinschlag", e_einschlag), ("meteorit", e_meteorit), ("erzader", e_erzader),
+        ("leuchtkristall", w_leuchtkristall), ("laterne", w_laterne), ("astronaut", w_astronaut), ("sammelwagen", w_sammelwagen),
+        ("aussenlager", w_aussenlager), ("bauplatz", w_bauplatz), ("grube", w_grube), ("pipeline_trasse", w_pipeline), ("ampel", w_ampel),
+        ("deko_fels_1", lambda: w_fels(1)), ("deko_fels_2", lambda: w_fels(2)), ("deko_fels_3", lambda: w_fels(3)), ("deko_krater", w_krater),
     ]
 
 
@@ -1708,18 +2463,331 @@ def _export(root, path):
     root.location, root.rotation_euler = old_loc, old_rot
 
 
+# ===================== Export ohne Blender: GLB, OBJ, ZIP ===================
+# Funktioniert auch außerhalb von Blender:  python3 lunar_models.py --zip Assets.zip
+# Achsen: Blender (Z oben, Front −Y)  →  glTF/OBJ (Y oben, Front +Z).
+def _conv(p):
+    return (p[0], p[2], -p[1])
+
+
+def _face_normal(pts):
+    n = (0.0, 0.0, 0.0)
+    for i in range(len(pts)):
+        p, q = pts[i], pts[(i + 1) % len(pts)]
+        n = (n[0] + (p[1] - q[1]) * (p[2] + q[2]), n[1] + (p[2] - q[2]) * (p[0] + q[0]), n[2] + (p[0] - q[0]) * (p[1] + q[1]))
+    return _norm(n)
+
+
+def _earclip(pts, n):
+    """Dreiecke (Indizes in pts) für ein ebenes, auch konkaves Vieleck mit Normale n."""
+    if len(pts) == 3:
+        return [(0, 1, 2)]
+    ax = max(range(3), key=lambda i: abs(n[i]))
+    a, b = [(1, 2), (0, 2), (0, 1)][ax]
+    P = [(p[a], p[b]) for p in pts]
+    sgn = 1.0 if n[ax] >= 0 else -1.0
+    if ax == 1:
+        sgn = -sgn
+    idx = list(range(len(pts)))
+    out = []
+
+    def cross(o, p, q):
+        return ((P[p][0] - P[o][0]) * (P[q][1] - P[o][1]) - (P[p][1] - P[o][1]) * (P[q][0] - P[o][0])) * sgn
+
+    def inside(t, i0, i1, i2):
+        return cross(i0, i1, t) >= -1e-12 and cross(i1, i2, t) >= -1e-12 and cross(i2, i0, t) >= -1e-12
+
+    guard = 0
+    while len(idx) > 3 and guard < 10000:
+        guard += 1
+        found = False
+        for k in range(len(idx)):
+            i0, i1, i2 = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]
+            if cross(i0, i1, i2) <= 1e-12:
+                continue
+            if any(inside(t, i0, i1, i2) for t in idx if t not in (i0, i1, i2) and P[t] not in (P[i0], P[i1], P[i2])):
+                continue
+            out.append((i0, i1, i2))
+            idx.pop(k)
+            found = True
+            break
+        if not found:  # entartet: Rest als Fächer
+            for k in range(1, len(idx) - 1):
+                out.append((idx[0], idx[k], idx[k + 1]))
+            return out
+    out.append(tuple(idx))
+    return out
+
+
+def _tri_data(mesh, angle=40.0):
+    """Dreiecke mit Eckennormalen und UVs: [(material, [(Punkt, Normale, UV) ×3]), …] in Modellkoordinaten (ohne Pivot)."""
+    fn = [_face_normal([mesh.v[i] for i in f]) for f in mesh.f]
+    vf = {}
+    for fi, f in enumerate(mesh.f):
+        for i in f:
+            vf.setdefault(i, []).append(fi)
+    lim = math.cos(math.radians(angle))
+    uvs = _uvs(mesh)
+    out, li = [], 0
+    for fi, f in enumerate(mesh.f):
+        nf = fn[fi]
+        corners = []
+        for k, i in enumerate(f):
+            s = (0.0, 0.0, 0.0)
+            for g in vf[i]:
+                if _dot(fn[g], nf) >= lim:
+                    s = _add(s, fn[g])
+            corners.append((mesh.v[i], _norm(s) if _len(s) > 1e-9 else nf, uvs[li + k], i))
+        li += len(f)
+        for t in _earclip([mesh.v[i] for i in f], nf):
+            out.append((mesh.fm[fi], [corners[t[0]], corners[t[1]], corners[t[2]]]))
+    return out
+
+
+def _srgb(h):
+    h = h.lstrip("#")
+    return [int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+
+
+def _glb(mdl):
+    import json
+    import struct
+    buf = bytearray()
+    views, accs = [], []
+
+    def view(data, target):
+        while len(buf) % 4:
+            buf.append(0)
+        views.append({"buffer": 0, "byteOffset": len(buf), "byteLength": len(data), "target": target})
+        buf.extend(data)
+        return len(views) - 1
+
+    mats, mat_idx = [], {}
+
+    def material(name):
+        if name in mat_idx:
+            return mat_idx[name]
+        col, met, rough, emit, est = MATS[name]
+        lin = _hex(col)
+        m = {"name": "LC_" + name, "pbrMetallicRoughness": {"baseColorFactor": [round(c, 5) for c in lin], "metallicFactor": met, "roughnessFactor": rough}}
+        if emit:
+            m["emissiveFactor"] = [round(c, 5) for c in _hex(emit)[:3]]
+            if est > 1.0:
+                m["extensions"] = {"KHR_materials_emissive_strength": {"emissiveStrength": est}}
+        mats.append(m)
+        mat_idx[name] = len(mats) - 1
+        return mat_idx[name]
+
+    nodes = [{"name": mdl.key, "children": []}]
+    meshes = []
+    for me in mdl.meshes:
+        tris = _tri_data(me)
+        prims = []
+        for mi in sorted(set(t[0] for t in tris)):
+            key_i, pos, nrm, uv, ind = {}, [], [], [], []
+            for _, cs in (t for t in tris if t[0] == mi):
+                for (p, n, u, vi) in cs:
+                    k = (vi, round(n[0], 3), round(n[1], 3), round(n[2], 3), round(u[0], 4), round(u[1], 4))
+                    if k not in key_i:
+                        key_i[k] = len(pos)
+                        pos.append(_conv(p))
+                        nrm.append(_conv(n))
+                        uv.append((u[0], 1.0 - u[1]))
+                    ind.append(key_i[k])
+            fmt = "<%dH" % len(ind) if len(pos) < 65536 else "<%dI" % len(ind)
+            vp = view(struct.pack("<%df" % (3 * len(pos)), *[c for p in pos for c in p]), 34962)
+            vn = view(struct.pack("<%df" % (3 * len(nrm)), *[c for p in nrm for c in p]), 34962)
+            vt = view(struct.pack("<%df" % (2 * len(uv)), *[c for p in uv for c in p]), 34962)
+            vi_ = view(struct.pack(fmt, *ind), 34963)
+            mn = [min(p[i] for p in pos) for i in range(3)]
+            mx = [max(p[i] for p in pos) for i in range(3)]
+            accs.append({"bufferView": vp, "componentType": 5126, "count": len(pos), "type": "VEC3", "min": mn, "max": mx}); ap = len(accs) - 1
+            accs.append({"bufferView": vn, "componentType": 5126, "count": len(nrm), "type": "VEC3"}); an = len(accs) - 1
+            accs.append({"bufferView": vt, "componentType": 5126, "count": len(uv), "type": "VEC2"}); at = len(accs) - 1
+            accs.append({"bufferView": vi_, "componentType": 5123 if len(pos) < 65536 else 5125, "count": len(ind), "type": "SCALAR"}); ai = len(accs) - 1
+            prims.append({"attributes": {"POSITION": ap, "NORMAL": an, "TEXCOORD_0": at}, "indices": ai, "material": material(me.mats[mi])})
+        meshes.append({"name": mdl.key + "_" + me.name, "primitives": prims})
+        nodes.append({"name": mdl.key + "_" + me.name, "mesh": len(meshes) - 1, "translation": list(_conv(me.pivot))})
+        nodes[0]["children"].append(len(nodes) - 1)
+    gl = {"asset": {"version": "2.0", "generator": "Lunar Cleanup Tycoon – lunar_models.py"},
+          "scene": 0, "scenes": [{"name": mdl.name, "nodes": [0]}], "nodes": nodes, "meshes": meshes,
+          "materials": mats, "accessors": accs, "bufferViews": views, "buffers": [{"byteLength": len(buf)}],
+          "extras": {"Spielname": mdl.name, "Gruppe": mdl.group, "fp": mdl.fp}}
+    if any("extensions" in m for m in mats):
+        gl["extensionsUsed"] = ["KHR_materials_emissive_strength"]
+    js = json.dumps(gl, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    while len(js) % 4:
+        js += b" "
+    while len(buf) % 4:
+        buf.append(0)
+    total = 12 + 8 + len(js) + 8 + len(buf)
+    return struct.pack("<III", 0x46546C67, 2, total) + struct.pack("<II", len(js), 0x4E4F534A) + js + struct.pack("<II", len(buf), 0x004E4942) + bytes(buf)
+
+
+def _obj(mdl):
+    lines = ["# Lunar Cleanup Tycoon – %s (%s)" % (mdl.name, mdl.key), "# Y oben, Vorderseite +Z, 1 Einheit = 1 m", "mtllib materialien.mtl"]
+    nv = nt = nn = 0
+    for me in mdl.meshes:
+        lines.append("o %s_%s" % (mdl.key, me.name))
+        tris = _tri_data(me)
+        vmap = {}
+        for i, v in enumerate(me.v):
+            p = _conv(_add(v, me.pivot))
+            lines.append("v %.5f %.5f %.5f" % p)
+        for mi in sorted(set(t[0] for t in tris)):
+            lines.append("usemtl LC_" + me.mats[mi])
+            for _, cs in (t for t in tris if t[0] == mi):
+                fl = []
+                for (p, n, u, vi) in cs:
+                    cn = _conv(n)
+                    lines.append("vt %.4f %.4f" % (u[0], u[1]))
+                    lines.append("vn %.4f %.4f %.4f" % cn)
+                    nt += 1
+                    nn += 1
+                    fl.append("%d/%d/%d" % (nv + vi + 1, nt, nn))
+                lines.append("f " + " ".join(fl))
+        nv += len(me.v)
+    return "\n".join(lines) + "\n"
+
+
+def _mtl(names):
+    out = ["# Lunar Cleanup Tycoon – Materialien (PBR-Werte in Pr/Pm)"]
+    for name in sorted(names):
+        col, met, rough, emit, est = MATS[name]
+        c = _srgb(col)
+        out += ["", "newmtl LC_" + name, "Kd %.4f %.4f %.4f" % tuple(c), "Ka 0 0 0", "Ks 0.5 0.5 0.5",
+                "Ns %d" % int((1 - rough) * 900 + 10), "Pr %.2f" % rough, "Pm %.2f" % met, "d 1", "illum 2"]
+        if emit:
+            e = _srgb(emit)
+            k = min(1.0, est / 4.0) if est else 0
+            out.append("Ke %.4f %.4f %.4f" % (e[0] * k, e[1] * k, e[2] * k))
+    return "\n".join(out) + "\n"
+
+
+README = """Lunar Cleanup Tycoon – eigene 3D-Assets
+========================================
+
+Alles in diesem Paket wurde mit dem Skript blender/lunar_models.py erzeugt
+(prozedural, keine fremden Modelle oder Texturen). Du darfst es in deinem
+Spiel frei verwenden, ändern und weitergeben.
+
+Ordner
+------
+glb/   Jedes Modell als glTF-Binärdatei (.glb) – mit Materialien, Leuchtfarben
+       und beweglichen Teilen als eigene Knoten. Empfohlen.
+       Unity: Package Manager → „glTFast“ (com.unity.cloud.gltfast) installieren,
+       dann .glb einfach in den Assets-Ordner ziehen.
+obj/   Dieselben Modelle als .obj + materialien.mtl (öffnet jedes 3D-Programm,
+       Unity ohne Zusatzpaket). Bewegliche Teile sind eigene Objekte, aber
+       ohne eigenen Drehpunkt.
+fbx/   (nur wenn das Paket in Blender gebaut wurde) FBX für Unity.
+blender/  Das Skript selbst. In Blender: Reiter „Scripting“ → Öffnen → ▶.
+vorschau/ Übersichtsbilder aller Modelle.
+manifest.json  Liste aller Modelle: Name, Gruppe, Dateien, Teile, Drehpunkte, Größe.
+
+Maße und Achsen
+---------------
+1 Einheit = 1 m. Ursprung jedes Modells: Mitte am Boden.
+glb/obj: Y nach oben, Vorderseite zeigt nach +Z (wie Unity „forward“).
+Gebäude passen in ihren Grundkreis (Radius fp aus gamedata.json).
+Förderbänder: laufen entlang +Z, Start bei z = 0, Lauffläche 0,55 m hoch,
+0,84 m breit (wie im Spiel). Kurven biegen nach rechts – für links spiegeln.
+Waren liegen mit der Unterseite auf 0, die lange Seite längs zum Band.
+
+Bewegliche Teile (Namen)
+------------------------
+<id>_Koerper   alles Feste
+<id>_Rakete    Rakete der Verkaufsstation (Start/Landung)
+<id>_Kolben    Pressenkolben (auf/ab)
+<id>_Dreh      Drehteil: Schüssel, Bohrgestänge, Schaufelrad, Kranhaken, Radar, Roboterarm
+<id>_Rad_0..n  Räder (drehen um die Querachse)
+<id>_Werkzeug  Bürste, Düse, Fräse, Pflug oder Pumpenarm vorne
+<id>_Rotor_0..3 Drohnenrotoren (drehen um die Hochachse)
+<id>_Ladung    Drohnenkorb bzw. Greifer
+<id>_Licht     Ampel-Kugel (Farbe wechselt im Spiel)
+
+Gruppen
+-------
+Gebaeude, Anlagen, Fahrzeuge, Drohnen, Foerderband, Produkte (alle 57 Waren),
+Schmutz (9 Schmutzarten), Ereignisse (Wracks, Komet, Einschlag, Meteorit,
+Frachter, Erzader), Welt (Leuchtkristall, Laterne, Astronaut, Sammelwagen,
+Außenlager, Bauplatz, Grube, Pipeline, Ampel, Deko-Felsen, Krater).
+"""
+
+
+def _own_source():
+    try:
+        with open(__file__, "r", encoding="utf-8") as fh:
+            return fh.read()
+    except Exception:
+        if HAVE_BPY:
+            for t in bpy.data.texts:
+                if t.name.endswith("lunar_models.py"):
+                    return t.as_string()
+    return None
+
+
+def make_package(zip_path, fbx_dir=None, extra=None, only=None):
+    """Baut alle Modelle und packt GLB, OBJ, (FBX), Manifest, Anleitung und Skript in eine ZIP."""
+    import json
+    import zipfile
+    models = build_all(only)
+    man = {"spiel": "Lunar Cleanup Tycoon", "einheit": "Meter", "achsen": "Y oben, Vorderseite +Z (glb/obj)", "modelle": []}
+    used = set()
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for mdl in models:
+            z.writestr("glb/%s/%s.glb" % (mdl.group, mdl.key), _glb(mdl))
+            z.writestr("obj/%s/%s.obj" % (mdl.group, mdl.key), _obj(mdl))
+            files = ["glb/%s/%s.glb" % (mdl.group, mdl.key), "obj/%s/%s.obj" % (mdl.group, mdl.key)]
+            if fbx_dir and os.path.exists(os.path.join(fbx_dir, mdl.key + ".fbx")):
+                z.write(os.path.join(fbx_dir, mdl.key + ".fbx"), "fbx/%s/%s.fbx" % (mdl.group, mdl.key))
+                files.append("fbx/%s/%s.fbx" % (mdl.group, mdl.key))
+            allp = [_add(v, me.pivot) for me in mdl.meshes for v in me.v]
+            mn = [round(min(p[i] for p in allp), 3) for i in range(3)]
+            mx = [round(max(p[i] for p in allp), 3) for i in range(3)]
+            for me in mdl.meshes:
+                used.update(me.mats)
+            man["modelle"].append({
+                "id": mdl.key, "name": mdl.name, "gruppe": mdl.group, "fp": mdl.fp, "dateien": files,
+                "groesse_m": {"breite": round(mx[0] - mn[0], 3), "tiefe": round(mx[1] - mn[1], 3), "hoehe": round(mx[2] - mn[2], 3)},
+                "dreiecke": sum(sum(len(f) - 2 for f in me.f) for me in mdl.meshes),
+                "teile": [{"name": mdl.key + "_" + me.name, "drehpunkt_yoben": [round(c, 3) for c in _conv(me.pivot)]} for me in mdl.meshes]})
+        mtl = _mtl(used)
+        for g in sorted(set(m.group for m in models)):
+            z.writestr("obj/%s/materialien.mtl" % g, mtl)
+        z.writestr("manifest.json", json.dumps(man, ensure_ascii=False, indent=1))
+        z.writestr("LIESMICH.txt", README)
+        src = _own_source()
+        if src:
+            z.writestr("blender/lunar_models.py", src)
+        for arc, path in (extra or {}).items():
+            z.write(path, arc)
+    return len(models)
+
+
+GROUPS = [("Gebaeude", 13.0, 10), ("Anlagen", 9.0, 10), ("Fahrzeuge", 8.0, 12), ("Drohnen", 7.0, 10), ("Foerderband", 6.0, 16),
+          ("Produkte", 1.2, 20), ("Schmutz", 3.0, 20), ("Ereignisse", 10.0, 10), ("Welt", 7.0, 12)]
+
+
 def run():
     if CLEAR_OLD:
         _clear_old()
     top = _collection("LunarCleanup", bpy.context.scene.collection)
-    groups = {}
     models = build_all(ONLY)
-    rows = ["Gebaeude", "Anlagen", "Fahrzeuge", "Drohnen"]
-    col_i = {g: 0 for g in rows}
+    gi = {g: i for i, (g, _, _) in enumerate(GROUPS)}
+    count = {g: 0 for g, _, _ in GROUPS}
+    for mdl in models:
+        count[mdl.group] = count.get(mdl.group, 0) + 1
+    # Startzeile jeder Gruppe (Gruppen untereinander, lange Gruppen umbrechen)
+    y0, ystart = 0.0, {}
+    for g, sp, per in GROUPS:
+        ystart[g] = y0
+        rows_g = max(1, -(-count.get(g, 0) // per))
+        y0 += rows_g * sp + 4.0
+    seen = {g: 0 for g, _, _ in GROUPS}
     roots = []
     for mdl in models:
         g = _collection("LC_" + mdl.group, top)
-        groups[mdl.group] = g
         root = bpy.data.objects.new(mdl.key, None)
         root.empty_display_type = "PLAIN_AXES"
         root.empty_display_size = 0.5
@@ -1732,21 +2800,32 @@ def run():
             ob.name = mdl.key + "_" + mesh.name
             ob.parent = root
             ob.location = mesh.pivot
-        i = col_i[mdl.group]
-        col_i[mdl.group] += 1
-        root.location = (i * SPACING, rows.index(mdl.group) * SPACING, 0)
+        _, sp, per = GROUPS[gi[mdl.group]]
+        i = seen[mdl.group]
+        seen[mdl.group] += 1
+        root.location = ((i % per) * sp, ystart[mdl.group] + (i // per) * sp, 0)
         roots.append(root)
     if SETUP_SCENE:
-        _setup_scene(max(col_i.values()) * SPACING, len(rows) * SPACING)
+        _setup_scene(max(per * sp for _, sp, per in GROUPS), y0)
     if EXPORT:
         d = bpy.path.abspath(EXPORT_DIR)
         os.makedirs(d, exist_ok=True)
         for r in roots:
             _export(r, os.path.join(d, r.name + ".fbx"))
-        print("Lunar Cleanup: %d Modelle exportiert nach %s" % (len(roots), d))
+        zp = os.path.join(os.path.dirname(os.path.normpath(d)), "LunarCleanup_Assets.zip")
+        make_package(zp, fbx_dir=d, only=ONLY)
+        print("Lunar Cleanup: %d Modelle exportiert nach %s, Paket: %s" % (len(roots), d, zp))
     tris = sum(sum(len(f) - 2 for f in me.f) for mdl in models for me in mdl.meshes)
     print("Lunar Cleanup: %d Modelle gebaut, %d Dreiecke vor Bevel" % (len(models), tris))
 
 
 if HAVE_BPY and __name__ == "__main__":
     run()
+elif __name__ == "__main__":
+    import sys
+    if "--zip" in sys.argv:
+        out = sys.argv[sys.argv.index("--zip") + 1]
+        n = make_package(out)
+        print("Lunar Cleanup: %d Modelle in %s gepackt" % (n, out))
+    else:
+        print("Aufruf: in Blender ausführen, oder: python3 lunar_models.py --zip LunarCleanup_Assets.zip")
