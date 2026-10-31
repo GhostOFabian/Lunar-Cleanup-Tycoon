@@ -70,12 +70,16 @@ namespace LunarCleanup.Core
         public static int FreqOf(string pid) { var sv = S?.planets?.Find(p => p.pid == pid); if (sv != null && sv.freq > 0) return sv.freq; return GameData.Planets.TryGetValue(pid, out var P) ? P.freq : 0; }
         /// <summary>Vorschau für die Basis-Prüfung: Planet mit allen Gebäuden, höchster Basisstufe und allen Außenlagern, Mittag.
         /// Wird nie gespeichert und läuft nicht in der Simulation.</summary>
-        public static PState Preview(string pid, int freq = 0)
+        /// <summary>Gebäude in Kaufreihenfolge (nach Basisstufe, dann Liste) – für Teil-Ausbauten in der Basis-Prüfung.</summary>
+        public static List<string> BuildOrder() { var o = GameData.BOrder.ToList(); return o.OrderBy(id => GameData.Bld[id].stage).ThenBy(id => o.IndexOf(id)).ToList(); }
+        /// <summary>Vorschau-Basis. upTo &lt; 0: alles maximal; sonst nur die ersten upTo Gebäude der Kaufreihenfolge (ohne Außenlager/Bohrtürme).</summary>
+        public static PState Preview(string pid, int freq = 0, int upTo = -1)
         {
             var sv = NewPlanet(pid); if (freq > 0) sv.freq = freq; sv.stage = GameData.Stages.Count;
-            foreach (var id in GameData.BOrder) if (!sv.bld.Contains(id)) sv.bld.Add(id);
+            if (upTo < 0) { foreach (var id in GameData.BOrder) if (!sv.bld.Contains(id)) sv.bld.Add(id); }
+            else { var ord = BuildOrder(); int st = 1; for (int i = 0; i < upTo && i < ord.Count; i++) { if (!sv.bld.Contains(ord[i])) sv.bld.Add(ord[i]); st = Math.Max(st, GameData.Bld[ord[i]].stage); } sv.stage = Math.Max(1, st); }
             sv.dayT = DayLen(pid) * .25f;
-            if (freq <= 0 || freq == GameData.Planets[pid].freq)
+            if (upTo < 0 && (freq <= 0 || freq == GameData.Planets[pid].freq))
             {
                 foreach (int c in OutpostSites(pid)) sv.outposts.Add(new StSave { id = "o" + c, cell = c, buf = new float[NM] });
                 // ein Bohrturm und ein Erzbagger zum Anschauen (Ring 4, trockene Zellen, kein Außenlager-Platz)

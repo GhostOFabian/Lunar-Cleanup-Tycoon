@@ -30,8 +30,13 @@ namespace LunarCleanup.Gameplay
         void Awake()
         {
             Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            QualitySettings.SetQualityLevel(1, true); /* Browser: PC-Qualität statt Handy-Stufe (volle Auflösung, weiche Schatten, 4 Kaskaden) */
+#endif
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
             {
+                urp.renderScale = 1f; urp.msaaSampleCount = 4; /* Kanten glätten – ohne sahen Bänder und Gebäude im Browser zackig und unscharf aus */
+                urp.shadowDistance = Mathf.Max(urp.shadowDistance, 60f);
                 urp.maxAdditionalLightsCount = 8;
                 try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }
             } // Laternen, Scheinwerfer, Saugkopf bei Nacht
@@ -164,6 +169,33 @@ namespace LunarCleanup.Gameplay
                         cd = preview.pd.cells[r.cell].c; north = preview.pd.cells[r.cell].e2; alt = altGoal = 20; WorldView.NightF = 0; ApplyCam(); yield return null; yield return null; yield return new WaitForEndOfFrame();
                         ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + (r.bag ? "_bagger" : "_bohrturm") + ".png"), 2); yield return null; yield return null;
                     }
+                // Teil-Ausbauten: nach jedem gekauften Gebäude (so wie beim echten Spielen) – jede Zwischenstufe hat andere Bänder und Wege
+                if (f == 0)
+                {
+                    var ord = Game.BuildOrder(); int partBad = 0;
+                    for (int k = 1; k < ord.Count; k++)
+                    {
+                        List<string> iss2 = null; bool any = false;
+                        try
+                        {
+                            preview = Game.Preview(pid, 0, k); any = preview.lay.belts.Any(b => Game.BeltLive(preview, b) && !Game.HiddenBelt(b));
+                            if (any) { world.Build(preview); }
+                        }
+                        catch (System.Exception e) { iss2 = new List<string> { "FEHLER beim Aufbau: " + e.Message }; Debug.LogException(e); }
+                        if (!any && iss2 == null) continue;
+                        yield return null;
+                        if (iss2 == null) { try { iss2 = world.CheckBase(); } catch (System.Exception e) { iss2 = new List<string> { "FEHLER bei der Prüfung: " + e.Message }; } }
+                        if (iss2.Count == 0) continue;
+                        total += iss2.Count; partBad++;
+                        rep.AppendLine("  == Teilausbau " + k + " (bis " + GameData.Bld[ord[k - 1]].name + "): " + iss2.Count + " Befunde");
+                        foreach (var s in iss2) rep.AppendLine("    - " + s);
+                        if (partBad <= 3)
+                        {
+                            var c = preview.pd.cells[preview.pd.baseCell]; cd = c.c; north = c.e2; alt = altGoal = 70; WorldView.NightF = 0; ApplyCam(); yield return null; yield return new WaitForEndOfFrame();
+                            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_teil" + k + ".png"), 2); yield return null; yield return null;
+                        }
+                    }
+                }
             }
             rep.AppendLine(); rep.AppendLine("Gesamt: " + total + " Befunde");
             System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "bericht.txt"), rep.ToString());

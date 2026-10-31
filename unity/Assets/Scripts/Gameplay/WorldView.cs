@@ -243,10 +243,9 @@ namespace LunarCleanup.Gameplay
             AddPart(Extrude(rp, cum, Box2(-BW - .06f, BW + .06f, H - .32f, H - .02f), true, false, LF, s0), frame, "Rahmen");
             // Stützen: enden unter dem Rahmen, nie im Band
             var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); float L = cum[n - 1];
-            for (float s = 1f; s < L - .6f; s += 3f)
+            foreach (var (p, tan, top) in SupportSpots(b, rp, cum, s0, H))
             {
-                var p = PointAt(rp, cum, s, out var tan); var nrm = new Vector2(-tan.y, tan.x); float top = H + LF(s0 + s) - .32f;
-                if (UnderBelt(b, p, H + LF(s0 + s), BW + .35f) || InFootprint(p)) continue; // in Kreuzungen und auf Gebäudeflächen keine Stützen // keine Stütze in einem tiefer liegenden Band (Kreuzung)
+                var nrm = new Vector2(-tan.y, tan.x);
                 foreach (float sd in new[] { -1f, 1f })
                 {
                     var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var g = MeshKit.Cyl(beltRoot, post, Vector3.zero, .06f, .07f, top, 8); g.transform.position = d * (pd.R + top / 2); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
@@ -284,6 +283,26 @@ namespace LunarCleanup.Gameplay
                     if (md > BW + .25f || dh > .15f) out_.Add(nm + ": Y-Anschluss an " + sw + " trifft das Band nicht (" + md.ToString("0.0") + " m daneben)"); else Notes.Add(nm + ": mündet als Y in " + sw);
                 }
                 if (!w0) Notes.Add(nm + ": Start über überdachten Zulauf mit " + b.from + " verbunden"); if (!w1) Notes.Add(nm + ": Ende über überdachten Zulauf mit " + b.to + " verbunden");
+                /* Stützen: dieselben Plätze wie beim Bauen; Beine nie in einem anderen Band, angehobene Stücke nie länger als 6,5 m ohne Stütze */
+                var sub = SubPath(rp, cum, s0, s1); var subCum = new float[sub.Length]; for (int i = 1; i < sub.Length; i++) subCum[i] = subCum[i - 1] + (sub[i] - sub[i - 1]).magnitude;
+                var spots = sub.Length >= 2 ? SupportSpots(b, sub, subCum, s0, H) : new List<(Vector2 p, Vector2 tan, float top)>();
+                foreach (var (p, tan, top) in spots)
+                {
+                    var nrm = new Vector2(-tan.y, tan.x);
+                    foreach (var ok2 in beltInfo) { if (ok2.Key == kv.Key) continue; var O = ok2.Value; foreach (float sd in new[] { -1f, 1f }) { var lp = p + nrm * (BW - .1f) * sd; for (float u = O.s0; u <= O.s1; u += .2f) { if ((PointAt(O.rp, O.cum, u, out _) - lp).magnitude < BW + .09f + .07f && O.H + Lift(ok2.Key, u) + .2f > 0 && O.H + Lift(ok2.Key, u) - .32f < top) { out_.Add(nm + ": Stütze steht in Band " + ok2.Key); goto legDone; } } } }
+                }
+                legDone:;
+                {
+                    float last = -1; bool lifted = false; float runStart = 0; var sPos = new List<float>(); foreach (var sp in spots) { float best = 0, bd = 1e9f; for (float q = 0; q <= subCum[subCum.Length - 1]; q += .1f) { float dd = (PointAt(sub, subCum, q, out _) - sp.p).sqrMagnitude; if (dd < bd) { bd = dd; best = q; } } sPos.Add(best); }
+                    for (float q = .5f; q < (s1 - s0) - .5f; q += .25f)
+                    {
+                        bool up = Lift(kv.Key, s0 + q) > .3f; bool hasSup = sPos.Any(x => Mathf.Abs(x - q) < .13f);
+                        if (up && !lifted) { lifted = true; runStart = q; last = q; }
+                        if (!up) lifted = false;
+                        if (up && hasSup) last = q;
+                        if (up && q - last > 6.5f) { out_.Add(nm + ": Brücke ohne Stütze bei " + (s0 + q).ToString("0.0") + " m (liegt nicht auf)"); break; }
+                    }
+                }
                 // Band durch ein Gebäude? (Mitte, Banden, Rahmenunterkante) – an den eigenen Enden 0,1 m Spielraum
                 foreach (var id in ids)
                 {
@@ -300,11 +319,11 @@ namespace LunarCleanup.Gameplay
                         if (hit) out_.Add(nm + ": läuft bei " + s.ToString("0.0") + " m durch " + id);
                     }
                     // Stützen (senkrecht vom Rahmen bis zum Boden)
-                    for (float s = 1f; s < (s1 - s0) - .6f && !hit; s += 3f)
+                    foreach (var (p, tan, top) in spots)
                     {
-                        var p = PointAt(rp, cum, s0 + s, out var tan); var nrm = new Vector2(-tan.y, tan.x); if (InFootprint(p) || UnderBelt(b, p, H + Lift(kv.Key, s0 + s), BW + .35f)) continue;
-                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); float top = H + Lift(kv.Key, s0 + s) - .32f; var A = d * (pd.R + top); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= top - .35f) hit = true; } // Bodenplatten zählen nicht
-                        if (hit) out_.Add(nm + ": Stütze bei " + (s0 + s).ToString("0.0") + " m steht in " + id);
+                        if (hit) break; var nrm = new Vector2(-tan.y, tan.x);
+                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var A = d * (pd.R + top); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= top - .35f) hit = true; } /* Bodenplatten zählen nicht */
+                        if (hit) out_.Add(nm + ": Stütze steht in " + id);
                     }
                 }
             }
@@ -475,6 +494,24 @@ namespace LunarCleanup.Gameplay
         bool InFootprint(Vector2 p) { foreach (var id in ps.bld) if (ps.lay.pos.TryGetValue(id, out var c) && GameData.Bld.ContainsKey(id) && (p - c).magnitude < GameData.Bld[id].fp * (id == "sell" || id == "port" ? 1.4f : .95f)) return true; /* Raketenplattform ist eckig */ return false; }
         static float SegDist(Vector2 q, Vector2 a, Vector2 c) { var d = c - a; float l2 = d.sqrMagnitude; float t = l2 > 0 ? Mathf.Clamp01(Vector2.Dot(q - a, d) / l2) : 0; return (q - (a + d * t)).magnitude; }
         /// <summary>Liegt unter Punkt p (Plan) ein anderes, tieferes Band?</summary>
+        /// <summary>Stützenplätze (alle ~3 m): nie auf Gebäudeflächen, und beide Beine weit genug neben tiefer liegenden Bändern.
+        /// Ist der Regelplatz belegt, wird bis 1,4 m davor/dahinter gesucht – so hat auch eine Brücke Stützen direkt neben dem unteren Band.</summary>
+        List<(Vector2 p, Vector2 tan, float top)> SupportSpots(BeltDef b, Vector2[] rp, float[] cum, float s0, float H)
+        {
+            var res = new List<(Vector2, Vector2, float)>(); float L = cum[cum.Length - 1];
+            for (float s = 1f; s < L - .6f; s += 3f)
+            {
+                foreach (float o in new[] { 0f, .5f, -.5f, 1f, -1f, 1.4f, -1.4f })
+                {
+                    float q = s + o; if (q < .4f || q > L - .4f) continue;
+                    var p = PointAt(rp, cum, q, out var tan); var nrm = new Vector2(-tan.y, tan.x); float hh = H + Lift(b.id, s0 + q);
+                    if (InFootprint(p)) continue;
+                    bool ok = true; foreach (float sd in new[] { -1f, 1f }) if (UnderBelt(b, p + nrm * (BW - .1f) * sd, hh, BW + .09f + .16f)) { ok = false; break; }
+                    if (!ok) continue; res.Add((p, tan, hh - .32f)); break;
+                }
+            }
+            return res;
+        }
         bool UnderBelt(BeltDef me, Vector2 p, float H, float r)
         {
             foreach (var o in ps.lay.belts)
