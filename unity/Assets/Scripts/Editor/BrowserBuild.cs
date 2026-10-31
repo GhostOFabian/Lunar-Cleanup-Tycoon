@@ -17,13 +17,17 @@ namespace LunarCleanup.EditorTools
         public static void BuildAndRun() => Run(true);
         [MenuItem("Lunar Cleanup/Browser-Version nur bauen")]
         public static void BuildOnly() => Run(false);
+        /// <summary>Öffentliche Fassung für GitHub Pages: ohne Testmodus, gzip-komprimiert mit Entpacken im Browser (GitHub setzt keine Kompressions-Header).</summary>
+        [MenuItem("Lunar Cleanup/Browser-Version für GitHub bauen")]
+        public static void BuildGitHub() => Run(false, true);
 
-        static void Run(bool start)
+        static void Run(bool start, bool pub = false)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Lunar Cleanup: erst den Play-Modus beenden."); return; }
             MakeShaderKeep();
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled; // läuft so auf jedem einfachen Webserver (auch GitHub Pages)
-            PlayerSettings.WebGL.decompressionFallback = false;
+            PlayerSettings.WebGL.compressionFormat = pub ? WebGLCompressionFormat.Gzip : WebGLCompressionFormat.Disabled; // unkomprimiert läuft auf jedem einfachen Webserver
+            PlayerSettings.WebGL.decompressionFallback = pub; // GitHub Pages: der Browser entpackt selbst
+            PlayerSettings.WebGL.nameFilesAsHashes = false;
             PlayerSettings.WebGL.dataCaching = true;
             PlayerSettings.defaultWebScreenWidth = 540; PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.runInBackground = true;
@@ -33,11 +37,11 @@ namespace LunarCleanup.EditorTools
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL) EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
             var opt = new BuildPlayerOptions
             {
-                scenes = new[] { "Assets/Scenes/LunarCleanup.unity" }, locationPathName = "Builds/WebGL", target = BuildTarget.WebGL,
-                options = BuildOptions.Development | (start ? BuildOptions.AutoRunPlayer : BuildOptions.None)
+                scenes = new[] { "Assets/Scenes/LunarCleanup.unity" }, locationPathName = pub ? "Builds/WebGL-GitHub" : "Builds/WebGL", target = BuildTarget.WebGL,
+                options = (pub ? BuildOptions.None : BuildOptions.Development) | (start ? BuildOptions.AutoRunPlayer : BuildOptions.None)
             };
             var rep = BuildPipeline.BuildPlayer(opt);
-            Debug.Log("Lunar Cleanup: Browser-Version " + (rep.summary.result == BuildResult.Succeeded ? "fertig: " + Path.GetFullPath("Builds/WebGL") + " (" + (rep.summary.totalSize / 1048576f).ToString("0.0") + " MB)" : "FEHLGESCHLAGEN: " + rep.summary.result));
+            Debug.Log("Lunar Cleanup: Browser-Version " + (rep.summary.result == BuildResult.Succeeded ? "fertig: " + Path.GetFullPath(opt.locationPathName) + " (" + (rep.summary.totalSize / 1048576f).ToString("0.0") + " MB)" : "FEHLGESCHLAGEN: " + rep.summary.result));
         }
 
         /// <summary>Materialien in Resources: dadurch sind Lit/Unlit/Partikel/Himmel samt der benutzten Schlüsselwörter im Build.</summary>
