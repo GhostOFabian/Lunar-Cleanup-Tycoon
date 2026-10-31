@@ -203,3 +203,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 31.10.2026: Die Unity-Version wird die neue Hauptversion; der Browser-Prototyp wird nicht mehr weiterentwickelt (bleibt nur als Nachschlagewerk im Repo).
 - 31.10.2026: Spielstand-Code (Export/Import) nur als Übergang, bis die Handy-Version mit Cloud-Speicher kommt – niedrige Priorität.
 - 31.10.2026: Claude darf die wichtigsten Tests selbst durchführen und abschließen (Testmodus, eigener Spielstand).
+- 31.10.: Ampeln sitzen auf der höchsten breiten Dachfläche (≥ 0,8 m), rücken bei Schornstein/Antenne/Rakete in 35-cm-Ringen nach außen – nie freischwebend über dem Gebäude.

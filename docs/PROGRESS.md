@@ -161,3 +161,7 @@
 - Ausbaustufen, Ausrichtung, Werksaufträge, 20 Planetenziele, tägliche Aufträge, Statistik, Vibration, Hauptziele 44–57.
 - Kometeneinschlag + Suchtrupp (Anzeige oben, Rover birgt Trümmer und Wracks), Lautstärkeregler.
 - Kleine Planeten mit feinerer Bodentextur, Entladeanlage rückt von zu nahen Gebäuden ab.
+
+## Unity 0.20 (31.10.2026) – Browser-Build v=11
+- Ampeln stehen jetzt auf dem Dach jedes Gebäudes (als Teil des Gebäudes, wachsen bei Ausbaustufen mit). Dachfläche wird aus den Bauteilen im Gebäuderaum bestimmt; Schornsteine, Antennen und die Rakete werden umgangen (Startplatz: Ampel auf der Plattform neben der Rakete).
+- Test: Umschalt+F4 im Testmodus fotografiert jede Ampel der fertigen Mondbasis schräg von der Seite (BasisCheck/Ampeln, mit Höhenliste). Alle 8 geprüft.

@@ -197,9 +197,9 @@ namespace LunarCleanup.Gameplay
                 if (!blds.TryGetValue(id, out var bp) || !bp.root) continue;
                 if (!ampel.TryGetValue(id, out var a) || !a.go)
                 {
-                    var rs = bp.root.GetComponentsInChildren<Renderer>(); if (rs.Length == 0) continue; var bb = rs[0].bounds; foreach (var r in rs) bb.Encapsulate(r.bounds);
-                    var up = bp.root.transform.up; float top = Vector3.Dot(bb.max - bp.root.transform.position, up); top = Mathf.Max(top, 1.5f);
-                    var g = new GameObject("Ampel " + id); g.transform.SetParent(baseRoot, false); g.transform.position = bp.root.transform.position + up * (top - .05f); g.transform.rotation = bp.root.transform.rotation; /* sitzt direkt auf dem Dach */
+                    if (!RoofSpot(bp, out var roof)) continue;
+                    var g = new GameObject("Ampel " + id); g.transform.SetParent(bp.root.transform, false); g.transform.localPosition = roof; g.transform.localRotation = Quaternion.identity; /* sitzt mitten auf dem Dach */
+                    var sc = bp.root.transform.lossyScale; g.transform.localScale = new Vector3(1 / Mathf.Max(.01f, sc.x), 1 / Mathf.Max(.01f, sc.y), 1 / Mathf.Max(.01f, sc.z)); // Gebäudestufen strecken das Gebäude – die Ampel nicht
                     MeshKit.Box(g.transform, MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f), new Vector3(0, .12f, 0), new Vector3(.9f, .24f, .9f)); // Gehäuse
                     var mat = MeshKit.Mat(Color.gray, 0, .6f, Color.gray); mat = new Material(mat);
                     var ball = MeshKit.Ball(g.transform, mat, new Vector3(0, .52f, 0), .75f); NoShadow(ball);
@@ -213,5 +213,54 @@ namespace LunarCleanup.Gameplay
             }
         }
         void Pulse() { }
+        /// <summary>Dachmitte im Gebäude-Koordinatensystem: Kasten jedes Bauteils im Gebäuderaum (nicht in Weltachsen, sonst zu groß), Mitte der Grundfläche,
+        /// höchste breite Fläche dort; ragt etwas hinein (Rakete, Schornstein, Antenne), rückt die Ampel in Ringen nach außen, bis sie frei steht.</summary>
+        static bool RoofSpot(Models.BuildingParts bp, out Vector3 roof)
+        {
+            roof = Vector3.zero; var root = bp.root.transform; var boxes = new List<Bounds>();
+            foreach (var r in bp.root.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (bp.rocket && r.transform.IsChildOf(bp.rocket)) continue; var mf = r.GetComponent<MeshFilter>(); if (!mf || !mf.sharedMesh) continue;
+                if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue; // Leuchtflächen, Lichtkegel
+                var lb = mf.sharedMesh.bounds; var m = root.worldToLocalMatrix * r.transform.localToWorldMatrix; Bounds b = new Bounds(m.MultiplyPoint3x4(lb.center), Vector3.zero);
+                for (int i = 0; i < 8; i++) b.Encapsulate(m.MultiplyPoint3x4(lb.center + Vector3.Scale(lb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1))));
+                if (b.size.y < .05f && b.max.y < .3f) continue; // Bodenplatten
+                boxes.Add(b);
+            }
+            if (boxes.Count == 0) return false;
+            var all = boxes[0]; foreach (var b in boxes) all.Encapsulate(b);
+            float cx0 = all.center.x, cz0 = all.center.z;
+            // Hindernisse auf dem Dach: Rakete, Schornsteine, Antennen, Stangen – die Ampel steht daneben, nicht darin oder obendrauf
+            var block = new List<Bounds>(boxes); // alles, was höher als die Stellfläche ist und in das Gehäuse ragen würde
+            if (bp.rocket)
+            {
+                bool have = false; Bounds rb = default;
+                foreach (var r in bp.rocket.GetComponentsInChildren<MeshRenderer>()) { var mf = r.GetComponent<MeshFilter>(); if (!mf || !mf.sharedMesh) continue; var lb = mf.sharedMesh.bounds; var m = root.worldToLocalMatrix * r.transform.localToWorldMatrix; for (int i = 0; i < 8; i++) { var q = m.MultiplyPoint3x4(lb.center + Vector3.Scale(lb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1))); if (!have) { rb = new Bounds(q, Vector3.zero); have = true; } else rb.Encapsulate(q); } }
+                if (have) block.Add(rb);
+            }
+            float cx = cx0, cz = cz0, top = TopAt(boxes, cx, cz); bool found = false;
+            for (int ring = 0; ring <= 6 && !found; ring++)
+                for (int k = 0; k < (ring == 0 ? 1 : 8) && !found; k++)
+                {
+                    float ang = k * Mathf.PI / 4, rad = ring * .35f; float x = cx0 + Mathf.Cos(ang) * rad, z = cz0 + Mathf.Sin(ang) * rad;
+                    if (x < all.min.x + .45f || x > all.max.x - .45f || z < all.min.z + .45f || z > all.max.z - .45f) continue;
+                    float t = TopAt(boxes, x, z); if (t <= 0) continue; bool free = true;
+                    foreach (var bb in block) if (bb.max.y > t + .05f && bb.min.y < t + 1.3f && x + .45f > bb.min.x && x - .45f < bb.max.x && z + .45f > bb.min.z && z - .45f < bb.max.z) { free = false; break; }
+                    if (free) { cx = x; cz = z; top = t; found = true; }
+                }
+            if (top <= 0) top = all.max.y;
+            roof = new Vector3(cx, top - .02f, cz); return true;
+        }
+        /// <summary>Höchste tragfähige Fläche über (x,z): nur Bauteile, die breit genug für das Ampelgehäuse sind (keine Schornsteine, Antennen, Stangen).</summary>
+        static float TopAt(List<Bounds> boxes, float x, float z)
+        {
+            float top = 0;
+            foreach (var b in boxes)
+            {
+                if (x < b.min.x - .2f || x > b.max.x + .2f || z < b.min.z - .2f || z > b.max.z + .2f) continue;
+                if (Mathf.Min(b.size.x, b.size.z) >= .8f) top = Mathf.Max(top, b.max.y);
+            }
+            return top;
+        }
     }
 }

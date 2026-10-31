@@ -135,7 +135,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
-            if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots("moon"));
+            if (kb.f4Key.wasPressedThisFrame && Application.isEditor) { if (kb.shiftKey.isPressed) StartCoroutine(AmpelShots("moon")); else StartCoroutine(BeltShots("moon")); }
             if (kb.f1Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(SkyShots());
             if (kb.f3Key.wasPressedThisFrame) { var cs = Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Game.StartEvent(cs, "impact"); } /* Test: Kometeneinschlag */
             if (kb.f2Key.wasPressedThisFrame && Application.isEditor) { string wd = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Web")); System.IO.Directory.CreateDirectory(wd); string fn = System.IO.Path.Combine(wd, "web_" + System.DateTime.Now.ToString("HHmmss") + ".png"); ScreenCapture.CaptureScreenshot(fn, 2); Debug.Log("Lunar Cleanup: Webseiten-Foto " + fn); } /* F2: Bildschirmfoto mit HUD für die Webseite */
@@ -162,6 +162,35 @@ namespace LunarCleanup.Gameplay
                 yield return new WaitForEndOfFrame(); ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, pid + ".png"), 1); yield return null; yield return null;
             }
             preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet(); Debug.Log("Lunar Cleanup: Himmelsfotos fertig");
+        }
+        /// <summary>Umschalt+F4 (Testmodus, Editor): jede Ampel der fertigen Basis schräg von der Seite fotografieren (BasisCheck/Ampeln).</summary>
+        IEnumerator AmpelShots(string pid)
+        {
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Ampeln")); System.IO.Directory.CreateDirectory(dir);
+            foreach (var f in System.IO.Directory.GetFiles(dir, "*.png")) System.IO.File.Delete(f);
+            if (uiRoot) uiRoot.SetActive(false);
+            PState pv = null; try { pv = Game.Preview(pid, 0); } catch (System.Exception e) { Debug.LogException(e); }
+            if (pv != null)
+            {
+                pv.sv.stage = Mathf.Max(pv.sv.stage, 3); mapMode = false; WorldView.MapMode = false; alt = altGoal = 12; preview = pv; planet.Build(pv); world.Build(pv); for (int q = 0; q < 6; q++) yield return null; yield return new WaitForSeconds(1.6f);
+                float R = pv.pd.R;
+                var amps = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(t => t.name.StartsWith("Ampel ")).ToList(); foreach (var a in amps) a.gameObject.SetActive(true);
+                var log = new System.Text.StringBuilder();
+                foreach (var a in amps)
+                {
+                    var up = a.position.normalized; var side = Vector3.Cross(up, Vector3.forward); if (side.sqrMagnitude < .01f) side = Vector3.Cross(up, Vector3.right); side.Normalize(); var fw = Vector3.Cross(side, up);
+                    log.AppendLine(a.name + " (an " + (a.parent ? a.parent.name : "-") + ") Höhe über Boden " + (a.position.magnitude - R).ToString("0.00") + " m");
+                    foreach (var (nm, s, h, b) in new[] { ("a", 4.5f, 1.2f, -4.5f), ("b", -4.5f, 2.5f, 4.5f) })
+                    {
+                        yield return null; WorldView.NightF = 0;
+                        cam.transform.position = a.position + side * s + up * h + fw * b; cam.transform.LookAt(a.position - up * .8f, up);
+                        yield return new WaitForEndOfFrame();
+                        ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, a.name.Replace(' ', '_') + "_" + nm + ".png"), 1); yield return null;
+                    }
+                }
+                log.AppendLine(amps.Count + " Ampeln, Stufe " + Game.Gs(pv)); System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "ampeln.txt"), log.ToString());
+            }
+            preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet(); Debug.Log("Lunar Cleanup: Ampelfotos fertig (" + dir + ")");
         }
         IEnumerator BeltShots(string pid)
         {
