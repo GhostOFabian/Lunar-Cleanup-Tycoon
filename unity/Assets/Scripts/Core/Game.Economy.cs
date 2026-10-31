@@ -17,7 +17,6 @@ namespace LunarCleanup.Core
 
         // ---------- Frachtauftrag ----------
         public const double ORDER_BONUS = 1.6;
-        public static IEnumerable<int> PlanetRaws(PState ps) => ps.P.types.Select(t => GameData.Dirt[t.Key].mat).Distinct();
         /// <summary>Was aus einem Rohstoff auf diesem Planeten am Ende wird (Presse → Schmelze, Raffinerie oder roh).</summary>
         public static int EndGood(PState ps, int m)
         {
@@ -58,13 +57,15 @@ namespace LunarCleanup.Core
             { int fl = sv.rigs.Count(r => r.faultK != ""); if (fl > 0) Add("roh", "Störung", 2, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – Techniker sind unterwegs, oder sofort beheben (antippen).", "rcare"); }
             { int br = sv.veh.Count(v => v.mode == "broken"), due = sv.veh.Count(v => v.wear >= .75f && v.mode != "broken"); if (br > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 2, br + (br > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen – " + (ps.bld.Contains("werkstatt") ? "Werkstatt öffnen" : "baue eine Roboterwerkstatt") + ".", "vdur"); else if (due > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 1, due + (due > 1 ? " Fahrzeuge brauchen" : " Fahrzeug braucht") + " bald Wartung.", "vdur"); }
             { int full = sv.rigs.Count(r => Sum(r.buf) >= RigBufCap(r) - .5f); if (full > 0) Add("roh", "Bohrtürme", 2, full + (full > 1 ? " Bohrtürme sind" : " Bohrturm ist") + " voll – " + (sv.veh.Count > 0 ? "die Fahrzeuge holen nicht schnell genug ab." : "kauf Fahrzeuge, die abholen."), "vtank", "vspeed", "urate"); }
-            foreach (var s in GameData.Stations) if (ps.bld.Contains(s) && ps.st.ContainsKey(s))
+            { string s = null; float f = -1; foreach (var s0 in GameData.Stations) if (ps.bld.Contains(s0) && ps.st.ContainsKey(s0)) { float f0 = Sum(ps.st[s0].buf) / Mathf.Max(1, StBuf(ps, s0)); if (f0 > f) { f = f0; s = s0; } } /* eine Entladeanlage: der vollste Teil zählt */
+                if (s != null)
                 {
-                    float f = Sum(ps.st[s].buf) / Mathf.Max(1, StBuf(ps, s)); bool rfull = rf > .97f; string nm = GameData.Bld[s].name;
+                    bool rfull = rf > .97f; string nm = IsUnit(s) ? "Entladeanlage" : GameData.Bld[s].name;
                     if (f > .97f) Add(s, nm, 2, "Puffer voll – Fahrzeuge warten, weil " + (rfull ? "das Rohstofflager voll ist." : "das Förderband zu langsam abtransportiert."), rfull ? new[] { "rohcap", "sellcap" } : new[] { "bspeed", "bcap", "ubuf" });
                     else if (f > .7f) Add(s, nm, 1, "Puffer füllt sich – " + (rfull ? "das Rohstofflager ist voll." : "das Förderband kommt nicht ganz hinterher."), rfull ? new[] { "rohcap", "sellcap" } : new[] { "bspeed", "bcap" });
                     else Add(s, nm, 0, "Läuft – Puffer " + Mathf.RoundToInt(f * 100) + " %");
                 }
+            }
             if (rf > .97f) Add("roh", "Rohstofflager", 2, "Voll – Maschinen verarbeiten zu wenig. (Ab 97 % geht der Überschuss zur Rakete.)", "rohcap", "mspeed", "sellcap");
             else if (rf > .85f) Add("roh", "Rohstofflager", 1, "Fast voll.", "rohcap", "sellcap", "bspeed"); else Add("roh", "Rohstofflager", 0, "Läuft – " + Mathf.RoundToInt(rf * 100) + " % belegt");
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach.ContainsKey(m))
