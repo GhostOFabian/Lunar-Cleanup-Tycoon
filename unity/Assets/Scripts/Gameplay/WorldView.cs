@@ -84,7 +84,7 @@ namespace LunarCleanup.Gameplay
                 MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
                 var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
-                var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; glowRends.Add(pool.GetComponent<MeshRenderer>());
+                var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
             RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
             BuildOutposts(); BuildRigs();
@@ -773,9 +773,10 @@ namespace LunarCleanup.Gameplay
         {
             if (beamMat) return beamMat; beamMat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); beamMat.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(beamMat, true); beamMat.SetFloat("_Cull", 0); beamMat.SetColor("_BaseColor", new Color(.8f, .9f, 1f, 0)); return beamMat;
         }
+        static void NoShadow(GameObject g) { var r = g.GetComponent<MeshRenderer>(); if (r) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; } }
         void AddHeadlight(Models.VehicleParts vp)
         {
-            var beam = MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)); beam.name = "Lichtkegel"; glowRends.Add(beam.GetComponent<MeshRenderer>());
+            var beam = MeshKit.Part(vp.root.transform, MeshKit.Quad, BeamMat(), new Vector3(0, .06f, 3.2f), new Vector3(4.2f, 6.5f, 1), new Vector3(90, 0, 0)); beam.name = "Lichtkegel"; NoShadow(beam); glowRends.Add(beam.GetComponent<MeshRenderer>());
             var lg = new GameObject("Scheinwerfer"); lg.transform.SetParent(vp.root.transform, false); lg.transform.localPosition = new Vector3(0, 1.1f, .9f); lg.transform.localRotation = Quaternion.Euler(28, 0, 0);
             var L = lg.AddComponent<Light>(); L.type = LightType.Spot; L.range = 11; L.spotAngle = 70; L.innerSpotAngle = 35; L.color = new Color(.85f, .92f, 1f); L.intensity = 0; L.shadows = LightShadows.None; vp.head = L;
         }

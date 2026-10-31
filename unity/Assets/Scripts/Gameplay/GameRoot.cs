@@ -30,7 +30,7 @@ namespace LunarCleanup.Gameplay
         UniversalRenderPipelineAsset urpA;
         void Awake()
         {
-            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0; QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable; /* Planetenboden auch schräg von der Seite scharf */
+            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
 #if UNITY_WEBGL && !UNITY_EDITOR
             QualitySettings.SetQualityLevel(1, true); /* Browser: PC-Qualität statt Handy-Stufe (volle Auflösung, weiche Schatten, 4 Kaskaden) */
 #endif
@@ -40,7 +40,6 @@ namespace LunarCleanup.Gameplay
                 urp.shadowDistance = Mathf.Max(urp.shadowDistance, 60f); urp.shadowCascadeCount = 4;
                 /* feinere, weiche Schatten (sonst nur eckige Klötze): Auflösung 2048, weiche Kanten – Felder sind nicht öffentlich setzbar */
                 void SetF(string n, object v) { try { var f = typeof(UniversalRenderPipelineAsset).GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null) f.SetValue(urp, f.FieldType.IsEnum ? System.Enum.ToObject(f.FieldType, v) : System.Convert.ChangeType(v, f.FieldType)); } catch { } }
-                SetF("m_MainLightShadowmapResolution", 2048); SetF("m_SoftShadowsSupported", true);
                 urpA = urp;
                 urp.maxAdditionalLightsCount = 8;
                 try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }

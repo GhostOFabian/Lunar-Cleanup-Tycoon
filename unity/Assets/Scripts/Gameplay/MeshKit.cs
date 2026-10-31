@@ -53,7 +53,6 @@ namespace LunarCleanup.Gameplay
             var g = new GameObject(mesh.name); g.transform.SetParent(parent, false);
             g.transform.localPosition = pos; g.transform.localScale = scale; g.transform.localRotation = Quaternion.Euler(euler);
             g.AddComponent<MeshFilter>().sharedMesh = mesh; var r = g.AddComponent<MeshRenderer>(); r.sharedMaterial = mat;
-            if (mat && mat.renderQueue >= (int)RenderQueue.Transparent) { r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false; } /* Lichtkegel, Glas, Glühen werfen keinen Schatten */
             return g;
         }
         public static GameObject Box(Transform p, Material m, Vector3 pos, Vector3 size, Vector3 euler = default) => Part(p, Cube, m, pos, size, euler);
