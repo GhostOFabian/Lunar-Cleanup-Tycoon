@@ -133,7 +133,7 @@
 - Boden wieder hell (DetailTex in ShaderKeep).
 - Ungetestet im Browser durch den Spieler: alle neuen Funktionen, große Planeten (Leistung), großer Basis-Check.
 
-## Unity 0.14 (31.10.2026, noch nicht als Browser-Build online)
+## Unity 0.14 (31.10.2026) – Browser-Build v=5 online
 - Boden: Reliefkarte (Normal Map) mit kleinen Kratern und Steinchen, Kraterböden dunkler/Ränder heller, dezente Fugen statt blauer/oranger Linien, ruhigere Basisplatten, feinere Detailkörnung, mehr Textur-Rand gegen Farbbluten.
 - Waren: Fässer rund, Kristalle als Kugel. Im Editor liegen die Waren auf dem Band, die Stützen enden unter dem Rahmen (Fotos mit F4 im Testmodus → BasisCheck/band_*.png).
-- Offen: Stelle mit Stützen im Band / schwebenden Waren aus Fabians Screenshot (Planet unbekannt), Build v=5 (PC ging während des Builds aus).
+- Behoben: Bandfläche folgte Brückenrampen nur an den Knickpunkten – Stützen kamen durchs Band, Waren schwebten (Mond, Band Rohstofflager→Verkauf). Kristall-Objekte nach Neuaufbau repariert.
