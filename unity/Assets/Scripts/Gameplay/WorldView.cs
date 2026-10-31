@@ -29,7 +29,7 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
-            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null;
+            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
@@ -228,7 +228,7 @@ namespace LunarCleanup.Gameplay
             if (!m0) Port(rp0, cum0, s0, H0 + LF(s0), false, true); if (!m1) Port(rp0, cum0, s1, H0 + LF(s1), true, true); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
             if (!w0 || !w1) Debug.Log("Lunar Cleanup: Band " + b.id + " ohne Wandtreffer bei " + (!w0 ? b.from + " (" + TrisOf(b.from).Count / 3 + " Dreiecke) " : "") + (!w1 ? b.to + " (" + TrisOf(b.to).Count / 3 + " Dreiecke)" : ""));
             beltTrim[b.id] = new Vector2(s0, s1);
-            var rp = SubPath(rp0, cum0, s0, s1); int n = rp.Length; if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
+            var rp = Densify(SubPath(rp0, cum0, s0, s1), .4f); int n = rp.Length; /* dichte Punkte: die Lauffläche folgt jeder Brückenrampe genau wie Stützen und Waren */ if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
             float H = BeltDeck(b);
             // Lauffläche (Textur läuft mit)
             var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true, LF, s0);
@@ -535,6 +535,13 @@ namespace LunarCleanup.Gameplay
         static Vector2[] SubPath(Vector2[] rp, float[] cum, float s0, float s1)
         {
             var o = new List<Vector2> { PointAt(rp, cum, s0, out _) }; for (int i = 1; i < rp.Length - 1; i++) if (cum[i] > s0 && cum[i] < s1) o.Add(rp[i]); o.Add(PointAt(rp, cum, s1, out _));
+            return o.ToArray();
+        }
+        /// <summary>Linie mit Zwischenpunkten (höchstens step Meter Abstand).</summary>
+        static Vector2[] Densify(Vector2[] rp, float step)
+        {
+            var o = new List<Vector2> { rp[0] };
+            for (int i = 1; i < rp.Length; i++) { float l = (rp[i] - rp[i - 1]).magnitude; int k = Mathf.Max(1, Mathf.CeilToInt(l / step)); for (int j = 1; j <= k; j++) o.Add(Vector2.Lerp(rp[i - 1], rp[i], j / (float)k)); }
             return o.ToArray();
         }
         static Vector2[] Box2(float x0, float x1, float y0, float y1) => new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y1), new Vector2(x0, y1) };

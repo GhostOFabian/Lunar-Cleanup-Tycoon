@@ -135,7 +135,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
-            if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots());
+            if (kb.f4Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(BeltShots("moon"));
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
             if (kb.f8Key.wasPressedThisFrame) Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f);
@@ -144,27 +144,35 @@ namespace LunarCleanup.Gameplay
 #endif
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         /// <summary>F4 (Testmodus, Editor): Nahaufnahmen der Bänder mit Waren und Stützen nach BasisCheck/band_*.png.</summary>
-        IEnumerator BeltShots()
+        IEnumerator BeltShots(string pid)
         {
-            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck")); System.IO.Directory.CreateDirectory(dir);
-            if (uiRoot) uiRoot.SetActive(false); var cd0 = cd; var n0 = north; float a0 = altGoal; int i = 0;
-            foreach (var (id, d, tan) in world.BeltViews())
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Baender")); System.IO.Directory.CreateDirectory(dir);
+            foreach (var f in System.IO.Directory.GetFiles(dir, "*.png")) System.IO.File.Delete(f);
+            if (uiRoot) uiRoot.SetActive(false); var ord = Game.BuildOrder(); bool first = true; string lastSig = null;
+            for (int k = 1; k <= ord.Count; k++)
             {
-                if (i++ >= 6) break;
-                // leere Bänder fürs Foto kurz mit Waren füllen
-                var ps0 = Game.Cur; List<BeltItem> fake = null; var bd = ps0.lay.belts.Find(x => x.id == id);
-                if (bd != null && ps0.belts.TryGetValue(id, out var its) && its.Count == 0) { fake = new List<BeltItem>(); for (float q = bd.L * .9f; q > bd.L * .1f; q -= 1.1f) { var it = new BeltItem { s = q, m = (int)(q * 7) % GameData.Mats.Count }; its.Add(it); fake.Add(it); } }
-                cd = d; north = tan; alt = altGoal = 12; ApplyCam(); float R = Game.Cur.pd.R; var side = Vector3.Cross(d, tan).normalized;
-                foreach (var (nm, sd, h, back) in new[] { ("a", 3.2f, 1.6f, -2.5f), ("b", -2.6f, .7f, 1.5f), ("c", .01f, 5f, -6f) })
+                PState pv; try { pv = Game.Preview(pid, 0, k); } catch (System.Exception e) { Debug.LogException(e); continue; }
+                string sig = string.Join(",", pv.lay.belts.Where(b => Game.BeltLive(pv, b) && !Game.HiddenBelt(b)).Select(b => b.id)); if (sig == "" || sig == lastSig) continue; lastSig = sig; /* nur Stufen mit neuen Bändern */
+                preview = pv; if (first) { planet.Build(pv); first = false; }
+                // Tag: Sonne möglichst hoch über der Basis
+                var bc = pv.pd.cells[pv.pd.baseCell].c; float bestT = 0, bestD = -2, DL = Game.DayLen(pid); for (int q = 0; q < 48; q++) { pv.sv.dayT = DL * q / 48f; float dd = Vector3.Dot(Game.SunDir(pv), bc); if (dd > bestD) { bestD = dd; bestT = pv.sv.dayT; } } pv.sv.dayT = bestT;
+                world.Build(pv); yield return null;
+                foreach (var (id, d, tan) in world.BeltViews())
                 {
-                    yield return null; WorldView.NightF = 0;
-                    cam.transform.position = d * (R + h) + side * sd + tan * back; cam.transform.LookAt(d * (R + .7f), d);
-                    yield return new WaitForEndOfFrame();
-                    ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "band_" + id + "_" + nm + ".png"), 1); yield return null;
+                    var bd = pv.lay.belts.Find(x => x.id == id); if (bd == null) continue;
+                    if (!pv.belts.TryGetValue(id, out var its)) { its = new List<BeltItem>(); pv.belts[id] = its; }
+                    if (its.Count == 0) for (float q = bd.L * .9f; q > bd.L * .1f; q -= 1.1f) its.Add(new BeltItem { s = q, m = (int)(q * 7) % GameData.Mats.Count });
+                    cd = d; north = tan; alt = altGoal = 12; ApplyCam(); float R = pv.pd.R; var side = Vector3.Cross(d, tan).normalized;
+                    foreach (var (nm, sd, h, back) in new[] { ("a", 3.2f, 1.6f, -2.5f), ("b", -3.2f, 1.6f, 2.5f), ("c", .01f, 6f, -7f) })
+                    {
+                        yield return null; WorldView.NightF = 0;
+                        cam.transform.position = d * (R + h) + side * sd + tan * back; cam.transform.LookAt(d * (R + .7f), d);
+                        yield return new WaitForEndOfFrame();
+                        ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, pid + "_k" + k.ToString("00") + "_" + id + "_" + nm + ".png"), 1); yield return null;
+                    }
                 }
-                if (fake != null && ps0.belts.TryGetValue(id, out var its2)) its2.RemoveAll(x => fake.Contains(x));
             }
-            cd = cd0; north = n0; alt = altGoal = a0; if (uiRoot) uiRoot.SetActive(true); Debug.Log("Lunar Cleanup: Bandfotos fertig");
+            preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet(); Debug.Log("Lunar Cleanup: Bandfotos fertig (" + dir + ")");
         }
 #endif
         // ---------- Kamera ----------
