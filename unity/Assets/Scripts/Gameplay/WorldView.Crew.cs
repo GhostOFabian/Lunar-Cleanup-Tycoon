@@ -30,9 +30,34 @@ namespace LunarCleanup.Gameplay
         }
         void NewTrip(Crew c, List<string> ids)
         {
-            string A = ids[Random.Range(0, ids.Count)], B = A; for (int k = 0; k < 8 && B == A; k++) B = ids[Random.Range(0, ids.Count)];
-            Vector2 pa = ps.lay.pos[A], pb = ps.lay.pos[B]; var d = (pb - pa).normalized;
-            c.a = pa + d * (GameData.Bld[A].fp + .8f); c.b = pb - d * (GameData.Bld[B].fp + .8f); c.len = Mathf.Max(.1f, (c.b - c.a).magnitude); c.s = 0;
+            // nur Wege, die kein Band und kein Gebäude kreuzen; sonst eine kleine Runde um das eigene Gebäude
+            for (int k = 0; k < 16; k++)
+            {
+                string A = ids[Random.Range(0, ids.Count)], B = ids[Random.Range(0, ids.Count)]; if (A == B) continue;
+                Vector2 pa = ps.lay.pos[A], pb = ps.lay.pos[B]; var d = (pb - pa).normalized;
+                Vector2 a = pa + d * (GameData.Bld[A].fp + .8f), b = pb - d * (GameData.Bld[B].fp + .8f);
+                if ((b - a).magnitude < 2 || !CrewClear(a, b)) continue;
+                c.a = a; c.b = b; c.len = (b - a).magnitude; c.s = 0; return;
+            }
+            for (int k = 0; k < 16; k++)
+            {
+                string A = ids[Random.Range(0, ids.Count)]; var pa = ps.lay.pos[A]; float r = GameData.Bld[A].fp + 1.3f, a0 = Random.Range(0f, 6.283f), a1 = a0 + Random.Range(.6f, 1.4f) * (Random.value < .5f ? 1 : -1);
+                Vector2 a = pa + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * r, b = pa + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * r;
+                if (!CrewClear(a, b)) continue; c.a = a; c.b = b; c.len = Mathf.Max(.1f, (b - a).magnitude); c.s = 0; return;
+            }
+            c.a = c.b = c.t ? (Vector2)pd.PlanLocal(c.t.position.normalized) : Vector2.zero; c.len = .1f; c.s = 0; c.wait = 5; /* nirgends frei: stehen bleiben */
+        }
+        /// <summary>Kreuzt die Strecke a→b ein Band oder ein Gebäude?</summary>
+        bool CrewClear(Vector2 a, Vector2 b)
+        {
+            float L = (b - a).magnitude; int n = Mathf.Max(2, Mathf.CeilToInt(L / .4f));
+            for (int i = 0; i <= n; i++)
+            {
+                var p = Vector2.Lerp(a, b, i / (float)n);
+                foreach (var rp in ps.visBelt.Values) for (int k = 0; k < rp.Length - 1; k++) { var ab = rp[k + 1] - rp[k]; float t = Mathf.Clamp01(Vector2.Dot(p - rp[k], ab) / Mathf.Max(1e-6f, ab.sqrMagnitude)); if ((rp[k] + ab * t - p).magnitude < .95f) return false; }
+                foreach (var kv in ps.lay.pos) if (ps.bld.Contains(kv.Key) && GameData.Bld.ContainsKey(kv.Key) && (kv.Value - p).magnitude < GameData.Bld[kv.Key].fp + .3f) return false;
+            }
+            return true;
         }
         void UpdateCrew()
         {

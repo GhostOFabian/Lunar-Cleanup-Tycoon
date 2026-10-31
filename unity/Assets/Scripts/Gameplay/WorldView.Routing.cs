@@ -62,6 +62,7 @@ namespace LunarCleanup.Gameplay
             var occ = new Dictionary<int, List<(string from, string to, string id)>>(); // Rasterzellen schon verlegter Bänder
             var ends = new Dictionary<string, (int a, int b)>(); var raw = new Dictionary<int, List<string>>();
             var portOf = new Dictionary<string, (BPort a, BPort b)>();
+            var faceIn = new Dictionary<string, int>(); var faceOut = new Dictionary<string, int>(); // Maschinen: Eingang gegenüber vom Ausgang, nie seitlich daneben
             foreach (var b in live)
             {
                 if (!feet.TryGetValue(b.from, out var FA) || !feet.TryGetValue(b.to, out var FB)) continue;
@@ -78,6 +79,8 @@ namespace LunarCleanup.Gameplay
                     int nA = used.TryGetValue(cnd.a.bid + cnd.a.face, out var tA) ? tA.Count : 0, nB = used.TryGetValue(cnd.b.bid + cnd.b.face, out var tB) ? tB.Count : 0;
                     cost += 7f * (nA + nB);
                     if (MinRadius(Shape(cnd.a, cnd.b, path)) < .56f) cost += 25f;
+                    if (IsMachine(b.to) && faceOut.TryGetValue(b.to, out int fo)) cost += cnd.b.face == (fo ^ 1) ? 0 : cnd.b.face == fo ? 10 : 16;
+                    if (IsMachine(b.from) && faceIn.TryGetValue(b.from, out int fi)) cost += cnd.a.face == (fi ^ 1) ? 0 : cnd.a.face == fi ? 10 : 16;
                     if (cost < bc) { bc = cost; best = path; bestC = cnd; }
                 }
                 // 2. nur wenn das nicht geht: als Y in den Eingang eines Bandes mit gleichem Ziel münden (nie als Abzweig am Anfang)
@@ -96,7 +99,7 @@ namespace LunarCleanup.Gameplay
                 var A = bestC.a; var B = bestC.b;
                 if (!bestC.Item3) { if (!used.TryGetValue(A.bid + A.face, out var ua)) used[A.bid + A.face] = ua = new HashSet<int>(); ua.Add(A.slot); }
                 if (!bestC.Item4) { if (!used.TryGetValue(B.bid + B.face, out var ub)) used[B.bid + B.face] = ub = new HashSet<int>(); ub.Add(B.slot); }
-                portOf[b.id] = (A, B);
+                portOf[b.id] = (A, B); if (IsMachine(b.from) && !faceOut.ContainsKey(b.from)) faceOut[b.from] = A.face; if (IsMachine(b.to) && !faceIn.ContainsKey(b.to)) faceIn[b.to] = B.face;
                 // belegte Fläche: Bandzellen plus zwei Zellen ringsum (Bandbreite + Abstand), damit nichts eng nebeneinander läuft
                 var mark = new HashSet<int>(); foreach (int cell in best) { int cx = cell % GN, cy = cell / GN; for (int dy = -2; dy <= 2; dy++) for (int dx = -2; dx <= 2; dx++) { int x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < GN && y < GN) mark.Add(y * GN + x); } }
                 int ca = best[0], cb = best[best.Count - 1]; ends[b.id] = (ca, cb);
@@ -126,6 +129,7 @@ namespace LunarCleanup.Gameplay
         static Vector2 Cc(int x, int y) => new Vector2((x + .5f) * GC - GOFF, (y + .5f) * GC - GOFF);
 
         /// <summary>Port-Kandidaten: Flächen, die zum Ziel zeigen, je ein freier Platz (Mitte, dann ±1 m).</summary>
+        static bool IsMachine(string id) => id == "presse" || id == "schmelze" || id == "raff";
         IEnumerable<BPort> Ports(Foot f, Vector2 toward, string id, Dictionary<string, HashSet<int>> used, int nFaces)
         {
             var faces = new List<(int k, Vector2 n, float score)>();

@@ -26,6 +26,7 @@ namespace LunarCleanup.Core
         public Dictionary<string, bool> jam = new Dictionary<string, bool>();
         public HashSet<int> dirtyCells = new HashSet<int>();
         public int baseVersion;
+        public Dictionary<string, Vector2[]> visBelt = new Dictionary<string, Vector2[]>(); public int visVer; // tatsächlich verlegte Bandlinien (von der Darstellung), damit Fahrzeuge nie durch Bänder fahren
         public bool[] navG; public string navKey; public Dictionary<long, List<Vector2>> navCache = new Dictionary<long, List<Vector2>>();
         public Dictionary<int, VehNav> vnav = new Dictionary<int, VehNav>();
         public float ef = 1, solar = 1, demand, prodNow, vm = 1, bm = 1, mm = 1; public bool shOn;
@@ -774,9 +775,10 @@ namespace LunarCleanup.Core
                         if (PickCrystal(ps, v, 25f)) break; // reifer Kristall in der Nähe: kurz mitnehmen
                         int c = ChooseCell(ps, v);
                         if (c < 0 && PickCrystal(ps, v)) break; // keine Reinigungsarbeit: Leuchtkristalle abbauen
-                        if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } if (IdleJob(ps, v)) break; NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
+                        if (c < 0) { var rg = PickRig(ps, v, true); if (rg != null) { rg.claim = v.id; v.rig = rg.cell; v.mode = "toRig"; break; } if (tank > .5f) { v.mode = "toUnload"; break; } if (IdleJob(ps, v)) break; if (StartSweep(ps, v)) break; NavMove(ps, v, pd.PlanDir(ParkPos(ps, v)), spd * .7f * dt, v.id); break; }
                         if (EnsureAct(ps, c) == null) break; v.cell = c; v.ti = -1; if (RequestLift(ps, v, c)) break; v.mode = "drive"; break;
                     }
+                case "sweep": SweepStep(ps, v, dt, spd, tank, cap); break;
                 case "drive":
                 case "clean":
                     {
@@ -1228,7 +1230,7 @@ namespace LunarCleanup.Core
                 if (v.mode == "toUnload" && BattLow(ps, v)) return "Akku fast leer – fährt zum Laden";
                 if (v.bat == 0) return "Akku leer – fährt langsam";
             }
-            switch (v.mode) { case "toCrystal": return "Fährt zu einem Leuchtkristall"; case "mineCr": return "Baut einen Leuchtkristall ab"; case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
+            switch (v.mode) { case "sweep": return v.sweepT > 0 && v.cell >= 0 && ps.pd.Arc(v.d, ps.pd.cells[v.cell].c) < ps.pd.cells[v.cell].H ? "Nachlese: sammelt Reststaub und Kleinteile" : "Fährt zur Nachlese"; case "toCrystal": return "Fährt zu einem Leuchtkristall"; case "mineCr": return "Baut einen Leuchtkristall ab"; case "seek": return ps.sv.veh.Contains(v) && ps.front.Count == 0 && ps.act.Count == 0 ? (ps.sv.rigs.Count > 0 ? "Wartet auf volle Bohrtürme" : "Planet sauber – wartet in der Garage") : "Sucht Arbeit"; case "drive": return "Fährt zum Einsatz" + (v.cell >= 0 && ps.sv.veh.Contains(v) ? " · noch " + Mathf.RoundToInt(ps.pd.Arc(v.d, ps.pd.cells[v.cell].c)) + " m" : ""); case "clean": return "Reinigt"; case "toUnload": return IsOut(v.sid) ? "Fährt zum Außenlager" : "Fährt zur Entladestation"; case "queue": return "Dockt an"; case "unload": return "Entlädt"; case "wait": return "Wartet auf Drohne"; case "liftwait": return "Wartet auf Lastdrohne"; case "lifted": return "Wird eingeflogen"; case "toShop": return "Fährt zur Werkstatt"; case "toRig": return "Fährt zum Bohrturm"; case "toRoh": return "Keine passende Entladestation – fährt direkt zum Rohstofflager"; case "unloadRoh": return "Entlädt ins Rohstofflager"; case "fieldRepair": return "Repariert sich notdürftig · noch " + Mathf.CeilToInt(v.repT) + " s"; case "rigload": return "Lädt am Bohrturm"; case "repair": return "Wird repariert · noch " + Mathf.CeilToInt(v.repT) + " s"; case "broken": return v.rep >= VM_REPS ? WearText(v) : ps.bld.Contains("werkstatt") ? "Ausgefallen – wartet auf die Werkstatt" : "Ausgefallen – baue eine Roboterwerkstatt"; }
             return v.mode;
         }
 
@@ -1280,14 +1282,14 @@ namespace LunarCleanup.Core
         static Vector2 NavPt(int k) => new Vector2(k % NN - NOFF + .5f, k / NN - NOFF + .5f);
         static bool[] NavGrid(PState ps)
         {
-            string key = string.Join(",", GameData.BOrder.Where(ps.bld.Contains)) + "|" + Gs(ps);
+            string key = string.Join(",", GameData.BOrder.Where(ps.bld.Contains)) + "|" + Gs(ps) + "|" + ps.visVer;
             if (ps.navG != null && ps.navKey == key) return ps.navG;
-            var g = new bool[NN * NN]; var blds = GameData.BOrder.Where(ps.bld.Contains).ToList(); var belts = ps.lay.belts.Where(b => BeltLive(ps, b)).ToList();
+            var g = new bool[NN * NN]; var blds = GameData.BOrder.Where(ps.bld.Contains).ToList(); var belts = ps.lay.belts.Where(b => BeltLive(ps, b) && !HiddenBelt(b)).ToList();
             for (int j = 0; j < NN; j++) for (int i = 0; i < NN; i++)
                 {
                     var q = new Vector2(i - NOFF + .5f, j - NOFF + .5f); bool bl = false;
                     foreach (var id in blds) if ((q - ps.lay.pos[id]).magnitude < GameData.Bld[id].fp + .9f) { bl = true; break; }
-                    if (!bl) foreach (var b in belts) { for (int k = 0; k < b.rp.Length - 1; k++) if (SegD(q, b.rp[k], b.rp[k + 1]) < 1.15f) { bl = true; break; } if (bl) break; }
+                    if (!bl) foreach (var b in belts) { var rp = ps.visBelt.TryGetValue(b.id, out var vr) ? vr : b.rp; for (int k = 0; k < rp.Length - 1; k++) if (SegD(q, rp[k], rp[k + 1]) < 1.2f) { bl = true; break; } if (bl) break; }
                     g[j * NN + i] = bl;
                 }
             ps.navG = g; ps.navKey = key; ps.navCache.Clear(); ps.vnav.Clear(); return g;

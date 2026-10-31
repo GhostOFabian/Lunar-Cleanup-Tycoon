@@ -77,18 +77,18 @@ namespace LunarCleanup.Gameplay
             }
             // Laternen: warmes Licht an den wichtigsten Gebäuden, leuchtet nur nachts
             lamps.Clear(); if (!lampHead) lampHead = MeshKit.Mat(new Color(.2f, .18f, .12f), 0, .3f, new Color(1f, .78f, .45f));
-            foreach (var id in new[] { "hq", "roh", "u1", "prod", "presse", "sell", "werkstatt", "schmelze" })
+            foreach (var id in new[] { "hq", "roh", "u1", "prod", "presse", "sell", "werkstatt", "schmelze", "raff", "energy", "research", "hangar" })
             {
-                if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 6) continue;
+                if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 10) continue;
                 var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f);
                 var post = new GameObject("Laterne"); post.transform.SetParent(baseRoot, false); Place(post.transform, off, 0);
                 MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8);
                 MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
                 var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
-                var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 16; L.color = new Color(1f, .8f, .55f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
-                var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(13, 13, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
+                var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 24; L.color = new Color(1f, .82f, .6f); L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
+                var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(19, 19, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
-            RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b);
+            RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
             BuildOutposts(); BuildRigs();
             builtVersion = ps.baseVersion;
         }
@@ -716,7 +716,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
@@ -729,7 +729,7 @@ namespace LunarCleanup.Gameplay
             sun.shadowStrength = .85f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.12f, .45f, Vector3.Dot(sd, cd))); // tiefe Sonne: keine meterlangen Schattenstreifen über den Planeten
             RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
-            foreach (var L in lamps) if (L) L.intensity = 2.2f * nf;
+            foreach (var L in lamps) if (L) L.intensity = 3.4f * nf; /* hellere Laternen: die Basis liegt nachts im warmen Licht */
             if (lampHead) lampHead.SetColor("_EmissionColor", new Color(1f, .78f, .45f) * (.1f + 2.2f * nf));
             foreach (var vp in vehs.Values) if (vp.head) { vp.head.intensity = 3f * nf; vp.head.enabled = nf > .02f; }
             foreach (var vp in vehs.Values) if (vp.headMat) vp.headMat.SetColor("_EmissionColor", new Color(1f, .94f, .78f) * (.15f + 2.85f * nf)); /* tagsüber nur schwach, nachts hell */
@@ -839,7 +839,7 @@ namespace LunarCleanup.Gameplay
                     MeshKit.Cyl(g.transform, MeshKit.Mat(GameData.Hex("#3a3632"), 0, .15f), new Vector3(0, .08f, 0), .45f, .6f, .2f, 7);
                     MeshKit.Cyl(g.transform, crMat[c.t], new Vector3(0, .8f, 0), 0, .26f, 1.5f, 6);
                     for (int k = 0; k < 6; k++) { float tilt = 22 + (c.id * 13 + k * 29) % 24, len = .6f + ((c.id + k * 7) % 5) * .12f; var rot = Quaternion.Euler(0, k * 60 + c.id * 11, 0) * Quaternion.Euler(tilt, 0, 0); MeshKit.Cyl(g.transform, crMat[c.t], rot * new Vector3(0, len / 2, 0) + rot * Vector3.forward * .1f, 0, .14f, len, 5, rot.eulerAngles); }
-                    MeshKit.Part(g.transform, MeshKit.Quad, crPool[c.t], new Vector3(0, .05f, 0), new Vector3(4.5f, 4.5f, 1), new Vector3(90, 0, 0)).name = "Schein";
+                    { var sch = MeshKit.Part(g.transform, MeshKit.Quad, crPool[c.t], new Vector3(0, .05f, 0), new Vector3(4.5f, 4.5f, 1), new Vector3(90, 0, 0)); sch.name = "Schein"; NoShadow(sch); } /* der Leuchtschein wirft keinen eckigen Schatten */
                     cv = (g, crMat[c.t], c.t); crys[c.id] = cv;
                 }
                 float s = (.35f + .95f * c.g) * 1.5f; cv.go.transform.localScale = Vector3.one * s * (1 + .03f * Mathf.Sin(Time.time * 2 + c.id));
