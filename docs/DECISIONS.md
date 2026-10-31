@@ -204,3 +204,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 31.10.2026: Spielstand-Code (Export/Import) nur als Übergang, bis die Handy-Version mit Cloud-Speicher kommt – niedrige Priorität.
 - 31.10.2026: Claude darf die wichtigsten Tests selbst durchführen und abschließen (Testmodus, eigener Spielstand).
 - 31.10.: Ampeln sitzen auf der höchsten breiten Dachfläche (≥ 0,8 m), rücken bei Schornstein/Antenne/Rakete in 35-cm-Ringen nach außen – nie freischwebend über dem Gebäude.
+- 01.11.: Neue Modelle entstehen in Blender aus `tools/blender/lunar_models.py` (prozedural, reines Python + bpy, keine gekauften Assets). Vorderseite −Y, Ursprung Mitte Boden, bewegliche Teile als eigene Objekte (Rakete, Kolben, Dreh, Rad_n, Werkzeug, Rotor_n, Ladung), FBX-Export Forward −Z / Up Y.
