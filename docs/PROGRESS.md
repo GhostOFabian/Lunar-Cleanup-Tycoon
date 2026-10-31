@@ -148,3 +148,7 @@
 - Maschinen bekommen den Bandeingang gegenüber vom Ausgang statt seitlich.
 - Optik: Triebwerksfeuer bei Start und Landung, Staub an reinigenden Fahrzeugen, Absturzwrack und Komet mit Schweif bei Ereignissen, Nordlichter alle paar Minuten, Ampel-Lampen über den Gebäuden, hellere und mehr Laternen, Kristallschein ohne eckigen Schatten.
 - Ungetestet: Wrack, Komet, Nordlicht und Raketenflamme im Spiel gesehen (nur kompiliert und Nachtbild geprüft).
+
+## Unity 0.17 (31.10.2026) – Browser-Build v=8 online
+- Nachbarkörper am Himmel wie die echten Vorbilder (berechnete Texturen, keine Bilddateien): Erde mit Kontinenten, Ozeanen, Polkappen, Wolkenschicht und Atmosphäre (vom Mond), Jupiter mit Bändern und Großem Rotem Fleck, Saturn mit Ringen und Cassini-Teilung, Neptun mit dunklem Fleck, Monde mit Kratern (Phobos, Charon mit roter Kappe, Dysnomia), rote Zwerge, nahe Sonne, Pulsar mit Strahlen. Langsame Eigendrehung.
+- Test: F1 im Testmodus fotografiert den Himmel aller Planeten (BasisCheck/Himmel).
