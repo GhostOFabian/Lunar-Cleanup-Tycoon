@@ -150,11 +150,20 @@ namespace LunarCleanup.Gameplay
                 rep.AppendLine(); rep.AppendLine("== " + GameData.Planets[pid].name + (f > 0 ? " (alte Größe " + f + ")" : "") + ": " + (iss.Count == 0 ? "alles in Ordnung" : iss.Count + " Befunde"));
                 foreach (var s in iss) rep.AppendLine("  - " + s);
                 foreach (var s in world.Notes) rep.AppendLine("  · " + s);
-                foreach (var (a, nm) in new[] { (95f, "oben"), (42f, "schraeg") })
+                var n0 = north;
+                foreach (var (a, nm, rot) in new[] { (95f, "oben", 0f), (46f, "nord", 0f), (46f, "ost", 90f), (46f, "sued", 180f), (46f, "west", 270f) }) // schräg aus allen vier Richtungen
                 {
+                    if (f > 0 && nm != "oben") continue; // alte Planetengrößen: nur Draufsicht
+                    north = Quaternion.AngleAxis(rot, cd) * n0;
                     alt = altGoal = a; WorldView.NightF = 0; ApplyCam(); yield return null; WorldView.NightF = 0; yield return null; yield return new WaitForEndOfFrame(); // Fotos immer bei Tag
                     ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_" + nm + ".png"), 2); yield return null; yield return null;
                 }
+                // Bohrturm und Erzbagger aus der Nähe
+                if (f == 0 && preview != null) foreach (var r in preview.sv.rigs)
+                    {
+                        cd = preview.pd.cells[r.cell].c; north = preview.pd.cells[r.cell].e2; alt = altGoal = 20; WorldView.NightF = 0; ApplyCam(); yield return null; yield return null; yield return new WaitForEndOfFrame();
+                        ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + (r.bag ? "_bagger" : "_bohrturm") + ".png"), 2); yield return null; yield return null;
+                    }
             }
             rep.AppendLine(); rep.AppendLine("Gesamt: " + total + " Befunde");
             System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "bericht.txt"), rep.ToString());

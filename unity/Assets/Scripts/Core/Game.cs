@@ -75,7 +75,14 @@ namespace LunarCleanup.Core
             var sv = NewPlanet(pid); if (freq > 0) sv.freq = freq; sv.stage = GameData.Stages.Count;
             foreach (var id in GameData.BOrder) if (!sv.bld.Contains(id)) sv.bld.Add(id);
             sv.dayT = DayLen(pid) * .25f;
-            if (freq <= 0 || freq == GameData.Planets[pid].freq) foreach (int c in OutpostSites(pid)) sv.outposts.Add(new StSave { id = "o" + c, cell = c, buf = new float[NM] });
+            if (freq <= 0 || freq == GameData.Planets[pid].freq)
+            {
+                foreach (int c in OutpostSites(pid)) sv.outposts.Add(new StSave { id = "o" + c, cell = c, buf = new float[NM] });
+                // ein Bohrturm und ein Erzbagger zum Anschauen (Ring 4, trockene Zellen, kein Außenlager-Platz)
+                var pd = PlanetData.Get(pid); var sites = OutpostSites(pid); var bc = pd.cells[pd.baseCell];
+                var cand = pd.cells.Where(c => c.ring == 4 && !c.Wet && !sites.Contains(c.id)).OrderByDescending(c => Vector3.Dot(c.c, bc.e1)).Take(2).ToList();
+                for (int i = 0; i < cand.Count; i++) sv.rigs.Add(new RigSave { cell = cand[i].id, lv = 3, bag = i == 1, buf = new float[NM] });
+            }
             return Attach(sv);
         }
         static SaveData Fresh() { var s = new SaveData(); s.planets.Add(NewPlanet("moon")); s.lastActive = Now(); return s; }
@@ -94,7 +101,7 @@ namespace LunarCleanup.Core
         {
             if (sv.freq <= 0) sv.freq = GameData.OldFreq.TryGetValue(sv.pid, out int of) ? of : GameData.Planets[sv.pid].freq;
             string sk = GameData.SizeKey(sv.pid, sv.freq);
-            var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = GameData.Layouts[sk], line = GameData.Lines[sv.pid] };
+            var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = OneStation(GameData.Layouts[sk]), line = GameData.Lines[sv.pid] };
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
             foreach (var b in sv.bld) ps.bld.Add(b);
@@ -421,6 +428,7 @@ namespace LunarCleanup.Core
         {
             var B = GameData.Bld[id]; if (ps.bld.Contains(id)) return "Steht schon";
             if (Gs(ps) < B.stage) return "Erst Basisstufe " + B.stage;
+            if (id == "u2" && !ps.bld.Contains("u1")) return "Erst die Entladeanlage (Stufe 1) bauen"; if (id == "u3" && !ps.bld.Contains("u2")) return "Erst Stufe 2 der Entladeanlage bauen";
             if (!string.IsNullOrEmpty(B.research) && !ResDone(B.research)) return "Erst erforschen: " + (GameData.Res.Find(r => r.id == B.research)?.name ?? B.research);
             if (B.geo && GeoF(ps.pid) <= 0) return "Hier gibt es keine nutzbare Erdwärme";
             return "";
@@ -447,8 +455,28 @@ namespace LunarCleanup.Core
             if (IsOut(s)) { var cl = ps.pd.cells[ps.st[s].cell]; var p = kind == 'a' ? new Vector2(6, 0) : kind == 'd' ? new Vector2(2.9f, -(k - (GameData.OutDocks - 1) / 2f) * 2) : Vector2.zero; return ps.pd.ToDir(cl, p.x, p.y); }
             return ps.pd.PlanDir(kind == 'a' ? StLoc(ps, s, 6.4f, 0) : kind == 'd' ? DockPos(ps, s, k) : ps.lay.pos[s]);
         }
+        // ---------- Eine Entladeanlage (Fabians Wunsch 31.10.): u1/u2/u3 bleiben intern getrennt (Käufe, Puffer, Andockplätze),
+        // stehen aber am selben Platz (dem der kleinen Station) mit gerader Ausrichtung. Ihre Bänder zum Lager bleiben in der Logik, sichtbar ist nur eines.
+        public static readonly string[] Units = { "u1", "u2", "u3" };
+        public static bool IsUnit(string id) => id == "u1" || id == "u2" || id == "u3";
+        public static bool HiddenBelt(BeltDef b) => IsUnit(b.from) && b.from != "u1"; // b_u2, b_u3a, b_u3b laufen unsichtbar mit
+        static LayoutDef OneStation(LayoutDef L)
+        {
+            if (!L.pos.ContainsKey("u1")) return L;
+            var c = new LayoutDef { pos = new Dictionary<string, Vector2>(L.pos), yaw = new Dictionary<string, float>(L.yaw), shop = L.shop, start = L.start, park = L.park, belts = L.belts };
+            float y = L.yaw.TryGetValue("u1", out var yy) ? yy : 0; y = Mathf.Round(y / (Mathf.PI / 2)) * (Mathf.PI / 2);
+            foreach (var u in Units) if (c.pos.ContainsKey(u)) { c.pos[u] = L.pos["u1"]; c.yaw[u] = y; }
+            return c;
+        }
+        /// <summary>Andockplätze aller gebauten Stufen in einer Reihe an einer geraden Seite der Anlage.</summary>
+        static int DockSlot(PState ps, string s, int k, out int total)
+        {
+            total = 0; int at = -1;
+            foreach (var u in Units) { if (!ps.bld.Contains(u) || GameData.Bld[u].st == null) continue; if (u == s) at = total + k; total += GameData.Bld[u].st.docks; }
+            if (at < 0) { at = total + k; total += k + 1; } return at;
+        }
         public static Vector2 StLoc(PState ps, string s, float a, float b) { float y = ps.lay.yaw.TryGetValue(s, out var yy) ? yy : 0; float c = Mathf.Cos(y), n = Mathf.Sin(y); var p = ps.lay.pos[s]; return new Vector2(p.x + a * c - b * n, p.y + a * n + b * c); }
-        public static Vector2 DockPos(PState ps, string s, int k) => StLoc(ps, s, 2.6f, -(k - (GameData.Bld[s].st.docks - 1) / 2f) * 1.8f);
+        public static Vector2 DockPos(PState ps, string s, int k) { if (IsUnit(s)) { int slot = DockSlot(ps, s, k, out int tot); return StLoc(ps, s, 3.4f, -(slot - (tot - 1) / 2f) * 2.2f); } return StLoc(ps, s, 2.6f, -(k - (GameData.Bld[s].st.docks - 1) / 2f) * 1.8f); }
         public static bool BeltLive(PState ps, BeltDef b) => ps.bld.Contains(b.from) && ps.bld.Contains(b.to) && (b.stage == 0 || Gs(ps) >= b.stage);
         static float Packet(PState ps) => 8 * Uv("bcap", ps);
         static float BeltSpeed(PState ps) => 2.4f * Uv("bspeed", ps);

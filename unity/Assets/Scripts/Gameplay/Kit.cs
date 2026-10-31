@@ -258,19 +258,74 @@ namespace LunarCleanup.Gameplay
             for (int k = 0; k < 20; k++) { float a = k / 20f * Mathf.PI * 2; if (Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, 90)) < 25) continue; MeshKit.Cyl(t, stripe, new Vector3(Mathf.Cos(a) * 4.05f, .45f, Mathf.Sin(a) * 4.05f), .04f, .04f, .6f, 6); }
             return bp;
         }
+        /// <summary>Träger zwischen zwei Punkten (für Gittermast, Streben, Leitern).</summary>
+        static void Beam(Transform t, Material m, Vector3 a, Vector3 b, float w)
+        {
+            var d = b - a; float l = d.magnitude; if (l < 1e-4f) return; var g = MeshKit.Box(t, m, (a + b) / 2, new Vector3(w, w, l)); g.transform.localRotation = Quaternion.LookRotation(d / l, Mathf.Abs(d.y / l) > .95f ? Vector3.forward : Vector3.up);
+        }
+        /// <summary>Bohrturm: Gittermast mit Querstreben, Kronenblock, Bohrgestänge (fährt beim Bohren auf und ab), Drehtisch, Rohrlager, Pumpenhaus.
+        /// Erzbagger: Kettenlaufwerk, drehbarer Oberwagen mit Kabine und Gegengewicht, Ausleger, Stiel und Schaufel (gräbt beim Fördern), Erzhaufen.</summary>
         public static Models.BuildingParts Rig(bool bag, Color acc)
         {
-            if (!Has("factory/crane")) return null;
             var bp = new Models.BuildingParts(); var g = new GameObject(bag ? "Erzbagger" : "Bohrturm"); bp.root = g; var t = g.transform;
-            MeshKit.Cyl(t, MeshKit.Mat(Hex("#3a414d"), .2f, .35f), new Vector3(0, .05f, 0), 3.2f, 3.4f, .1f, 28);
-            if (bag) { var m = Spawn("space/craft_miner", t, 5f, new Vector3(0, .3f, 0), 0, acc); if (m) bp.spin = MeshKit.Cyl(t, MeshKit.Mat(Hex("#ffbf4d"), .3f, .5f), new Vector3(0, .9f, 2.6f), .9f, .9f, .3f, 16, new Vector3(90, 0, 0)).transform; }
+            var pad = MeshKit.Mat(Hex("#4a505c"), .1f, .25f); var steel = MeshKit.Mat(Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(Hex("#2a3039"), .5f, .4f);
+            var yel = MeshKit.Mat(Hex("#ffbf4d"), .3f, .5f); var accM = MeshKit.Mat(acc, .35f, .55f); var glass = MeshKit.Mat(Hex("#7fd8ff") * .3f, .1f, .9f, Hex("#7fd8ff") * .5f);
+            MeshKit.Cyl(t, pad, new Vector3(0, .06f, 0), 3.2f, 3.4f, .12f, 8); MeshKit.Cyl(t, yel, new Vector3(0, .13f, 0), 3.2f, 3.2f, .03f, 8);
+            bp.lamp = new Material(MeshKit.Glow(Hex("#3fe58a"), 2.5f));
+            if (!bag)
+            {
+                // Unterbau und Bohrboden
+                MeshKit.Box(t, dark, new Vector3(0, .55f, 0), new Vector3(2.8f, .8f, 2.8f)); MeshKit.Box(t, steel, new Vector3(0, 1f, 0), new Vector3(3f, .1f, 3f));
+                // Gittermast: 4 Beine, alle 1,4 m Querstreben und X-Kreuze
+                float y0 = 1.05f, y1 = 8.6f, b0 = 1.2f, b1 = .3f;
+                Vector3 Leg(int k, float y) { float f = (y - y0) / (y1 - y0), b = Mathf.Lerp(b0, b1, f); return new Vector3(k % 2 == 0 ? -b : b, y, k < 2 ? -b : b); }
+                for (int k = 0; k < 4; k++) Beam(t, yel, Leg(k, y0), Leg(k, y1), .14f);
+                int[] ring = { 0, 1, 3, 2 };
+                for (float y = y0 + 1.4f; y < y1; y += 1.4f)
+                    for (int e = 0; e < 4; e++) { int a = ring[e], c = ring[(e + 1) % 4]; Beam(t, yel, Leg(a, y), Leg(c, y), .07f); Beam(t, steel, Leg(a, y - 1.4f), Leg(c, y), .045f); Beam(t, steel, Leg(c, y - 1.4f), Leg(a, y), .045f); }
+                MeshKit.Box(t, dark, new Vector3(0, y1 + .2f, 0), new Vector3(1f, .4f, 1f)); // Kronenblock
+                MeshKit.Ball(t, bp.lamp, new Vector3(0, y1 + .6f, 0), .3f);
+                // Bohrgestänge mit Flaschenzugblock (bewegt sich), Drehtisch (dreht sich)
+                var str = new GameObject("Gestänge").transform; str.SetParent(t, false); str.localPosition = new Vector3(0, 0, 0);
+                MeshKit.Cyl(str, steel, new Vector3(0, 3.8f, 0), .09f, .09f, 5.6f, 10); MeshKit.Box(str, accM, new Vector3(0, 6.8f, 0), new Vector3(.55f, .7f, .4f)); MeshKit.Cyl(str, dark, new Vector3(0, 7.6f, 0), .03f, .03f, 1.2f, 6);
+                bp.piston = str; bp.pistonY = 0;
+                var rt = MeshKit.Cyl(t, dark, new Vector3(0, 1.15f, 0), .55f, .55f, .18f, 16).transform; MeshKit.Box(rt, yel, new Vector3(0, .1f, 0), new Vector3(1f, .04f, .14f)); bp.spinUp = rt;
+                // Rohrlager, Pumpenhaus mit Schlammtank, Treppe
+                foreach (float sz in new[] { -.8f, .8f }) MeshKit.Box(t, dark, new Vector3(2.35f, .35f, sz), new Vector3(.9f, .5f, .15f));
+                for (int k = 0; k < 6; k++) MeshKit.Cyl(t, steel, new Vector3(2.0f + (k % 3) * .28f, .7f + (k / 3) * .25f, 0), .11f, .11f, 2.6f, 10, new Vector3(90, 0, 0));
+                MeshKit.Box(t, MeshKit.Mat(Hex("#d9dee6"), .3f, .55f), new Vector3(-2.2f, .8f, .4f), new Vector3(1.2f, 1.4f, 1.6f)); MeshKit.Box(t, accM, new Vector3(-2.2f, 1.55f, .4f), new Vector3(1.25f, .14f, 1.65f));
+                MeshKit.Cyl(t, steel, new Vector3(-2.2f, .6f, -1.2f), .45f, .45f, 1f, 16);
+                Beam(t, steel, new Vector3(1.5f, .15f, 1.6f), new Vector3(.8f, 1.05f, 1.6f), .12f);
+            }
             else
             {
-                Spawn("factory/structure-yellow-tall", t, 2.2f, new Vector3(0, .1f, 0), 0, acc, 6f);
-                var p = Spawn("factory/piston-round", t, 1.1f, new Vector3(0, 3.5f, 0), 0, acc); if (p) { bp.piston = p.transform; bp.pistonY = 3.5f; }
-                Spawn("factory/hopper-round", t, 1.6f, new Vector3(1.8f, .1f, 0), 0, acc);
+                // Kettenlaufwerk
+                foreach (float sx in new[] { -1.15f, 1.15f })
+                {
+                    MeshKit.Box(t, dark, new Vector3(sx, .5f, 0), new Vector3(.75f, .7f, 3.4f));
+                    foreach (float sz in new[] { -1.45f, 1.45f }) MeshKit.Cyl(t, steel, new Vector3(sx, .5f, sz), .36f, .36f, .8f, 14, new Vector3(0, 0, 90));
+                    for (int k = 0; k < 4; k++) MeshKit.Cyl(t, steel, new Vector3(sx, .28f, -.9f + k * .6f), .16f, .16f, .78f, 10, new Vector3(0, 0, 90));
+                }
+                MeshKit.Box(t, dark, new Vector3(0, .65f, 0), new Vector3(1.6f, .5f, 1.8f));
+                // Oberwagen (dreht sich): Drehkranz, Kabine, Motorhaube, Gegengewicht, Auspuff
+                var sw = new GameObject("Oberwagen").transform; sw.SetParent(t, false); sw.localPosition = new Vector3(0, 1.0f, 0); bp.swing = sw;
+                MeshKit.Cyl(sw, steel, new Vector3(0, .05f, 0), .9f, .9f, .15f, 20);
+                MeshKit.Box(sw, yel, new Vector3(0, .55f, -.2f), new Vector3(2.2f, .9f, 2.4f));
+                MeshKit.Box(sw, dark, new Vector3(0, .65f, -1.55f), new Vector3(2.2f, .7f, .5f)); // Gegengewicht
+                MeshKit.Box(sw, yel, new Vector3(-.6f, 1.35f, .55f), new Vector3(.95f, .9f, 1.0f)); MeshKit.Box(sw, glass, new Vector3(-.6f, 1.4f, 1.06f), new Vector3(.85f, .6f, .03f)); MeshKit.Box(sw, glass, new Vector3(-1.08f, 1.4f, .55f), new Vector3(.03f, .6f, .8f));
+                MeshKit.Cyl(sw, dark, new Vector3(.7f, 1.3f, -.9f), .07f, .07f, .7f, 8);
+                MeshKit.Ball(sw, bp.lamp, new Vector3(-.6f, 1.88f, .55f), .22f);
+                // Ausleger → Stiel → Schaufel
+                var boom = new GameObject("Ausleger").transform; boom.SetParent(sw, false); boom.localPosition = new Vector3(.35f, .8f, .9f); boom.localRotation = Quaternion.Euler(-42, 0, 0); bp.boom = boom; /* Grundhaltung, falls nicht animiert */
+                MeshKit.Box(boom, yel, new Vector3(0, 0, 1.3f), new Vector3(.4f, .5f, 2.6f)); MeshKit.Cyl(boom, steel, new Vector3(0, -.32f, .8f), .08f, .08f, 1.3f, 8, new Vector3(90, 0, 0)); // Hydraulikzylinder
+                var stick = new GameObject("Stiel").transform; stick.SetParent(boom, false); stick.localPosition = new Vector3(0, 0, 2.6f); stick.localRotation = Quaternion.Euler(105, 0, 0); bp.stick = stick;
+                MeshKit.Box(stick, yel, new Vector3(0, 0, .85f), new Vector3(.32f, .36f, 1.7f));
+                var bucket = new GameObject("Schaufel").transform; bucket.SetParent(stick, false); bucket.localPosition = new Vector3(0, 0, 1.7f); bucket.localRotation = Quaternion.Euler(60, 0, 0);
+                MeshKit.Box(bucket, dark, new Vector3(0, -.25f, .15f), new Vector3(.8f, .5f, .55f)); for (int k = 0; k < 4; k++) MeshKit.Box(bucket, steel, new Vector3(-.3f + k * .2f, -.52f, .4f), new Vector3(.07f, .14f, .07f));
+                // Erzhaufen
+                var ore = MeshKit.Mat(Hex("#7a5a3a"), 0, .15f); var oreG = MeshKit.Mat(acc * .6f, .2f, .6f, acc * .5f);
+                MeshKit.Part(t, MeshKit.Sphere, ore, new Vector3(2.2f, .1f, 1.6f), new Vector3(1.8f, .8f, 1.6f)); MeshKit.Part(t, MeshKit.Sphere, oreG, new Vector3(2.0f, .3f, 1.5f), new Vector3(.4f, .3f, .35f));
             }
-            bp.lamp = new Material(MeshKit.Glow(Hex("#3fe58a"), 2.5f)); MeshKit.Ball(t, bp.lamp, new Vector3(0, bag ? 2.6f : 6.4f, 0), .3f);
             return bp;
         }
         public static GameObject Cart(Color acc) { if (!Has("space/rover")) return null; var g = new GameObject("Sammelwagen"); Spawn("space/rover", g.transform, 1.8f, Vector3.zero, 0, Hex("#ffbf4d")); MeshKit.Ball(g.transform, MeshKit.Glow(Hex("#6ff2d2"), 3f), new Vector3(0, 1.2f, 0), .16f); return g; }

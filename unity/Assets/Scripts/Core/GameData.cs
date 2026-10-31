@@ -167,11 +167,18 @@ namespace LunarCleanup.Core
                 };
                 Planets[kv.Key] = P;
             }
-            foreach (var q in J.A(J.G(root, "quests"))) Quests.Add(new QuestDef { t = J.S(q, "t"), r = J.F(q, "r") });
+            foreach (var q in J.A(J.G(root, "quests"))) Quests.Add(new QuestDef { t = OneStationText(J.S(q, "t")), r = J.F(q, "r") });
+            // Eine Entladeanlage mit drei Ausbaustufen (Namen/Texte)
+            if (Bld.ContainsKey("u1")) { Bld["u1"].name = "Entladeanlage"; Bld["u1"].desc = "Hier entladen alle Fahrzeuge. Stufe 1: ein Andockplatz für kleine Fahrzeuge."; }
+            if (Bld.ContainsKey("u2")) { Bld["u2"].name = "Entladeanlage Stufe 2"; Bld["u2"].desc = "Ausbau der Entladeanlage: 2 weitere Andockplätze, auch für mittlere Fahrzeuge (Industriesauger)."; }
+            if (Bld.ContainsKey("u3")) { Bld["u3"].name = "Entladeanlage Stufe 3"; Bld["u3"].desc = "Großer Ausbau: 3 weitere Andockplätze, auch für schwere Fahrzeuge (Truck), großer Zwischenspeicher."; }
             Loaded = true;
         }
 
         // ---- Helfer ----
+        static string OneStationText(string t) => (t ?? "").Replace("die kleine Entladestation", "die Entladeanlage").Replace("Kleine Entladestation", "Entladeanlage").Replace("kleine Entladestation", "Entladeanlage")
+            .Replace("die Industrielle Entladestation", "die Entladeanlage Stufe 2").Replace("Industrielle Entladestation", "Entladeanlage Stufe 2").Replace("industrielle Entladestation", "Entladeanlage Stufe 2")
+            .Replace("die Zentrale Entladeanlage", "die Entladeanlage Stufe 3").Replace("Zentrale Entladeanlage", "Entladeanlage Stufe 3").Replace("zentrale Entladeanlage", "Entladeanlage Stufe 3");
         static string[] ToStrings(object o) { var l = J.A(o); if (l == null) return new string[0]; var r = new string[l.Count]; for (int i = 0; i < l.Count; i++) r[i] = l[i] as string ?? ""; return r; }
         static int[] Ints(object o) { var d = J.Dv(o); var r = new int[d.Length]; for (int i = 0; i < d.Length; i++) r[i] = (int)d[i]; return r; }
         static int[] MapMats(object o) { var s = ToStrings(o); var r = new int[s.Length]; for (int i = 0; i < s.Length; i++) r[i] = MatIx[s[i]]; return r; }

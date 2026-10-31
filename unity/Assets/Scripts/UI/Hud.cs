@@ -124,7 +124,7 @@ namespace LunarCleanup.UI
         {
             var sh = UiKit.Glass(root, "Fenster", Pal.GlassHi, 22); sheetGo = sh.gameObject; sh.raycastTarget = true; sheetPanel = sh.rectTransform; sheetPanel.Anchor(0, 0, 1, .74f, 0, 60, 0, 0);
             sheetKick = UiKit.Text(sh.transform, "Planet", "", 11, Pal.Ink2, true, FontStyles.UpperCase); sheetKick.rectTransform.Anchor(0, 1, 1, 1, 20, -34, 60, 16); sheetKick.characterSpacing = 10;
-            sheetTitle = UiKit.Text(sh.transform, "Titel", "", 26, Pal.Ink, true, FontStyles.Bold); sheetTitle.rectTransform.Anchor(0, 1, 1, 1, 20, -70, 60, 34);
+            sheetTitle = UiKit.Text(sh.transform, "Titel", "", 26, Pal.Ink, true, FontStyles.Bold); sheetTitle.rectTransform.Anchor(0, 1, 1, 1, 20, -70, 60, 34); sheetTitle.enableAutoSizing = true; sheetTitle.fontSizeMin = 13; sheetTitle.fontSizeMax = 26; sheetTitle.textWrappingMode = TextWrappingModes.NoWrap; sheetTitle.overflowMode = TextOverflowModes.Overflow; // lange Gebäudenamen werden kleiner statt abgeschnitten
             var x = UiKit.Btn(sh.transform, "Schließen", CloseSheet, new Color(1, 1, 1, .06f), 18); ((RectTransform)x.transform).Anchor(1, 1, 1, 1, -54, -54, 14, 14);
             UiKit.Img(x.transform, "Icon", UiKit.Icon("close"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -10, -10, -10, -10);
             var sv = UiKit.Rt(sh.transform, "Inhalt").Anchor(0, 0, 1, 1, 0, 0, 0, 80); var scroll = sv.gameObject.AddComponent<ScrollRect>(); scroll.horizontal = false; scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 30;

@@ -54,6 +54,15 @@ namespace LunarCleanup.Gameplay
             foreach (var id in GameData.BOrder)
             {
                 var B = GameData.Bld[id]; if (!ps.lay.pos.ContainsKey(id)) continue; float yaw = ps.lay.yaw.TryGetValue(id, out var y) ? y : 0;
+                if (Game.IsUnit(id))
+                {
+                    // Eine Entladeanlage: ein Modell am Platz der Stufe 1, Größe nach höchster gebauter Stufe; Gruben an allen Andockplätzen
+                    if (id != "u1") continue; string top = ps.bld.Contains("u3") ? "u3" : ps.bld.Contains("u2") ? "u2" : ps.bld.Contains("u1") ? "u1" : null;
+                    if (top == null) { if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "") { var s0 = Models.Site(B.fp); s0.transform.SetParent(baseRoot, false); Place(s0.transform, ps.lay.pos[id], yaw); } continue; }
+                    var ub = Models.Building(top, B.fp, acc, acc2); ub.root.name = "Entladeanlage"; ub.root.transform.SetParent(baseRoot, false); Place(ub.root.transform, ps.lay.pos[id], yaw); blds["u1"] = ub;
+                    foreach (var u in Game.Units) if (ps.bld.Contains(u) && GameData.Bld[u].st != null) for (int k = 0; k < GameData.Bld[u].st.docks; k++) { var dp = Game.DockPos(ps, u, k); var cp = ps.lay.pos[u]; var dir2 = (dp - cp); var pp = cp + dir2.normalized * (dir2.magnitude - 1.3f); var lp = ub.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; var toC = ub.root.transform.InverseTransformPoint(pd.PlanDir(cp + (dp - cp).normalized * 0f) * pd.R); Kit.Pit(ub.root.transform, lp, new Vector3(-lp.x, 0, -lp.z), Kit.HouseW(top, B.fp)); }
+                    continue;
+                }
                 if (ps.bld.Contains(id))
                 {
                     var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], Mathf.Round(yaw / (Mathf.PI / 2)) * (Mathf.PI / 2)); blds[id] = bp; // Modelle achsparallel: Bänder treffen gerade Flächen
@@ -66,7 +75,7 @@ namespace LunarCleanup.Gameplay
             }
             // Laternen: warmes Licht an den wichtigsten Gebäuden, leuchtet nur nachts
             lamps.Clear(); if (!lampHead) lampHead = MeshKit.Mat(new Color(.2f, .18f, .12f), 0, .3f, new Color(1f, .78f, .45f));
-            foreach (var id in new[] { "hq", "roh", "u1", "u2", "u3", "prod", "presse", "sell", "werkstatt", "schmelze" })
+            foreach (var id in new[] { "hq", "roh", "u1", "prod", "presse", "sell", "werkstatt", "schmelze" })
             {
                 if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 6) continue;
                 var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f);
@@ -103,6 +112,16 @@ namespace LunarCleanup.Gameplay
                 if (!bp.root) continue; bool fault = r.faultK != "";
                 if (bp.piston) bp.piston.localPosition = new Vector3(0, bp.pistonY + (r.busy ? Mathf.Sin(Time.time * 3 + r.cell) * .9f : 0), 0);
                 if (bp.spin && r.busy) bp.spin.Rotate(Vector3.forward, 60 * Time.deltaTime, Space.Self);
+                if (bp.piston && bp.pistonY == 0) bp.piston.localPosition = new Vector3(0, r.busy ? -.75f + .75f * Mathf.Cos(Time.time * .8f + r.cell) : 0, 0); // Bohrgestänge fährt langsam auf und ab
+                if (bp.spinUp && r.busy) bp.spinUp.Rotate(Vector3.up, 140 * Time.deltaTime, Space.Self);
+                if (bp.swing)
+                {
+                    // Bagger: schwenkt zum Graben, Ausleger und Stiel heben/senken die Schaufel
+                    float ph = Time.time * (r.busy ? 1.1f : .25f) + r.cell, dig = r.busy ? 1 : .15f;
+                    bp.swing.localRotation = Quaternion.Euler(0, Mathf.Sin(ph * .5f) * 40 * dig, 0);
+                    if (bp.boom) bp.boom.localRotation = Quaternion.Euler(-42 + 14 * Mathf.Sin(ph) * dig, 0, 0);
+                    if (bp.stick) bp.stick.localRotation = Quaternion.Euler(105 + 20 * Mathf.Sin(ph + 1.2f) * dig, 0, 0);
+                }
                 if (bp.lamp) bp.lamp.SetColor("_EmissionColor", fault ? (Mathf.Sin(Time.time * 10) > 0 ? new Color(1, .16f, .16f) * 3 : Color.black) : r.busy ? new Color(.25f, .9f, .54f) * 2.5f : new Color(1, .75f, .3f) * 1.5f);
             }
         }
@@ -192,7 +211,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Förderband als durchgehendes Profil entlang der Kurve: Lauffläche, Seitenbanden, Rahmen – alles folgt exakt derselben Linie.</summary>
         void BuildBelt(BeltDef b)
         {
-            if (b.rp.Length < 2) return; var V = Vis(b); var rp0 = V.rp; int n0 = rp0.Length; var cum0 = V.cum; beltCum[b.id] = cum0; // Bänder laufen auf der geglätteten Linie
+            if (b.rp.Length < 2 || Game.HiddenBelt(b)) return; var V = Vis(b); var rp0 = V.rp; int n0 = rp0.Length; var cum0 = V.cum; beltCum[b.id] = cum0; // Bänder laufen auf der geglätteten Linie
             // Band endet genau an der Gebäudewand: Strahlen (Bandmitte + beide Banden, zwei Höhen) gegen die echte Modelloberfläche
             float L0 = cum0[n0 - 1], s0 = 0, s1 = L0, H0 = BeltDeck(b);
             float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp * .92f : 0;
@@ -253,6 +272,17 @@ namespace LunarCleanup.Gameplay
             foreach (var kv in beltInfo)
             {
                 var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value; string nm = kv.Key + " (" + b.from + "→" + b.to + ")";
+                // Bandenden dürfen nie angehoben sein (Brücke direkt am Ende = hängt in der Luft)
+                string BrInfo() { var sbq = new System.Text.StringBuilder(" [s0 " + s0.ToString("0.0") + ", s1 " + s1.ToString("0.0") + ", Brücken"); if (bridges.TryGetValue(kv.Key, out var blq)) foreach (var wq in blq) sbq.Append(" " + wq.x.ToString("0.0") + "–" + wq.y.ToString("0.0") + "↑" + wq.z.ToString("0.0")); return sbq.Append("]").ToString(); }
+                if (Lift(kv.Key, s0) > .05f) out_.Add(nm + ": Anfang hängt in der Luft (angehoben)" + BrInfo()); if (Lift(kv.Key, s1) > .05f) out_.Add(nm + ": Ende hängt in der Luft (angehoben)" + BrInfo());
+                /* zu enge Kurve: Innenkante läuft sich selbst über (Zacken) */
+                { float minR = 9; for (int i = 1; i + 1 < rp.Length; i++) { var u1 = rp[i] - rp[i - 1]; var u2 = rp[i + 1] - rp[i]; float l1 = u1.magnitude, l2 = u2.magnitude; if (l1 < 1e-4f || l2 < 1e-4f) continue; float an = Vector2.Angle(u1, u2) * Mathf.Deg2Rad; if (an < .05f) continue; minR = Mathf.Min(minR, Mathf.Min(l1, l2) / an); } if (minR < BW + .1f) out_.Add(nm + ": Kurve zu eng (Radius " + minR.ToString("0.00") + " m)"); }
+                if (sharedEnd.TryGetValue(kv.Key, out var sw) && mergeEnd.ContainsKey(kv.Key) && beltInfo.TryGetValue(sw, out var oth))
+                {
+                    var pe = PointAt(rp, cum, s1, out _); float hb = H + Lift(kv.Key, s1), md = 1e9f, dh = 9;
+                    for (float u = oth.s0; u <= oth.s1; u += .25f) { float d0 = (PointAt(oth.rp, oth.cum, u, out _) - pe).magnitude; if (d0 < md) { md = d0; dh = Mathf.Abs(oth.H + Lift(sw, u) - hb); } }
+                    if (md > BW + .25f || dh > .15f) out_.Add(nm + ": Y-Anschluss an " + sw + " trifft das Band nicht (" + md.ToString("0.0") + " m daneben)"); else Notes.Add(nm + ": mündet als Y in " + sw);
+                }
                 if (!w0) Notes.Add(nm + ": Start über überdachten Zulauf mit " + b.from + " verbunden"); if (!w1) Notes.Add(nm + ": Ende über überdachten Zulauf mit " + b.to + " verbunden");
                 // Band durch ein Gebäude? (Mitte, Banden, Rahmenunterkante) – an den eigenen Enden 0,1 m Spielraum
                 foreach (var id in ids)
@@ -389,15 +419,16 @@ namespace LunarCleanup.Gameplay
             float L0 = 0; for (int i = 1; i < b.rp.Length; i++) L0 += (b.rp[i] - b.rp[i - 1]).magnitude;
             v = (arr, c, c[c.Length - 1] / Mathf.Max(.01f, L0)); vis[b.id] = v; return v;
         }
+        const float EndGuard = 4.8f; /* 1,6 m im Gebäude + 3 m Rampe + Rest: Bandenden bleiben am Boden */
         void PlanBridges()
         {
-            bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear(); var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x)).ToList();
+            bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear(); var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
             var smp = new Dictionary<string, List<(float s, Vector2 p)>>(); var len = new Dictionary<string, float>();
             foreach (var b in live)
             {
                 var V = Vis(b); var l = new List<(float, Vector2)>(); var q = V.rp;
                 float zf = GameData.Bld[b.from].fp * .35f, zt = GameData.Bld[b.to].fp * .35f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
-                for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((V.cum[i - 1] + u, p)); } }
+                for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); float su = V.cum[i - 1] + u; if (su < 2.0f || su > V.cum[V.cum.Length - 1] - 2.0f) continue; /* Stück im Gebäude */ if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((su, p)); } }
                 smp[b.id] = l; len[b.id] = V.cum[V.cum.Length - 1];
             }
             for (int j = 0; j < live.Count; j++)
@@ -414,12 +445,22 @@ namespace LunarCleanup.Gameplay
                         }
                     if (mine.Count == 0) continue;
                     float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
+                    /* Kreuzung nah am Ende von B (dort darf B nicht hoch)? Dann hebt sich A, wenn A dort weit genug von seinen Enden ist */
+                    if (!(sharedEnd.TryGetValue(B.id, out var shw0) && shw0 == A.id) && (uMin < EndGuard || uMax > len[B.id] - EndGuard))
+                    {
+                        float sMin = mine.Min(m => m.s), sMax = mine.Max(m => m.s);
+                        if (sMin - .5f >= EndGuard && sMax + .5f <= len[A.id] - EndGuard)
+                        {
+                            if (!bridges.TryGetValue(A.id, out var ra)) { ra = new List<Vector3>(); bridges[A.id] = ra; }
+                            ra.Add(new Vector3(sMin - .5f, sMax + .5f, HB + 1.0f - HA0)); marks.RemoveAll(m => m.u >= uMin - .01f && m.u <= uMax + .01f); continue;
+                        }
+                    }
                     // gleiches Ziel und Berührung erst kurz davor → Weiche
-                    if (A.to == B.to) /* gleiches Ziel: an der ersten Berührung als Y aufs andere Band */ { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
-                    else if (A.from == B.from) /* gleiche Quelle: Abzweig nach der letzten Berührung */ { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
+                    if (sharedEnd.TryGetValue(B.id, out var shw) && shw == A.id) /* Y nur, wo der Router bewusst den Eingang teilt */ { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
+                    else if (false) /* keine Abzweige mehr – sie hingen in der Luft */ { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
                 }
                 if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
-                void Flush() { float x = a0 - .5f, y = a1 + .5f; if (x < 4) x = -100; if (y > len[B.id] - 4) y = 1e4f; res.Add(new Vector3(x, y, am)); }
+                void Flush() { float x = Mathf.Max(EndGuard, a0 - .5f), y = Mathf.Min(len[B.id] - EndGuard, a1 + .5f); if (y < x) return; /* zu nah am Ende: lieber nicht anheben als in der Luft hängen */ res.Add(new Vector3(x, y, am)); } // Bandenden bleiben immer unten
                 for (int k = 1; k < marks.Count; k++) { if (marks[k].u - a1 > 1.5f) { Flush(); a0 = marks[k].u; am = 0; } a1 = marks[k].u; am = Mathf.Max(am, marks[k].amt); }
                 Flush(); bridges[B.id] = res;
                 // Nachprüfen: liegt das angehobene Stück jetzt auf Höhe eines anderen (höheren) Bandes? Dann noch einmal darüber.

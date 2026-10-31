@@ -22,36 +22,38 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 ## Morgen zuerst: Playtest-Befunde vom 30.10. (Fabian)
 Reihenfolge so gewählt, dass jeder Punkt einzeln in Unity geprüft werden kann (Basis-Prüfung F11 + Fotos).
 
-1. [ ] **Bänder ohne Anfang / Ende in der Luft (Mars: roh→Rakete, roh→Raffinerie; Io: Band oben aus dem Rohstofflager)**
+1. [x] **Bänder ohne Anfang / Ende in der Luft (Mars: roh→Rakete, roh→Raffinerie; Io: Band oben aus dem Rohstofflager)**
    - Ursache: Vom Rohstofflager gehen auf Mars drei Bänder ab (→ Presse, → Raffinerie, → Rakete). Zwei davon werden als „Abzweig“ (Y) gekappt und beginnen dort, wo sie das erste Band berühren – liegt dieses Band dort aber angehoben (Brücke) oder ist selbst gekappt, hängt der Abzweig in der Luft. Bei Io startet ein Band schon angehoben („Brücke ab Start“), deshalb kommt es oben aus dem Lager.
    - Lösung: **Jedes Band bekommt seinen eigenen Ausgang und Eingang** (bis 3 Plätze je Gebäudefläche, notfalls Flächen um die Ecke). Y nur noch, wenn alle Plätze belegt sind – und nur, wenn der Treffpunkt auf einem sichtbaren, gleich hohen Bandstück liegt (wird geprüft, sonst eigener Port). Brücken nie an Bandenden: Rampe frühestens 2 m nach dem Ausgang, die Bandenden liegen immer auf Normalhöhe.
    - Basis-Prüfung erweitern: „Bandende hängt in der Luft“ und „Band beginnt/endet nicht an einem Gebäude oder Band“.
 
-2. [ ] **Bänder laufen ineinander (Europa: Produktlager → Rakete; Titan: Bänder mit mehreren Wegen)**
+2. [x] **Bänder laufen ineinander (Europa: Produktlager → Rakete; Titan: Bänder mit mehreren Wegen)**
    - Ursache: Y-Zusammenführungen und Brücken überlagern sich, wenn mehrere Bänder zum selben Ziel wollen.
    - Lösung wie 1 (eigene Ports statt Y). Dazu Router: Bänder mit gleichem Ziel nebeneinander mit festem Abstand (Kanal-Prinzip) statt übereinander; weniger Brücken durch eine Strafe für Kreuzungen, die sich mit einem längeren Weg vermeiden lassen.
 
-3. [ ] **Unnötige Bänder entfernen**
+3. [x] **Unnötige Bänder entfernen**
    - Heute: 12 Bänder je Basis (3 Entladestationen → Lager, u3 → Presse, Lager → Presse/Raffinerie/Rakete, Presse → Schmelze/Produktlager, Schmelze → Produktlager, Raffinerie → Produktlager, Produktlager → Rakete).
    - Mit Punkt 4 (eine Entladeanlage) fallen 3 Bänder weg (u2→Lager, u3→Lager, u3→Presse); übrig bleiben 9, jedes mit klarer Aufgabe.
 
-4. [ ] **Nur noch eine Entladeanlage je Planet** (Vorschlag, morgen kurz bestätigen)
+4. [x] **Nur noch eine Entladeanlage je Planet** (von Fabian bestätigt, 31.10.; Browser-Prototyp noch nachziehen)
    - Die drei Stationen werden zu **einer Anlage mit 3 Ausbaustufen** am Platz der heutigen kleinen Station: Stufe 1 = heutige Kleine (1 Andockplatz, klein), Stufe 2 = + Industrielle (2 weitere Plätze, auch mittel), Stufe 3 = + Zentrale (3 weitere Plätze, auch groß). Kosten, Puffer und Raten bleiben wie bisher.
    - Spielstände bleiben gültig: intern bleiben u1/u2/u3 bestehen (gekaufte Stufen), nur der Bauplatz, die Optik und das eine Band zum Lager sind gemeinsam. Fahrzeuge fahren alle zur selben Anlage, jede Größe zu ihren passenden Plätzen.
    - Auch im Browser-Prototyp nachziehen (Regeln/Texte), Hauptziele mit „Baue die … Entladestation“ werden zu „Baue die Entladeanlage aus (Stufe 2/3)“.
 
-5. [ ] **Andockplätze der Entladestationen kreuz und quer**
+5. [x] **Andockplätze der Entladestationen kreuz und quer**
    - Ursache: Die Gebäude stehen im Bild jetzt gerade (auf 90° gedreht), die Andockplätze und Gruben folgen aber noch der alten schrägen Ausrichtung aus dem Layout (z. B. 83° auf Mars, 52° auf Kepler).
    - Lösung: Andockplätze in einer Reihe an einer geraden Seite der Anlage (gleiche Drehung wie das Gebäude), Gruben direkt davor, Anfahrspur frei von Bändern. Mit Punkt 4 eine gemeinsame Andockseite mit bis zu 6 Plätzen.
 
-6. [ ] **Gebäudenamen im Fenster abgeschnitten**
+6. [x] **Gebäudenamen im Fenster abgeschnitten**
    - Lösung: Titel in den Fenstern verkleinern sich automatisch (Auto-Size, 2 Zeilen erlaubt), lange Namen wie „Industrielle Entladestation“ passen dann ganz.
 
-7. [ ] **Bohrturm und Erzbagger neu gestalten**
+7. [x] **Bohrturm und Erzbagger neu gestalten**
    - Bohrturm: richtiger Gittermast (4 Beine mit Querstreben), Drehtisch, Bohrgestänge, das sich beim Bohren dreht und auf/ab fährt, Rohrlager, Warnleuchte oben, Fundament.
    - Erzbagger: klar erkennbarer Bagger – Kettenlaufwerk, drehbarer Oberwagen mit Kabine, Ausleger + Stiel + Schaufel, die beim Fördern gräbt und schwenkt, dazu ein kleiner Erzhaufen.
 
-8. [ ] Danach: Basis-Prüfung über alle Planeten, Fotos ansehen, Browser-Version neu bauen.
+8. [x] Danach: Basis-Prüfung über alle Planeten, Fotos ansehen, Browser-Version neu bauen.
+9. [ ] Browser-Prototyp: eine Entladeanlage mit 3 Stufen nachziehen (Regeln, Texte, Layout).
+10. [ ] Restliche Kleinigkeiten der Prüfung: 3 etwas enge Kurven, Andockarme der Entladeanlage nah an Nachbargebäuden.
 
 ## Als Nächstes (in dieser Reihenfolge)
 1. [ ] **Meteoritenschauer** – Meteoritenstaub auf sauberen Parzellen (gemischtes Material), Erzbagger räumt ihn in der Nähe weg, Ziel „Räume Parzellen nach Meteoritenschauern“

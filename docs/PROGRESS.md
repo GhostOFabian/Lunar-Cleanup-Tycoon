@@ -107,3 +107,12 @@
 - Menü „Lunar Cleanup → Browser-Version bauen und starten“: WebGL-Development-Build nach `Builds/WebGL` (ohne Kompression, ~99 MB), startet über Unitys lokalen Webserver im Standard-Browser. Läuft (getestet in Opera GX, localhost).
 - Browser-Testversion startet im Testmodus (eigener Spielstand), Test-Knöpfe in den Einstellungen; Testmodus dort umschaltbar (Seite neu laden).
 - Build-Fixes: `-lembind -sERROR_ON_UNDEFINED_SYMBOLS=0` (KI-Paket bringt embind-Code mit), Shader-Platzhalter in `Resources/ShaderKeep`, Engine-Stripping aus.
+
+## Unity 0.13 (31.10.2026) – Playtest-Befunde vom 30.10.
+- **Eine Entladeanlage** je Planet mit 3 Ausbaustufen (intern weiter u1/u2/u3, Spielstände bleiben gültig): ein Gebäude am Platz der kleinen Station, alle Andockplätze in einer geraden Reihe davor, ein Band zum Rohstofflager. Die Bänder von Stufe 2/3 laufen nur noch unsichtbar in der Logik. Quests/Texte angepasst.
+- **Bänder:** jedes Band hat einen eigenen Ein- und Ausgang (Y nur noch bewusst bei gleichem Ziel und geprüft); zwischen zwei Ecken mindestens 1,5 m gerade, kurze Versätze als weites S, keine Zacken in Kurven; Brücken nie in den letzten 4,8 m vor einem Gebäude – liegt eine Kreuzung dort, hebt sich das andere Band; Kreuzungen nah an Ein-/Ausgängen vermeidet der Router.
+- Basis-Prüfung erweitert: „hängt in der Luft“, „Y trifft das Band nicht“, „Kurve zu eng“. Fotos jetzt von oben + 4 Himmelsrichtungen + Bohrturm/Bagger aus der Nähe. Ergebnis nach vier Durchläufen: 251 → 12 Befunde, davon 0 Überschneidungen, 0 hängende Enden; übrig sind 3 etwas enge Kurven (0,34–0,5 m) und 9 Hinweise „kommt sich nahe“ (Andockarme der Entladeanlage, keine Überlappung).
+- Erzbagger hat jetzt eine Grundhaltung (Ausleger hoch, Stiel runter), auch wenn er nicht animiert wird.
+- Browser-Version neu gebaut.
+- Fenstertitel verkleinern sich automatisch (13–26 pt, eine Zeile).
+- Neuer Bohrturm (Gittermast, Drehtisch, Gestänge fährt/dreht) und neuer Erzbagger (Ketten, drehender Oberwagen, Ausleger/Stiel/Schaufel graben).

@@ -11,7 +11,7 @@ namespace LunarCleanup.Gameplay
         static Material M(Color c, float met = .25f, float sm = .5f) => MeshKit.Mat(c, met, sm);
         static Color Hex(string h) => GameData.Hex(h);
 
-        public class BuildingParts { public GameObject root; public Transform piston, rocket, spin; public Material lamp; public float pistonY = 2.2f, rocketY = .7f; }
+        public class BuildingParts { public GameObject root; public Transform piston, rocket, spin, spinUp, swing, boom, stick; public Material lamp; public float pistonY = 2.2f, rocketY = .7f; }
 
         /// <summary>Gebäude in Modellkoordinaten: x = Plan-x, z = −Plan-y, y nach oben. Grundfläche ~ Radius fp.</summary>
         public static BuildingParts Building(string id, float fp, Color acc, Color acc2)
