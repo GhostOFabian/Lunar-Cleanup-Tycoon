@@ -1,6 +1,6 @@
 # Unity-Version – Was noch zu tun ist
 
-Stand: 30.10.2026 · Unity-Version 0.12 · Branch `claude/prototype-v3.5`
+Stand: 31.10.2026, 17 Uhr · Unity-Version 0.15 · Unity ist die Hauptversion (Browser-Prototyp nur noch Nachschlagewerk) · Branch `claude/prototype-v3.5`
 Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wird nach jedem Teil abgehakt.
 
 ## Fertig (in Unity getestet, im Editor)
@@ -22,27 +22,27 @@ Vorbild ist immer der Browser-Prototyp (`prototype/index.html`). Diese Liste wir
 ## Nach Dringlichkeit (Stand 31.10.2026, 11 Uhr)
 
 ### Sofort, sobald Unity wieder offen ist
-1. [ ] **Vorbereiteten Code übersetzen und Fehler beheben** (ohne Unity geschrieben, noch nie kompiliert): Gebäude-Upgrades im Gebäudefenster, Ziel antippen = Sprung an die richtige Stelle, Kristalle im Bild antippen, Bodenteile auf schmutzigen Parzellen, Detailtextur-Fix.
-2. [ ] **Dunklen Planetenboden in der Browser-Fassung beheben** – Vermutung: nach dem Unity-Absturz fehlt die Shader-Variante mit Detailtextur (`_DETAIL_MULX2`). Fix vorbereitet (Platzhalter-Material bekommt eine echte Detailtextur). Danach Browser-Build und A/B-Vergleich mit dem hellen Stand von 09:50, erst dann online stellen.
-2b. [ ] **Produkte fahren nicht sichtbar über die Bänder** (Fabian, 31.10. 12:10): prüfen, ob es an der Logik liegt (Presse/Schmelze/Raffinerie → Produktlager → Rakete, `BeltTake`/`BeltAccept`) oder nur an der Darstellung (`DrawItems`: Lage auf der neu verlegten Bandlinie, Ausblenden im Gebäude über `beltTrim`, Y-Bänder, Brücken). Im Testmodus mit vollem Ausbau ansehen und mit dem Browser-Prototyp vergleichen.
+1. [x] **Vorbereiteten Code übersetzen und Fehler beheben** (ohne Unity geschrieben, noch nie kompiliert): Gebäude-Upgrades im Gebäudefenster, Ziel antippen = Sprung an die richtige Stelle, Kristalle im Bild antippen, Bodenteile auf schmutzigen Parzellen, Detailtextur-Fix.
+2. [x] **Dunklen Planetenboden in der Browser-Fassung beheben** – Vermutung: nach dem Unity-Absturz fehlt die Shader-Variante mit Detailtextur (`_DETAIL_MULX2`). Fix vorbereitet (Platzhalter-Material bekommt eine echte Detailtextur). Danach Browser-Build und A/B-Vergleich mit dem hellen Stand von 09:50, erst dann online stellen.
+2b. [x] **Produkte fahren nicht sichtbar über die Bänder** (Fabian, 31.10. 12:10): prüfen, ob es an der Logik liegt (Presse/Schmelze/Raffinerie → Produktlager → Rakete, `BeltTake`/`BeltAccept`) oder nur an der Darstellung (`DrawItems`: Lage auf der neu verlegten Bandlinie, Ausblenden im Gebäude über `beltTrim`, Y-Bänder, Brücken). Im Testmodus mit vollem Ausbau ansehen und mit dem Browser-Prototyp vergleichen.
 3. [ ] **Große Bänder-Prüfung** (jeder Teilausbau, alle Planeten) mit der neuen Verlege-Reihenfolge; Rest: Kreuzungen auf Enceladus und Sedna, eine enge Kurve auf Gliese 1214 b.
 3b. [ ] **Große Planeten (bis 17.642 Parzellen) in Unity testen**: Ladezeit, Speicher (Texturen), Bildrate im Browser und am Handy, Offline-Rechnung, Kamera-Zoom, Basis-Prüfung für die neuen Größen.
 4. [ ] **Alles Neue im Spiel testen**: 2 Parzellen pro Wisch, Kamera beim Wischen (Rand, WASD/Pfeile, rechte Maustaste), Scheinwerfer nur nachts, Gebäude-Upgrades, Ziel-Sprung, Kristalle ernten, Bodenteile verschwinden beim Reinigen (Leistung auf großen Planeten wie Poltergeist prüfen).
 5. [ ] **Webseite: echte Spielbilder aus Unity** (mit HUD, ausgebaute Basis, Nacht mit Scheinwerfern, Kristalle, Bodenteile) statt der Prüf-Fotos.
 
 ### Neue Ideen (ausgearbeitet in docs/IDEEN_SPEC.md, Daten in Core/FeatureData.cs, Spielstand-Felder vorbereitet)
-- [ ] A1 Waren sichtbar (Bänder, Lager-Füllstand, Rakete beladen) · [ ] B3 Kombo · [ ] B2 Funde + Album · [ ] B1 Ereignisse · [ ] B4 Tagesbonus · [ ] A4/A5 Sound, Vibration · [ ] C2 Fahrzeug-Stufen · [ ] A2 Wetter, A3 Astronauten · [ ] D1 Sternenstaub · [ ] C1 Forschungsbaum · [ ] F1–F3 Komfort · [ ] D3/D4 · [ ] C3–C5 · [ ] D2, E1–E3
+- [x] A1 Waren auf Bändern (Lager-Füllstand, Rakete beladen fehlen) · [x] B3 Kombo · [x] B2 Funde + Album · [x] B1 Ereignisse · [x] B4 Tagesbonus · [x] A4 Sound · [ ] A5 Vibration · [x] C2 Fahrzeug-Stufen · [x] A2 Wetter, A3 Astronauten · [x] D1 Sternenstaub · [ ] C1 Forschungsbaum · [ ] F1–F3 Komfort · [ ] D3/D4 · [ ] C3–C5 · [ ] D2, E1–E3
 
 ### Hoch
-6. [ ] **Planetenboden schöner** (Unity): feinere Bodentextur mit Normal-Map, weniger Rauschen, Schatten auf Handy-Qualität prüfen.
-7. [ ] **Meteoritenschauer** (Unity): Staub auf sauberen Parzellen, Erzbagger räumt, Ziel dazu.
-8. [ ] **Browser-Prototyp nachziehen**: eine Entladeanlage mit 3 Stufen; entscheiden, ob 2 Parzellen pro Wisch auch dort gelten.
+6. [x] **Planetenboden schöner** (Unity): feinere Bodentextur mit Normal-Map, weniger Rauschen, Schatten auf Handy-Qualität prüfen.
+7. [x] **Meteoritenschauer** (Unity): Staub auf sauberen Parzellen, Erzbagger räumt, Ziel dazu.
+8. [–] (entfällt – Browser-Prototyp wird nicht weiterentwickelt) **Browser-Prototyp nachziehen**: eine Entladeanlage mit 3 Stufen; entscheiden, ob 2 Parzellen pro Wisch auch dort gelten.
 
 ### Mittel (Spielinhalt aus dem Prototyp)
-9. [ ] Ausbaustufen nach Basisstufe 5 · 10. [ ] Sternenstaub-Neustart + Artefakte · 11. [ ] Frachtaufträge der Rakete, „Band an/aus“ · 12. [ ] Verkaufsautomat + Produktionsplan · 13. [ ] Produktions-Ampel · 14. [ ] Gebäudestufen · 15. [ ] Ausrichtung, Betriebsbonus, Werksaufträge · 16. [ ] Planetenziele + tägliche Aufträge · 17. [ ] Funde, Erfolge, Statistik · 18. [ ] Fahrzeug-Feinheiten (Teamarbeit, Arbeitsbereich) · 19. [ ] Sound + Vibration
+9. [ ] Ausbaustufen nach Basisstufe 5 · 10. [x] Sternenstaub-Neustart (Artefakte fehlen noch) · 11. [x] Frachtaufträge der Rakete, „Band an/aus“ · 12. [x] Verkaufsautomat + Produktionsplan · 13. [x] Produktions-Ampel + Betriebsbonus · 14. [x] Gebäudestufen · 15. [ ] Ausrichtung, Betriebsbonus, Werksaufträge · 16. [ ] Planetenziele + tägliche Aufträge · 17. [x] Funde, Erfolge · [ ] Statistik · 18. [ ] Fahrzeug-Feinheiten (Teamarbeit, Arbeitsbereich) · 19. [x] Sound · [ ] Vibration
 
 ### Später (Handy)
-20. [ ] Spielstand-Code (Übernahme aus dem Browser) · 21. [ ] Android-Build + Test in BlueStacks · 22. [ ] Google Play Spiele / Game Center + Käufe · 23. [ ] iOS-Build (Mac nötig)
+20. [ ] Spielstand-Code (nur als Übergang bis zur Handy-Version – niedrige Priorität) · 21. [ ] Android-Build + Test in BlueStacks · 22. [ ] Google Play Spiele / Game Center + Käufe · 23. [ ] iOS-Build (Mac nötig)
 
 ## Morgen zuerst: Playtest-Befunde vom 30.10. (Fabian)
 Reihenfolge so gewählt, dass jeder Punkt einzeln in Unity geprüft werden kann (Basis-Prüfung F11 + Fotos).
@@ -77,7 +77,7 @@ Reihenfolge so gewählt, dass jeder Punkt einzeln in Unity geprüft werden kann 
    - Erzbagger: klar erkennbarer Bagger – Kettenlaufwerk, drehbarer Oberwagen mit Kabine, Ausleger + Stiel + Schaufel, die beim Fördern gräbt und schwenkt, dazu ein kleiner Erzhaufen.
 
 8. [x] Danach: Basis-Prüfung über alle Planeten, Fotos ansehen, Browser-Version neu bauen.
-9. [ ] Browser-Prototyp: eine Entladeanlage mit 3 Stufen nachziehen (Regeln, Texte, Layout).
+9. [–] (entfällt) Browser-Prototyp: eine Entladeanlage mit 3 Stufen nachziehen (Regeln, Texte, Layout).
 10. [ ] Restliche Kleinigkeiten der Prüfung: 3 etwas enge Kurven, Andockarme der Entladeanlage nah an Nachbargebäuden.
 
 ## Als Nächstes (in dieser Reihenfolge)
