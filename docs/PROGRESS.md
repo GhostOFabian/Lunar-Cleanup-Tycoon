@@ -173,5 +173,6 @@
 - Meteoritenschauer mit Animation (Glutschweif, Blitz, Staub, Vibration, Kamera-Ruckeln, glühender Brocken bis zur Reinigung); live meist im sichtbaren Bereich.
 - Spielstand-Code (kopieren/einfügen/rückgängig) in den Einstellungen.
 - iPhone-Playtest-Fixes: Tippen auf Gebäude (Touch-Position beim Loslassen), Ampeln als Masten neben den Gebäuden, blaue Basis-Ränder, helleres Fingerlicht, Kamera folgt der Putzstelle, weiter rauszoomen mit Atmosphäre, Fernlichter, Wrack-Absturz als Feuerball.
+- Bandenden ohne Wand auf Bandhöhe (Entladeanlage auf Stelzen, Rohstofflager, Verkaufsstation): Fabians Übergabesäule am Modellrand statt Tunnel bis in die Mitte.
 - Editor-Fernsteuerung `Editor/RemoteCommands.cs` (Befehle über `Temp/claude_cmd.txt`).
 - Getestet im Editor (Mond, Mars, Meteoritenschauer, Frachter). Auf dem iPhone noch offen: Testliste 0.21.

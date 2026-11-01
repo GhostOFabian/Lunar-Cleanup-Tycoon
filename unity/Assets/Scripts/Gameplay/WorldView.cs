@@ -219,7 +219,7 @@ namespace LunarCleanup.Gameplay
             if (b.rp.Length < 2 || Game.HiddenBelt(b)) return; var V = Vis(b); var rp0 = V.rp; int n0 = rp0.Length; var cum0 = V.cum; beltCum[b.id] = cum0; // Bänder laufen auf der geglätteten Linie
             // Band endet genau an der Gebäudewand: Strahlen (Bandmitte + beide Banden, zwei Höhen) gegen die echte Modelloberfläche
             float L0 = cum0[n0 - 1], s0 = 0, s1 = L0, H0 = BeltDeck(b);
-            float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp * .92f : 0;
+            float Edge(string id) => ps.lay.pos.ContainsKey(id) && GameData.Bld.ContainsKey(id) ? (LcKit.HasBelt ? ModelEdge(id) : GameData.Bld[id].fp * .92f) : 0;
             System.Func<float, float> LF = q => Lift(b.id, q);
             bool w0 = WallHit(b.from, rp0, cum0, q => H0 + LF(q), false, out float h0), w1 = WallHit(b.to, rp0, cum0, q => H0 + LF(q), true, out float h1);
             if (w0) s0 = h0 + .02f; else for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= Edge(b.from)) { s0 = q; break; } }
@@ -228,9 +228,11 @@ namespace LunarCleanup.Gameplay
             bool m1 = mergeEnd.TryGetValue(b.id, out float mE), m0 = mergeStart.TryGetValue(b.id, out float mS);
             if (m1) { s1 = Mathf.Min(s1, mE + .45f); w1 = true; } if (m0) { s0 = Mathf.Max(s0, mS - .45f); w0 = true; } // Weiche: mündet seitlich auf das andere Band
             // Kein Wandtreffer (Lücke im Modell oder zu niedrig): überdachter Zulauf bis in die Gebäudemitte, vorne ein Anschlussrahmen
-            if (!w0 && !m0) Tunnel(rp0, cum0, Mathf.Max(0, s0 - GameData.Bld[b.from].fp), s0 + .25f, H0 + LF(s0));
-            if (!w1 && !m1) Tunnel(rp0, cum0, s1 - .25f, Mathf.Min(L0, s1 + GameData.Bld[b.to].fp), H0 + LF(s1));
-            if (!m0) Port(rp0, cum0, s0, H0 + LF(s0), false, true); if (!m1) Port(rp0, cum0, s1, H0 + LF(s1), true, true); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
+            /* Ohne Wand auf Bandhöhe (Gebäude auf Stelzen, offene Halle): mit Fabians Modellen steht am Modellrand seine Übergabesäule, sonst ein überdachter Zulauf bis in die Mitte */
+            bool lcEnd = LcKit.HasBelt;
+            if (!w0 && !m0 && !lcEnd) Tunnel(rp0, cum0, Mathf.Max(0, s0 - GameData.Bld[b.from].fp), s0 + .25f, H0 + LF(s0));
+            if (!w1 && !m1 && !lcEnd) Tunnel(rp0, cum0, s1 - .25f, Mathf.Min(L0, s1 + GameData.Bld[b.to].fp), H0 + LF(s1));
+            if (!m0) Port(rp0, cum0, s0, H0 + LF(s0), false, w0 || !lcEnd); if (!m1) Port(rp0, cum0, s1, H0 + LF(s1), true, w1 || !lcEnd); beltInfo[b.id] = (b, w0, w1, s0, s1, H0, rp0, cum0);
             if (!w0 || !w1) Debug.Log("Lunar Cleanup: Band " + b.id + " ohne Wandtreffer bei " + (!w0 ? b.from + " (" + TrisOf(b.from).Count / 3 + " Dreiecke) " : "") + (!w1 ? b.to + " (" + TrisOf(b.to).Count / 3 + " Dreiecke)" : ""));
             beltTrim[b.id] = new Vector2(s0, s1);
             var rp = Densify(SubPath(rp0, cum0, s0, s1), .4f); int n = rp.Length; /* dichte Punkte: die Lauffläche folgt jeder Brückenrampe genau wie Stützen und Waren */ if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
@@ -364,6 +366,13 @@ namespace LunarCleanup.Gameplay
             return out_;
         }
         /// <summary>Alle Dreiecke eines Gebäudemodells in Weltkoordinaten (ohne Bodenplatte/Lampe).</summary>
+        /// <summary>Wie weit das Gebäudemodell in Bodennähe (0–2 m) von seiner Mitte reicht – dort steht die Übergabesäule, wenn das Band keine Wand trifft.</summary>
+        float ModelEdge(string id)
+        {
+            var T = TrisOf(id); var c = ps.lay.pos[id]; float r = 0, fp = GameData.Bld[id].fp;
+            for (int i = 0; i < T.Count; i += 3) { var v = T[i]; float h = v.magnitude - pd.R; if (h < .05f || h > 2f) continue; float d = (pd.PlanLocal(v.normalized) - c).magnitude; if (d < fp * 1.6f) r = Mathf.Max(r, d); }
+            return r > .5f ? r + .55f : fp * .92f; // Säule (0,7 m tief) steht knapp vor dem äußersten Teil
+        }
         List<Vector3> TrisOf(string id)
         {
             if (bTris.TryGetValue(id, out var T)) return T; T = new List<Vector3>(); bTris[id] = T;

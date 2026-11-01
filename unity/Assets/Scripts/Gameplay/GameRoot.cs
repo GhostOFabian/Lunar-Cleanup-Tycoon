@@ -21,7 +21,7 @@ namespace LunarCleanup.Gameplay
         PlanetView planet; WorldView world; Hud hud; Camera cam;
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
         /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
-        public static float ZoomReq = -1;
+        public static float ZoomReq = -1; public static Vector3? FocusReq;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
@@ -127,6 +127,7 @@ namespace LunarCleanup.Gameplay
             if (!offlineRunning) Game.Step(dt);
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
+            if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam();
             Game.CartGoal = cd; WorldView.MapMode = mapMode;

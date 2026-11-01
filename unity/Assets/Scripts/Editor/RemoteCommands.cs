@@ -40,6 +40,7 @@ namespace LunarCleanup.EditorTools
                     case "wreck": case "impact": { var cs = LunarCleanup.Core.Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Write((LunarCleanup.Core.Game.StartEvent(cs, c) ? "ok " : "kein Platz ") + c); break; }
                     default:
                         if (c.StartsWith("shot")) { string f = "Temp/shot_" + (c.Length > 5 ? c.Substring(5) : "x") + ".png"; ScreenCapture.CaptureScreenshot(f); Write("ok " + f); break; }
+                        if (c.StartsWith("look ")) { var ps = LunarCleanup.Core.Game.Cur; var id = c.Substring(5); if (ps.lay.pos.ContainsKey(id)) { LunarCleanup.Gameplay.GameRoot.FocusReq = ps.pd.PlanDir(ps.lay.pos[id]); Write("ok " + c); } else Write("fehlt " + id); break; }
                         if (c.StartsWith("zoom ")) { LunarCleanup.Gameplay.GameRoot.ZoomReq = float.Parse(c.Substring(5), System.Globalization.CultureInfo.InvariantCulture); Write("ok " + c); break; }
                         if (c.StartsWith("travel ")) { var pid = c.Substring(7); if (!LunarCleanup.Core.Game.P.ContainsKey(pid)) { LunarCleanup.Core.Game.S.credits += 1e12; LunarCleanup.Core.Game.Unlock(pid); } else LunarCleanup.Core.Game.Travel(pid); Write("ok " + c); break; }
                         if (c.StartsWith("menu ")) { bool ok = EditorApplication.ExecuteMenuItem(c.Substring(5)); Write((ok ? "ok " : "fehlt ") + c); }
