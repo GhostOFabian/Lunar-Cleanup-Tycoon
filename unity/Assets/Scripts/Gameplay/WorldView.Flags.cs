@@ -8,7 +8,7 @@ namespace LunarCleanup.Gameplay
 {
     public partial class WorldView
     {
-        class FlagView { public GameObject go; public Transform cloth; public TextMeshPro label; public FlagSave f; public bool shown, got; public string text; public Transform lid, chest; public float openT = -1; }
+        class FlagView { public GameObject go; public Transform cloth; public TextMeshPro label; public FlagSave f; public bool shown, got; public string text; public Transform lid, chest; public float openT = -1; public int look = -1; }
         readonly List<FlagView> flagViews = new List<FlagView>(); string flagFor; int flagVer = -1; float flagT;
 
         void BuildFlags()
@@ -23,11 +23,11 @@ namespace LunarCleanup.Gameplay
             var pole = MeshKit.Mat(new Color(.82f, .84f, .88f), .8f, .6f); MeshKit.Cyl(g.transform, pole, new Vector3(0, 1.1f, 0), .04f, .05f, 2.2f, 8); MeshKit.Ball(g.transform, pole, new Vector3(0, 2.24f, 0), .09f);
             MeshKit.Cyl(g.transform, MeshKit.Mat(new Color(.25f, .26f, .3f), .4f, .3f), new Vector3(0, .03f, 0), .22f, .26f, .06f, 10);
             var cl = new GameObject("Tuch"); cl.transform.SetParent(g.transform, false); cl.transform.localPosition = new Vector3(.03f, 1.82f, 0); v.cloth = cl.transform;
-            var col = v.f.got ? ps.P.col0 : new Color(.85f, .86f, .9f); var cm = MeshKit.Mat(col, .05f, .3f, v.f.got ? col * .35f : (Color?)null);
+            var col = v.f.got ? Game.FlagCloth(ps, v.f) : new Color(.85f, .86f, .9f); var cm = MeshKit.Mat(col, .05f, .3f, v.f.got ? col * .35f : (Color?)null);
             MeshKit.Box(cl.transform, cm, new Vector3(.55f, 0, 0), new Vector3(1.1f, .66f, .03f));
             var tgo = new GameObject("Text"); tgo.transform.SetParent(cl.transform, false); tgo.transform.localPosition = new Vector3(.55f, 0, -.03f);
             var tm = tgo.AddComponent<TextMeshPro>(); tm.fontSize = 2.2f; tm.alignment = TextAlignmentOptions.Center; tm.enableAutoSizing = true; tm.fontSizeMin = .6f; tm.fontSizeMax = 2.4f; tm.rectTransform.sizeDelta = new Vector2(1.0f, .58f);
-            tm.color = v.f.got ? Color.white : new Color(.2f, .22f, .3f); var tm2 = Object.Instantiate(tgo, cl.transform); tm2.transform.localPosition = new Vector3(.55f, 0, .03f); tm2.transform.localRotation = Quaternion.Euler(0, 180, 0);
+            tm.color = v.f.got ? Game.FlagInk(v.f) : new Color(.2f, .22f, .3f); var tm2 = Object.Instantiate(tgo, cl.transform); tm2.transform.localPosition = new Vector3(.55f, 0, .03f); tm2.transform.localRotation = Quaternion.Euler(0, 180, 0);
             /* Fabian 01.11.: Schatztruhe neben der Flagge – antippen öffnet sie, danach darfst du die Flagge beschriften */
             var ch = new GameObject("Schatztruhe").transform; ch.SetParent(g.transform, false); ch.localPosition = new Vector3(-.75f, 0, .35f); ch.localRotation = Quaternion.Euler(0, 25, 0); v.chest = ch;
             var wood = MeshKit.Mat(new Color(.45f, .27f, .13f), .05f, .35f); var gold = MeshKit.Mat(new Color(1f, .78f, .3f), .9f, .75f, new Color(1f, .7f, .2f) * (v.f.got ? .15f : .6f));
@@ -41,7 +41,7 @@ namespace LunarCleanup.Gameplay
             MeshKit.Box(lid, gold, new Vector3(0, .02f, .405f), new Vector3(.1f, .12f, .03f)); /* Schloss */
             if (!v.f.got) { var gl = MeshKit.Part(ch, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .8f, .35f, .5f)), new Vector3(0, .45f, 0), Vector3.one * .9f); NoShadow(gl); gl.AddComponent<Billboard>(); }
             lid.localRotation = Quaternion.Euler(v.f.got && v.openT < 0 ? -105 : 0, 0, 0);
-            v.label = tm; v.got = v.f.got; v.text = null; return g;
+            v.label = tm; v.got = v.f.got; v.text = null; v.look = v.f.fcol * 100 + v.f.tcol; return g;
         }
         void UpdateFlags()
         {
@@ -51,7 +51,7 @@ namespace LunarCleanup.Gameplay
             foreach (var v in flagViews)
             {
                 n++; bool vis = Game.FlagVisible(ps, v.f) && !MapMode;
-                if (vis && (!v.go || v.got != v.f.got)) { bool opening = v.go && !v.got && v.f.got; if (v.go) Destroy(v.go); if (opening) v.openT = 0; v.go = MakeFlag(v); if (opening) ChestBurst(v.chest.position + v.chest.up * .4f, v.chest.up); }
+                if (vis && (!v.go || v.got != v.f.got || (v.got && v.look != v.f.fcol * 100 + v.f.tcol))) { bool opening = v.go && !v.got && v.f.got; if (v.go) Destroy(v.go); if (opening) v.openT = 0; v.go = MakeFlag(v); if (opening) ChestBurst(v.chest.position + v.chest.up * .4f, v.chest.up); }
                 if (v.go && v.go.activeSelf != vis) v.go.SetActive(vis);
                 if (v.go && vis)
                 {

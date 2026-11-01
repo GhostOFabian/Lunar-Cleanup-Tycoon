@@ -358,6 +358,8 @@ namespace LunarCleanup.UI
             h.Section("Dein Kommentar");
             h.Note("Schreib, was du dazu denkst – es steht danach auf der Fahne (höchstens 24 Zeichen).");
             h.TextInput(f.text, "Dein Kommentar", t => Game.SetFlagText(f, t));
+            h.Row("Fahnenfarbe", () => "Jetzt: " + Game.FlagCols[Mathf.Clamp(f.fcol, 0, Game.FlagCols.Length - 1)].name, () => "Wechseln", null, () => Game.NextFlagCol(f), false);
+            h.Row("Schriftfarbe", () => "Jetzt: " + Game.TextCols[Mathf.Clamp(f.tcol, 0, Game.TextCols.Length - 1)].name, () => "Wechseln", null, () => Game.NextTextCol(f), false);
             h.Section("Ideen");
             foreach (var idea in new[] { "Gänsehaut!", "Ich les weiter!", "Unglaublich …", "Hier war ich!", "Wie geht's weiter?", "Gruß an alle" }) { var t = idea; h.Row(t, null, () => f.text == t ? "Steht drauf" : "Nehmen", () => f.text != t, () => { Game.SetFlagText(f, t); Game.Toast("Flagge beschriftet: „" + t + "“", "good"); }, false); }
             h.Row("Geschichte", () => Game.FlagsGot(ps) + " von " + ps.sv.flags.Count + " Truhen auf " + ps.P.name + " geöffnet", () => "Alles lesen", null, () => h.OpenSheet("story", ps.pid), false);

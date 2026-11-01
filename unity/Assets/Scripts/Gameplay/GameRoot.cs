@@ -95,7 +95,7 @@ namespace LunarCleanup.Gameplay
         IEnumerator Offline(float seconds)
         {
             float t = Mathf.Min(seconds, Game.OfflineCap); if (t < 5) yield break;
-            offlineRunning = true; Game.Offline = true; double c0 = Game.S.credits; float el = 0;
+            offlineRunning = true; Game.Offline = true; double c0 = Game.S.credits, e0 = Game.S.stats.earned; float el = 0; int r0 = 0, n0 = 0; foreach (var q in Game.P.Values) { r0 += q.sv.nRockets; n0 += q.nClean; }
             while (el < t)
             {
                 float t0 = Time.realtimeSinceStartup;
@@ -105,8 +105,9 @@ namespace LunarCleanup.Gameplay
                 yield return null;
             }
             Game.Offline = false; offlineRunning = false; hud.ShowOffline(null);
-            double gain = Game.S.credits - c0; int h = Mathf.FloorToInt(t / 3600), m = Mathf.FloorToInt(t % 3600 / 60);
-            Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr", "good");
+            double gain = System.Math.Max(Game.S.credits - c0, Game.S.stats.earned - e0); int h = Mathf.FloorToInt(t / 3600), m = Mathf.FloorToInt(t % 3600 / 60); int r1 = 0, n1 = 0; foreach (var q in Game.P.Values) { r1 += q.sv.nRockets; n1 += q.nClean; }
+            /* Fabian 01.11.: zeigen, was offline passiert ist – nicht nur Credits */
+            Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr" + (r1 > r0 ? " · " + (r1 - r0) + (r1 - r0 == 1 ? " Rakete" : " Raketen") : "") + (n1 > n0 ? " · " + (n1 - n0) + " Parzellen gereinigt" : ""), "good");
             if (Game.S.wrecks.Count > 0) { Game.Toast("Totalschaden: " + string.Join(", ", Game.S.wrecks) + " – neue Fahrzeuge bauen", "bad"); Game.S.wrecks.Clear(); }
             Game.Save();
         }

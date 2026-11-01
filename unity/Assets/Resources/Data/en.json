@@ -1870,5 +1870,12 @@
 " Truhen geöffnet. Das letzte Kapitel liegt immer in der letzten Truhe.": " chests opened. The last chapter is always in the last chest.",
 "Noch keine Truhe geöffnet.": "No chest opened yet.",
 "Fortsetzung folgt – in der nächsten Truhe.": "To be continued – in the next chest.",
-" Cr – darin liegt eine Geschichte": " Cr – there's a story inside"
+" Cr – darin liegt eine Geschichte": " Cr – there's a story inside",
+"Fahnenfarbe": "Flag color",
+"Schriftfarbe": "Text color",
+"Planetenfarbe": "Planet color",
+"Schwarz": "Black",
+" Rakete": " rocket",
+" Parzellen gereinigt": " parcels cleaned",
+" min): +": " min): +"
 }

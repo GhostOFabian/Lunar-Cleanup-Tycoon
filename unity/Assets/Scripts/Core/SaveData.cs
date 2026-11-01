@@ -35,6 +35,7 @@ namespace LunarCleanup.Core
     public class PlanetSave
     {
         public string pid;
+        [NonSerialized] public float sellIdle, sellLast, sellAge; /* Rakete: wie lange schon nichts Neues in den Frachtraum kam */
         public int freq; // Planetengröße (0 = Stand vor v6.4 → alte Größe)
         public int stage = 1, techF, nextVeh = 1, nRockets;
         public bool prize; // Reiseprämie bei 100 % schon gezahlt

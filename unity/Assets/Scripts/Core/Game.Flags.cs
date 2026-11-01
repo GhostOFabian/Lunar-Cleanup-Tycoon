@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace LunarCleanup.Core
 {
-    [Serializable] public class FlagSave { public int cell; public float x, y; public bool got; public string text = ""; public int slot; /* Fabian 01.11.: Reihenfolge des Öffnens (1 = erste Truhe), 0 = noch nicht vergeben – bestimmt, welches Kapitel darin liegt */ }
+    [Serializable] public class FlagSave { public int cell; public float x, y; public bool got; public string text = ""; public int fcol, tcol; /* Fabian 01.11.: Fahnen- und Schriftfarbe (0 = Standard) */ public int slot; /* Fabian 01.11.: Reihenfolge des Öffnens (1 = erste Truhe), 0 = noch nicht vergeben – bestimmt, welches Kapitel darin liegt */ }
 
     public static partial class Game
     {
@@ -43,6 +43,12 @@ namespace LunarCleanup.Core
             Toast("Schatztruhe geöffnet " + got + "/" + all + " · +" + Fmt(r) + " Cr – darin liegt eine Geschichte", "good"); FloatTxt(FlagDir(ps, f), "+" + Fmt(r) + " Cr", "big");
             if (got == all) { double b = Math.Round(r * 10); Earn(b); Toast("Alle Flaggen auf " + ps.P.name + " gefunden! Bonus +" + Fmt(b) + " Cr", "good"); }
         }
+        public static readonly (string name, Color col)[] FlagCols = { ("Planetenfarbe", Color.clear), ("Rot", new Color(.9f, .12f, .12f)), ("Orange", new Color(1f, .5f, .05f)), ("Gold", new Color(1f, .78f, .1f)), ("Grün", new Color(.1f, .75f, .3f)), ("Türkis", new Color(0f, .75f, .75f)), ("Blau", new Color(.12f, .35f, .95f)), ("Violett", new Color(.5f, .2f, .85f)), ("Pink", new Color(1f, .3f, .7f)), ("Weiß", new Color(.95f, .95f, .97f)), ("Schwarz", new Color(.08f, .08f, .1f)) };
+        public static readonly (string name, Color col)[] TextCols = { ("Weiß", Color.white), ("Schwarz", new Color(.05f, .05f, .08f)), ("Gold", new Color(1f, .82f, .2f)), ("Rot", new Color(1f, .2f, .2f)), ("Grün", new Color(.2f, 1f, .45f)), ("Blau", new Color(.3f, .55f, 1f)), ("Pink", new Color(1f, .4f, .8f)) };
+        public static Color FlagCloth(PState ps, FlagSave f) { int i = Mathf.Clamp(f.fcol, 0, FlagCols.Length - 1); return i == 0 ? ps.P.col0 : FlagCols[i].col; }
+        public static Color FlagInk(FlagSave f) => TextCols[Mathf.Clamp(f.tcol, 0, TextCols.Length - 1)].col;
+        public static void NextFlagCol(FlagSave f) { f.fcol = (f.fcol + 1) % FlagCols.Length; FlagVer++; }
+        public static void NextTextCol(FlagSave f) { f.tcol = (f.tcol + 1) % TextCols.Length; FlagVer++; }
         public static void SetFlagText(FlagSave f, string t) { f.text = (t ?? "").Trim(); if (f.text.Length > 24) f.text = f.text.Substring(0, 24); FlagVer++; }
     }
 }
