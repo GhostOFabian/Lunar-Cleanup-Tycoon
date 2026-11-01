@@ -21,7 +21,7 @@ namespace LunarCleanup.Core
         public bool IsBase => kind == 0;
     }
 
-    public class PlanetData
+    public partial class PlanetData
     {
         public string pid;
         public float R;
@@ -171,23 +171,25 @@ namespace LunarCleanup.Core
             cc = new int[N][]; var tmp = new List<int>();
             for (int z = 0; z < N; z++) { tmp.Clear(); var cz = cells[z]; for (int i = 0; i < nc; i++) { float lim = (cr[i].w * 1.8f + cz.H * 1.4f) / R; if (Vector3.Dot(cz.c, new Vector3(cr[i].x, cr[i].y, cr[i].z)) > Mathf.Cos(Mathf.Min(Mathf.PI, lim))) tmp.Add(i); } cc[z] = tmp.ToArray(); }
             try { foreach (int c in Game.OutpostSites(pid)) Flatten(cells[c].c, 7f); } catch (Exception) { }
+            try { PlaceFeatures(); } catch (Exception e) { Debug.LogWarning("Lunar Cleanup: Geländeformen: " + e.Message); } /* Vulkane, Berge, Schlothügel … gehören zum Boden */
         }
         /// <summary>Flache Stelle (z. B. Außenlager), Radius in Metern.</summary>
         public void Flatten(Vector3 dir, float radius) { flat.Add(dir.normalized * radius); }
         public float Height(Vector3 dir, int cell = -1)
         {
             if (hk == null) InitTerrain(); dir.Normalize();
-            var b = PlanLocal(dir); float bd = b.magnitude; float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(33f, 46f, bd > 1e3f ? 1e3f : bd)); if (k <= 0) return 0;
+            if (cell < 0) { cell = CellOf(dir, lastHC); lastHC = cell; }
+            float fh = FeatureH(dir, cell);
+            var b = PlanLocal(dir); float bd = b.magnitude; float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(33f, 46f, bd > 1e3f ? 1e3f : bd)); if (k <= 0) return fh;
             float h = 0; for (int i = 0; i < hk.Length; i++) h += Mathf.Sin(Vector3.Dot(dir, hk[i]) * hf[i] + hp[i]) * (i < 2 ? 1f : .35f);
             h *= hAmp * .55f;
-            if (cell < 0) { cell = CellOf(dir, lastHC); lastHC = cell; }
             foreach (int i in cc[cell])
             {
                 var c = cr[i]; float cd = Vector3.Dot(dir, new Vector3(c.x, c.y, c.z)); if (cd < cth[i]) continue; float dist = Mathf.Acos(Mathf.Min(1, cd)) * R; float x = dist / c.w; if (x > 1.8f) continue;
                 float depth = c.w * .09f; h += x < 1 ? depth * (x * x - 1) * .9f + depth * .25f * x * x * x * x : 0; h += depth * .45f * Mathf.Exp(-(x - 1) * (x - 1) / .06f);
             }
             foreach (var f in flat) { float fr = f.magnitude; float dd = Mathf.Acos(Mathf.Clamp(Vector3.Dot(dir, f / fr), -1, 1)) * R; if (dd < fr * 1.8f) k *= Mathf.SmoothStep(0, 1, Mathf.InverseLerp(fr, fr * 1.8f, dd)); }
-            return h * k;
+            return h * k + fh;
         }
         /// <summary>Punkt auf der Geländeoberfläche (plus Höhe darüber).</summary>
         public Vector3 Surf(Vector3 dir, float lift = 0, int cell = -1) { dir.Normalize(); return dir * (R + Height(dir, cell) + lift); }

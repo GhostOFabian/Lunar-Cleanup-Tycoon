@@ -9,7 +9,7 @@ namespace LunarCleanup.Gameplay
     public class PlanetView : MonoBehaviour
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
-        const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
+        public const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
         class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty; public Material mat; }
         /// <summary>Fabian 01.11.: grüne Ränder sauberer Parzellen leuchten weit rausgezoomt (0 = nah, 1 = ganzer Planet); setzt GameRoot.</summary>
         public static float GlowK; float glowSet = -1;
@@ -70,7 +70,7 @@ namespace LunarCleanup.Gameplay
             {
                 var cl = pd.cells[id]; int ti = tileOf[id]; float u0 = (ti % per) * inv, v0 = (ti / per) * inv;
                 System.Func<Vector2, Vector2> UV = p => new Vector2(u0 + (pad + (p.x + cl.H) / (2 * cl.H) * (1 - 2 * pad)) * inv, v0 + (pad + (p.y + cl.H) / (2 * cl.H) * (1 - 2 * pad)) * inv);
-                int K = cl.poly.Length;
+                int K = cl.poly.Length; int SUB = pd.HasFeatures(id) ? 12 : PlanetView.SUB; /* Geländeformen brauchen feinere Dreiecke */
                 for (int k = 0; k < K; k++)
                 {
                     Vector2 A = Vector2.zero, B = cl.poly[k] * 1.004f, C = cl.poly[(k + 1) % K] * 1.004f; int b0 = v.Count;
@@ -247,7 +247,7 @@ namespace LunarCleanup.Gameplay
             Color c0 = th.clean.Length > 0 ? th.clean[0] : Color.gray, c1 = th.clean.Length > 1 ? th.clean[1] : c0, c2 = th.clean.Length > 2 ? th.clean[2] : c0;
             Color b0 = th.baseC.Length > 0 ? th.baseC[0] : Color.gray, b1 = th.baseC.Length > 1 ? th.baseC[1] : b0;
             Color kindTint = K.key == "rich" ? new Color(1.08f, 1.02f, .85f) : K.key == "industrial" ? new Color(.82f, .82f, .86f) : K.key == "anomaly" ? new Color(.95f, .85f, 1.12f) : Color.white;
-            float H = cl.H; int Kc = cl.poly.Length; float edgeW = Mathf.Max(.13f, H * .024f); var crs = Craters(cl);
+            float H = cl.H; int Kc = cl.poly.Length; float edgeW = Mathf.Max(.13f, H * .024f); var crs = Craters(cl); bool hasF = pd.HasFeatures(id); Color fGlow = Color.black;
             for (int py = 0; py < TILE; py++)
             {
                 float y = -H + ((py + .5f) / TILE - PAD) / (1 - 2 * PAD) * 2 * H;
@@ -288,9 +288,11 @@ namespace LunarCleanup.Gameplay
                         }
                         col = Color.Lerp(cleanC, dirtC, g);
                         if (!cl.Wet) { float rh = Relief(crs, x, y, ed, edgeW); col *= 1 + Mathf.Clamp(rh * 1.8f, -.16f, .1f); } // Kraterböden dunkler, Ränder heller
-                        float ea = EdgeA(ed, edgeW);
+                        float ea = EdgeA(ed, edgeW); float fa0 = 0;
+                        if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { col = Color.Lerp(col, fc, fa * (1 - g * .55f)); fGlow = fg * (1 - g * .7f); fa0 = fa; } else fGlow = Color.black;
+                        ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
                         if (ea > 0) col = clean && act == null ? Color.Lerp(col, CleanLine, .75f * ea) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
-                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = clean && act == null ? ea : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(CleanLine.r * gl, CleanLine.g * gl, CleanLine.b * gl, 1); }
+                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = clean && act == null ? ea : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }

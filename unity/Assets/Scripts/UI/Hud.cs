@@ -269,6 +269,16 @@ namespace LunarCleanup.UI
             }
             var gap = UiKit.Rt(sheetContent, "Abstand"); UiKit.LE(gap, 8, 8);
         }
+        /// <summary>Texteingabe (Flagge beschriften): auf dem Handy öffnet sich die Tastatur, „Fertig“ speichert.</summary>
+        public void TextInput(string value, string placeholder, Action<string> done)
+        {
+            var bg = UiKit.Glass(sheetContent, "Eingabe", new Color(1, 1, 1, .08f), 10); UiKit.LE(bg, 48, 48); bg.raycastTarget = true;
+            var area = UiKit.Rt(bg.transform, "Textbereich").Anchor(0, 0, 1, 1, 12, 6, 12, 6); area.gameObject.AddComponent<RectMask2D>();
+            var ph = UiKit.Text(area, "Platzhalter", placeholder, 16, new Color(1, 1, 1, .35f)); ph.rectTransform.Anchor(0, 0, 1, 1); ph.alignment = TextAlignmentOptions.MidlineLeft;
+            var txr = UiKit.Rt(area, "Text"); var tx = txr.gameObject.AddComponent<TextMeshProUGUI>(); tx.font = UiKit.Body; tx.fontSize = 16; tx.color = Pal.Ink; tx.rectTransform.Anchor(0, 0, 1, 1); /* eigener Text wird nicht übersetzt */ tx.alignment = TextAlignmentOptions.MidlineLeft;
+            var inp = bg.gameObject.AddComponent<TMP_InputField>(); inp.textViewport = area; inp.textComponent = tx; inp.placeholder = ph; inp.characterLimit = 24; inp.lineType = TMP_InputField.LineType.SingleLine; inp.fontAsset = UiKit.Body;
+            inp.text = value ?? ""; inp.onEndEdit.AddListener(v => { done?.Invoke(v); Game.Toast("Flagge beschriftet: „" + v + "“", "good"); });
+        }
         /// <summary>Schieberegler (0–1), z. B. Lautstärke.</summary>
         public void Slider(string title, Func<float> get, Action<float> set)
         {

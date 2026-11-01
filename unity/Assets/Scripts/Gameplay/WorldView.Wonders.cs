@@ -62,38 +62,17 @@ namespace LunarCleanup.Gameplay
                     MeshKit.Box(rover.transform, M("#d8c8a8", .5f), new Vector3(0, .7f, 0), new Vector3(1.4f, .35f, 1.9f)); for (int i = 0; i < 6; i++) MeshKit.Cyl(rover.transform, M("#3a3a3e"), new Vector3(i % 2 == 0 ? -.8f : .8f, .3f, -.7f + (i / 2) * .7f), .3f, .3f, .2f, 12, new Vector3(0, 0, 90));
                     MeshKit.Cyl(rover.transform, M("#bfc4ca", .7f), new Vector3(.3f, 1.4f, .6f), .05f, .05f, 1.1f, 6); MeshKit.Box(rover.transform, M("#bfc4ca", .7f), new Vector3(.3f, 2f, .6f), new Vector3(.35f, .25f, .25f));
                     break;
-                case "europa": case "enceladus": case "triton": case "gliese":
-                    {
-                        int n = ps.pid == "europa" ? 1 : ps.pid == "gliese" ? 4 : 3; string ring = ps.pid == "triton" ? "#4a3c3a" : "#cfe6f8";
-                        /* Fabian 01.11.: kein schwebender Ring mehr – flacher Eishügel, der im Boden steckt, mit dunklem Schlot, Rissen und Eisbrocken */
-                        string top = ps.pid == "triton" ? "#5a4c48" : ps.pid == "gliese" ? "#8a9aa2" : "#e4f2fc";
-                        for (int i = 0; i < n; i++)
-                        {
-                            var p = new Vector3(-4 + i * 4, 0, (i % 2) * 2 - 1); float sc = ps.pid == "gliese" ? .7f : 1f;
-                            MeshKit.Cyl(t, M(ring, .05f, .5f), p + new Vector3(0, -.05f, 0), 1.5f * sc, 2.6f * sc, .5f, 18);   // breiter Fuß, unten im Boden
-                            MeshKit.Cyl(t, M(top, .05f, .85f), p + new Vector3(0, .32f, 0), .7f * sc, 1.45f * sc, .35f, 16);  // Kuppe
-                            MeshKit.Cyl(t, M("#0c1014", 0, .1f), p + new Vector3(0, .5f, 0), .42f * sc, .5f * sc, .04f, 12);   // Schlot
-                            for (int q = 0; q < 5; q++) { float a = q * 72 + i * 23; var dd = Quaternion.Euler(0, a, 0) * Vector3.forward; MeshKit.Box(t, M("#2a3a48", 0, .2f), p + dd * 1.9f * sc + new Vector3(0, .03f, 0), new Vector3(.07f, .03f, 1.3f * sc), new Vector3(0, a, 0)); } // Risse
-                            for (int q = 0; q < 4; q++) { float a = q * 90 + 40 + i * 31; var dd = Quaternion.Euler(0, a, 0) * Vector3.forward; MeshKit.Part(t, Octa(), M(top, .05f, .8f), p + dd * (2.4f + q * .2f) * sc + new Vector3(0, .1f, 0), new Vector3(.35f, .25f, .3f) * sc, new Vector3(0, a, 20)); } // Eisbrocken
-                            var g = new GameObject("Quelle"); g.transform.SetParent(t, false); g.transform.localPosition = p + new Vector3(0, .5f, 0); wonderBits.Add(g.transform);
-                        }
-                        if (ps.pid == "enceladus") for (int i = 0; i < 3; i++) MeshKit.Box(t, G("#3d93ff", 1.4f), new Vector3(-4 + i * 4, .03f, 0), new Vector3(.35f, .02f, 6f), new Vector3(0, 15, 0)); // Tigerstreifen
-                        break;
-                    }
+                case "europa": case "enceladus": case "triton": case "gliese": break; /* Fabian 01.11.: Schlothügel und Tigerstreifen sind Teil des Bodens (Planet.Features) – hier nur die Fontänen, siehe unten */
                 case "titan": break; // nur Regen (in UpdateWonder)
-                case "io":
-                    MeshKit.Cyl(t, M("#6a4a24", 0, .2f), new Vector3(0, 1.6f, 0), 1.2f, 4.5f, 3.2f, 18); MeshKit.Cyl(t, G("#ff6a1a", 3f), new Vector3(0, 3.22f, 0), 1.1f, 1.1f, .05f, 14);
-                    { var lg = new GameObject("Glut"); lg.transform.SetParent(t, false); lg.transform.localPosition = new Vector3(0, 4.5f, 0); var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.color = new Color(1, .55f, .2f); L.range = 18; L.intensity = 4; L.shadows = LightShadows.None; wonderBits.Add(lg.transform); }
+                case "io": /* Vulkan ist Gelände (Planet.Features) – hier nur Glut und Ausbrüche */
+                    { var lg = new GameObject("Glut"); lg.transform.SetParent(t, false); lg.transform.localPosition = new Vector3(0, 2.5f, 0); var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.color = new Color(1f, .45f, .15f); L.range = 22; L.intensity = 2.5f; L.shadows = LightShadows.None; wonderBits.Add(lg.transform); wonderBase.Add(lg.transform.localPosition); }
                     break;
                 case "venus": break; // Blitze in UpdateWonder
-                case "ganymed":
-                    for (int i = 0; i <= 12; i++) { float a = i / 12f * Mathf.PI; MeshKit.Box(t, M("#9fd2ff", .1f, .9f), new Vector3(Mathf.Cos(a) * 5, Mathf.Sin(a) * 4.2f, 0), new Vector3(1.3f, 1.3f, 1.1f), new Vector3(0, 0, a * Mathf.Rad2Deg)); }
-                    break;
-                case "pluto":
-                    { var heart = G("#ffd8c8", 1.2f); for (int i = 0; i < 2; i++) MeshKit.Cyl(t, heart, new Vector3(i == 0 ? -1.6f : 1.6f, .03f, 1.2f), 2.2f, 2.2f, .02f, 24); MeshKit.Box(t, heart, new Vector3(0, .03f, -.6f), new Vector3(3.6f, .02f, 3.6f), new Vector3(0, 45, 0)); wonderSpin = t; }
-                    break;
+                case "ganymed": break; /* Eisgrat ist Gelände */
+                case "pluto": break; /* Herz ist in den Boden gemalt und leuchtet über die Emission */
                 case "eris": case "sedna": case "cancri":
                     {
+                        if (ps.pid != "sedna") break; /* Eisnadeln und Diamantberg sind Gelände */
                         string col = ps.pid == "sedna" ? "#ff3a4a" : ps.pid == "cancri" ? "#c8f6ff" : "#dfefff"; var gm = G(col, ps.pid == "eris" ? 1.2f : 2f);
                         int n = ps.pid == "cancri" ? 1 : 9;
                         for (int i = 0; i < n; i++)
@@ -106,9 +85,7 @@ namespace LunarCleanup.Gameplay
                 case "proxima":
                     for (int i = 0; i < 5; i++) { var b = MeshKit.Ball(t, M("#5a3a30", 0, .15f), new Vector3((float)r.NextDouble() * 8 - 4, 3 + (float)r.NextDouble() * 3, (float)r.NextDouble() * 8 - 4), .8f + (float)r.NextDouble() * 1.2f); b.transform.localScale = new Vector3(1.3f, .8f, 1.1f) * b.transform.localScale.x; wonderBits.Add(b.transform); wonderBase.Add(b.transform.localPosition); }
                     break;
-                case "trappist":
-                    for (int i = 0; i < 4; i++) MeshKit.Cyl(t, G(i % 2 == 0 ? "#3affd0" : "#5ab0ff", 1.6f), new Vector3(-4.5f + i * 3, .03f, (i % 2) * 2.5f - 1.2f), 1.2f + .3f * i, 1.2f + .3f * i, .02f, 20);
-                    break;
+                case "trappist": break; /* Becken sind Gelände und leuchten */
                 case "kepler":
                     for (int i = 0; i < 10; i++) { var p = new Vector3((float)r.NextDouble() * 9 - 4.5f, 0, (float)r.NextDouble() * 9 - 4.5f); float h = 2 + (float)r.NextDouble() * 2.5f; var stem = new GameObject("Pflanze"); stem.transform.SetParent(t, false); stem.transform.localPosition = p; MeshKit.Cyl(stem.transform, M("#3a6a2a", 0, .3f), new Vector3(0, h / 2, 0), .06f, .12f, h, 6); MeshKit.Ball(stem.transform, G(i % 3 == 0 ? "#d0ff6a" : "#6affc8", 3f), new Vector3(0, h, 0), .45f); wonderBits.Add(stem.transform); }
                     break;
@@ -123,6 +100,9 @@ namespace LunarCleanup.Gameplay
                 float g = t.InverseTransformPoint(pd.Surf(wp.normalized, 0)).y; c.localPosition = lp + new Vector3(0, g, 0);
                 int bi = wonderBits.IndexOf(c); if (bi >= 0 && bi < wonderBase.Count) wonderBase[bi] = c.localPosition;
             }
+            /* Fontänen aus den Schlothügeln des Bodens */
+            if (ps.pid == "europa" || ps.pid == "enceladus" || ps.pid == "triton" || ps.pid == "gliese")
+                foreach (var f in pd.feats) { if (f.kind != 1 || pd.geyserSites.Contains(f.d)) continue; var g = new GameObject("Quelle"); g.transform.SetParent(t, false); g.transform.position = pd.Surf(f.d, .15f); wonderBits.Add(g.transform); wonderBase.Add(g.transform.localPosition); }
             foreach (var mr in wonder.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial && mr.sharedMaterial.IsKeywordEnabled("_EMISSION")) mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             /* beim ersten Besuch: Meldung */
             string k = "LunarCleanup.Entdeckt." + ps.pid; if (!Game.Offline && PlayerPrefs.GetInt(k, 0) == 0) { PlayerPrefs.SetInt(k, 1); PlayerPrefs.Save(); var info = WonderInfo[ps.pid]; Game.Toast("Entdeckt: " + info.name + " – " + info.text, "good"); }
@@ -148,7 +128,7 @@ namespace LunarCleanup.Gameplay
                     }
                 case "titan": if (Camera.main) for (int i = 0; i < 3; i++) { var cp = Camera.main.transform.position; var p = cp + Camera.main.transform.forward * Random.Range(8, 30) + Camera.main.transform.right * Random.Range(-14, 14) + Camera.main.transform.up * Random.Range(4, 12); Puff(p, -up * 9, new Color(1f, .75f, .4f, .35f), .12f, 1.6f); } break;
                 case "io":
-                    { float ph = Mathf.Repeat(tt / 7f, 1); if (ph < .4f) for (int i = 0; i < 2; i++) Puff(W(new Vector3(0, 3.4f, 0)), up * (14 * (1 - ph)) + Random.insideUnitSphere * 3, Random.value < .5f ? new Color(1, .85f, .3f, .7f) : new Color(1, .45f, .15f, .7f), .6f + Random.value, 2.4f); if (wonderBits.Count > 0) { var L = wonderBits[0].GetComponent<Light>(); if (L) L.intensity = ph < .4f ? 6 : 2.5f; } break; }
+                    { float ph = Mathf.Repeat(tt / 7f, 1); if (ph < .4f) for (int i = 0; i < 5; i++) Puff(W(new Vector3(0, .6f, 0)) + Random.insideUnitSphere * .6f, up * (16 * (1 - ph)) + Random.insideUnitSphere * 3, Random.value < .5f ? new Color(1, .85f, .3f, .7f) : new Color(1, .45f, .15f, .7f), .15f + Random.value * .3f, 2.4f); if (wonderBits.Count > 0) { var L = wonderBits[0].GetComponent<Light>(); if (L) L.intensity = ph < .4f ? 6 : 2.5f; } break; }
                 case "venus": if (Random.value < Time.deltaTime * .3f) { var at = pd.Surf((up + Random.insideUnitSphere * .08f).normalized, 18 + Random.value * 14); Flash(at, new Color(.95f, .9f, 1f)); Flash(at + Random.insideUnitSphere * 3, new Color(1f, .85f, .6f)); Sfx.Play("pop", .3f, .15f); } break; // Wetterleuchten in den Wolken
                 case "pluto": if (wonderSpin) { float k = .85f + .15f * Mathf.Sin(tt * 1.3f); foreach (var mr in wonder.GetComponentsInChildren<MeshRenderer>()) mr.sharedMaterial.SetColor("_EmissionColor", GameData.Hex("#ffd8c8") * 1.2f * k); } break;
                 case "cancri": if (wonderSpin) wonderSpin.Rotate(Vector3.up, 12 * Time.deltaTime, Space.Self); break;

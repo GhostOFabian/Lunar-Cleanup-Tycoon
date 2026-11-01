@@ -148,6 +148,7 @@ namespace LunarCleanup.Core
             CalcFront(ps);
             if (S.done == null) S.done = new List<string>(); if (!S.done.Contains(sv.pid) && CleanPct(ps) >= .999f) S.done.Add(sv.pid);
             if (S.done.Contains(sv.pid) && !sv.prize) pendingPrize.Add(ps); /* alte Spielstände: Prämie nachzahlen, wenn der nächste Planet noch fehlt */
+            InitFlags(ps); /* Flaggen anlegen (auch für alte Spielstände) */
             return ps;
         }
 
@@ -408,7 +409,7 @@ namespace LunarCleanup.Core
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
                 float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
-                float got = CleanAt(ps, a, l.x, l.y, r * 1.2f, k * .8f); /* Fabian 01.11.: weicherer, etwas größerer Pinsel – sanfter Rand statt harter Kante, gleiche Kraft */
+                float got = CleanAt(ps, a, l.x, l.y, r, k); /* Pinsel wieder wie bis Build 21 (Fabian: Build 22 war schlechter) */
                 if (got <= 0) continue;
                 float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
                 ps.sv.hand[a.D.mat] += amt; mat = a.D.mat; S.stats.handM2 += got / a.cl.nIn * pd.CellArea(a.cl); total += amt;

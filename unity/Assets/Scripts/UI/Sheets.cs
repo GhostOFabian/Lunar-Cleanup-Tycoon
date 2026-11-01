@@ -17,6 +17,7 @@ namespace LunarCleanup.UI
             switch (kind)
             {
                 case "vehicles": title = "Fahrzeuge"; Vehicles(h); break;
+                case "flag": { int fi = int.TryParse(arg, out var q) ? q : -1; title = "Flagge"; FlagSheet(h, fi); break; }
                 case "vehicle": { var v = ps.sv.veh.FirstOrDefault(x => x.id.ToString() == arg); if (v == null) { title = "Fahrzeuge"; Vehicles(h); } else { title = Game.VehName(v); Vehicle(h, v); } break; }
                 case "production": title = "Produktion"; Production(h); break;
                 case "base": title = "Basis"; Base(h); break;
@@ -339,8 +340,17 @@ namespace LunarCleanup.UI
         static void SdRow(Hud h, SdNode n) { var nn = n; h.Row(n.name, () => nn.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
 
         static string Dur(double sec) { if (sec <= 0) return "–"; long t = (long)sec; long d = t / 86400, hh = t % 86400 / 3600, mm = t % 3600 / 60; return d > 0 ? d + " T " + hh + " h" : hh > 0 ? hh + " h " + mm + " min" : Mathf.Max(1, mm) + " min"; }
+        static void FlagSheet(Hud h, int i)
+        {
+            if (i < 0 || i >= ps.sv.flags.Count) return; var f = ps.sv.flags[i];
+            h.Note("Flagge " + (i + 1) + " von " + ps.sv.flags.Count + " auf " + ps.P.name + (f.got ? " · gehört dir" : " · noch nicht eingesammelt") + ". Schreib etwas auf das Fahnentuch (höchstens 24 Zeichen).");
+            if (f.got) h.TextInput(f.text, "Text für die Flagge", t => Game.SetFlagText(f, t));
+            h.Row("Gefunden", () => Game.FlagsGot(ps) + " von " + ps.sv.flags.Count + " Flaggen auf " + ps.P.name);
+        }
         static void Codex(Hud h)
         {
+            h.Section("Flaggen");
+            foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; if (q.sv.flags == null) continue; h.Row(q.P.name, () => Game.FlagsGot(q) + " / " + q.sv.flags.Count + " gefunden" + (q.sv.flags.Any(f => f.got && f.text != "") ? " · " + string.Join(", ", q.sv.flags.Where(f => f.got && f.text != "").Select(f => "„" + f.text + "“").Take(4)) : "")); }
             h.Section("Entdeckungen · " + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.WonderKnown(pid)) + "/" + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.TryWonder(pid, out _, out _)));
             foreach (var pid in GameData.POrder)
             {

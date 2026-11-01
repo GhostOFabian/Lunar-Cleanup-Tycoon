@@ -231,3 +231,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Kamera folgt beim Wischen nicht mehr der Putzstelle (ruhiger), nur der Bildrand schwenkt.
 - 01.11.2026 (Fabian): Erfolge mit drei Stufen und Belohnungen zum Abholen; Speicherung als „t:id:stufe“/„c:id:stufe“ in S.achievements.
 - 01.11.2026 (Fabian): Reiseprämie bei 100 % + doppelter Tiefenabbau auf sauberen Planeten + Reise auf Kredit, damit niemand festsitzt.
+- 01.11.2026 (Fabian): Entdeckungen und Geysire sind Geländeformen (Höhe + Bodentextur + Emission), keine hingestellten Modelle.

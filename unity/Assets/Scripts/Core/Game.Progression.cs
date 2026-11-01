@@ -86,7 +86,8 @@ namespace LunarCleanup.Core
             new PGoal { text = "Baue ein Gebäude eine Stufe aus", prog = p => p.sv.blvl.Count > 0 ? 1 : 0, k = 5 },
             new PGoal { text = "Baue einen Bohrturm", prog = p => p.sv.rigs.Count, k = 6 },
             new PGoal { text = "Finde alle Funde dieses Planeten", prog = p => FeatureData.Finds.TryGetValue(p.pid, out var a) && a.Length > 0 ? FindsOn(p.pid) / (float)a.Length : 0, k = 8 },
-            new PGoal { text = "Erreiche Ausbaustufe 1", prog = p => p.sv.exp, k = 15 } };
+            new PGoal { text = "Erreiche Ausbaustufe 1", prog = p => p.sv.exp, k = 15 },
+            new PGoal { text = "Sammle alle Flaggen dieses Planeten", prog = p => p.sv.flags.Count > 0 ? FlagsGot(p) / (float)p.sv.flags.Count : 0, k = 12 } };
         public static double PGoalReward(PState ps, int i) => Math.Round(250 * ps.P.diff * PlanetGoals[i].k);
         public static bool PGoalClaimed(PState ps, int i) => ps.sv.pgDone.Contains(i);
         public static float PGoalProg(PState ps, int i) => Mathf.Clamp01(PlanetGoals[i].prog(ps));

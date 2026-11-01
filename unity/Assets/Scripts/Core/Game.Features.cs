@@ -227,6 +227,7 @@ namespace LunarCleanup.Core
             A("Entdecker", "finds", "Funde gemacht", "Funde", () => S.finds.Count, 1, 25, 100, "Schatzsucher"),
             A("Entdecker", "albums", "Fundalben komplett", "Alben", () => Albums(), 1, 5, 18),
             A("Entdecker", "wonders", "Entdeckungen gesehen", "Orte", () => Wonders(), 1, 9, 18, "Entdecker"),
+            A("Entdecker", "flags", "Flaggen gesammelt", "Flaggen", () => S.stats.flags, 10, 60, 250, "Fahnenträger"),
             A("Entdecker", "crystals", "Leuchtkristalle geerntet", "Kristalle", () => S.stats.crystals, 25, 250, 2500),
             A("Ereignisse", "wrecks", "Wracks und Trümmer geborgen", "Bergungen", () => S.stats.salvage, 1, 10, 50),
             A("Ereignisse", "storms", "Stürme überstanden", "Stürme", () => S.stats.storms, 1, 20, 200),
