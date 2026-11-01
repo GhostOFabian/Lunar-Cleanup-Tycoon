@@ -69,9 +69,10 @@ namespace LunarCleanup.EditorTools
             for (int i = 0; i < lv.arraySize; i++)
             {
                 var l = lv.GetArrayElementAtIndex(i); if (l.FindPropertyRelative("name").stringValue != "PC") continue; var ex = l.FindPropertyRelative("excludedTargetPlatforms");
-                for (int k = ex.arraySize - 1; k >= 0; k--) { var v = ex.GetArrayElementAtIndex(k).stringValue; if (v == "iPhone" || v == "WebGL") { ex.DeleteArrayElementAtIndex(k); ch = true; } }
+                /* Build 31: wieder wie bis Build 29 – die PC-Stufe ließ das iPhone schwarz; die eigentliche Ursache für den flachen Boden waren fehlende Shader-Varianten (siehe BrowserBuild.MakeShaderKeep) */
+                foreach (var want in new[] { "iPhone", "WebGL" }) { bool has = false; for (int k = 0; k < ex.arraySize; k++) if (ex.GetArrayElementAtIndex(k).stringValue == want) has = true; if (!has) { ex.InsertArrayElementAtIndex(ex.arraySize); ex.GetArrayElementAtIndex(ex.arraySize - 1).stringValue = want; ch = true; } }
             }
-            if (ch) { so.ApplyModifiedProperties(); AssetDatabase.SaveAssets(); Debug.Log("Lunar Cleanup: PC-Grafikstufe jetzt auch für iPhone und Browser"); }
+            if (ch) { so.ApplyModifiedProperties(); AssetDatabase.SaveAssets(); Debug.Log("Lunar Cleanup: PC-Grafikstufe wieder nur für den PC"); }
         }
         public static void Apply()
         {

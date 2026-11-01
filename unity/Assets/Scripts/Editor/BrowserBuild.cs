@@ -65,7 +65,8 @@ namespace LunarCleanup.EditorTools
         {
             if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
             if (!AssetDatabase.IsValidFolder(Keep)) AssetDatabase.CreateFolder("Assets/Resources", "ShaderKeep");
-            void Save(Material m, string n) { var p = Keep + "/" + n + ".mat"; if (AssetDatabase.LoadAssetAtPath<Material>(p)) AssetDatabase.DeleteAsset(p); AssetDatabase.CreateAsset(m, p); }
+            /* Fabian 01.11.: Unity prüft die Materialien beim Neustart neu und wirft _EMISSION raus, wenn „EmissiveIsBlack“ gesetzt ist – dann fehlten im Build alle Leucht-Varianten, der Boden verlor Relief und Detail. Darum GI-Flag immer auf None. */
+            void Save(Material m, string n) { if (m.IsKeywordEnabled("_EMISSION")) m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; var p = Keep + "/" + n + ".mat"; if (AssetDatabase.LoadAssetAtPath<Material>(p)) AssetDatabase.DeleteAsset(p); AssetDatabase.CreateAsset(m, p); }
             var lit = Shader.Find("Universal Render Pipeline/Lit"); var pu = Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (lit)
             {
@@ -76,18 +77,34 @@ namespace LunarCleanup.EditorTools
                 var e = new Material(lit); e.EnableKeyword("_EMISSION"); e.SetColor("_EmissionColor", Color.white); Save(e, "LitEmission");
                 var t = new Material(lit); MeshKit.MakeTransparent(t, false); Save(t, "LitTransparent");
                 var ta = new Material(lit); MeshKit.MakeTransparent(ta, true); Save(ta, "LitAdditive");
-                var te = new Material(lit); MeshKit.MakeTransparent(te, false); te.EnableKeyword("_EMISSION"); Save(te, "LitTransparentEmission");
+                var te = new Material(lit); MeshKit.MakeTransparent(te, false); te.EnableKeyword("_EMISSION"); te.SetColor("_EmissionColor", Color.white); Save(te, "LitTransparentEmission");
                 /* Planetenboden: Lit mit Detailtextur. Ohne zugewiesene Detailtextur entfernt Unity das Schlüsselwort beim Speichern – dann fehlt die Variante im Build und der Boden wird dunkel und flach */
                 var dtPath = Keep + "/DetailTex.asset"; var dt = AssetDatabase.LoadAssetAtPath<Texture2D>(dtPath); if (!dt) { dt = new Texture2D(8, 8, TextureFormat.RGBA32, true); var px = new Color[64]; for (int i = 0; i < 64; i++) px[i] = new Color(.5f, .5f, .5f, 1); dt.SetPixels(px); dt.Apply(); AssetDatabase.CreateAsset(dt, dtPath); }
-                var d = new Material(lit); d.SetTexture("_DetailAlbedoMap", dt); d.SetFloat("_DetailAlbedoMapScale", .3f); d.EnableKeyword("_DETAIL_MULX2"); Save(d, "LitDetail");
+                var d = new Material(lit); d.SetTexture("_DetailAlbedoMap", dt); d.SetFloat("_DetailAlbedoMapScale", 1f); d.EnableKeyword("_DETAIL_MULX2"); Save(d, "LitDetail");
                 /* Planetenboden mit Reliefkarte (kleine Krater/Steine): Lit + Normal Map + Detailtextur */
                 var nmPath = Keep + "/NormalTex.asset"; var nt = AssetDatabase.LoadAssetAtPath<Texture2D>(nmPath); if (!nt) { nt = new Texture2D(8, 8, TextureFormat.RGBA32, true, true); var px = new Color[64]; for (int i = 0; i < 64; i++) px[i] = new Color(.5f, .5f, 1, 1); nt.SetPixels(px); nt.Apply(); AssetDatabase.CreateAsset(nt, nmPath); }
-                var dn = new Material(lit); dn.SetTexture("_DetailAlbedoMap", dt); dn.SetFloat("_DetailAlbedoMapScale", .3f); dn.EnableKeyword("_DETAIL_MULX2"); dn.SetTexture("_BumpMap", nt); dn.EnableKeyword("_NORMALMAP"); Save(dn, "LitDetailNormal");
+                var dn = new Material(lit); dn.SetTexture("_DetailAlbedoMap", dt); dn.SetFloat("_DetailAlbedoMapScale", 1f); dn.EnableKeyword("_DETAIL_MULX2"); dn.SetTexture("_BumpMap", nt); dn.EnableKeyword("_NORMALMAP"); Save(dn, "LitDetailNormal");
                 var dne = new Material(dn); dne.EnableKeyword("_EMISSION"); dne.SetTexture("_EmissionMap", dt); dne.SetColor("_EmissionColor", Color.white); Save(dne, "LitDetailNormalEmission"); /* Planetenboden mit leuchtenden grünen Rändern */
             }
             if (pu) { var a = new Material(pu); MeshKit.MakeTransparent(a, true); Save(a, "ParticlesAdditive"); var b = new Material(pu); MeshKit.MakeTransparent(b, false); Save(b, "ParticlesAlpha"); Save(new Material(pu), "Particles"); }
             foreach (var (n, s) in new[] { ("Unlit", "Universal Render Pipeline/Unlit"), ("Sky", "Skybox/Panoramic"), ("Sprites", "Sprites/Default"), ("UnlitColor", "Unlit/Color") }) { var sh = Shader.Find(s); if (sh) Save(new Material(sh), n); }
+            KeepVariants(lit);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Fabian 01.11.: Unity prüft Materialien beim Neustart nach und streicht dabei Schlüsselwörter (_EMISSION, _DETAIL_MULX2) aus den Platzhalter-Materialien.
+        /// Ohne diese Varianten zeichnete das Handy den Boden ohne Relief und Detail. Eine Variantenliste (in den vorgeladenen Shadern) hält sie fest – unabhängig von den Materialien.</summary>
+        static void KeepVariants(Shader lit)
+        {
+            if (!lit) return; var svc = new ShaderVariantCollection(); int n = 0;
+            void V(params string[] kw) { try { svc.Add(new ShaderVariantCollection.ShaderVariant(lit, UnityEngine.Rendering.PassType.ScriptableRenderPipeline, kw)); n++; } catch (System.Exception e) { Debug.Log("Lunar Cleanup: Variante " + string.Join(" ", kw) + " – " + e.Message); } }
+            V("_NORMALMAP", "_DETAIL_MULX2", "_EMISSION"); V("_NORMALMAP", "_DETAIL_MULX2"); V("_DETAIL_MULX2"); V("_EMISSION"); V("_EMISSION", "INSTANCING_ON"); V("INSTANCING_ON");
+            V("_SURFACE_TYPE_TRANSPARENT", "_ALPHAPREMULTIPLY_ON", "_EMISSION"); V("_SURFACE_TYPE_TRANSPARENT", "_EMISSION"); V("_SURFACE_TYPE_TRANSPARENT", "_ALPHAPREMULTIPLY_ON");
+            var path = Keep + "/Varianten.shadervariants"; if (AssetDatabase.LoadAssetAtPath<ShaderVariantCollection>(path)) AssetDatabase.DeleteAsset(path); AssetDatabase.CreateAsset(svc, path);
+            var gsA = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset"); if (gsA == null || gsA.Length == 0) return; var so = new SerializedObject(gsA[0]); var pre = so.FindProperty("m_PreloadedShaders");
+            for (int i = pre.arraySize - 1; i >= 0; i--) if (pre.GetArrayElementAtIndex(i).objectReferenceValue == null) pre.DeleteArrayElementAtIndex(i);
+            pre.InsertArrayElementAtIndex(pre.arraySize); pre.GetArrayElementAtIndex(pre.arraySize - 1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ShaderVariantCollection>(path); so.ApplyModifiedProperties();
+            Debug.Log("Lunar Cleanup: " + n + " Shader-Varianten festgehalten");
         }
     }
 }

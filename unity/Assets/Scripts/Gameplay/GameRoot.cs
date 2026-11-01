@@ -51,8 +51,6 @@ namespace LunarCleanup.Gameplay
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             QualitySettings.SetQualityLevel(1, true); /* Browser: PC-Qualität statt Handy-Stufe (volle Auflösung, weiche Schatten, 4 Kaskaden) */
-#elif !UNITY_EDITOR
-            QualitySettings.SetQualityLevel(GfxHigh ? 1 : 0, true);
 #endif
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
             {

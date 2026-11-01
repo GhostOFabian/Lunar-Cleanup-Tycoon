@@ -244,3 +244,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026: Müllberg-Abtrag wird je Fahrzeug gedeckelt statt über Härte – sonst schaffen voll ausgebaute Fahrzeuge ihn allein in Sekunden.
 - 01.11.2026 (Fabian): Handy nutzt standardmäßig die PC-Grafikstufe (SSAO, weiche Schatten); „Sparsam“ in den Einstellungen als Rückfall für ältere Geräte und Akku.
 - 01.11.2026: Grafikstufe „Hoch“ auf dem iPhone nur auf Probe mit automatischem Zurückschalten (wie beim Ändern der Bildschirmauflösung), weil sie den Bildschirm schwarz lassen kann.
+- 01.11.2026: Nötige Shader-Varianten stehen in einer festen Variantenliste (vorgeladene Shader), nicht nur in Platzhalter-Materialien – die prüft Unity beim Neustart nach und streicht Schlüsselwörter.
