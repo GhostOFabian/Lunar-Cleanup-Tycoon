@@ -135,7 +135,7 @@ namespace LunarCleanup.UI
         static void Selling(Hud h)
         {
             h.Section("Rakete");
-            h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst, wenn sie voll ist",
+            h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst ab " + Game.Fmt(Game.SellTarget(ps)) + " E",
                 () => "Starten", () => ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0, () => Game.LaunchRocket(), false);
             if (ps.bld.Contains("sell"))
             {

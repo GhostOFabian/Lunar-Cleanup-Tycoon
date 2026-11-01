@@ -161,7 +161,7 @@ namespace LunarCleanup.Gameplay
         static readonly Dictionary<string, Baked> BakeCache = new Dictionary<string, Baked>();
         public static Baked Bake(string path)
         {
-            if (BakeCache.TryGetValue(path, out var bk)) return bk;
+            if (BakeCache.TryGetValue(path, out var bk) && (bk == null || bk.mesh)) return bk; /* im Editor überlebt der Zwischenspeicher das Beenden des Spiels, das Mesh nicht */
             var g = Spawn(path, null, Vector3.zero, 0, Hex("#ffbf4d")); if (!g) { BakeCache[path] = null; return null; }
             var groups = new Dictionary<Material, List<CombineInstance>>(); var order = new List<Material>(); var w2l = g.transform.worldToLocalMatrix;
             foreach (var mf in g.GetComponentsInChildren<MeshFilter>())
@@ -319,7 +319,15 @@ namespace LunarCleanup.Gameplay
             {
                 var cl = pd.cells[r.Next(pd.N)]; if (cl.IsBase || cl.ring <= 2) continue;
                 float a = (float)r.NextDouble() * Mathf.PI * 2, d = (float)r.NextDouble() * cl.H * .8f; var dir = pd.ToDir(cl, Mathf.Cos(a) * d, Mathf.Sin(a) * d);
-                string m = deco[r.Next(deco.Length)]; bool crater = m.EndsWith("krater"); float s = crater ? .7f + (float)r.NextDouble() * 1.3f : .25f + (float)r.NextDouble() * .55f;
+                string m = deco[r.Next(deco.Length)]; bool crater = m.EndsWith("krater");
+                if (m.Contains("deko_fels")) /* Fabian 01.11.: echte Felsbrocken (RockKit) statt der Klotz-Modelle */
+                {
+                    float rs = .7f + (float)r.NextDouble() * 1.6f; if (r.NextDouble() < .15) rs *= 2.2f;
+                    var rk = RockKit.Spawn(parent, r.Next(RockKit.Variants), RockKit.Tint(LunarCleanup.Core.GameData.Dirt[cl.type].lightC * .85f), rs);
+                    rk.transform.position = pd.Surf(dir, -.08f * rs); rk.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(dir)) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
+                    if (r.NextDouble() < .35) for (int q = 0; q < 1 + r.Next(2); q++) { float qa = (float)r.NextDouble() * 6.283f, qd = rs * (.45f + (float)r.NextDouble() * .4f); var qdir = (dir * pd.R + (Quaternion.FromToRotation(Vector3.up, dir) * new Vector3(Mathf.Cos(qa) * qd, 0, Mathf.Sin(qa) * qd))).normalized; float qs = rs * (.18f + (float)r.NextDouble() * .2f); var sm = RockKit.Spawn(parent, r.Next(RockKit.Variants), RockKit.Tint(LunarCleanup.Core.GameData.Dirt[cl.type].lightC * .85f), qs); sm.transform.position = pd.Surf(qdir, -.05f * qs); sm.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(qdir)) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0); } /* kleine Brocken drumherum */
+                    continue;
+                } float s = crater ? .7f + (float)r.NextDouble() * 1.3f : .25f + (float)r.NextDouble() * .55f;
                 var go = Spawn(m, parent, Vector3.zero, 0, Color.gray, null, s); if (!go) continue;
                 go.transform.position = pd.Surf(dir, -(crater ? .05f : .1f)); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(dir)) * Quaternion.Euler(0, (float)r.NextDouble() * 360, 0);
             }

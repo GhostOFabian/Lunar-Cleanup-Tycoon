@@ -38,7 +38,7 @@ namespace LunarCleanup.Gameplay
                 int id = pd.CellOf(dir); var up = pd.SurfNormal(dir, id);
                 var go = new GameObject("Geysir"); go.transform.SetParent(geyRoot.transform, false); go.transform.position = pd.Surf(dir, .05f, id); go.transform.rotation = Quaternion.FromToRotation(Vector3.up, up);
                 var p = go.AddComponent<ParticleSystem>(); p.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                var main = p.main; main.loop = true; main.playOnAwake = false; main.simulationSpace = ParticleSystemSimulationSpace.Local; main.maxParticles = 900;
+                var main = p.main; main.loop = true; main.playOnAwake = false; main.simulationSpace = ParticleSystemSimulationSpace.Local; main.maxParticles = 420;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(1.4f, 2.4f); main.startSpeed = new ParticleSystem.MinMaxCurve(lk.Item3 * .7f, lk.Item3 * 1.15f);
                 main.startSize = new ParticleSystem.MinMaxCurve(.08f, .22f); /* feine Tröpfchen statt großer Kugeln */ main.startColor = new ParticleSystem.MinMaxGradient(lk.Item1, lk.Item2);
                 var sh = p.shape; sh.shapeType = ParticleSystemShapeType.Cone; sh.angle = 7; sh.radius = .25f; sh.rotation = new Vector3(-90, 0, 0); // Kegel zeigt nach oben (lokal +y)

@@ -56,7 +56,18 @@ namespace LunarCleanup.Gameplay
                     int gi = -1; for (int t = 0; t < 20; t++) { int c = (int)(R() * CELLS); if (c >= CELLS) c = CELLS - 1; if (cl.inside[c]) { gi = c; break; } }
                     if (gi < 0) continue;
                     float x = -cl.H + ((gi % G) + .5f) * cl.cs + (R() - .5f) * .3f, y = -cl.H + ((gi / G) + .5f) * cl.cs + (R() - .5f) * .3f, yaw = R() * 360f, s = .7f + R() * .8f;
-                    int v = (int)(R() * 3); var lc = LcKit.Debris(D.deb, v); /* eigenes Modell (Fabian), sonst einfache Form */
+                    bool rock = D.deb == "rock"; /* Fabian 01.11.: Steine als echte Felsbrocken statt Klötze */
+                    int v = rock ? (int)(R() * RockKit.Variants) : (int)(R() * 3); var lc = rock ? null : LcKit.Debris(D.deb, v); /* eigenes Modell (Fabian), sonst einfache Form */
+                    if (rock)
+                    {
+                        if (!keyed.TryGetValue((cl.chunk, cl.type, 100 + v), out var rb)) { rb = new DebBatch { mesh = RockKit.Mesh(v), mat = RockKit.Mat(RockKit.Tint(D.lightC)), chunk = cl.chunk }; keyed[(cl.chunk, cl.type, 100 + v)] = rb; debBatches.Add(rb); }
+                        var rdir = pd.ToDir(cl, x, y); var rn = Vector3.Lerp(pd.SurfNormal(rdir, cl.id), rdir.normalized, .3f).normalized; float rs = .45f * s * (R() < .12f ? 1.8f : 1); var rsz = new Vector3(rs * (.85f + R() * .3f), rs * (.8f + R() * .4f), rs * (.85f + R() * .3f));
+                        var rit = new DebItem { cell = cl.id, gi = gi, m = Matrix4x4.TRS(pd.Surf(rdir, -.05f * rsz.y, cl.id), Quaternion.FromToRotation(Vector3.up, rn) * Quaternion.Euler(R() * 8 - 4, yaw, R() * 8 - 4), rsz) };
+                        rb.items.Add(rit);
+                        if (!debByCell.TryGetValue(cl.id, out var rli)) { rli = new List<DebItem>(); debByCell[cl.id] = rli; } rli.Add(rit);
+                        if (!debBatchOfCell.TryGetValue(cl.id, out var rlb)) { rlb = new List<DebBatch>(); debBatchOfCell[cl.id] = rlb; } if (!rlb.Contains(rb)) rlb.Add(rb);
+                        continue;
+                    }
                     if (!keyed.TryGetValue((cl.chunk, cl.type, lc != null ? v : 0), out var bt)) { if (lc != null) bt = new DebBatch { mesh = lc.mesh, mats = lc.mats, chunk = cl.chunk }; else { var sh = DebShape(D); bt = new DebBatch { mesh = sh.mesh, mat = sh.mat, chunk = cl.chunk }; bt.mat.enableInstancing = true; } keyed[(cl.chunk, cl.type, lc != null ? v : 0)] = bt; debBatches.Add(bt); }
                     var dir = pd.ToDir(cl, x, y); var nrm = pd.SurfNormal(dir, cl.id);
                     var size = lc != null ? Vector3.one * (.62f / Mathf.Max(.3f, Mathf.Max(lc.size.x, lc.size.z)) * s) : DebShape(D).size * s;

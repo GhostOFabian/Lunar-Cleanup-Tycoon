@@ -132,7 +132,8 @@ namespace LunarCleanup.Core
         // ---------- Meteoritenschauer (wie im Browser-Prototyp) ----------
         // Ein Schauer bedeckt eine saubere Parzelle und 1–3 Nachbarn (auf fertigen Planeten 3–6) fast ganz mit Staub.
         // Die Parzellen bleiben „sauber“ (Fortschritt sinkt nicht), haben aber wieder Schmutz zum Abbauen – Arbeit für die Flotte.
-        public static float MeteorEvery(PState ps) => IsDone(ps.pid) ? Mathf.Max(120, 1600 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(150, 3000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
+        public const float DoneMeteorAmt = 3f;
+        public static float MeteorEvery(PState ps) => IsDone(ps.pid) ? Mathf.Max(90, 1200 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(150, 3000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
         static void MeteorStep(PState ps, float dt)
         {
             if (ps.nClean < 3) return; ps.sv.met += dt; float iv = MeteorEvery(ps); int guard = 0;
@@ -154,7 +155,7 @@ namespace LunarCleanup.Core
             foreach (int cid in patch)
             {
                 var cl = pd.cells[cid];
-                if (!ps.act.TryGetValue(cid, out var a)) { a = new Act { cl = cl, grid = new float[G * G], sum = 0, amt = D.amt * GameData.Kinds[cl.kind].amt, D = D, K = GameData.Kinds[cl.kind] }; ps.act[cid] = a; }
+                if (!ps.act.TryGetValue(cid, out var a)) { a = new Act { cl = cl, grid = new float[G * G], sum = 0, amt = D.amt * GameData.Kinds[cl.kind].amt * (done ? DoneMeteorAmt : 1), D = D, K = GameData.Kinds[cl.kind] }; /* Fabian 01.11.: auf fertigen Planeten bringt Meteoritenstaub dreimal so viel – Endspiel lohnt sich */ ps.act[cid] = a; }
                 int n = 11 + fr.Next(5);
                 for (int k = 0; k < n; k++)
                 {

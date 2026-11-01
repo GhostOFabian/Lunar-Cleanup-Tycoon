@@ -381,7 +381,7 @@ namespace LunarCleanup.Core
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
             foreach (int b in cl.nb) ps.dirtyCells.Add(b);
-            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); TravelPrize(ps, ps.pid == S.planet); if (ps.sv.tDone <= 0) { ps.sv.tDone = ps.sv.tPlay; ps.sv.tDoneAt = Now(); } ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
+            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); TravelPrize(ps, ps.pid == S.planet); if (ps.sv.tDone <= 0) { ps.sv.tDone = ps.sv.tPlay; ps.sv.tDoneAt = Now(); } ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); Toast("Ab jetzt fallen hier öfter Meteore – ihr Staub bringt dreimal so viel", "good"); } }
         }
 
         // ================= Handgerät =================
@@ -695,16 +695,18 @@ namespace LunarCleanup.Core
             if (c <= 0) { Fail("Die Lager sind leer"); return; }
             OnRocket?.Invoke(Cur.pid, c); Toast("Alles verkauft · +" + Fmt(c) + " Cr", "good");
         }
+        /// <summary>Fabian 01.11.: Ab wann die Rakete startet – so viel, wie in etwa 4 Minuten nachkommt (höchstens der volle Frachtraum). Kleine Planeten warten so nicht ewig.</summary>
+        public static float SellTarget(PState ps) { float cap = SellCap(ps); return Mathf.Clamp(ps.sv.sellRate * 240f, Mathf.Min(cap * .98f, 60f), cap * .98f); }
         static void SellStep(PState ps, float dt)
         {
             var sv = ps.sv; if (!ps.bld.Contains("sell")) return;
-            if (sv.rk > 0) { sv.rk = Mathf.Max(0, sv.rk - dt); return; }
-            float tot = Sum(sv.sellBuf); if (tot <= 1e-6f) { sv.rkGo = false; sv.sellAge = 0; sv.sellLast = 0; return; }
+            if (sv.rk > 0) { sv.rk = Mathf.Max(0, sv.rk - dt); float t2 = Sum(sv.sellBuf), inf = Mathf.Max(0, t2 - sv.sellLast); sv.sellLast = t2; if (dt > 0) sv.sellRate = Mathf.Lerp(sv.sellRate, inf / dt, 1 - Mathf.Exp(-dt / 180f)); return; } /* Zufluss auch messen, während die Rakete unterwegs ist */
+            float tot = Sum(sv.sellBuf); if (tot <= 1e-6f) { sv.rkGo = false; sv.sellAge = 0; sv.sellLast = 0; if (dt > 0) sv.sellRate *= Mathf.Exp(-dt / 180f); return; }
             bool jamS = false; foreach (var b in ps.lay.belts) if (b.to == "sell" && ps.jam.TryGetValue(b.id, out bool j) && j) jamS = true; /* passt das nächste Paket nicht mehr hinein, startet sie schon ab 60 % – sonst steht alles */
-            if (tot > sv.sellLast + .01f) sv.sellIdle = 0; else sv.sellIdle += dt; sv.sellLast = tot; sv.sellAge += dt;
+            float inflow = Mathf.Max(0, tot - sv.sellLast); if (inflow > .01f) sv.sellIdle = 0; else sv.sellIdle += dt; sv.sellLast = tot; sv.sellAge += dt; if (dt > 0) sv.sellRate = Mathf.Lerp(sv.sellRate, inflow / dt, 1 - Mathf.Exp(-dt / 180f));
             /* Fabian 01.11.: Offline blieb die Ladung im Frachtraum liegen, bis die Rakete voll war – das passierte oft nie. Kommt eine Weile nichts Neues dazu, startet sie mit dem, was drin ist (offline nach 45 s, live nach 5 min) – oder spätestens, wenn sie schon lange lädt (offline 10 min, live 30 min). */
             bool stale = tot >= 1 && (sv.sellIdle >= (Offline ? 45 : 300) || sv.sellAge >= (Offline ? 600 : 1800));
-            if (tot < SellCap(ps) * .98f && !sv.rkGo && !stale && !(jamS && tot >= SellCap(ps) * .6f) && !(EarlyLaunch(ps) && tot >= SellCap(ps) * .5f)) return;
+            if (tot < SellTarget(ps) && !sv.rkGo && !stale && !(jamS && tot >= SellCap(ps) * .6f) && !(EarlyLaunch(ps) && tot >= SellCap(ps) * .5f)) return;
             sv.sellIdle = 0; sv.sellLast = 0; sv.sellAge = 0;
             bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } int om0 = sv.order; bool hadOrder = om0 >= 0 && om0 < NM && sv.sellBuf[om0] > 1e-6f; CountSold(ps, sv.sellBuf); Array.Clear(sv.sellBuf, 0, NM); NewOrder(ps);
             Earn(val); sv.soldP += val; S.stats.sold += val; sv.nRockets++; sv.rk = RocketTime(ps);

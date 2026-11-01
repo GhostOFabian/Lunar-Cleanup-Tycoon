@@ -48,6 +48,7 @@ namespace LunarCleanup.EditorTools
                         if (c.StartsWith("gameview ")) { var a2 = c.Substring(9).Split(' '); Write(SetGameView(int.Parse(a2[0]), int.Parse(a2[1]))); break; }
                         if (c.StartsWith("rshot ")) { var cam = Camera.main; var rt = new RenderTexture(720, 1280, 24); var old = cam.targetTexture; float oa = cam.aspect; cam.targetTexture = rt; cam.aspect = 720f / 1280f; cam.Render(); var prev = RenderTexture.active; RenderTexture.active = rt; var tx = new Texture2D(720, 1280, TextureFormat.RGB24, false); tx.ReadPixels(new Rect(0, 0, 720, 1280), 0, 0); tx.Apply(); RenderTexture.active = prev; cam.targetTexture = old; cam.aspect = oa; cam.ResetAspect(); string f = "Temp/r_" + c.Substring(6) + ".jpg"; File.WriteAllBytes(f, tx.EncodeToJPG(88)); Object.DestroyImmediate(tx); rt.Release(); Write("ok " + f); break; }
                         if (c.StartsWith("shot")) { string f = "Temp/shot_" + (c.Length > 5 ? c.Substring(5) : "x") + ".png"; ScreenCapture.CaptureScreenshot(f, 2); Write("ok " + f); break; }
+                        if (c.StartsWith("lookdirty")) { var ps = LunarCleanup.Core.Game.Cur; int want = c.Length > 10 ? int.Parse(c.Substring(10)) : 0; int k = 0; for (int i = 0; i < ps.pd.N; i++) { var cl = ps.pd.cells[i]; if (cl.IsBase || cl.Wet || ps.clean[i] || cl.ring < 2) continue; if (k++ < want) continue; LunarCleanup.Gameplay.GameRoot.FocusReq = cl.c; Write("ok " + c + " " + LunarCleanup.Core.GameData.Dirt[cl.type].key); break; } break; }
                         if (c.StartsWith("look ")) { var ps = LunarCleanup.Core.Game.Cur; var id = c.Substring(5); if (ps.lay.pos.ContainsKey(id)) { LunarCleanup.Gameplay.GameRoot.FocusReq = ps.pd.PlanDir(ps.lay.pos[id]); Write("ok " + c); } else Write("fehlt " + id); break; }
                         if (c.StartsWith("lang ")) { LunarCleanup.Core.Loc.Set(c.Substring(5) == "en"); Write("ok " + c); break; }
                         if (c.StartsWith("sheet ")) { var a = c.Substring(6).Split(' '); Object.FindFirstObjectByType<LunarCleanup.UI.Hud>().OpenSheet(a[0], a.Length > 1 ? a[1] : null); Write("ok " + c); break; }
@@ -58,6 +59,14 @@ namespace LunarCleanup.EditorTools
                         if (c.StartsWith("zoom ")) { LunarCleanup.Gameplay.GameRoot.ZoomReq = float.Parse(c.Substring(5), System.Globalization.CultureInfo.InvariantCulture); Write("ok " + c); break; }
                         if (c == "resetsave") { string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); if (!PlayerPrefs.HasKey(k + "-claudebak")) PlayerPrefs.SetString(k + "-claudebak", PlayerPrefs.GetString(k, "")); LunarCleanup.Core.Game.ResetAll(); Write("ok resetsave test=" + LunarCleanup.Core.Game.TestMode); break; }
                         if (c == "restoresave") { string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); string b = PlayerPrefs.GetString(k + "-claudebak", ""); if (b != "") { PlayerPrefs.SetString(k, b); PlayerPrefs.DeleteKey(k + "-claudebak"); PlayerPrefs.Save(); LunarCleanup.Core.Game.S = null; EditorApplication.isPlaying = false; } Write("ok restoresave " + (b != "")); break; }
+                        if (c == "oldsave") /* Spielstand wie aus Build 19: alle neueren Felder entfernen, dann neu laden */
+                        {
+                            string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); string j = PlayerPrefs.GetString(k, "");
+                            if (!PlayerPrefs.HasKey(k + "-claudebak")) PlayerPrefs.SetString(k + "-claudebak", j);
+                            int n0 = j.Length; foreach (var key in new[] { "flags", "flagsInit", "tFirst", "tDoneAt", "tPlay", "tDone", "prize", "debt", "lineCol", "comboMax", "meteors", "salvage", "storms", "geysers", "nightMin", "achievements" }) j = StripKey(j, key);
+                            j = j.Replace("\"cart\":{\"owned\":false", "\"cart\":{\"owned\":true");
+                            PlayerPrefs.SetString(k, j); PlayerPrefs.Save(); LunarCleanup.Core.Game.S = null; EditorApplication.isPlaying = false; Write("ok oldsave " + n0 + " -> " + j.Length); break;
+                        }
                         if (c == "state") { var G = typeof(LunarCleanup.Core.Game); var sb = new System.Text.StringBuilder("ok state cr=" + LunarCleanup.Core.Game.S.credits.ToString("0") + " last=" + LunarCleanup.Core.Game.S.lastActive + " now=" + LunarCleanup.Core.Game.Now());
                             foreach (var q in LunarCleanup.Core.Game.P.Values) { var modes = new System.Collections.Generic.Dictionary<string,int>(); foreach (var v in q.sv.veh) modes[v.mode] = (modes.TryGetValue(v.mode, out var n) ? n : 0) + 1; sb.Append("\n" + q.pid + " clean=" + q.nClean + " roh=" + LunarCleanup.Core.Game.RohSum(q).ToString("0") + " prod=" + LunarCleanup.Core.Game.ProdSum(q).ToString("0") + " rockets=" + q.sv.nRockets + " veh=" + string.Join(",", System.Linq.Enumerable.Select(modes, kv => kv.Key + ":" + kv.Value)) + " ef=" + q.ef.ToString("0.00") + " sell=" + LunarCleanup.Core.Game.Sum(q.sv.sellBuf).ToString("0") + "/" + LunarCleanup.Core.Game.SellCap(q).ToString("0") + " sold=" + q.sv.soldP.ToString("0") + " rk=" + q.sv.rk.ToString("0") + " rigs=" + q.sv.rigs.Count + " cr=" + q.sv.crystals.Count); }
                             Write(sb.ToString()); break; }
@@ -69,6 +78,18 @@ namespace LunarCleanup.EditorTools
                 }
             }
             catch (System.Exception e) { Write("Fehler: " + e); }
+        }
+        static string StripKey(string j, string key)
+        {
+            string pat = "\"" + key + "\":"; int i;
+            while ((i = j.IndexOf(pat)) >= 0)
+            {
+                int e = i + pat.Length, depth = 0; bool str = false;
+                for (; e < j.Length; e++) { char ch = j[e]; if (str) { if (ch == '\\') e++; else if (ch == '"') str = false; continue; } if (ch == '"') str = true; else if (ch == '[' || ch == '{') depth++; else if (ch == ']' || ch == '}') { if (depth == 0) break; depth--; } else if (ch == ',' && depth == 0) break; }
+                int st = i; if (e < j.Length && j[e] == ',') e++; else if (st > 0 && j[st - 1] == ',') st--;
+                j = j.Remove(st, e - st);
+            }
+            return j;
         }
         /// <summary>Game-Ansicht auf eine feste Auflösung stellen (für Hochformat-Screenshots mit Oberfläche).</summary>
         static string SetGameView(int w, int h)

@@ -109,10 +109,11 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Zielkarte ----------
+        const int TutorialSteps = 10;
         void BuildGoal()
         {
             var b = UiKit.Btn(root, "Ziel", () => { if (!Game.ClaimQuest()) OnFocusQuest?.Invoke(); }, Pal.Glass, 16); goalGo = b.gameObject;
-            ((RectTransform)b.transform).Anchor(0, 1, 1, 1, 12, -190, 12, 112);
+            ((RectTransform)b.transform).Anchor(0, 1, 1, 1, 12, -232, 12, 154); /* unter dem Warnhinweis */
             goalKick = UiKit.Text(b.transform, "Kopf", "", 10, Pal.Credit, true, FontStyles.Bold | FontStyles.UpperCase); goalKick.rectTransform.Anchor(0, 1, 1, 1, 14, -22, 14, 8); goalKick.characterSpacing = 8;
             goalText = UiKit.Text(b.transform, "Text", "", 14, Pal.Ink); goalText.rectTransform.Anchor(0, 0, 1, 1, 14, 14, 74, 24);
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
@@ -331,8 +332,11 @@ namespace LunarCleanup.UI
             foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
-            goalGo.SetActive(false); /* Zielkarte nur noch im Ziele-Fenster */
-            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellCap(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
+            { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
+              if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
+                var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }

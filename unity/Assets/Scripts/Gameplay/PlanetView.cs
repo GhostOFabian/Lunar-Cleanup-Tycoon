@@ -100,12 +100,20 @@ namespace LunarCleanup.Gameplay
             var px = new Color32[S * S]; var r = new System.Random(3);
             for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
                 {
-                    float nz = .5f + .22f * Noise(x * .055f, y * .055f, 7) + .14f * Noise(x * .19f, y * .19f, 9) + .06f * Noise(x * .6f, y * .6f, 4);
+                    float u = x / (float)S, v = y / (float)S; /* Fabian 01.11.: kachelbares Rauschen – vorher zeichneten die Kachelkanten ein Gitter aus Linien auf den Boden */
+                    float nz = .5f + .22f * PNoise(u * 14, v * 14, 14, 7) + .14f * PNoise(u * 48, v * 48, 48, 9) + .06f * PNoise(u * 154, v * 154, 154, 4);
                     byte g = (byte)Mathf.Clamp(nz * 255, 0, 255); px[y * S + x] = new Color32(g, g, g, 255);
                 }
             detail.SetPixels32(px); detail.Apply(true); return detail;
         }
 
+        /// <summary>Wertrauschen, das sich nach <paramref name="per"/> Gitterpunkten wiederholt (nahtlos kachelbar), Wertebereich −1…1.</summary>
+        static float PNoise(float x, float y, int per, int s)
+        {
+            int xi = Mathf.FloorToInt(x), yi = Mathf.FloorToInt(y); float fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+            float H(int a, int b) => Hash(((xi + a) % per + per) % per, ((yi + b) % per + per) % per, s);
+            return Mathf.Lerp(Mathf.Lerp(H(0, 0), H(1, 0), fx), Mathf.Lerp(H(0, 1), H(1, 1), fx), fy) * 2 - 1;
+        }
         static float Hash(int x, int y, int s) { unchecked { int h = x * 374761393 + y * 668265263 + s * 1442695041; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) & 0xffff) / 65535f; } }
         static float Noise(float x, float y, int s)
         {

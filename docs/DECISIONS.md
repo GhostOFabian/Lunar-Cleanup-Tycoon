@@ -236,3 +236,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026: Gekaufte Upgrades bleiben an ihrer Stelle, erst bei Max wandern sie in „Ausgereizt (Max)“; spontane Geysire erscheinen nur im Blickfeld, damit sie gesehen werden und nichts kosten.
 - 01.11.2026 (Fabian): Flaggen erzählen Geschichten; Kapitel nach Öffnungsreihenfolge, Finale in der letzten Truhe – so bleibt es spannend, egal welche Flagge man zuerst findet. Geschichtentexte sind zweisprachig im Code, Loc.Tr lässt sie über ein unsichtbares Zeichen (U+2060) unverändert.
 - 01.11.2026 (Fabian): Rakete startet auch teilbeladen, wenn nichts mehr nachkommt – sonst bringt Offline-Zeit nichts ein. Gilt live und offline (eine Simulation), offline nur mit kürzeren Wartezeiten.
+- 01.11.2026 (Fabian): Felsen sind prozedural (RockKit) statt der Klotz-Modelle; Fabians übrige Bodenteil-Modelle (Schrott, Fässer, Eis …) bleiben.
+- 01.11.2026: Raketenschwelle richtet sich nach dem Zufluss (≈ 4 min), nicht nach der Frachtraumgröße; die Teilstart-Regeln aus Build 26 bleiben als Rückfall.
+- 01.11.2026: Die ersten 10 Ziele dienen als Einführung und stehen im Bild; danach Ziele nur im Ziele-Fenster.
