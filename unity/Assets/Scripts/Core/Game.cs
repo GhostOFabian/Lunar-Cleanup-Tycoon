@@ -255,7 +255,13 @@ namespace LunarCleanup.Core
         /// A) Reiseprämie: Wer einen Planeten komplett reinigt, bekommt einmalig die Reisekosten zum nächsten Planeten.</summary>
         static readonly List<PState> pendingPrize = new List<PState>();
         static double cartRefund;
-        static void ProcessPrizes() { foreach (var q in pendingPrize) TravelPrize(q, true); pendingPrize.Clear(); if (cartRefund > 0) { S.credits += cartRefund; Toast("Den Sammelwagen gibt es nicht mehr – " + Fmt(cartRefund) + " Cr zurück. Dein Behälter kommt jetzt direkt ins Rohstofflager.", "good"); cartRefund = 0; } }
+        /// <summary>Fabian 01.11.: Fahrzeughalle hat nur noch 9 Stufen – darüber gekaufte Stufen werden erstattet.</summary>
+        static void HallRefund()
+        {
+            if (!GUpg.TryGetValue("slots", out int l) || l <= HALL_MAX) return; var u = GameData.Up["slots"]; double r = 0; for (int k = HALL_MAX; k < l; k++) r += Math.Round(u.baseCost * Math.Pow(u.grow, k));
+            GUpg["slots"] = HALL_MAX; S.credits += r; Toast("Die Fahrzeughalle geht jetzt bis 24 Fahrzeuge je Planet – " + (l - HALL_MAX) + " Stufen zu viel erstattet: +" + Fmt(r) + " Cr", "good");
+        }
+        static void ProcessPrizes() { HallRefund(); foreach (var q in pendingPrize) TravelPrize(q, true); pendingPrize.Clear(); if (cartRefund > 0) { S.credits += cartRefund; Toast("Den Sammelwagen gibt es nicht mehr – " + Fmt(cartRefund) + " Cr zurück. Dein Behälter kommt jetzt direkt ins Rohstofflager.", "good"); cartRefund = 0; } }
         static void TravelPrize(PState ps, bool live)
         {
             if (ps.sv.prize) return; ps.sv.prize = true; int i = Array.IndexOf(GameData.POrder, ps.pid); if (i < 0 || i + 1 >= GameData.POrder.Length) return; string nx = GameData.POrder[i + 1]; if (P.ContainsKey(nx)) return;

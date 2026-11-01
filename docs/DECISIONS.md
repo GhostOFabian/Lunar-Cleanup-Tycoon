@@ -239,3 +239,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Felsen sind prozedural (RockKit) statt der Klotz-Modelle; Fabians übrige Bodenteil-Modelle (Schrott, Fässer, Eis …) bleiben.
 - 01.11.2026: Raketenschwelle richtet sich nach dem Zufluss (≈ 4 min), nicht nach der Frachtraumgröße; die Teilstart-Regeln aus Build 26 bleiben als Rückfall.
 - 01.11.2026: Die ersten 10 Ziele dienen als Einführung und stehen im Bild; danach Ziele nur im Ziele-Fenster.
+- 01.11.2026 (Fabian): Höchstens 24 Fahrzeuge je Planet; die Fahrzeughalle ist der Weg dorthin (+1 je Stufe). Erweiterte Upgrade-Stufen zählen nicht als Bedingung für Gebäudestufen (max0).

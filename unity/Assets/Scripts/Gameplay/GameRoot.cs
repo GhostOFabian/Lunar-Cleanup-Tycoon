@@ -90,7 +90,7 @@ namespace LunarCleanup.Gameplay
             ApplyCam();
         }
 
-        void Start() { StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); }
+        void Start() { if (!offlineRunning) StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); } /* OnApplicationPause(false) kommt beim Start schon vor Start() – sonst lief die Offline-Zeit doppelt */
 
         IEnumerator Offline(float seconds)
         {

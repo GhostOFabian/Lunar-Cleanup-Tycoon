@@ -11,7 +11,7 @@ namespace LunarCleanup.Core
     public class KindDef { public string key, name, desc; public float amt, hard, cost; public int tier; }
     public class StageDef { public int n; public string name, txt; public float cost; }
     public class ResDef { public string id, name, desc, req; public double cost; public float time; }
-    public class UpgDef { public string id, cat, name, res, label; public bool loc, hide, done, rad; public float baseCost, grow; public int max, stage; public double[] vals; public string[] show; }
+    public class UpgDef { public string id, cat, name, res, label; public bool loc, hide, done, rad; public float baseCost, grow; public int max, stage, max0; /* max0: Stufen vor der Erweiterung (für Gebäudestufen) */ public double[] vals; public string[] show; }
     public class VehDef { public string key, name, size, desc, planet; public float batt, cost, speed, radius, power, tank, energy; public int stage, tier; public bool fly; public string[] home; }
     public class StDef { public int docks; public float buf, rate; public string acc; }
     public class BldDef { public string id, name, research, desc; public int stage; public float cost, fp; public bool auto, mach, geo; public StDef st; }
