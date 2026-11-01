@@ -50,7 +50,7 @@ namespace LunarCleanup.Gameplay
             var gal = new Vector3((float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f).normalized;
             float seed = (float)rnd.NextDouble() * 100; Color bg = new Color(.006f, .008f, .018f);
             var img = new Color[W * H];
-            System.Threading.Tasks.Parallel.For(0, H / 2, yy => // Nebel in halber Auflösung, auf allen Prozessorkernen
+            LunarCleanup.Core.Par.For(0, H / 2, yy => // Nebel in halber Auflösung, auf allen Prozessorkernen
             {
                 int y = yy * 2;
                 float lat = (y + 1f) / H * Mathf.PI - Mathf.PI / 2, cl = Mathf.Cos(lat), sl = Mathf.Sin(lat);

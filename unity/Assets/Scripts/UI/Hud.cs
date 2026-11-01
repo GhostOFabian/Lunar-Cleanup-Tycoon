@@ -25,13 +25,46 @@ namespace LunarCleanup.UI
         readonly List<Action> binders = new List<Action>();
         string sheetKind, sheetArg; float bindT, lastCred; double credShown;
         public bool SheetOpen => sheetGo && sheetGo.activeSelf;
+        public bool MenuOpen => menuGo && menuGo.activeSelf;
+        public void HideMenu() { if (menuGo) menuGo.SetActive(false); }
+        GameObject menuGo; float quitT = -99;
+        /// <summary>Startmenü (Fabian 01.11.): Spiel starten, Einstellungen, Beenden – liegt über der Basis, unter den Einstellungen.</summary>
+        void BuildMenu()
+        {
+            var bg = UiKit.Glass(root, "Startmenü", new Color(.02f, .04f, .1f, .72f), 0); bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 1, -300, -300, -300, -300); menuGo = bg.gameObject;
+            var box = UiKit.Rt(bg.transform, "Mitte").Anchor(.5f, .5f, .5f, .5f, -150, -210, -150, -230);
+            var t1 = UiKit.Text(box, "Titel", "LUNAR CLEANUP", 34, Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t1.rectTransform.Anchor(0, 1, 1, 1, 0, -50, 0, 0); t1.textWrappingMode = TextWrappingModes.NoWrap; t1.enableAutoSizing = true; t1.fontSizeMin = 18; t1.fontSizeMax = 34;
+            var t2 = UiKit.Text(box, "Untertitel", "TYCOON", 18, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); t2.rectTransform.Anchor(0, 1, 1, 1, 0, -82, 0, 50); t2.characterSpacing = 18;
+            float y = -150;
+            void Big(string label, string sub, Color bgc, Color fg, System.Action act)
+            {
+                var b = UiKit.Btn(box, label, act, bgc, 16); ((RectTransform)b.transform).Anchor(0, 1, 1, 1, 0, y - 58, 0, -y); y -= 72;
+                var bt = UiKit.Text(b.transform, "Text", label, 19, fg, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, .38f, 1, 1, 8, 0, 8, 2);
+                var st = UiKit.Text(b.transform, "Hinweis", sub, 11, new Color(fg.r, fg.g, fg.b, .7f), false, FontStyles.Normal, TextAlignmentOptions.Center); st.rectTransform.Anchor(0, 0, 1, .42f, 8, 6, 8, 0);
+            }
+            Big("Spiel starten", "Weiter mit deiner Basis", new Color(.43f, .95f, .82f, .95f), new Color(.03f, .08f, .12f), () => { menuGo.SetActive(false); LunarCleanup.Gameplay.Sfx.Play("pop", 1.2f, .4f); });
+            Big("Einstellungen", "Sprache, Ton, Spielstand", new Color(1, 1, 1, .1f), Pal.Ink, () => OpenSheet("settings"));
+            Big("Beenden", "Speichert und schließt das Spiel", new Color(1, 1, 1, .06f), Pal.Ink2, () =>
+            {
+                Game.Save();
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+                Game.Toast("Gespeichert – du kannst den Browser-Tab jetzt schließen.", "good");
+#else
+                Application.Quit();
+#endif
+            });
+            var ver = UiKit.Text(bg.transform, "Version", "Version " + Application.version, 10, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.Center); ver.rectTransform.Anchor(0, 0, 1, 0, 0, 330, 0, -360);
+        }
+        public void ShowMenu() { if (menuGo) { CloseSheet(); menuGo.SetActive(true); } }
 
         public void Build(Transform canvas)
         {
             I = this; UiKit.Init();
             root = UiKit.Rt(canvas, "SafeArea").Anchor(0, 0, 1, 1); root.gameObject.AddComponent<SafeAreaFitter>();
             floatLayer = UiKit.Rt(root, "Schwebetexte").Anchor(0, 0, 1, 1);
-            BuildTop(); BuildGoal(); BuildBottom(); BuildSheet(); BuildOffline();
+            BuildTop(); BuildGoal(); BuildBottom(); BuildMenu(); BuildSheet(); BuildOffline();
             toastBox = UiKit.Rt(root, "Meldungen").Anchor(0, 1, 1, 1, 24, -330, 24, 196);
             var vl = toastBox.gameObject.AddComponent<VerticalLayoutGroup>(); vl.spacing = 6; vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.childAlignment = TextAnchor.UpperCenter;
             Game.OnToast += Toast;
@@ -49,7 +82,7 @@ namespace LunarCleanup.UI
             var pc = UiKit.Btn(top, "Planet", () => OpenSheet("planets"), Pal.Glass, 16); ((RectTransform)pc.transform).Anchor(.43f, 0, .78f, 1, 4, 0, 4, 0);
             pdot = UiKit.Img(pc.transform, "Kugel", UiKit.Circle(Color.white, Color.gray), Color.white); pdot.rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             pname = UiKit.Text(pc.transform, "Name", "MOND", 14, Pal.Ink, true, FontStyles.Bold | FontStyles.UpperCase); pname.rectTransform.Anchor(0, .45f, 1, 1, 40, 0, 6, 6); pname.textWrappingMode = TextWrappingModes.NoWrap; pname.characterSpacing = 6;
-            pprog = UiKit.Text(pc.transform, "Fortschritt", "", 11, Pal.Ink2); pprog.rectTransform.Anchor(0, 0, 1, .48f, 40, 6, 6, 0); pprog.textWrappingMode = TextWrappingModes.NoWrap;
+            pprog = UiKit.Text(pc.transform, "Fortschritt", "", 11, Pal.Ink2); pprog.rectTransform.Anchor(0, 0, 1, .48f, 40, 6, 6, 0); pprog.textWrappingMode = TextWrappingModes.NoWrap; pprog.enableAutoSizing = true; pprog.fontSizeMin = 7; pprog.fontSizeMax = 11; /* „983/983 sauber · Stufe 5“ passt sonst nicht aufs Handy */
             var gb = UiKit.Btn(top, "Ziele", () => OpenSheet("goals"), Pal.Glass, 14); ((RectTransform)gb.transform).Anchor(.79f, 0, .885f, 1, 2, 0, 2, 0);
             UiKit.Img(gb.transform, "Icon", UiKit.Icon("goals"), Pal.Ink2).rectTransform.Anchor(.5f, .5f, .5f, .5f, -11, -11, -11, -11);
             var sb = UiKit.Btn(top, "Einstellungen", () => OpenSheet("settings"), Pal.Glass, 14); ((RectTransform)sb.transform).Anchor(.895f, 0, 1, 1, 2, 0, 0, 0);
@@ -97,7 +130,7 @@ namespace LunarCleanup.UI
             else if (ps.sv.veh.Any(v => v.mode == "broken" || v.mode == "fieldRepair")) { int n = ps.sv.veh.Count(v => v.mode == "broken" || v.mode == "fieldRepair"); t = n + (n > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen" + (ps.bld.Contains("werkstatt") ? " – fährt zur Werkstatt" : " – baue eine Roboterwerkstatt (Basisstufe 3)"); warnTarget = "vehicles"; }
             else if (ps.sv.veh.Count > 0 && !Game.PowOK(ps)) { t = "Fahrzeuge zu schwach für " + ps.P.name + " (nur 30 %): Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig"; warnTarget = "vehicles"; }
             else if (ps.ef < .99f && (ps.sv.veh.Count > 0 || ps.bld.Contains("presse"))) { t = "Energie reicht nicht – alles läuft langsamer"; warnTarget = "energy"; }
-            warnGo.SetActive(t != null && !SheetOpen); if (t != null) warnTxt.text = t;
+            warnGo.SetActive(t != null && !SheetOpen && !MenuOpen); if (t != null) warnTxt.text = t;
         }
 
         // ---------- unten ----------
@@ -276,7 +309,7 @@ namespace LunarCleanup.UI
             foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
-            int q = Game.S.quest; bool has = q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(has && !SheetOpen);
+            int q = Game.S.quest; bool has = q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(has && !SheetOpen && !MenuOpen);
             if (has)
             {
                 float pr = Game.QuestProgress(q); goalKick.text = "Ziel " + (q + 1) + " von " + GameData.Quests.Count + (pr >= 1 ? " · antippen zum Abholen" : "");

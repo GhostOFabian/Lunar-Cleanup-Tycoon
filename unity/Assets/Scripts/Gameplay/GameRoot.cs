@@ -119,8 +119,9 @@ namespace LunarCleanup.Gameplay
             { var kb0 = Keyboard.current; bool tl = (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Mouse.current.position.ReadValue().x < 80 && Mouse.current.position.ReadValue().y > Screen.height - 80) || (ETouch.activeTouches.Count > 0 && ETouch.activeTouches[0].screenPosition.x < 80 && ETouch.activeTouches[0].screenPosition.y > Screen.height - 80);
               if ((kb0 != null && kb0.pKey.wasPressedThisFrame && preview == null) || (photo && tl)) { photo = !photo; if (uiRoot) uiRoot.SetActive(!photo); } }
             if (!dailyDone && !offlineRunning && Time.realtimeSinceStartup > 3) { dailyDone = true; var dtx = Game.DailyCheck(); if (dtx != null) Game.Toast(dtx, "good"); }
-            HandleInput(dt);
-            var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
+            bool menu = Hud.I.MenuOpen; if (menu) { Twist(4 * dt); } /* Startmenü: Kamera dreht sich langsam um die Basis, kein Wischen */
+            if (!menu) HandleInput(dt);
+            var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen && !menu) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
             if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevKeys();

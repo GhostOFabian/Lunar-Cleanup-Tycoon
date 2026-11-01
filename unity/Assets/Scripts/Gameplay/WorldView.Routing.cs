@@ -76,7 +76,7 @@ namespace LunarCleanup.Gameplay
                 List<int> best = null; float bc = 1e9f; (BPort a, BPort b, bool, bool) bestC = default; string shareWith = null;
                 foreach (var cnd in cands)
                 {
-                    var path = AStar(cnd.a.p + cnd.a.n * 1.1f, cnd.a.n, cnd.b.p + cnd.b.n * 1.1f, -cnd.b.n, block, occ, null, null, out float cost);
+                    var path = AStar(cnd.a.p + cnd.a.n * Stub, cnd.a.n, cnd.b.p + cnd.b.n * Stub, -cnd.b.n, block, occ, null, null, out float cost);
                     if (path == null) continue;
                     /* lieber eine freie Gebäudefläche als neben einem anderen Band (dort laufen sie sonst ineinander), und keine zu engen Kurven */
                     int nA = used.TryGetValue(cnd.a.bid + cnd.a.face, out var tA) ? tA.Count : 0, nB = used.TryGetValue(cnd.b.bid + cnd.b.face, out var tB) ? tB.Count : 0;
@@ -93,7 +93,7 @@ namespace LunarCleanup.Gameplay
                         var o = live.First(x => x.id == kv.Key); if (o.to != b.to) continue;
                         foreach (var pa in Ports(FA, FB.c, b.from, used, 3))
                         {
-                            var path = AStar(pa.p + pa.n * 1.1f, pa.n, kv.Value.b.p + kv.Value.b.n * 1.1f, -kv.Value.b.n, block, occ, null, b.to, out float cost);
+                            var path = AStar(pa.p + pa.n * Stub, pa.n, kv.Value.b.p + kv.Value.b.n * Stub, -kv.Value.b.n, block, occ, null, b.to, out float cost);
                             if (path != null && cost < bc) { bc = cost; best = path; bestC = (pa, kv.Value.b, false, true); shareWith = kv.Key; }
                         }
                     }
@@ -132,6 +132,8 @@ namespace LunarCleanup.Gameplay
         static Vector2 Cc(int x, int y) => new Vector2((x + .5f) * GC - GOFF, (y + .5f) * GC - GOFF);
 
         /// <summary>Port-Kandidaten: Flächen, die zum Ziel zeigen, je ein freier Platz (Mitte, dann ±1 m).</summary>
+        const float Stub = 1.8f; // gerades Stück vor dem Rahmen, erst danach eine Kurve (Fabian 01.11.: Bänder schnitten seitlich durch die Rahmen)
+        const float SlotGap = 2f; // Rahmen 1,34 m breit + Luft, auch nach dem Einrasten aufs 0,5-m-Raster
         static bool IsMachine(string id) => id == "presse" || id == "schmelze" || id == "raff";
         IEnumerable<BPort> Ports(Foot f, Vector2 toward, string id, Dictionary<string, HashSet<int>> used, int nFaces)
         {
@@ -152,11 +154,11 @@ namespace LunarCleanup.Gameplay
                 var n = fc.n; var t = new Vector2(-n.y, n.x); used.TryGetValue(id + fc.k, out var taken);
                 float half = Mathf.Abs(n.x) > .5f ? (f.max.y - f.min.y) / 2 : (f.max.x - f.min.x) / 2;
                 var mid = new Vector2(n.x > .5f ? f.max.x : n.x < -.5f ? f.min.x : (f.min.x + f.max.x) / 2, n.y > .5f ? f.max.y : n.y < -.5f ? f.min.y : (f.min.y + f.max.y) / 2);
-                /* freier Platz: Mitte, dann abwechselnd 1,45 m daneben – zuerst auf der Seite, wo das Ziel liegt (Bänder kreuzen sich nicht am Gebäude) */
+                /* freier Platz: Mitte, dann abwechselnd 2 m daneben (Fabian 01.11.: Rahmen standen mit 1,45 m Kante an Kante) – zuerst auf der Seite, wo das Ziel liegt (Bänder kreuzen sich nicht am Gebäude) */
                 int sg = Vector2.Dot(t, toward - mid) >= 0 ? 1 : -1; int slot = 0; bool ok = false;
-                foreach (int sl in new[] { 0, sg, -sg, 2 * sg, -2 * sg }) { if (Mathf.Abs(sl * 1.45f) > half - .45f) continue; if (taken != null && taken.Contains(sl)) continue; slot = sl; ok = true; break; }
+                foreach (int sl in new[] { 0, sg, -sg, 2 * sg, -2 * sg }) { if (Mathf.Abs(sl * SlotGap) > half - .5f) continue; if (taken != null && taken.Contains(sl)) continue; slot = sl; ok = true; break; }
                 if (!ok) continue; /* Fläche voll */
-                var pp = mid + t * (slot * 1.45f); if (Mathf.Abs(n.x) > .5f) pp.y = Cc(0, Ix(pp.y)).y; else pp.x = Cc(Ix(pp.x), 0).x; // quer zur Fläche aufs Raster
+                var pp = mid + t * (slot * SlotGap); if (Mathf.Abs(n.x) > .5f) pp.y = Cc(0, Ix(pp.y)).y; else pp.x = Cc(Ix(pp.x), 0).x; // quer zur Fläche aufs Raster
                 yield return new BPort { bid = id, face = fc.k, slot = slot, p = pp, n = n };
             }
         }
@@ -246,7 +248,7 @@ namespace LunarCleanup.Gameplay
     /// <summary>Gemerkte Bandwege: im Speicher und als Datei (persistentDataPath/bandwege.txt). Neue Version → Cache leer.</summary>
     public static class RouteCache
     {
-        const string Ver = "lc-2026-11-01a"; // bei Änderungen an Wegsuche oder Gebäudemodellen erhöhen
+        const string Ver = "lc-2026-11-01c"; // bei Änderungen an Wegsuche oder Gebäudemodellen erhöhen
         static Dictionary<string, (Dictionary<string, Vector2[]> r, Dictionary<string, string> s)> mem;
         public static int Count { get { Load(); return mem.Count; } }
         static string FilePath => System.IO.Path.Combine(Application.persistentDataPath, "bandwege.txt");

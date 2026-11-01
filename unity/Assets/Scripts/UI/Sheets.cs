@@ -238,36 +238,70 @@ namespace LunarCleanup.UI
             }
         }
 
+        /* Fabian 01.11.: Planetenwechsel und Sternenstaub in Reiter und Gruppen gliedern */
+        static readonly (string name, string[] ids)[] Regions =
+        {
+            ("Innere Planeten", new[] { "moon", "mars", "venus" }),
+            ("Monde der Gasriesen", new[] { "europa", "io", "ganymed", "titan", "enceladus", "triton" }),
+            ("Zwergplaneten", new[] { "pluto", "eris", "sedna" }),
+            ("Exoplaneten", new[] { "proxima", "trappist", "kepler", "cancri", "gliese", "poltergeist" }),
+        };
+        static readonly (string name, string[] ids)[] SdGroups =
+        {
+            ("Schneller Start", new[] { "cash1", "cash2", "cash3", "fast", "buggy" }),
+            ("Einnahmen", new[] { "price", "hand", "offline", "crystal" }),
+            ("Funde und Optik", new[] { "find", "event", "glow" }),
+        };
         static void Planets(Hud h)
         {
-            if (Game.S.done.Count > 0 || Game.S.stardust > 0) Stardust(h);
-            h.Section("Reiseziele");
-            foreach (var pid in GameData.POrder)
+            bool sd = Game.S.done.Count > 0 || Game.S.stardust > 0;
+            int owned = GameData.POrder.Count(x => Game.P.ContainsKey(x));
+            if (sd) h.Tabs("Reisen " + owned, "Neue Planeten", "Sternenstaub " + Game.StardustFree()); else h.Tabs("Reisen " + owned, "Neue Planeten");
+            int tab = h.Tab;
+            if (sd && tab >= 2) { Stardust(h); return; }
+            bool travel = tab == 0; int shown = 0;
+            foreach (var (rname, ids) in Regions)
             {
-                var P = GameData.Planets[pid]; bool have = Game.P.ContainsKey(pid), cur = Game.S.planet == pid; string key = pid;
-                string dirt = string.Join(", ", P.types.Select(t => GameData.Dirt[t.Key].name));
-                if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand";}
-                int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = nP.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("de-DE")) + " Parzellen";
-                if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
-                else if (have) h.Row(P.name, () => Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => "Reisen", () => true, () => { Game.Travel(key); h.CloseSheet(); }, false);
-                else
-                {
-                    int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
-                    if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); });
-                    else h.Row(P.name, () => size + " · " + P.sub + " · noch nicht erreichbar");
-                }
+                var list = ids.Where(x => GameData.Planets.ContainsKey(x) && Game.P.ContainsKey(x) == travel).OrderBy(x => System.Array.IndexOf(GameData.POrder, x)).ToList(); if (list.Count == 0) continue;
+                h.Section(rname); foreach (var pid in list) { PlanetRow(h, pid); shown++; }
+            }
+            foreach (var pid in GameData.POrder) if (!Regions.Any(r => r.ids.Contains(pid)) && Game.P.ContainsKey(pid) == travel) { PlanetRow(h, pid); shown++; } /* Sicherheitsnetz für neue Planeten */
+            if (shown == 0) h.Note(travel ? "Noch keine Planeten." : "Alle Planeten sind freigeschaltet.");
+            else if (!travel) h.Note("Freischalten kannst du immer den nächsten Planeten der Reihe.");
+        }
+        static void PlanetRow(Hud h, string pid)
+        {
+            var P = GameData.Planets[pid]; bool have = Game.P.ContainsKey(pid), cur = Game.S.planet == pid; string key = pid;
+            string dirt = string.Join(", ", P.types.Select(t => GameData.Dirt[t.Key].name));
+            if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand"; }
+            int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = Game.Num(nP) + " Parzellen";
+            if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
+            else if (have) h.Row(P.name, () => Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => "Reisen", () => true, () => { Game.Travel(key); h.CloseSheet(); }, false);
+            else
+            {
+                int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
+                if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); });
+                else h.Row(P.name, () => size + " · " + P.sub + " · noch nicht erreichbar");
             }
         }
 
         static float prestigeT = -99, importT = -99, demolishT = -99;
         static void Stardust(Hud h)
         {
-            h.Section("Sternenstaub · " + Game.StardustFree() + " frei");
+            h.Section("Neustart · " + Game.StardustFree() + " Sternenstaub frei");
             h.Note("Jeder komplett saubere Planet bringt Sternenstaub (später in der Reihe = mehr), dazu 1 je 10 Funde. Mit einem Neustart beginnst du wieder auf dem Mond – Sternenstaub, Boni, Funde und Tagesbonus bleiben.");
             h.Row("Neustart", () => Time.unscaledTime - prestigeT < 4 ? "Wirklich? Noch einmal tippen setzt Planeten, Credits, Upgrades und Forschung zurück." : "Bringt jetzt +" + Game.StardustPending() + " Sternenstaub" + (Game.S.resets > 0 ? " · bisher " + Game.S.resets + " Neustarts" : ""),
                 () => Time.unscaledTime - prestigeT < 4 ? "Ja, neu starten" : "Neu starten", () => Game.StardustPending() > 0, () => { if (Time.unscaledTime - prestigeT < 4) { Game.Prestige(); h.CloseSheet(); } else prestigeT = Time.unscaledTime; }, false);
-            foreach (var n in FeatureData.Stardust) { var nn = n; h.Row(n.name, () => n.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
+            var done = new HashSet<string>();
+            foreach (var (gname, ids) in SdGroups)
+            {
+                var list = FeatureData.Stardust.Where(n => ids.Contains(n.id)).ToList(); if (list.Count == 0) continue;
+                h.Section(gname + " · " + list.Count(n => Game.S.sdNodes.Contains(n.id)) + "/" + list.Count); foreach (var n in list) { SdRow(h, n); done.Add(n.id); }
+            }
+            var rest = FeatureData.Stardust.Where(n => !done.Contains(n.id)).ToList();
+            if (rest.Count > 0) { h.Section("Weitere"); foreach (var n in rest) SdRow(h, n); }
         }
+        static void SdRow(Hud h, SdNode n) { var nn = n; h.Row(n.name, () => nn.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
 
         static void Goals(Hud h)
         {
@@ -444,6 +478,9 @@ namespace LunarCleanup.UI
         static float resetT;
         static void Settings(Hud h)
         {
+            if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
+            h.Section("Sprache · Language");
+            h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);
             h.Section("Foto-Modus");
             h.Row("Oberfläche ausblenden", () => "Für schöne Bilder deiner Basis. Taste P oder ein Tipp oben links blendet sie wieder ein.", () => "Foto-Modus", () => true, () => { h.CloseSheet(); h.OnPhoto?.Invoke(); }, false);
             h.Section("Ton");

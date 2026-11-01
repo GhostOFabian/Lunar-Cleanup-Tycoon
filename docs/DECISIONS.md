@@ -214,3 +214,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Bohrtürme/Erzbagger: 5 frei platzierbar + 3 je Außenlager, abreißbar mit 30 % Erstattung; fünfter Außenlagerplatz auf der Gegenseite der Basis.
 - 01.11.2026: Bandwege werden je Basis-Zustand zwischengespeichert (Datei im persistentDataPath + Startdatei im Spiel); bei Router-Änderungen Cache-Version (`RouteCache.Ver`) erhöhen.
 - 01.11.2026: Upgrades erscheinen nur im Upgrade-Menü und im jeweiligen Gebäudeblatt, nie zusätzlich als Reiter in anderen Menüs.
+- 01.11.2026 (Fabian): Englisch als zweite Sprache. Der Code bleibt deutsch; übersetzt wird beim Anzeigen (`Core/Loc.cs`, `UI/LText.cs`) über das Wörterbuch `Resources/Data/en.json` (ganze Texte + Textbausteine, längster Treffer an Wortgrenzen, Zahlen 1.234,5 → 1,234.5). Neue Texte: Baustein ins Wörterbuch eintragen. Standard: Gerätesprache, umschaltbar in den Einstellungen (PlayerPrefs, nicht im Spielstand).
+- 01.11.2026 (Fabian): Bandanschlüsse an einer Gebäudewand mindestens 2 m auseinander (vorher 1,45 m, Rahmen standen Kante an Kante).
+- 01.11.2026 (Fabian): Planetenmenü mit Reitern „Reisen“, „Neue Planeten“, „Sternenstaub“; Planeten nach Regionen (innere Planeten, Monde der Gasriesen, Zwergplaneten, Exoplaneten), Sternenstaub-Boni nach Gruppen (Schneller Start, Einnahmen, Funde und Optik).
+- 01.11.2026 (Fabian): Vor jedem Anschlussrahmen 1,8 m gerades Band (Router-Startpunkt), damit Kurven nicht durch die Rahmen schneiden.

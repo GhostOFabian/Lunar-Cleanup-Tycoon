@@ -188,3 +188,10 @@
 - Schneller: Boden parallel (Mars 5,5 → 1,8 s), Bandwege zwischengespeichert + mitgelieferte Startdatei (`Resources/Data/bandwege.txt`, 320 Basen) – Basisaufbau beim Planetenwechsel ≈ 0,2 s statt ≈ 5 s; Offline-Aufholen in größeren Schritten (bis 4 s) bei langer Abwesenheit.
 - Bänder an der Rakete/hohen Gebäuden liegen auf Wandanschlusshöhe statt in der Luft.
 - Basis-Prüfung jetzt auch mit Teilausbauten: 4 Restbefunde (Mond/Kepler Gebäude-Hüllkreise knapp, Io/Ganymed ein Anschlussrahmen, Venus ein Bandpaar zu nah). Browser-Build v=13 und Webseite neu gebaut.
+
+## Unity 0.21 Build 15 (01.11.2026) – Englisch, Anschlüsse, Planetenmenü
+- Komplette englische Übersetzung (≈1.660 Einträge in `Resources/Data/en.json`, auch Planeten, Gebäude, Ziele, Ereignisse, Entdeckungen); umschaltbar in den Einstellungen („Sprache · Language“), Standard = Gerätesprache. Zahlen im englischen Format (1,234.5). Prüfung: Editor-Befehl `loctour` öffnet alle Fenster/Reiter, `locmiss` listet die Texte.
+- Bandanschlüsse an einer Wand mindestens 2 m auseinander; vor jedem Rahmen 1,8 m gerades Band, erst dann eine Kurve (Bänder schnitten seitlich durch die Rahmen). Basis-Prüfung meldet jetzt auch zu dichte Rahmen.
+- Planetenmenü mit Reitern „Reisen“, „Neue Planeten“, „Sternenstaub“; Planeten nach Regionen, Sternenstaub-Boni nach Gruppen.
+- Browser: parallele Schleifen laufen im WebGL-Build nacheinander (`Core/Par.cs`), vorher blieb der Browser beim Laden hängen.
+- Startmenü (Spiel starten / Einstellungen / Beenden).

@@ -66,7 +66,7 @@ namespace LunarCleanup.Core
         // ================= Start, Speichern, Laden =================
         public static void Init()
         {
-            GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades();
+            Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps);
@@ -251,11 +251,13 @@ namespace LunarCleanup.Core
         public static void Toast(string t, string k = "") { if (!Offline) OnToast?.Invoke(t, k); }
         static void FloatTxt(Vector3 d, string t, string k) { if (!Offline) OnFloat?.Invoke(d, t, k); }
 
+        static readonly string[] UnitsDe = { " k", " Mio", " Mrd", " Bio", " Brd" }, UnitsEn = { "k", "M", "B", "T", "Qa" };
+        public static string Num(double v) => Math.Floor(v).ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
         public static string Fmt(double v)
         {
             double a = Math.Abs(v); string sgn = v < 0 ? "-" : "";
             if (a < 10000) return sgn + Math.Floor(a).ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
-            string[] u = { " k", " Mio", " Mrd", " Bio", " Brd" }; double x = a / 1000; int i = 0; while (x >= 1000 && i < u.Length - 1) { x /= 1000; i++; }
+            string[] u = Loc.En ? UnitsEn : UnitsDe; /* Zahl bleibt deutsch formatiert, Loc.Tr stellt Komma/Punkt für Englisch um */ double x = a / 1000; int i = 0; while (x >= 1000 && i < u.Length - 1) { x /= 1000; i++; }
             return sgn + x.ToString(x < 100 ? "0.0" : "0", System.Globalization.CultureInfo.GetCultureInfo("de-DE")) + u[i];
         }
 

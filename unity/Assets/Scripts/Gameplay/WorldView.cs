@@ -434,6 +434,17 @@ namespace LunarCleanup.Gameplay
                         // genauer: liegt ein Eckpunkt von a innerhalb der Hülle von b? (Abstand zum Mittelpunkt kleiner als b's Ausdehnung in dieser Richtung)
                         out_.Add("Gebäude " + a + " und " + b + " kommen sich nahe (Abstand " + (ps.lay.pos[a] - ps.lay.pos[b]).magnitude.ToString("0.0") + " m, Ausdehnung " + rad[a].ToString("0.0") + " + " + rad[b].ToString("0.0") + " m)");
                     }
+            // Anschlussrahmen am selben Gebäude zu dicht nebeneinander (Fabian 01.11.: Rahmen Kante an Kante)
+            var wallPts = new List<(string bid, Vector2 p, string belt)>();
+            foreach (var kv in beltInfo)
+            {
+                var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value;
+                if (w0 && !mergeStart.ContainsKey(kv.Key)) wallPts.Add((b.from, PointAt(rp, cum, s0, out _), kv.Key));
+                if (w1 && !mergeEnd.ContainsKey(kv.Key)) wallPts.Add((b.to, PointAt(rp, cum, s1, out _), kv.Key));
+            }
+            for (int x = 0; x < wallPts.Count; x++) for (int y = x + 1; y < wallPts.Count; y++)
+                    if (wallPts[x].bid == wallPts[y].bid && (wallPts[x].p - wallPts[y].p).magnitude < 1.6f)
+                        out_.Add("Anschlussrahmen von " + wallPts[x].belt + " und " + wallPts[y].belt + " an " + wallPts[x].bid + " zu dicht (" + (wallPts[x].p - wallPts[y].p).magnitude.ToString("0.0") + " m)");
             /* Pipelines liegen seit 01.11. unsichtbar im Boden – keine Prüfung der Wandtreffer mehr */
             /* Fabian 01.11.: Anschlussrahmen nur an geraden Wandflächen; Ampeln und Laternen nie im Band oder in einem Gebäude */
             foreach (var kv in beltInfo)

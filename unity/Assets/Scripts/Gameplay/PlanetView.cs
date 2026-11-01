@@ -44,8 +44,8 @@ namespace LunarCleanup.Gameplay
             /* Fabian 01.11.: Reisen schneller – Boden und Normal-Maps auf allen Prozessorkernen berechnen (reine Rechnerei, keine Unity-Objekte) */
             style = StyleFor(ps.pid); foreach (var cl in pd.cells) Craters(cl);
             var nrmPx = new Color32[F][];
-            System.Threading.Tasks.Parallel.For(0, F, f => { if (chunks[f] != null) nrmPx[f] = NormalPixels(chunkIds[f], chunks[f].per); });
-            System.Threading.Tasks.Parallel.For(0, pd.N, id => PaintCell(id));
+            LunarCleanup.Core.Par.For(0, F, f => { if (chunks[f] != null) nrmPx[f] = NormalPixels(chunkIds[f], chunks[f].per); });
+            LunarCleanup.Core.Par.For(0, pd.N, id => PaintCell(id));
             for (int f = 0; f < F; f++)
             {
                 var ch = chunks[f]; if (ch == null) continue; int size = ch.per * NT;

@@ -62,7 +62,18 @@ namespace LunarCleanup.Gameplay
                 case "europa": case "enceladus": case "triton": case "gliese":
                     {
                         int n = ps.pid == "europa" ? 1 : ps.pid == "gliese" ? 4 : 3; string ring = ps.pid == "triton" ? "#4a3c3a" : "#cfe6f8";
-                        for (int i = 0; i < n; i++) { var p = new Vector3(-4 + i * 4, 0, (i % 2) * 2 - 1); MeshKit.Cyl(t, M(ring, .1f, .8f), p + new Vector3(0, .1f, 0), 1.1f, 1.4f, .25f, 16); MeshKit.Cyl(t, M("#101418", 0, .1f), p + new Vector3(0, .23f, 0), .55f, .55f, .02f, 14); var g = new GameObject("Quelle"); g.transform.SetParent(t, false); g.transform.localPosition = p; wonderBits.Add(g.transform); }
+                        /* Fabian 01.11.: kein schwebender Ring mehr – flacher Eishügel, der im Boden steckt, mit dunklem Schlot, Rissen und Eisbrocken */
+                        string top = ps.pid == "triton" ? "#5a4c48" : ps.pid == "gliese" ? "#8a9aa2" : "#e4f2fc";
+                        for (int i = 0; i < n; i++)
+                        {
+                            var p = new Vector3(-4 + i * 4, 0, (i % 2) * 2 - 1); float sc = ps.pid == "gliese" ? .7f : 1f;
+                            MeshKit.Cyl(t, M(ring, .05f, .5f), p + new Vector3(0, -.05f, 0), 1.5f * sc, 2.6f * sc, .5f, 18);   // breiter Fuß, unten im Boden
+                            MeshKit.Cyl(t, M(top, .05f, .85f), p + new Vector3(0, .32f, 0), .7f * sc, 1.45f * sc, .35f, 16);  // Kuppe
+                            MeshKit.Cyl(t, M("#0c1014", 0, .1f), p + new Vector3(0, .5f, 0), .42f * sc, .5f * sc, .04f, 12);   // Schlot
+                            for (int q = 0; q < 5; q++) { float a = q * 72 + i * 23; var dd = Quaternion.Euler(0, a, 0) * Vector3.forward; MeshKit.Box(t, M("#2a3a48", 0, .2f), p + dd * 1.9f * sc + new Vector3(0, .03f, 0), new Vector3(.07f, .03f, 1.3f * sc), new Vector3(0, a, 0)); } // Risse
+                            for (int q = 0; q < 4; q++) { float a = q * 90 + 40 + i * 31; var dd = Quaternion.Euler(0, a, 0) * Vector3.forward; MeshKit.Part(t, Octa(), M(top, .05f, .8f), p + dd * (2.4f + q * .2f) * sc + new Vector3(0, .1f, 0), new Vector3(.35f, .25f, .3f) * sc, new Vector3(0, a, 20)); } // Eisbrocken
+                            var g = new GameObject("Quelle"); g.transform.SetParent(t, false); g.transform.localPosition = p + new Vector3(0, .5f, 0); wonderBits.Add(g.transform);
+                        }
                         if (ps.pid == "enceladus") for (int i = 0; i < 3; i++) MeshKit.Box(t, G("#3d93ff", 1.4f), new Vector3(-4 + i * 4, .03f, 0), new Vector3(.35f, .02f, 6f), new Vector3(0, 15, 0)); // Tigerstreifen
                         break;
                     }
@@ -101,6 +112,13 @@ namespace LunarCleanup.Gameplay
                 case "poltergeist":
                     for (int i = 0; i < 7; i++) { var b = MeshKit.Ball(t, G(i % 2 == 0 ? "#5affb0" : "#d04aff", 3f), new Vector3((float)r.NextDouble() * 10 - 5, 1.5f + (float)r.NextDouble() * 2, (float)r.NextDouble() * 10 - 5), .7f); NoShadow(b); wonderBits.Add(b.transform); wonderBase.Add(b.transform.localPosition); }
                     break;
+            }
+            /* an den Boden anpassen: jedes Teil auf die Bodenhöhe an seiner Stelle (Hügel, Krater), schwebende Teile behalten ihren Abstand */
+            for (int i = 0; i < t.childCount; i++)
+            {
+                var c = t.GetChild(i); var lp = c.localPosition; var wp = t.TransformPoint(new Vector3(lp.x, 0, lp.z));
+                float g = t.InverseTransformPoint(pd.Surf(wp.normalized, 0)).y; c.localPosition = lp + new Vector3(0, g, 0);
+                int bi = wonderBits.IndexOf(c); if (bi >= 0 && bi < wonderBase.Count) wonderBase[bi] = c.localPosition;
             }
             foreach (var mr in wonder.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial && mr.sharedMaterial.IsKeywordEnabled("_EMISSION")) mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             /* beim ersten Besuch: Meldung */

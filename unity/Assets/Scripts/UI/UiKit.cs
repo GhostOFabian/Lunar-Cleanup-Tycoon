@@ -115,7 +115,7 @@ namespace LunarCleanup.UI
         }
         public static TextMeshProUGUI Text(Transform parent, string name, string txt, float size, Color col, bool display = false, FontStyles st = FontStyles.Normal, TextAlignmentOptions al = TextAlignmentOptions.Left)
         {
-            var rt = Rt(parent, name); var t = rt.gameObject.AddComponent<TextMeshProUGUI>(); t.font = display ? Display : Body; t.fontSize = size; t.color = col; t.text = txt; t.fontStyle = st; t.alignment = al;
+            var rt = Rt(parent, name); var t = rt.gameObject.AddComponent<LText>(); t.font = display ? Display : Body; t.fontSize = size; t.color = col; t.text = txt; t.fontStyle = st; t.alignment = al;
             t.textWrappingMode = TextWrappingModes.Normal; t.raycastTarget = false; t.overflowMode = TextOverflowModes.Truncate; return t;
         }
         public static Image Img(Transform parent, string name, Sprite s, Color col)
