@@ -64,7 +64,7 @@
 - Nachtoptik nur per Software-Rendering geprüft (Scheinwerfer, Lichtkegel sichtbar); auf echten Handys noch ungesehen. Der Wegfindungstest schwankt gelegentlich knapp über der Grenze (zeitabhängig).
 
 ## Nächste Schritte (Stand Build 27, 01.11.2026)
-0. Für morgen (Fabian 01.11., Build 33 sieht sonst perfekt aus): Meteorit am Boden zeigt ein schwarzes Quadrat (Brandfleck-Quad mit GlowTex ist nicht transparent auf dem Handy); Bohrturm/Erzbagger: der große graue Sockelkreis und die braune Achteck-Platte daneben sehen schlecht aus.
+0. Für morgen (Fabian 01.11.): vorbereitet, aber noch NICHT auf dem Mac übernommen/gebaut – Meteorit: Brandfleck als Sprite (Sprites/Default) und Glut als Partikel-Leuchten statt durchsichtigem Lit-Quad (schwarzes Quadrat); Bohrturm/Erzbagger: Fundament nur noch 2,1 m, schräg, aus Gestein in Bodenfarbe statt grauem 3,5-m-Teller; Erzader als Felsgruppe mit leuchtenden Adern (RockKit.OreMat) statt brauner Achteck-Platte. Nächster Schritt: Dateien (WorldView.cs, WorldView.Meteors.cs, RockKit.cs) auf den Mac, kompilieren, im Editor ansehen, Build 34.
 1. TestFlight-Upload und App-Store-Eintrag (Symbol, Screenshots, Datenschutz, Altersfreigabe) – braucht Fabians Apple-Entwicklerkonto.
 2. Konto-Speicher (Game Center/iCloud) anbinden – der Knopf in den Einstellungen ist da, die Anmeldung noch nicht.
 3. In-App-Käufe an den App Store anbinden (Angebote stehen in `Core/Platform.cs`).

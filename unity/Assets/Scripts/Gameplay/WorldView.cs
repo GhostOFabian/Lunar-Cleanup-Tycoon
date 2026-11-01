@@ -171,8 +171,13 @@ namespace LunarCleanup.Gameplay
                 // Fundament: steht auf dem höchsten Geländepunkt unter dem Bohrturm und reicht bis unter den tiefsten – keine Hügel ragen durch die Plattform
                 float hmax = pd.Height(cl.c), hmin = hmax; for (int k = 0; k < 16; k++) foreach (float rr in new[] { 1.8f, 3.5f }) { float a = k * Mathf.PI / 8; float h = pd.Height(pd.ToDir(cl, Mathf.Cos(a) * rr, Mathf.Sin(a) * rr)); hmax = Mathf.Max(hmax, h); hmin = Mathf.Min(hmin, h); }
                 bp.root.transform.position = cl.c * (pd.R + hmax);
-                if (hmax - hmin > .02f) { float dep = hmax - hmin + .3f; MeshKit.Cyl(bp.root.transform, MeshKit.Mat(GameData.Hex("#6b717c"), .05f, .2f), new Vector3(0, -dep / 2 + .02f, 0), 3.4f, 3.6f, dep, 28); } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
-                LcKit.Spawn("Ereignisse/erzader", bp.root.transform, new Vector3(r.bag ? 3.6f : -3.8f, -.05f, 1.2f), (r.cell * 37) % 360, ps.P.col0); /* Erzader neben dem Abbau (eigenes Modell) */
+                /* Fabian 01.11.: kein großer grauer Teller mehr – nur ein schmaler, schräger Sockel aus Gestein in der Bodenfarbe, gerade so groß wie das Modell */
+                if (hmax - hmin > .02f) { float dep = hmax - hmin + .3f; var fm = RockKit.Mat(RockKit.Tint(GameData.Dirt[ps.P.start].lightC * .8f)); var fd = MeshKit.Cyl(bp.root.transform, fm, new Vector3(0, -dep / 2 + .02f, 0), 2.1f, 2.1f + dep * .9f, dep, 24); var fr = fd.GetComponent<MeshRenderer>(); if (fr) fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                { /* Fabian 01.11.: Erzader als kleine Gruppe Felsbrocken mit leuchtenden Adern statt der braunen Achteck-Platte */
+                  var ore = RockKit.OreMat(ps.P.col0); var orng = new System.Random(r.cell); float ox = r.bag ? 3.4f : -3.6f;
+                  for (int q = 0; q < 4; q++) { float qs = q == 0 ? .9f : .35f + (float)orng.NextDouble() * .35f; float qa = (float)orng.NextDouble() * 6.283f, qd = q == 0 ? 0 : .7f + (float)orng.NextDouble() * .6f;
+                    var go = new GameObject("Erzader"); go.transform.SetParent(bp.root.transform, false); go.transform.localPosition = new Vector3(ox + Mathf.Cos(qa) * qd, -.08f * qs, 1.2f + Mathf.Sin(qa) * qd); go.transform.localScale = Vector3.one * qs * 1.4f; go.transform.localRotation = Quaternion.Euler(0, (float)orng.NextDouble() * 360, 0);
+                    go.AddComponent<MeshFilter>().sharedMesh = RockKit.Mesh(orng.Next(RockKit.Variants), q == 0); go.AddComponent<MeshRenderer>().sharedMaterial = ore; } }
                 rigViews.Add((bp, r));
             }
         }

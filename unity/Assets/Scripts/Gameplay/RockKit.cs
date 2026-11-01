@@ -105,6 +105,14 @@ namespace LunarCleanup.Gameplay
             var m = new Material(MeshKit.Mat(new Color(.22f, .19f, .17f), .1f, .25f)) { name = "Meteorit" }; m.SetTexture("_BaseMap", Tex());
             m.EnableKeyword("_EMISSION"); m.SetTexture("_EmissionMap", CrackTex()); m.SetColor("_EmissionColor", new Color(1f, .45f, .12f) * 3); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; return m;
         }
+        static readonly Dictionary<string, Material> ores = new Dictionary<string, Material>();
+        /// <summary>Gestein mit leuchtenden Erzadern in der Farbe des Planeten (für die Erzader neben Bohrturm und Bagger).</summary>
+        public static Material OreMat(Color vein)
+        {
+            string k = ColorUtility.ToHtmlStringRGB(vein); if (ores.TryGetValue(k, out var m) && m) return m;
+            m = new Material(MeshKit.Mat(new Color(.3f, .28f, .26f), .1f, .3f)) { name = "Erz " + k, enableInstancing = true }; m.SetTexture("_BaseMap", Tex());
+            m.EnableKeyword("_EMISSION"); m.SetTexture("_EmissionMap", CrackTex()); m.SetColor("_EmissionColor", new Color(vein.r, vein.g, vein.b) * 1.6f); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; ores[k] = m; return m;
+        }
         /// <summary>Gesteinsmaterial in einer Grundfarbe (je Farbe einmal, für GPU-Instancing).</summary>
         public static Material Mat(Color c)
         {
