@@ -119,7 +119,7 @@ namespace LunarCleanup.Gameplay
         GameObject teamGo; Light teamLight;
         void TeamFx()
         {
-            var t = ps.sv.team; if (t == null || t.d == Vector3.zero || MapMode) { if (teamGo) teamGo.SetActive(false); return; }
+            var t = ps.sv.team; if (t == null || t.d == Vector3.zero || t.mode == "home" || t.mode == "" || t.mode == null || MapMode) { /* Fabian 01.11.: geparkt sah er aus wie ein festgefahrenes Fahrzeug – zu sehen nur im Einsatz */ if (teamGo) teamGo.SetActive(false); return; }
             if (!teamGo)
             {
                 var vp = LcKit.Team(new Color(1f, .45f, .1f)) ?? Models.Vehicle(GameData.Veh["buggy"], new Color(1f, .45f, .1f)); teamGo = vp.root; teamGo.name = "Suchtrupp"; teamGo.transform.SetParent(vehRoot, false);

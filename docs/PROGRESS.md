@@ -195,3 +195,4 @@
 - Planetenmenü mit Reitern „Reisen“, „Neue Planeten“, „Sternenstaub“; Planeten nach Regionen, Sternenstaub-Boni nach Gruppen.
 - Browser: parallele Schleifen laufen im WebGL-Build nacheinander (`Core/Par.cs`), vorher blieb der Browser beim Laden hängen.
 - Startmenü (Spiel starten / Einstellungen / Beenden).
+- Build 16: Suchtrupp ist nur noch im Einsatz zu sehen (geparkt neben der Zentrale sah er aus wie ein festgefahrenes Fahrzeug).
