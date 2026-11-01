@@ -165,3 +165,13 @@
 ## Unity 0.20 (31.10.2026) – Browser-Build v=11
 - Ampeln stehen jetzt auf dem Dach jedes Gebäudes (als Teil des Gebäudes, wachsen bei Ausbaustufen mit). Dachfläche wird aus den Bauteilen im Gebäuderaum bestimmt; Schornsteine, Antennen und die Rakete werden umgangen (Startplatz: Ampel auf der Plattform neben der Rakete).
 - Test: Umschalt+F4 im Testmodus fotografiert jede Ampel der fertigen Mondbasis schräg von der Seite (BasisCheck/Ampeln, mit Höhenliste). Alle 8 geprüft.
+
+## Unity 0.21 (01.11.2026) – iPhone-App + Browser-Build v=12
+- iPhone-App läuft (Build über Menü „Lunar Cleanup → iPhone-Version bauen und aufs iPhone“, Personal Team, App-Icon aus `unity/Assets/Icons/AppIcon.png`).
+- Fabians eigene 3D-Modelle (147 Stück, `unity/Assets/Resources/LC`, Quelle `unity/Modelle_Quelle`): Gebäude, Bagger/Bohrturm, 10 Fahrzeuge + Suchtrupp, Drohnen, Sammelwagen, Bauplatz, Ampelköpfe, Wracks, Kometeneinschlag, Deko, Waren auf den Bändern, Bodenteile (GPU-Instancing), Laternen, Leuchtkristalle, Astronauten, Außenlager, Abkippgruben, Erzadern, Komet, Frachter. Kenney-Modelle liegen in `unity/Assets/_Archiv/Kenney` und werden nicht mehr geladen.
+- Förderbänder in Fabians Farben und Profil (Gurt mit Mitnehmern, Stützen und Wandanschlüsse als seine Modelle); Pipelines komplett unsichtbar im Boden.
+- Meteoritenschauer mit Animation (Glutschweif, Blitz, Staub, Vibration, Kamera-Ruckeln, glühender Brocken bis zur Reinigung); live meist im sichtbaren Bereich.
+- Spielstand-Code (kopieren/einfügen/rückgängig) in den Einstellungen.
+- iPhone-Playtest-Fixes: Tippen auf Gebäude (Touch-Position beim Loslassen), Ampeln als Masten neben den Gebäuden, blaue Basis-Ränder, helleres Fingerlicht, Kamera folgt der Putzstelle, weiter rauszoomen mit Atmosphäre, Fernlichter, Wrack-Absturz als Feuerball.
+- Editor-Fernsteuerung `Editor/RemoteCommands.cs` (Befehle über `Temp/claude_cmd.txt`).
+- Getestet im Editor (Mond, Mars, Meteoritenschauer, Frachter). Auf dem iPhone noch offen: Testliste 0.21.

@@ -20,12 +20,17 @@ namespace LunarCleanup.Gameplay
     {
         PlanetView planet; WorldView world; Hud hud; Camera cam;
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
+        /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
+        public static float ZoomReq = -1;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
         enum Mode { None, Wipe, Pan, Ui }
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
         GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos;
+        bool lastTouch; int followCell = -1; Vector2 followRef; // Touch-Ende merken; Kamera folgt der Parzelle, die gerade gereinigt wird
+        /// <summary>Bildschirm-Pixel je Layout-Punkt (iPhone ≈ 3, Browser ≈ 1): Tipp-Grenzen in echter Fingergröße statt fester Pixel.</summary>
+        static float U => Mathf.Max(1f, Mathf.Min(Screen.width / 390f, Screen.height / 844f));
 
         UniversalRenderPipelineAsset urpA; bool dailyDone, photo;
         void Awake()
@@ -70,9 +75,9 @@ namespace LunarCleanup.Gameplay
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
             hud.OnFocusQuest = FocusQuest; hud.OnPhoto = () => { photo = true; if (uiRoot) uiRoot.SetActive(false); }; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
-            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket();
+            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket(); Game.OnMeteors += cells => world.MeteorShower(cells);
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
-            { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 3.2f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 9; brushLight.color = new Color(.75f, 1f, .92f); brushLight.intensity = 0; }
+            { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 4.5f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 16; brushLight.color = new Color(1f, .96f, .88f); brushLight.intensity = 0; brushLight.shadows = LightShadows.None; }
             BuildPlanet();
         }
         void OnDestroy() { Game.OnPlanetChanged -= BuildPlanet; Game.OnFloat -= OnFloat; }
@@ -121,6 +126,8 @@ namespace LunarCleanup.Gameplay
 #endif
             if (!offlineRunning) Game.Step(dt);
             planet.Tick();
+            if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
+            Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam();
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
@@ -137,7 +144,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f4Key.wasPressedThisFrame && Application.isEditor) { if (kb.shiftKey.isPressed) StartCoroutine(AmpelShots("moon")); else StartCoroutine(BeltShots("moon")); }
             if (kb.f1Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(SkyShots());
-            if (kb.f3Key.wasPressedThisFrame) { var cs = Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Game.StartEvent(cs, "impact"); } /* Test: Kometeneinschlag */
+            if (kb.f3Key.wasPressedThisFrame) { var cs = Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Game.StartEvent(cs, kb.shiftKey.isPressed ? "wreck" : "impact"); } /* Test: F3 Kometeneinschlag, Umschalt+F3 Wrack-Absturz */
             if (kb.f2Key.wasPressedThisFrame && Application.isEditor) { string wd = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "../BasisCheck/Web")); System.IO.Directory.CreateDirectory(wd); string fn = System.IO.Path.Combine(wd, "web_" + System.DateTime.Now.ToString("HHmmss") + ".png"); ScreenCapture.CaptureScreenshot(fn, 2); Debug.Log("Lunar Cleanup: Webseiten-Foto " + fn); } /* F2: Bildschirmfoto mit HUD für die Webseite */
             if (kb.f9Key.wasPressedThisFrame) { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }
             if (kb.f10Key.wasPressedThisFrame && Game.Cur.P.storm != null) { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }
@@ -299,6 +306,7 @@ namespace LunarCleanup.Gameplay
             north = (north - cd * Vector3.Dot(north, cd)).normalized;
             var focus = cd * R; var pos = focus + (cd * Mathf.Cos(tilt) - north * Mathf.Sin(tilt)) * alt;
             cam.transform.position = pos; cam.transform.rotation = Quaternion.LookRotation(focus - pos, north * Mathf.Cos(tilt) + cd * Mathf.Sin(tilt));
+            if (WorldView.Shake > 0) cam.transform.position += (cam.transform.right * (Mathf.PerlinNoise(Time.time * 25, 0) - .5f) + cam.transform.up * (Mathf.PerlinNoise(0, Time.time * 25) - .5f)) * WorldView.Shake * Mathf.Clamp(alt * .03f, .3f, 4f); // Meteoriteneinschlag
         }
         void Pan(Vector2 delta)
         {
@@ -309,7 +317,7 @@ namespace LunarCleanup.Gameplay
             var axis = Vector3.Cross(cd, move.normalized); var q = Quaternion.AngleAxis(ang * Mathf.Rad2Deg, axis); cd = (q * cd).normalized; north = q * north;
         }
         void Twist(float deg) { if (Mathf.Abs(deg) < 1e-4f) return; north = Quaternion.AngleAxis(deg, cd) * north; }
-        void Zoom(float f) { float R = VP.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 2.6f); mapMode = altGoal > R * 1.5f; }
+        void Zoom(float f) { float R = VP.pd.R; altGoal = Mathf.Clamp(altGoal * f, 9, R * 4.5f); mapMode = altGoal > R * 1.5f; } /* weit raus: ganzer Planet mit Atmosphäre, Lichtern und Kometen */
         /// <summary>Tipp auf das Ziel: an die passende Stelle fliegen bzw. das passende Fenster öffnen.</summary>
         public void FocusQuest()
         {
@@ -357,7 +365,8 @@ namespace LunarCleanup.Gameplay
             }
             lastPinch = 0;
             bool pressed; Vector2 pos; int pid = -1;
-            if (touches.Count == 1) { pressed = true; pos = touches[0].screenPosition; pid = touches[0].touchId; }
+            if (touches.Count == 1) { pressed = true; pos = touches[0].screenPosition; pid = touches[0].touchId; lastTouch = true; }
+            else if (lastTouch) { pressed = false; pos = lastPos; lastTouch = false; } /* Finger gerade gehoben: letzte Fingerposition (auf dem iPhone gibt es keine Maus – vorher wurde bei (0,0) getippt) */
             else if (Mouse.current != null && (Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed) && mode == Mode.Wipe && Mouse.current.leftButton.isPressed)
             {
                 /* beim Wischen (linke Taste) zusätzlich rechts ziehen = Kamera drehen, der Wisch läuft weiter */
@@ -377,12 +386,12 @@ namespace LunarCleanup.Gameplay
             {
                 downPos = lastPos = pos; downT = Time.time; moved = false;
                 if (Hud.PointerOverUi(pid) || offlineRunning) { mode = Mode.Ui; return; }
-                if (!mapMode && Hit(pos, out var dir) && Game.CanClean(dir) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; }
+                if (!mapMode && Hit(pos, out var dir) && Game.CanClean(dir) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; }
                 else mode = Mode.Pan;
             }
             if (pressed)
             {
-                if ((pos - downPos).magnitude > 10) moved = true;
+                if ((pos - downPos).magnitude > 12 * U) moved = true;
                 if (mode == Mode.Wipe)
                 {
                     /* Am Bildschirmrand weiterwischen: der Planet dreht sich langsam mit, so erreichst du auch Stellen außerhalb des Bildes */
@@ -396,8 +405,9 @@ namespace LunarCleanup.Gameplay
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
-                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 2.4f * Mathf.Clamp01((WorldView.NightF - .2f) / .6f);
+                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
                         Sfx.Wipe(amt > 0);
+                        FollowWipe(dir, pos, dt);
                         if (amt > 0 && Random.value < .6f) { int c = Game.Cur.pd.CellOf(dir); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, 3); }
                     }
                 }
@@ -409,6 +419,20 @@ namespace LunarCleanup.Gameplay
             mode = Mode.None;
         }
         void EndWipe() { brush.SetActive(false); mode = Mode.None; Sfx.Wipe(false); }
+        /// <summary>Beim Putzen gleitet die Kamera sanft zur Parzelle, die gerade gereinigt wird; ist sie sauber, zur dreckigen Nachbarparzelle.
+        /// Die Zielparzelle wechselt nur, wenn der Finger wirklich weiterwischt – hält man still, wandert die Kamera nicht von selbst weiter.</summary>
+        void FollowWipe(Vector3 dir, Vector2 pos, float dt)
+        {
+            var ps = Game.Cur; var pd = ps.pd; int fc = pd.CellOf(dir);
+            if (followCell < 0) { followCell = fc; followRef = pos; }
+            if (fc != followCell && !ps.clean[fc] && (pos - followRef).magnitude > 40 * U) { followCell = fc; followRef = pos; }
+            if (ps.clean[followCell] && ps.act.ContainsKey(followCell) == false)
+            {
+                int nb = -1; float bd = -2; foreach (int n in pd.cells[followCell].nb) { if (ps.clean[n] || pd.cells[n].IsBase || !Game.Workable(ps, n)) continue; float d = Vector3.Dot(pd.cells[n].c, dir); if (d > bd) { bd = d; nb = n; } }
+                if (nb >= 0) { followCell = nb; followRef = pos; }
+            }
+            var to = pd.cells[followCell].c; float k = 1 - Mathf.Exp(-1.3f * dt); var n0 = cd; cd = Vector3.Slerp(cd, to, k).normalized; north = Quaternion.FromToRotation(n0, cd) * north;
+        }
 
         bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
 
@@ -430,6 +454,8 @@ namespace LunarCleanup.Gameplay
                 }
                 if (bc != null) { Game.HarvestCrystal(bc.id); return; }
             }
+            /* Wrack oder Einschlag antippen: Stand des Suchtrupps zeigen */
+            { var ep = Game.EventPlace(ps); if (ep.HasValue) { var sp = cam.WorldToScreenPoint(ps.pd.Surf(ep.Value, 1)); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < 50 * U) { var tt = Game.TeamText(ps); if (tt != null) { Game.Toast(tt.Replace(" · Tippen: hinsehen", "")); return; } } } }
             /* Gebäude im Bild antippen: Mittelpunkt und Rand der Grundfläche in Bildschirmpunkte umrechnen – trifft auch das Dach hoher Gebäude */
             {
                 string bb = null; float bs = 1e9f;
@@ -440,7 +466,7 @@ namespace LunarCleanup.Gameplay
                     foreach (float h in new[] { .5f, 2f })
                     {
                         var s0 = cam.WorldToScreenPoint(ps.pd.Surf(d0, h)); var s1 = cam.WorldToScreenPoint(ps.pd.Surf(d1, h)); if (s0.z <= 0) continue;
-                        float rad = Mathf.Max(28f, ((Vector2)s1 - (Vector2)s0).magnitude * 1.05f), dd = ((Vector2)s0 - pos).magnitude;
+                        float rad = Mathf.Max(30f * U, ((Vector2)s1 - (Vector2)s0).magnitude * 1.1f), dd = ((Vector2)s0 - pos).magnitude;
                         if (dd < rad && dd / rad < bs) { bs = dd / rad; bb = id; }
                     }
                 }

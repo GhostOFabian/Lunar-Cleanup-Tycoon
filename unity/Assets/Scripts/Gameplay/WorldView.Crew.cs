@@ -20,6 +20,7 @@ namespace LunarCleanup.Gameplay
             for (int i = 0; i < n; i++)
             {
                 var g = new GameObject("Astronaut"); g.transform.SetParent(baseRoot, false); var t = g.transform;
+                if (LcKit.Astronaut(t)) { var c0 = new Crew { t = t, wait = Random.Range(0f, 3f) }; NewTrip(c0, ids); c0.s = Random.Range(0f, c0.len); crew.Add(c0); continue; } /* eigenes Modell (Fabian) */
                 MeshKit.Cyl(t, suit, new Vector3(0, .62f, 0), .16f, .18f, .5f, 10);          // Rumpf
                 MeshKit.Ball(t, suit, new Vector3(0, 1.02f, 0), .3f);                        // Helm
                 MeshKit.Box(t, visor, new Vector3(0, 1.03f, .11f), new Vector3(.2f, .12f, .08f)); // Visier
@@ -69,7 +70,7 @@ namespace LunarCleanup.Gameplay
                 if (!c.t) continue; c.t.gameObject.SetActive(true);
                 if (c.wait > 0) { c.wait -= Time.deltaTime; } else { c.s += Time.deltaTime * 1.3f; if (c.s >= c.len) { c.wait = Random.Range(2f, 6f); NewTrip(c, ids); } }
                 var p = Vector2.Lerp(c.a, c.b, Mathf.Clamp01(c.s / c.len)); var dir = pd.PlanDir(p); var fwd = pd.PlanDir(p + (c.b - c.a).normalized * .5f) - dir;
-                c.t.position = pd.Surf(dir, 0); c.t.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(fwd, dir).normalized + dir * 1e-4f, dir);
+                c.t.position = pd.Surf(dir, c.legL || c.wait > 0 ? 0 : Mathf.Abs(Mathf.Sin(Time.time * 7 + c.len)) * .08f); /* Modell ohne Beine: wippt beim Gehen */ c.t.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(fwd, dir).normalized + dir * 1e-4f, dir);
                 float sw = c.wait > 0 ? 0 : Mathf.Sin(Time.time * 7 + c.len) * 25; if (c.legL) c.legL.localRotation = Quaternion.Euler(sw, 0, 0); if (c.legR) c.legR.localRotation = Quaternion.Euler(-sw, 0, 0);
             }
         }

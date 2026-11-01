@@ -147,7 +147,8 @@ namespace LunarCleanup.Core
         {
             var pd = ps.pd; bool Ok(int i) => ps.clean[i] && !pd.cells[i].IsBase && !pd.cells[i].Wet && !(ps.act.TryGetValue(i, out var a) && a.sum > pd.cells[i].nIn * .5f);
             var c = new List<int>(); for (int i = 0; i < pd.N; i++) if (Ok(i)) c.Add(i); if (c.Count == 0) return;
-            int id = c[fr.Next(c.Count)]; bool done = IsDone(ps.pid); int want = done ? 4 + fr.Next(4) : 2 + fr.Next(3); var patch = new List<int> { id };
+            int id = c[fr.Next(c.Count)]; bool done = IsDone(ps.pid);
+            if (!Offline && ps.pid == S.planet && ViewDir.sqrMagnitude > .5f && fr.NextDouble() < .8) { var near = c.Where(i => Vector3.Dot(pd.cells[i].c.normalized, ViewDir) > ViewCos).ToList(); if (near.Count > 0) id = near[fr.Next(near.Count)]; else id = c.OrderByDescending(i => Vector3.Dot(pd.cells[i].c.normalized, ViewDir)).First(); } /* live meist dort, wo man hinschaut – sonst verpasst man den Schauer */ int want = done ? 4 + fr.Next(4) : 2 + fr.Next(3); var patch = new List<int> { id };
             for (int g = 0; g < want * 3 && patch.Count < want; g++) { int from = patch[fr.Next(patch.Count)]; var nb = pd.cells[from].nb.Where(j => Ok(j) && !patch.Contains(j)).ToList(); if (nb.Count > 0) patch.Add(nb[fr.Next(nb.Count)]); }
             int dt0 = MeteorType(ps); var D = GameData.Dirt[dt0]; int G = GameData.GRID;
             foreach (int cid in patch)
@@ -163,7 +164,7 @@ namespace LunarCleanup.Core
                 }
                 ps.dirtyCells.Add(cid);
             }
-            if (!Offline && ps.pid == S.planet) { foreach (int cid in patch) OnBoom?.Invoke(pd.cells[cid].c); Toast((patch.Count >= 4 ? "Großer " : "") + "Meteoritenschauer: " + patch.Count + " Parzellen – die Fahrzeuge räumen auf", "bad"); }
+            if (!Offline && ps.pid == S.planet) { if (OnMeteors != null) OnMeteors(patch); else foreach (int cid in patch) OnBoom?.Invoke(pd.cells[cid].c); Toast((patch.Count >= 4 ? "Großer " : "") + "Meteoritenschauer: " + patch.Count + " Parzellen – die Fahrzeuge räumen auf", "bad"); }
         }
         static void DirtyAt(Act a, float x, float y, float r, float s)
         {

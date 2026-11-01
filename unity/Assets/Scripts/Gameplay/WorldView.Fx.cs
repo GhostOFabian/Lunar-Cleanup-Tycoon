@@ -1,5 +1,5 @@
 // Sichtbare Effekte (nur Optik): Raketenflammen, Staub an reinigenden Fahrzeugen, Absturzwrack und Kometenschweif bei Ereignissen,
-// Nordlichter, die ab und zu über den Himmel ziehen, und Ampel-Lampen über den Gebäuden.
+// Nordlichter, die ab und zu über den Himmel ziehen, und Ampel-Masten neben den Gebäuden.
 using System.Collections.Generic;
 using System.Linq;
 using LunarCleanup.Core;
@@ -20,7 +20,7 @@ namespace LunarCleanup.Gameplay
         void UpdateFx()
         {
             if (ps == null) return;
-            RocketFlame(); VehicleDust(); EventFx(); TeamFx(); Aurora(); Ampeln();
+            RocketFlame(); VehicleDust(); EventFx(); TeamFx(); Aurora(); Ampeln(); SpaceFx();
         }
 
         // ---------- Raketenflammen beim Start und bei der Landung ----------
@@ -70,9 +70,9 @@ namespace LunarCleanup.Gameplay
         void EventFx()
         {
             var ev = ps.sv.ev; bool wOn = ev != null && (ev.key == "wreck" || ev.key == "impact") && ev.t > 0 && ev.cell >= 0 && ev.cell < pd.N;
-            if (wOn && (!wreck || wreckCell != ev.cell)) { if (wreck) Destroy(wreck); wreck = ev.key == "impact" ? BuildImpact(ev.cell) : BuildWreck(ev.cell); wreckCell = ev.cell; }
+            if (wOn && (!wreck || wreckCell != ev.cell)) { if (wreck) Destroy(wreck); wreck = ev.key == "impact" ? BuildImpact(ev.cell) : BuildWreck(ev.cell); wreckCell = ev.cell; var def = Game.EvDef(ev.key); if (def != null && ev.t > def.dur - 4) StartCrash(ev.cell, ev.key == "impact"); /* frisch: Anflug zeigen */ }
             if (!wOn && wreck) { EmitDust(wreck.transform.position.normalized, new Color(.8f, .75f, .7f), 20); Destroy(wreck); wreck = null; wreckCell = -1; }
-            if (wreck) { wreck.SetActive(!MapMode); if (!MapMode && Random.value < .3f) dust.Emit(new ParticleSystem.EmitParams { position = wreck.transform.position + wreck.transform.up * 1.2f, velocity = wreck.transform.up * 1.5f + Random.insideUnitSphere * .3f, startColor = new Color(.35f, .33f, .32f, .5f), startSize = Random.Range(.5f, 1f), startLifetime = 2.5f, applyShapeToPosition = false }, 1); }
+            if (wreck) { wreck.SetActive(!MapMode && !Crashing); if (!MapMode && !Crashing && Random.value < .3f) dust.Emit(new ParticleSystem.EmitParams { position = wreck.transform.position + wreck.transform.up * 1.2f, velocity = wreck.transform.up * 1.5f + Random.insideUnitSphere * .3f, startColor = new Color(.35f, .33f, .32f, .5f), startSize = Random.Range(.5f, 1f), startLifetime = 2.5f, applyShapeToPosition = false }, 1); }
 
             bool cOn = ev != null && ev.key == "comet" && ev.t > 0;
             if (cOn && !comet) comet = BuildComet();
@@ -90,6 +90,7 @@ namespace LunarCleanup.Gameplay
         {
             var cl = pd.cells[cell]; var g = new GameObject("Absturzwrack"); g.transform.SetParent(transform, false);
             var d = cl.c; g.transform.position = pd.Surf(d, -.15f); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d)) * Quaternion.Euler(0, cell * 37 % 360, 0);
+            if (LcKit.Event(cell % 3 == 0 ? "wrack_satellit" : "wrack_raumschiff", g.transform)) return g; // eigenes Modell (jedes dritte Wrack ist ein Satellit)
             var hull = MeshKit.Mat(new Color(.62f, .64f, .68f), .6f, .45f); var dark = MeshKit.Mat(new Color(.16f, .15f, .15f), .2f, .2f); var gold = MeshKit.Mat(new Color(.95f, .72f, .25f), .8f, .7f); var panel = MeshKit.Mat(new Color(.12f, .2f, .45f), .5f, .8f);
             var body = MeshKit.Cyl(g.transform, hull, new Vector3(0, .7f, 0), .9f, 1.1f, 2.2f, 12, new Vector3(68, 0, 12)); // umgekippter Rumpf
             MeshKit.Cyl(g.transform, dark, new Vector3(1.3f, .45f, .2f), .5f, .7f, .9f, 10, new Vector3(70, 0, 20));    // verkohltes Triebwerk
@@ -107,6 +108,7 @@ namespace LunarCleanup.Gameplay
             var d = cl.c; g.transform.position = pd.Surf(d, -.1f); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d)) * Quaternion.Euler(0, cell * 53 % 360, 0);
             var scorch = MeshKit.Part(g.transform, MeshKit.Quad, Glow(new Color(.04f, .03f, .03f), .8f), new Vector3(0, .06f, 0), new Vector3(9, 9, 1), new Vector3(90, 0, 0)); NoShadow(scorch);
             var hot = MeshKit.Part(g.transform, MeshKit.Quad, Glow(new Color(1f, .45f, .15f), .55f), new Vector3(0, .08f, 0), new Vector3(3.5f, 3.5f, 1), new Vector3(90, 0, 0)); NoShadow(hot);
+            if (LcKit.Event("kometeneinschlag", g.transform)) { var lg0 = new GameObject("Glut"); lg0.transform.SetParent(g.transform, false); lg0.transform.localPosition = new Vector3(0, 1.5f, 0); var L0 = lg0.AddComponent<Light>(); L0.type = LightType.Point; L0.color = new Color(.5f, .8f, 1f); L0.range = 10; L0.intensity = 2.5f; L0.shadows = LightShadows.None; return g; }
             var ice = MeshKit.Mat(new Color(.55f, .8f, 1f), .1f, .9f, new Color(.3f, .7f, 1f) * 1.6f); var rock = MeshKit.Mat(new Color(.18f, .17f, .2f), .2f, .3f);
             MeshKit.Ball(g.transform, rock, new Vector3(0, .35f, 0), 1.4f).transform.localScale = new Vector3(1.6f, 1.1f, 1.3f); // Kometenkern
             for (int i = 0; i < 9; i++) { float an = i * .7f + cell, r = 1.2f + (i % 4) * .7f; var f = MeshKit.Box(g.transform, i % 3 == 0 ? rock : ice, new Vector3(Mathf.Cos(an) * r, .2f, Mathf.Sin(an) * r), new Vector3(.35f, .5f + (i % 3) * .2f, .3f), new Vector3(20 * (i % 3), i * 41, 15)); NoShadow(f); } // leuchtende Eisbrocken
@@ -120,7 +122,7 @@ namespace LunarCleanup.Gameplay
             var t = ps.sv.team; if (t == null || t.d == Vector3.zero || MapMode) { if (teamGo) teamGo.SetActive(false); return; }
             if (!teamGo)
             {
-                var vp = Models.Vehicle(GameData.Veh["buggy"], new Color(1f, .45f, .1f)); teamGo = vp.root; teamGo.name = "Suchtrupp"; teamGo.transform.SetParent(vehRoot, false);
+                var vp = LcKit.Team(new Color(1f, .45f, .1f)) ?? Models.Vehicle(GameData.Veh["buggy"], new Color(1f, .45f, .1f)); teamGo = vp.root; teamGo.name = "Suchtrupp"; teamGo.transform.SetParent(vehRoot, false);
                 var mast = MeshKit.Cyl(teamGo.transform, MeshKit.Mat(new Color(.3f, .3f, .32f), .6f, .4f), new Vector3(0, 1.6f, -.3f), .03f, .03f, 1.2f, 6);
                 var lamp = MeshKit.Ball(teamGo.transform, MeshKit.Mat(new Color(1f, .5f, .1f), 0, .5f, new Color(1f, .45f, .1f) * 3), new Vector3(0, 2.25f, -.3f), .22f); NoShadow(lamp); // Rundumleuchte
                 var lg = new GameObject("Licht"); lg.transform.SetParent(teamGo.transform, false); lg.transform.localPosition = new Vector3(0, 2.3f, -.3f); teamLight = lg.AddComponent<Light>(); teamLight.type = LightType.Point; teamLight.color = new Color(1f, .5f, .15f); teamLight.range = 7; teamLight.shadows = LightShadows.None;
@@ -182,7 +184,7 @@ namespace LunarCleanup.Gameplay
             }
         }
 
-        // ---------- Ampel-Lampen über den Gebäuden ----------
+        // ---------- Ampel-Masten neben den Gebäuden ----------
         readonly Dictionary<string, (GameObject go, Material mat)> ampel = new Dictionary<string, (GameObject, Material)>(); int ampelVer = -1; float ampelT;
         static readonly string[] AmpelIds = { "u1", "roh", "presse", "schmelze", "raff", "prod", "sell", "energy" };
         void Ampeln()
@@ -197,13 +199,20 @@ namespace LunarCleanup.Gameplay
                 if (!blds.TryGetValue(id, out var bp) || !bp.root) continue;
                 if (!ampel.TryGetValue(id, out var a) || !a.go)
                 {
-                    if (!RoofSpot(bp, out var roof)) continue;
-                    var g = new GameObject("Ampel " + id); g.transform.SetParent(bp.root.transform, false); g.transform.localPosition = roof; g.transform.localRotation = Quaternion.identity; /* sitzt mitten auf dem Dach */
-                    var sc = bp.root.transform.lossyScale; g.transform.localScale = new Vector3(1 / Mathf.Max(.01f, sc.x), 1 / Mathf.Max(.01f, sc.y), 1 / Mathf.Max(.01f, sc.z)); // Gebäudestufen strecken das Gebäude – die Ampel nicht
-                    MeshKit.Box(g.transform, MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f), new Vector3(0, .12f, 0), new Vector3(.9f, .24f, .9f)); // Gehäuse
+                    if (!SideSpot(bp, out var spot, out float bh)) continue;
+                    /* Ampelmast neben dem Gebäude (an einer freien Ecke, auf dem Boden) – gut sichtbar, nicht auf oder im Dach */
+                    var g = new GameObject("Ampel " + id); g.transform.SetParent(bp.root.transform, false); g.transform.localPosition = spot; g.transform.localRotation = Quaternion.identity;
+                    var sc = bp.root.transform.lossyScale; g.transform.localScale = new Vector3(1 / Mathf.Max(.01f, sc.x), 1 / Mathf.Max(.01f, sc.y), 1 / Mathf.Max(.01f, sc.z)); // ab hier Meter, egal wie groß das Gebäude ist
+                    float ph = Mathf.Clamp(bh * .75f, 2.6f, 4.6f); var dark = MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f);
+                    MeshKit.Box(g.transform, dark, new Vector3(0, .06f, 0), new Vector3(.7f, .12f, .7f)); // Fußplatte
+                    MeshKit.Cyl(g.transform, dark, new Vector3(0, ph / 2, 0), .07f, .09f, ph, 10); // Mast
                     var mat = MeshKit.Mat(Color.gray, 0, .6f, Color.gray); mat = new Material(mat);
-                    var ball = MeshKit.Ball(g.transform, mat, new Vector3(0, .52f, 0), .75f); NoShadow(ball);
-                    var halo = MeshKit.Part(g.transform, MeshKit.Quad, Glow(Color.white, .6f), new Vector3(0, .52f, 0), new Vector3(2.6f, 2.6f, 1), Vector3.zero); NoShadow(halo); halo.AddComponent<Billboard>(); halo.name = "Schein";
+                    if (!LcKit.AmpelHead(g.transform, new Vector3(0, ph, 0), mat)) // eigenes Ampelmodell auf dem Mast, sonst wie bisher
+                    {
+                        MeshKit.Box(g.transform, dark, new Vector3(0, ph + .1f, 0), new Vector3(.8f, .2f, .8f)); // Gehäuse unter der Lampe
+                        var ball = MeshKit.Ball(g.transform, mat, new Vector3(0, ph + .55f, 0), .75f); NoShadow(ball);
+                    }
+                    var halo = MeshKit.Part(g.transform, MeshKit.Quad, Glow(Color.white, .6f), new Vector3(0, ph + .55f, 0), new Vector3(2.6f, 2.6f, 1), Vector3.zero); NoShadow(halo); halo.AddComponent<Billboard>(); halo.name = "Schein";
                     a = (g, mat); ampel[id] = a;
                 }
                 int l = lv.TryGetValue(id, out int x) ? x : -1; Color c = l == 2 ? new Color(1f, .25f, .2f) : l == 1 ? new Color(1f, .78f, .2f) : l == 0 ? new Color(.25f, 1f, .55f) : new Color(.5f, .55f, .6f);
@@ -213,6 +222,24 @@ namespace LunarCleanup.Gameplay
             }
         }
         void Pulse() { }
+        /// <summary>Stellplatz für den Ampelmast neben dem Gebäude: Ecke der Grundfläche (Gebäuderaum), 0,8 m nach außen versetzt.
+        /// bh = Gebäudehöhe in Metern.</summary>
+        static bool SideSpot(Models.BuildingParts bp, out Vector3 spot, out float bh)
+        {
+            spot = Vector3.zero; bh = 0; var root = bp.root.transform; Bounds all = default; bool have = false;
+            foreach (var r in bp.root.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (bp.rocket && r.transform.IsChildOf(bp.rocket)) continue; var mf = r.GetComponent<MeshFilter>(); if (!mf || !mf.sharedMesh) continue;
+                if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;
+                var lb = mf.sharedMesh.bounds; var m = root.worldToLocalMatrix * r.transform.localToWorldMatrix;
+                for (int i = 0; i < 8; i++) { var q = m.MultiplyPoint3x4(lb.center + Vector3.Scale(lb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1))); if (!have) { all = new Bounds(q, Vector3.zero); have = true; } else all.Encapsulate(q); }
+            }
+            if (!have) return false;
+            var sc = root.lossyScale; float ox = .8f / Mathf.Max(.01f, sc.x), oz = .8f / Mathf.Max(.01f, sc.z);
+            bh = all.max.y * sc.y;
+            /* feste Ecke (+x, −z): Bandanschlüsse liegen in der Wandmitte, Ecken bleiben frei */
+            spot = new Vector3(all.max.x + ox, 0, all.min.z - oz); return true;
+        }
         /// <summary>Dachmitte im Gebäude-Koordinatensystem: Kasten jedes Bauteils im Gebäuderaum (nicht in Weltachsen, sonst zu groß), Mitte der Grundfläche,
         /// höchste breite Fläche dort; ragt etwas hinein (Rakete, Schornstein, Antenne), rückt die Ampel in Ringen nach außen, bis sie frei steht.</summary>
         static bool RoofSpot(Models.BuildingParts bp, out Vector3 roof)

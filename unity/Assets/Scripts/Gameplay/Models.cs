@@ -1,4 +1,5 @@
-// Gebäude- und Fahrzeugmodelle, per Code gebaut. Gleiche Form-Idee wie im Browser, aber mit mehr Details:
+// Gebäude- und Fahrzeugmodelle. Reihenfolge: eigene Modelle (LcKit, Resources/LC) → Kenney (Kit, liegt im Archiv) → hier per Code gebaut.
+// Per Code gebaut: Gleiche Form-Idee wie im Browser, aber mit mehr Details:
 // Kanten, Paneele, Fenster, Antennen, Leuchten und Planeten-Akzentfarbe.
 using LunarCleanup.Core;
 using UnityEngine;
@@ -16,6 +17,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Gebäude in Modellkoordinaten: x = Plan-x, z = −Plan-y, y nach oben. Grundfläche ~ Radius fp.</summary>
         public static BuildingParts Building(string id, float fp, Color acc, Color acc2)
         {
+            var lb = LcKit.Building(id, fp, acc, acc2); if (lb != null) return lb; // eigene Modelle (Resources/LC)
             var kb = Kit.Building(id, fp, acc); if (kb != null) return kb;
             var bp = new BuildingParts(); var g = new GameObject(id); bp.root = g; var t = g.transform;
             Material white = M(Hex("#dfe5ee"), .1f, .55f), light = M(Hex("#c4ccd8"), .2f, .5f), dark = M(Hex("#3a4150"), .5f, .45f), steel = M(Hex("#8a93a3"), .8f, .6f),
@@ -158,7 +160,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Außenlager: Silo mit Trichter, zwei Andockplätze, Pumpenhaus mit Pipeline-Anschluss.</summary>
         public static BuildingParts Outpost(Color acc)
         {
-            var ko = Kit.Outpost(acc); if (ko != null) return ko;
+            var lo = LcKit.Outpost(acc); if (lo != null) return lo; var ko = Kit.Outpost(acc); if (ko != null) return ko;
             var bp = new BuildingParts(); var g = new GameObject("Außenlager"); bp.root = g; var t = g.transform;
             Material W = M(Hex("#d9dee6"), .35f, .55f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
             MeshKit.Cyl(t, Pad, new Vector3(0, .06f, 0), 4.2f, 4.4f, .12f, 32);
@@ -174,6 +176,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Bohrturm (Gittermast mit Pumpenkopf) oder Erzbagger (Schaufelrad auf Raupen).</summary>
         public static BuildingParts Rig(bool bag, Color acc)
         {
+            var lr = LcKit.Rig(bag, acc); if (lr != null) return lr;
             var kr = Kit.Rig(bag, acc); if (kr != null) return kr;
             var bp = new BuildingParts(); var g = new GameObject(bag ? "Erzbagger" : "Bohrturm"); bp.root = g; var t = g.transform;
             Material D = M(Hex("#2b313c"), .4f, .4f), S = M(Hex("#8a93a3"), .7f, .5f), A = M(acc, .3f, .55f), Pad = M(Hex("#3a414d"), .2f, .35f);
@@ -201,6 +204,7 @@ namespace LunarCleanup.Gameplay
 
         public static GameObject Site(float fp)
         {
+            var ls = LcKit.Site(fp); if (ls != null) return ls;
             var g = new GameObject("Bauplatz"); var t = g.transform; var gold = MeshKit.Glow(Hex("#ffbf4d"), 1.6f);
             for (int k = 0; k < 12; k++) MeshKit.Box(t, gold, Quaternion.Euler(0, k * 30, 0) * new Vector3(Mathf.Min(fp, 2.2f), .06f, 0), new Vector3(.18f, .06f, .9f), new Vector3(0, k * 30, 0));
             return g;
@@ -210,6 +214,7 @@ namespace LunarCleanup.Gameplay
 
         public static VehicleParts Vehicle(VehDef T, Color acc)
         {
+            var lv = LcKit.Vehicle(T, acc); if (lv != null) return lv;
             var kv = Kit.Vehicle(T, acc); if (kv != null) return kv;
             var vp = new VehicleParts(); var g = new GameObject(T.name); vp.root = g; var t = g.transform;
             float s = T.size == "s" ? .8f : T.size == "m" ? 1.15f : 1.55f; if (T.key == "staubi") s = .6f;
@@ -244,6 +249,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Transportdrohne: flacher Körper, vier Ausleger mit Rotoren, Frachtkorb darunter, Positionslichter.</summary>
         public static DroneParts Drone(Color acc, bool heavy = false)
         {
+            var ld = LcKit.Drone(acc, heavy); if (ld != null) return ld;
             var kd = Kit.Drone(acc, heavy); if (kd != null) return kd;
             var dp = new DroneParts(); var g = new GameObject("Drohne"); dp.root = g; var t = g.transform;
             Material B = M(Hex("#e6eaf0"), .4f, .65f), D = M(Hex("#2b313c"), .3f, .4f), A = M(acc, .3f, .55f), P = MeshKit.Mat(Hex("#20242b"), .1f, .3f);
@@ -267,6 +273,7 @@ namespace LunarCleanup.Gameplay
 
         public static GameObject Cart()
         {
+            var lc = LcKit.Cart(); if (lc != null) return lc;
             var kc = Kit.Cart(GameData.Hex("#ffbf4d")); if (kc != null) return kc;
             var g = new GameObject("Sammelwagen"); var t = g.transform;
             Material Y = M(Hex("#ffbf4d"), .3f, .55f), D = M(Hex("#2b313c"), .3f, .4f), L = MeshKit.Glow(Hex("#6ff2d2"), 3f);

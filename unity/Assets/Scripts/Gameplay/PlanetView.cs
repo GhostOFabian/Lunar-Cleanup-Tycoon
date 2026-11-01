@@ -100,7 +100,7 @@ namespace LunarCleanup.Gameplay
         }
 
         /* Fugen: dezent statt knallig – helle Stahlfuge an der Basis, warmes Bernstein an putzbaren Parzellen, Rot bei Meteoritenstaub */
-        static readonly Color BaseLine = new Color(.66f, .7f, .76f), FrontLine = new Color(1f, .74f, .38f), MeteorLine = new Color(1f, .42f, .3f);
+        static readonly Color BaseLine = new Color(.22f, .58f, 1f) /* Basis: kräftiges Blau, damit man das Basisgelände sofort erkennt */, FrontLine = new Color(1f, .74f, .38f), MeteorLine = new Color(1f, .42f, .3f);
         const float PAD = 1.5f / 64f; // Rand je Feld in der Textur, damit beim Verkleinern (Mipmaps) keine Nachbarfarben durchscheinen
         static float EdgeA(float ed, float w) => ed >= w ? 0 : ed <= w * .4f ? 1 : 1 - Mathf.SmoothStep(0, 1, (ed - w * .4f) / (w * .6f));
 
@@ -186,7 +186,7 @@ namespace LunarCleanup.Gameplay
                     {
                         float gx = Mathf.Abs(Mathf.Repeat(x + id * .37f, 2.4f) - 1.2f), gy = Mathf.Abs(Mathf.Repeat(y, 2.4f) - 1.2f);
                         int pid0 = Mathf.FloorToInt((x + id * .37f) / 2.4f) * 31 + Mathf.FloorToInt(y / 2.4f); col = Color.Lerp(b0, b1, .5f + .14f * Noise(x * .3f, y * .3f, id) + .1f * (Hash(pid0, id, 5) - .5f)) * (.97f + .05f * Noise(x * 1.7f, y * 1.7f, 2)); /* ruhige Platten, jede leicht anders getönt */ if (gx > 1.12f || gy > 1.12f) col *= .84f; else if (gx > 1.02f || gy > 1.02f) col *= 1.06f; // Fuge mit hellerer Kante
-                        float ea = EdgeA(ed, edgeW); if (ea > 0) col = Color.Lerp(col, BaseLine, ea * .6f);
+                        float ea = EdgeA(ed, edgeW * 1.5f); if (ea > 0) col = Color.Lerp(col, BaseLine * 1.15f, ea * .92f);
                     }
                     else
                     {

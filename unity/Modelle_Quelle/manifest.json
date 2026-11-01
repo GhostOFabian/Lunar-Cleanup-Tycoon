@@ -1,0 +1,4448 @@
+{
+ "spiel": "Lunar Cleanup Tycoon",
+ "einheit": "Meter",
+ "achsen": "Y oben, Vorderseite +Z (glb/obj)",
+ "modelle": [
+  {
+   "id": "hq",
+   "name": "Hauptstation",
+   "gruppe": "Gebaeude",
+   "fp": 3.6,
+   "dateien": [
+    "glb/Gebaeude/hq.glb",
+    "obj/Gebaeude/hq.obj",
+    "fbx/Gebaeude/hq.fbx"
+   ],
+   "groesse_m": {
+    "breite": 7.5,
+    "tiefe": 7.5,
+    "hoehe": 3.99
+   },
+   "dreiecke": 3362,
+   "teile": [
+    {
+     "name": "hq_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "roh",
+   "name": "Rohstofflager",
+   "gruppe": "Gebaeude",
+   "fp": 3.4,
+   "dateien": [
+    "glb/Gebaeude/roh.glb",
+    "obj/Gebaeude/roh.obj",
+    "fbx/Gebaeude/roh.fbx"
+   ],
+   "groesse_m": {
+    "breite": 7.1,
+    "tiefe": 7.1,
+    "hoehe": 6.29
+   },
+   "dreiecke": 4178,
+   "teile": [
+    {
+     "name": "roh_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sell",
+   "name": "Verkaufsstation",
+   "gruppe": "Gebaeude",
+   "fp": 3.3,
+   "dateien": [
+    "glb/Gebaeude/sell.glb",
+    "obj/Gebaeude/sell.obj",
+    "fbx/Gebaeude/sell.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.9,
+    "tiefe": 6.9,
+    "hoehe": 6.84
+   },
+   "dreiecke": 5576,
+   "teile": [
+    {
+     "name": "sell_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "sell_Rakete",
+     "drehpunkt_yoben": [
+      0,
+      0.61,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "prod",
+   "name": "Produktlager",
+   "gruppe": "Gebaeude",
+   "fp": 2.9,
+   "dateien": [
+    "glb/Gebaeude/prod.glb",
+    "obj/Gebaeude/prod.obj",
+    "fbx/Gebaeude/prod.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.1,
+    "tiefe": 6.1,
+    "hoehe": 4.66
+   },
+   "dreiecke": 2034,
+   "teile": [
+    {
+     "name": "prod_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "u1",
+   "name": "Kleine Entladestation",
+   "gruppe": "Gebaeude",
+   "fp": 2.6,
+   "dateien": [
+    "glb/Gebaeude/u1.glb",
+    "obj/Gebaeude/u1.obj",
+    "fbx/Gebaeude/u1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.5,
+    "tiefe": 5.5,
+    "hoehe": 2.44
+   },
+   "dreiecke": 1990,
+   "teile": [
+    {
+     "name": "u1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "u2",
+   "name": "Industrielle Entladestation",
+   "gruppe": "Gebaeude",
+   "fp": 2.9,
+   "dateien": [
+    "glb/Gebaeude/u2.glb",
+    "obj/Gebaeude/u2.obj",
+    "fbx/Gebaeude/u2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.1,
+    "tiefe": 6.1,
+    "hoehe": 2.84
+   },
+   "dreiecke": 2362,
+   "teile": [
+    {
+     "name": "u2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "u3",
+   "name": "Zentrale Entladeanlage",
+   "gruppe": "Gebaeude",
+   "fp": 3.4,
+   "dateien": [
+    "glb/Gebaeude/u3.glb",
+    "obj/Gebaeude/u3.obj",
+    "fbx/Gebaeude/u3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 7.1,
+    "tiefe": 7.1,
+    "hoehe": 3.28
+   },
+   "dreiecke": 2778,
+   "teile": [
+    {
+     "name": "u3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "presse",
+   "name": "Staubpresse",
+   "gruppe": "Gebaeude",
+   "fp": 2.4,
+   "dateien": [
+    "glb/Gebaeude/presse.glb",
+    "obj/Gebaeude/presse.obj",
+    "fbx/Gebaeude/presse.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.1,
+    "tiefe": 5.1,
+    "hoehe": 4.44
+   },
+   "dreiecke": 1618,
+   "teile": [
+    {
+     "name": "presse_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "presse_Kolben",
+     "drehpunkt_yoben": [
+      0,
+      3.26,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmelze",
+   "name": "Schmelzanlage",
+   "gruppe": "Gebaeude",
+   "fp": 2.2,
+   "dateien": [
+    "glb/Gebaeude/schmelze.glb",
+    "obj/Gebaeude/schmelze.obj",
+    "fbx/Gebaeude/schmelze.fbx"
+   ],
+   "groesse_m": {
+    "breite": 4.7,
+    "tiefe": 4.7,
+    "hoehe": 5.21
+   },
+   "dreiecke": 2652,
+   "teile": [
+    {
+     "name": "schmelze_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "raff",
+   "name": "Hochleistungsraffinerie",
+   "gruppe": "Gebaeude",
+   "fp": 2.4,
+   "dateien": [
+    "glb/Gebaeude/raff.glb",
+    "obj/Gebaeude/raff.obj",
+    "fbx/Gebaeude/raff.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.1,
+    "tiefe": 5.1,
+    "hoehe": 4.21
+   },
+   "dreiecke": 7256,
+   "teile": [
+    {
+     "name": "raff_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "energy",
+   "name": "Energiezentrale",
+   "gruppe": "Gebaeude",
+   "fp": 4.3,
+   "dateien": [
+    "glb/Gebaeude/energy.glb",
+    "obj/Gebaeude/energy.obj",
+    "fbx/Gebaeude/energy.fbx"
+   ],
+   "groesse_m": {
+    "breite": 8.9,
+    "tiefe": 8.9,
+    "hoehe": 2.49
+   },
+   "dreiecke": 2060,
+   "teile": [
+    {
+     "name": "energy_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rtg",
+   "name": "Radioisotopen-Generator",
+   "gruppe": "Gebaeude",
+   "fp": 1.9,
+   "dateien": [
+    "glb/Gebaeude/rtg.glb",
+    "obj/Gebaeude/rtg.obj",
+    "fbx/Gebaeude/rtg.fbx"
+   ],
+   "groesse_m": {
+    "breite": 4.1,
+    "tiefe": 4.1,
+    "hoehe": 2.51
+   },
+   "dreiecke": 1816,
+   "teile": [
+    {
+     "name": "rtg_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "geo",
+   "name": "Geothermie-Kraftwerk",
+   "gruppe": "Gebaeude",
+   "fp": 2.8,
+   "dateien": [
+    "glb/Gebaeude/geo.glb",
+    "obj/Gebaeude/geo.obj",
+    "fbx/Gebaeude/geo.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.9,
+    "tiefe": 5.9,
+    "hoehe": 3.36
+   },
+   "dreiecke": 2724,
+   "teile": [
+    {
+     "name": "geo_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "name": "Kernreaktor",
+   "gruppe": "Gebaeude",
+   "fp": 2.8,
+   "dateien": [
+    "glb/Gebaeude/reactor.glb",
+    "obj/Gebaeude/reactor.obj",
+    "fbx/Gebaeude/reactor.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.9,
+    "tiefe": 5.9,
+    "hoehe": 3.89
+   },
+   "dreiecke": 2540,
+   "teile": [
+    {
+     "name": "reactor_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "werkstatt",
+   "name": "Roboterwerkstatt",
+   "gruppe": "Gebaeude",
+   "fp": 3.4,
+   "dateien": [
+    "glb/Gebaeude/werkstatt.glb",
+    "obj/Gebaeude/werkstatt.obj",
+    "fbx/Gebaeude/werkstatt.fbx"
+   ],
+   "groesse_m": {
+    "breite": 7.1,
+    "tiefe": 7.1,
+    "hoehe": 3.64
+   },
+   "dreiecke": 1994,
+   "teile": [
+    {
+     "name": "werkstatt_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "werkstatt_Dreh",
+     "drehpunkt_yoben": [
+      2.35,
+      0.16,
+      1.7
+     ]
+    }
+   ]
+  },
+  {
+   "id": "research",
+   "name": "Forschungsstation",
+   "gruppe": "Gebaeude",
+   "fp": 2.9,
+   "dateien": [
+    "glb/Gebaeude/research.glb",
+    "obj/Gebaeude/research.obj",
+    "fbx/Gebaeude/research.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.1,
+    "tiefe": 6.1,
+    "hoehe": 3.457
+   },
+   "dreiecke": 2830,
+   "teile": [
+    {
+     "name": "research_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "research_Dreh",
+     "drehpunkt_yoben": [
+      1.6,
+      2.56,
+      -1.4
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hangar",
+   "name": "Drohnenhangar",
+   "gruppe": "Gebaeude",
+   "fp": 3.0,
+   "dateien": [
+    "glb/Gebaeude/hangar.glb",
+    "obj/Gebaeude/hangar.obj",
+    "fbx/Gebaeude/hangar.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.3,
+    "tiefe": 6.3,
+    "hoehe": 2.76
+   },
+   "dreiecke": 1802,
+   "teile": [
+    {
+     "name": "hangar_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "hangar_Dreh",
+     "drehpunkt_yoben": [
+      1.1,
+      1.86,
+      -1.9
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lifter",
+   "name": "Schwerlast-Hangar",
+   "gruppe": "Gebaeude",
+   "fp": 2.8,
+   "dateien": [
+    "glb/Gebaeude/lifter.glb",
+    "obj/Gebaeude/lifter.obj",
+    "fbx/Gebaeude/lifter.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.9,
+    "tiefe": 5.9,
+    "hoehe": 4.16
+   },
+   "dreiecke": 3594,
+   "teile": [
+    {
+     "name": "lifter_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "lifter_Dreh",
+     "drehpunkt_yoben": [
+      0.4,
+      3.76,
+      0.2
+     ]
+    }
+   ]
+  },
+  {
+   "id": "port",
+   "name": "Raumhafen",
+   "gruppe": "Gebaeude",
+   "fp": 3.4,
+   "dateien": [
+    "glb/Gebaeude/port.glb",
+    "obj/Gebaeude/port.obj",
+    "fbx/Gebaeude/port.fbx"
+   ],
+   "groesse_m": {
+    "breite": 7.1,
+    "tiefe": 7.1,
+    "hoehe": 5.66
+   },
+   "dreiecke": 2508,
+   "teile": [
+    {
+     "name": "port_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rig",
+   "name": "Bohrturm",
+   "gruppe": "Anlagen",
+   "fp": 1.3,
+   "dateien": [
+    "glb/Anlagen/rig.glb",
+    "obj/Anlagen/rig.obj",
+    "fbx/Anlagen/rig.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.6,
+    "tiefe": 2.6,
+    "hoehe": 3.93
+   },
+   "dreiecke": 1662,
+   "teile": [
+    {
+     "name": "rig_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "rig_Dreh",
+     "drehpunkt_yoben": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bagger",
+   "name": "Erzbagger",
+   "gruppe": "Anlagen",
+   "fp": null,
+   "dateien": [
+    "glb/Anlagen/bagger.glb",
+    "obj/Anlagen/bagger.obj",
+    "fbx/Anlagen/bagger.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.19,
+    "tiefe": 4.49,
+    "hoehe": 3.09
+   },
+   "dreiecke": 1692,
+   "teile": [
+    {
+     "name": "bagger_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "bagger_Dreh",
+     "drehpunkt_yoben": [
+      -0.3,
+      2.0,
+      2.2
+     ]
+    }
+   ]
+  },
+  {
+   "id": "staubi",
+   "name": "Staubi",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/staubi.glb",
+    "obj/Fahrzeuge/staubi.obj",
+    "fbx/Fahrzeuge/staubi.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.1,
+    "tiefe": 1.139,
+    "hoehe": 0.48
+   },
+   "dreiecke": 858,
+   "teile": [
+    {
+     "name": "staubi_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "staubi_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.02,
+      0.33
+     ]
+    }
+   ]
+  },
+  {
+   "id": "buggy",
+   "name": "Reinigungsbuggy",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/buggy.glb",
+    "obj/Fahrzeuge/buggy.obj",
+    "fbx/Fahrzeuge/buggy.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.34,
+    "tiefe": 2.238,
+    "hoehe": 1.468
+   },
+   "dreiecke": 4644,
+   "teile": [
+    {
+     "name": "buggy_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "buggy_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.176,
+      1.056
+     ]
+    },
+    {
+     "name": "buggy_Rad_0",
+     "drehpunkt_yoben": [
+      -0.522,
+      0.32,
+      0.691
+     ]
+    },
+    {
+     "name": "buggy_Rad_1",
+     "drehpunkt_yoben": [
+      0.522,
+      0.32,
+      0.691
+     ]
+    },
+    {
+     "name": "buggy_Rad_2",
+     "drehpunkt_yoben": [
+      -0.522,
+      0.32,
+      -0.691
+     ]
+    },
+    {
+     "name": "buggy_Rad_3",
+     "drehpunkt_yoben": [
+      0.522,
+      0.32,
+      -0.691
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sauger",
+   "name": "Industriesauger",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/sauger.glb",
+    "obj/Fahrzeuge/sauger.obj",
+    "fbx/Fahrzeuge/sauger.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.87,
+    "tiefe": 3.098,
+    "hoehe": 2.312
+   },
+   "dreiecke": 3588,
+   "teile": [
+    {
+     "name": "sauger_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "sauger_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.057,
+      1.435
+     ]
+    },
+    {
+     "name": "sauger_Rad_0",
+     "drehpunkt_yoben": [
+      -0.75,
+      0.483,
+      0.911
+     ]
+    },
+    {
+     "name": "sauger_Rad_1",
+     "drehpunkt_yoben": [
+      0.75,
+      0.483,
+      0.911
+     ]
+    },
+    {
+     "name": "sauger_Rad_2",
+     "drehpunkt_yoben": [
+      -0.75,
+      0.483,
+      -0.911
+     ]
+    },
+    {
+     "name": "sauger_Rad_3",
+     "drehpunkt_yoben": [
+      0.75,
+      0.483,
+      -0.911
+     ]
+    }
+   ]
+  },
+  {
+   "id": "truck",
+   "name": "Schwerer Reinigungs-Truck",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/truck.glb",
+    "obj/Fahrzeuge/truck.obj",
+    "fbx/Fahrzeuge/truck.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.49,
+    "tiefe": 4.614,
+    "hoehe": 3.167
+   },
+   "dreiecke": 6168,
+   "teile": [
+    {
+     "name": "truck_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "truck_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.372,
+      2.158
+     ]
+    },
+    {
+     "name": "truck_Rad_0",
+     "drehpunkt_yoben": [
+      -1.01,
+      0.651,
+      1.339
+     ]
+    },
+    {
+     "name": "truck_Rad_1",
+     "drehpunkt_yoben": [
+      1.01,
+      0.651,
+      1.339
+     ]
+    },
+    {
+     "name": "truck_Rad_2",
+     "drehpunkt_yoben": [
+      -1.01,
+      0.651,
+      -0.67
+     ]
+    },
+    {
+     "name": "truck_Rad_3",
+     "drehpunkt_yoben": [
+      1.01,
+      0.651,
+      -0.67
+     ]
+    },
+    {
+     "name": "truck_Rad_4",
+     "drehpunkt_yoben": [
+      -1.01,
+      0.651,
+      -1.414
+     ]
+    },
+    {
+     "name": "truck_Rad_5",
+     "drehpunkt_yoben": [
+      1.01,
+      0.651,
+      -1.414
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eisfraese",
+   "name": "Eisfräse",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/eisfraese.glb",
+    "obj/Fahrzeuge/eisfraese.obj",
+    "fbx/Fahrzeuge/eisfraese.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.97,
+    "tiefe": 3.585,
+    "hoehe": 2.159
+   },
+   "dreiecke": 2932,
+   "teile": [
+    {
+     "name": "eisfraese_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "eisfraese_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.341,
+      1.68
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schlammraupe",
+   "name": "Schlammraupe",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/schlammraupe.glb",
+    "obj/Fahrzeuge/schlammraupe.obj",
+    "fbx/Fahrzeuge/schlammraupe.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.07,
+    "tiefe": 3.884,
+    "hoehe": 2.047
+   },
+   "dreiecke": 2838,
+   "teile": [
+    {
+     "name": "schlammraupe_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "schlammraupe_Werkzeug",
+     "drehpunkt_yoben": [
+      0.5,
+      1.7,
+      0.4
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lavapanzer",
+   "name": "Lavapanzer",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/lavapanzer.glb",
+    "obj/Fahrzeuge/lavapanzer.obj",
+    "fbx/Fahrzeuge/lavapanzer.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.6,
+    "tiefe": 4.15,
+    "hoehe": 2.32
+   },
+   "dreiecke": 2148,
+   "teile": [
+    {
+     "name": "lavapanzer_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "lavapanzer_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.4,
+      2.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schwebe",
+   "name": "Schwebereiniger",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/schwebe.glb",
+    "obj/Fahrzeuge/schwebe.obj",
+    "fbx/Fahrzeuge/schwebe.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.18,
+    "tiefe": 2.694,
+    "hoehe": 1.475
+   },
+   "dreiecke": 1940,
+   "teile": [
+    {
+     "name": "schwebe_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "schwebe_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.05,
+      1.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "magnetgleiter",
+   "name": "Magnetgleiter",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/magnetgleiter.glb",
+    "obj/Fahrzeuge/magnetgleiter.obj",
+    "fbx/Fahrzeuge/magnetgleiter.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.64,
+    "tiefe": 4.595,
+    "hoehe": 1.58
+   },
+   "dreiecke": 1408,
+   "teile": [
+    {
+     "name": "magnetgleiter_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "magnetgleiter_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.22,
+      2.3
+     ]
+    }
+   ]
+  },
+  {
+   "id": "kryokoloss",
+   "name": "Kryo-Koloss",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/kryokoloss.glb",
+    "obj/Fahrzeuge/kryokoloss.obj",
+    "fbx/Fahrzeuge/kryokoloss.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.008,
+    "tiefe": 5.73,
+    "hoehe": 3.05
+   },
+   "dreiecke": 9548,
+   "teile": [
+    {
+     "name": "kryokoloss_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "kryokoloss_Werkzeug",
+     "drehpunkt_yoben": [
+      0,
+      0.45,
+      2.75
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_0",
+     "drehpunkt_yoben": [
+      -1.275,
+      0.62,
+      1.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_1",
+     "drehpunkt_yoben": [
+      1.275,
+      0.62,
+      1.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_2",
+     "drehpunkt_yoben": [
+      -1.275,
+      0.62,
+      0.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_3",
+     "drehpunkt_yoben": [
+      1.275,
+      0.62,
+      0.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_4",
+     "drehpunkt_yoben": [
+      -1.275,
+      0.62,
+      -0.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_5",
+     "drehpunkt_yoben": [
+      1.275,
+      0.62,
+      -0.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_6",
+     "drehpunkt_yoben": [
+      -1.275,
+      0.62,
+      -1.55
+     ]
+    },
+    {
+     "name": "kryokoloss_Rad_7",
+     "drehpunkt_yoben": [
+      1.275,
+      0.62,
+      -1.55
+     ]
+    }
+   ]
+  },
+  {
+   "id": "suchtrupp",
+   "name": "Suchtrupp",
+   "gruppe": "Fahrzeuge",
+   "fp": null,
+   "dateien": [
+    "glb/Fahrzeuge/suchtrupp.glb",
+    "obj/Fahrzeuge/suchtrupp.obj",
+    "fbx/Fahrzeuge/suchtrupp.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.34,
+    "tiefe": 2.259,
+    "hoehe": 1.468
+   },
+   "dreiecke": 4216,
+   "teile": [
+    {
+     "name": "suchtrupp_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "suchtrupp_Rad_0",
+     "drehpunkt_yoben": [
+      -0.522,
+      0.32,
+      0.691
+     ]
+    },
+    {
+     "name": "suchtrupp_Rad_1",
+     "drehpunkt_yoben": [
+      0.522,
+      0.32,
+      0.691
+     ]
+    },
+    {
+     "name": "suchtrupp_Rad_2",
+     "drehpunkt_yoben": [
+      -0.522,
+      0.32,
+      -0.691
+     ]
+    },
+    {
+     "name": "suchtrupp_Rad_3",
+     "drehpunkt_yoben": [
+      0.522,
+      0.32,
+      -0.691
+     ]
+    }
+   ]
+  },
+  {
+   "id": "drohne",
+   "name": "Transportdrohne",
+   "gruppe": "Drohnen",
+   "fp": null,
+   "dateien": [
+    "glb/Drohnen/drohne.glb",
+    "obj/Drohnen/drohne.obj",
+    "fbx/Drohnen/drohne.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.32,
+    "tiefe": 2.32,
+    "hoehe": 0.832
+   },
+   "dreiecke": 2224,
+   "teile": [
+    {
+     "name": "drohne_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "drohne_Rotor_0",
+     "drehpunkt_yoben": [
+      -0.75,
+      0.78,
+      0.75
+     ]
+    },
+    {
+     "name": "drohne_Rotor_1",
+     "drehpunkt_yoben": [
+      0.75,
+      0.78,
+      0.75
+     ]
+    },
+    {
+     "name": "drohne_Rotor_2",
+     "drehpunkt_yoben": [
+      0.75,
+      0.78,
+      -0.75
+     ]
+    },
+    {
+     "name": "drohne_Rotor_3",
+     "drehpunkt_yoben": [
+      -0.75,
+      0.78,
+      -0.75
+     ]
+    },
+    {
+     "name": "drohne_Ladung",
+     "drehpunkt_yoben": [
+      0,
+      0.55,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lastdrohne",
+   "name": "Lastdrohne",
+   "gruppe": "Drohnen",
+   "fp": null,
+   "dateien": [
+    "glb/Drohnen/lastdrohne.glb",
+    "obj/Drohnen/lastdrohne.obj",
+    "fbx/Drohnen/lastdrohne.fbx"
+   ],
+   "groesse_m": {
+    "breite": 4.64,
+    "tiefe": 4.64,
+    "hoehe": 1.663
+   },
+   "dreiecke": 2348,
+   "teile": [
+    {
+     "name": "lastdrohne_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "lastdrohne_Rotor_0",
+     "drehpunkt_yoben": [
+      -1.5,
+      1.56,
+      1.5
+     ]
+    },
+    {
+     "name": "lastdrohne_Rotor_1",
+     "drehpunkt_yoben": [
+      1.5,
+      1.56,
+      1.5
+     ]
+    },
+    {
+     "name": "lastdrohne_Rotor_2",
+     "drehpunkt_yoben": [
+      1.5,
+      1.56,
+      -1.5
+     ]
+    },
+    {
+     "name": "lastdrohne_Rotor_3",
+     "drehpunkt_yoben": [
+      -1.5,
+      1.56,
+      -1.5
+     ]
+    },
+    {
+     "name": "lastdrohne_Ladung",
+     "drehpunkt_yoben": [
+      0,
+      1.1,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_gerade_1m",
+   "name": "Förderband gerade 1 m",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_gerade_1m.glb",
+    "obj/Foerderband/band_gerade_1m.obj",
+    "fbx/Foerderband/band_gerade_1m.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 1.0,
+    "hoehe": 0.52
+   },
+   "dreiecke": 128,
+   "teile": [
+    {
+     "name": "band_gerade_1m_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_gerade_2m",
+   "name": "Förderband gerade 2 m",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_gerade_2m.glb",
+    "obj/Foerderband/band_gerade_2m.obj",
+    "fbx/Foerderband/band_gerade_2m.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 2.0,
+    "hoehe": 0.52
+   },
+   "dreiecke": 240,
+   "teile": [
+    {
+     "name": "band_gerade_2m_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_gerade_4m",
+   "name": "Förderband gerade 4 m",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_gerade_4m.glb",
+    "obj/Foerderband/band_gerade_4m.obj",
+    "fbx/Foerderband/band_gerade_4m.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 4.0,
+    "hoehe": 0.52
+   },
+   "dreiecke": 464,
+   "teile": [
+    {
+     "name": "band_gerade_4m_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_kurve_90_r1_5",
+   "name": "Förderband Kurve 90° (Radius 1,5 m)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_kurve_90_r1_5.glb",
+    "obj/Foerderband/band_kurve_90_r1_5.obj",
+    "fbx/Foerderband/band_kurve_90_r1_5.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.052,
+    "tiefe": 2.042,
+    "hoehe": 0.52
+   },
+   "dreiecke": 520,
+   "teile": [
+    {
+     "name": "band_kurve_90_r1_5_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_kurve_90_r3",
+   "name": "Förderband Kurve 90° (Radius 3 m)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_kurve_90_r3.glb",
+    "obj/Foerderband/band_kurve_90_r3.obj",
+    "fbx/Foerderband/band_kurve_90_r3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.542,
+    "tiefe": 3.542,
+    "hoehe": 0.52
+   },
+   "dreiecke": 616,
+   "teile": [
+    {
+     "name": "band_kurve_90_r3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_kurve_45_r3",
+   "name": "Förderband Kurve 45° (Radius 3 m)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_kurve_45_r3.glb",
+    "obj/Foerderband/band_kurve_45_r3.obj",
+    "fbx/Foerderband/band_kurve_45_r3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.771,
+    "tiefe": 2.491,
+    "hoehe": 0.52
+   },
+   "dreiecke": 328,
+   "teile": [
+    {
+     "name": "band_kurve_45_r3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_rampe",
+   "name": "Förderband Rampe (+1,0 m auf 3,0 m)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_rampe.glb",
+    "obj/Foerderband/band_rampe.obj",
+    "fbx/Foerderband/band_rampe.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 3.041,
+    "hoehe": 1.749
+   },
+   "dreiecke": 856,
+   "teile": [
+    {
+     "name": "band_rampe_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_bruecke",
+   "name": "Förderband Brücke (1,0 m hoch)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_bruecke.glb",
+    "obj/Foerderband/band_bruecke.obj",
+    "fbx/Foerderband/band_bruecke.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 4.0,
+    "hoehe": 1.75
+   },
+   "dreiecke": 1168,
+   "teile": [
+    {
+     "name": "band_bruecke_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_ende",
+   "name": "Förderband Ende (Umlenkrolle)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_ende.glb",
+    "obj/Foerderband/band_ende.obj",
+    "fbx/Foerderband/band_ende.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.16,
+    "tiefe": 0.96,
+    "hoehe": 0.52
+   },
+   "dreiecke": 204,
+   "teile": [
+    {
+     "name": "band_ende_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_weiche_y",
+   "name": "Förderband Y-Weiche",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_weiche_y.glb",
+    "obj/Foerderband/band_weiche_y.obj",
+    "fbx/Foerderband/band_weiche_y.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.918,
+    "tiefe": 3.042,
+    "hoehe": 0.525
+   },
+   "dreiecke": 856,
+   "teile": [
+    {
+     "name": "band_weiche_y_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_stuetze",
+   "name": "Bandstütze",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_stuetze.glb",
+    "obj/Foerderband/band_stuetze.obj",
+    "fbx/Foerderband/band_stuetze.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.96,
+    "tiefe": 0.304,
+    "hoehe": 0.24
+   },
+   "dreiecke": 312,
+   "teile": [
+    {
+     "name": "band_stuetze_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "band_stuetze_hoch",
+   "name": "Bandstütze hoch (+1,0 m)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/band_stuetze_hoch.glb",
+    "obj/Foerderband/band_stuetze_hoch.obj",
+    "fbx/Foerderband/band_stuetze_hoch.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.96,
+    "tiefe": 0.304,
+    "hoehe": 1.24
+   },
+   "dreiecke": 312,
+   "teile": [
+    {
+     "name": "band_stuetze_hoch_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "anschluss_eingang",
+   "name": "Gebäude-Eingang (Bandanschluss)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/anschluss_eingang.glb",
+    "obj/Foerderband/anschluss_eingang.obj",
+    "fbx/Foerderband/anschluss_eingang.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.34,
+    "tiefe": 1.3,
+    "hoehe": 1.045
+   },
+   "dreiecke": 320,
+   "teile": [
+    {
+     "name": "anschluss_eingang_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "anschluss_ausgang",
+   "name": "Gebäude-Ausgang (Bandanschluss)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/anschluss_ausgang.glb",
+    "obj/Foerderband/anschluss_ausgang.obj",
+    "fbx/Foerderband/anschluss_ausgang.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.34,
+    "tiefe": 1.3,
+    "hoehe": 1.045
+   },
+   "dreiecke": 320,
+   "teile": [
+    {
+     "name": "anschluss_ausgang_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "uebergabe_saeule",
+   "name": "Übergabesäule (Band ohne Wand)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/uebergabe_saeule.glb",
+    "obj/Foerderband/uebergabe_saeule.obj",
+    "fbx/Foerderband/uebergabe_saeule.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.38,
+    "tiefe": 1.52,
+    "hoehe": 0.96
+   },
+   "dreiecke": 156,
+   "teile": [
+    {
+     "name": "uebergabe_saeule_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "zulauf_tunnel",
+   "name": "Zulauf-Tunnel (Band unter Haube)",
+   "gruppe": "Foerderband",
+   "fp": null,
+   "dateien": [
+    "glb/Foerderband/zulauf_tunnel.glb",
+    "obj/Foerderband/zulauf_tunnel.obj",
+    "fbx/Foerderband/zulauf_tunnel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.415,
+    "tiefe": 2.0,
+    "hoehe": 1.04
+   },
+   "dreiecke": 400,
+   "teile": [
+    {
+     "name": "zulauf_tunnel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_staub",
+   "name": "Staub",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_staub.glb",
+    "obj/Produkte/ware_staub.obj",
+    "fbx/Produkte/ware_staub.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.432,
+    "tiefe": 0.432,
+    "hoehe": 0.355
+   },
+   "dreiecke": 142,
+   "teile": [
+    {
+     "name": "ware_staub_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_metall",
+   "name": "Metallschrott",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_metall.glb",
+    "obj/Produkte/ware_metall.obj",
+    "fbx/Produkte/ware_metall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.432,
+    "tiefe": 0.432,
+    "hoehe": 0.344
+   },
+   "dreiecke": 264,
+   "teile": [
+    {
+     "name": "ware_metall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kristall",
+   "name": "Kristallsplitter",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kristall.glb",
+    "obj/Produkte/ware_kristall.obj",
+    "fbx/Produkte/ware_kristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.432,
+    "tiefe": 0.432,
+    "hoehe": 0.37
+   },
+   "dreiecke": 168,
+   "teile": [
+    {
+     "name": "ware_kristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_chemie",
+   "name": "Chemieschlamm",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_chemie.glb",
+    "obj/Produkte/ware_chemie.obj",
+    "fbx/Produkte/ware_chemie.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.432,
+    "tiefe": 0.432,
+    "hoehe": 0.35
+   },
+   "dreiecke": 268,
+   "teile": [
+    {
+     "name": "ware_chemie_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_staubBrick",
+   "name": "Staub-Brick",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_staubBrick.glb",
+    "obj/Produkte/ware_staubBrick.obj",
+    "fbx/Produkte/ware_staubBrick.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_staubBrick_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_metallBrick",
+   "name": "Metall-Brick",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_metallBrick.glb",
+    "obj/Produkte/ware_metallBrick.obj",
+    "fbx/Produkte/ware_metallBrick.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_metallBrick_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_barren",
+   "name": "Metallbarren",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_barren.glb",
+    "obj/Produkte/ware_barren.obj",
+    "fbx/Produkte/ware_barren.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_barren_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_reinkristall",
+   "name": "Reinkristall",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_reinkristall.glb",
+    "obj/Produkte/ware_reinkristall.obj",
+    "fbx/Produkte/ware_reinkristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_reinkristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_polymer",
+   "name": "Polymer",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_polymer.glb",
+    "obj/Produkte/ware_polymer.obj",
+    "fbx/Produkte/ware_polymer.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_polymer_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_isotop",
+   "name": "Strahlenerz",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_isotop.glb",
+    "obj/Produkte/ware_isotop.obj",
+    "fbx/Produkte/ware_isotop.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.432,
+    "tiefe": 0.432,
+    "hoehe": 0.355
+   },
+   "dreiecke": 142,
+   "teile": [
+    {
+     "name": "ware_isotop_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_marsstahl",
+   "name": "Marsstahl",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_marsstahl.glb",
+    "obj/Produkte/ware_marsstahl.obj",
+    "fbx/Produkte/ware_marsstahl.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_marsstahl_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_hitzekachel",
+   "name": "Hitzeschild-Kachel",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_hitzekachel.glb",
+    "obj/Produkte/ware_hitzekachel.obj",
+    "fbx/Produkte/ware_hitzekachel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_hitzekachel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_treibstoff",
+   "name": "Raketentreibstoff",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_treibstoff.glb",
+    "obj/Produkte/ware_treibstoff.obj",
+    "fbx/Produkte/ware_treibstoff.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_treibstoff_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_eisblock",
+   "name": "Eisblock",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_eisblock.glb",
+    "obj/Produkte/ware_eisblock.obj",
+    "fbx/Produkte/ware_eisblock.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_eisblock_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kryolinse",
+   "name": "Kryolinse",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kryolinse.glb",
+    "obj/Produkte/ware_kryolinse.obj",
+    "fbx/Produkte/ware_kryolinse.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_kryolinse_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_bitumen",
+   "name": "Bitumenblock",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_bitumen.glb",
+    "obj/Produkte/ware_bitumen.obj",
+    "fbx/Produkte/ware_bitumen.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_bitumen_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kohlefaser",
+   "name": "Kohlefaser",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kohlefaser.glb",
+    "obj/Produkte/ware_kohlefaser.obj",
+    "fbx/Produkte/ware_kohlefaser.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_kohlefaser_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_methanol",
+   "name": "Methanol",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_methanol.glb",
+    "obj/Produkte/ware_methanol.obj",
+    "fbx/Produkte/ware_methanol.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_methanol_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_lavaziegel",
+   "name": "Lavaziegel",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_lavaziegel.glb",
+    "obj/Produkte/ware_lavaziegel.obj",
+    "fbx/Produkte/ware_lavaziegel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_lavaziegel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_schwefelstahl",
+   "name": "Schwefelstahl",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_schwefelstahl.glb",
+    "obj/Produkte/ware_schwefelstahl.obj",
+    "fbx/Produkte/ware_schwefelstahl.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_schwefelstahl_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_schwefelsaeure",
+   "name": "Schwefelsäure",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_schwefelsaeure.glb",
+    "obj/Produkte/ware_schwefelsaeure.obj",
+    "fbx/Produkte/ware_schwefelsaeure.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_schwefelsaeure_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_titanleg",
+   "name": "Titanlegierung",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_titanleg.glb",
+    "obj/Produkte/ware_titanleg.obj",
+    "fbx/Produkte/ware_titanleg.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_titanleg_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_basaltfaser",
+   "name": "Basaltfaser",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_basaltfaser.glb",
+    "obj/Produkte/ware_basaltfaser.obj",
+    "fbx/Produkte/ware_basaltfaser.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_basaltfaser_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_hitzelack",
+   "name": "Hitzelack",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_hitzelack.glb",
+    "obj/Produkte/ware_hitzelack.obj",
+    "fbx/Produkte/ware_hitzelack.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_hitzelack_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_magnetrohling",
+   "name": "Magnetrohling",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_magnetrohling.glb",
+    "obj/Produkte/ware_magnetrohling.obj",
+    "fbx/Produkte/ware_magnetrohling.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_magnetrohling_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_supraleiter",
+   "name": "Supraleiter",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_supraleiter.glb",
+    "obj/Produkte/ware_supraleiter.obj",
+    "fbx/Produkte/ware_supraleiter.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_supraleiter_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_magnetkristall",
+   "name": "Magnetkristall",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_magnetkristall.glb",
+    "obj/Produkte/ware_magnetkristall.obj",
+    "fbx/Produkte/ware_magnetkristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_magnetkristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_salzblock",
+   "name": "Salzblock",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_salzblock.glb",
+    "obj/Produkte/ware_salzblock.obj",
+    "fbx/Produkte/ware_salzblock.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_salzblock_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_elektrolyt",
+   "name": "Elektrolyt",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_elektrolyt.glb",
+    "obj/Produkte/ware_elektrolyt.obj",
+    "fbx/Produkte/ware_elektrolyt.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_elektrolyt_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_reinwasser",
+   "name": "Reinwasser",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_reinwasser.glb",
+    "obj/Produkte/ware_reinwasser.obj",
+    "fbx/Produkte/ware_reinwasser.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_reinwasser_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_stickstoffblock",
+   "name": "Stickstoffblock",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_stickstoffblock.glb",
+    "obj/Produkte/ware_stickstoffblock.obj",
+    "fbx/Produkte/ware_stickstoffblock.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_stickstoffblock_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kryostahl",
+   "name": "Kryostahl",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kryostahl.glb",
+    "obj/Produkte/ware_kryostahl.obj",
+    "fbx/Produkte/ware_kryostahl.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_kryostahl_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kuehlmittel",
+   "name": "Kühlmittel",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kuehlmittel.glb",
+    "obj/Produkte/ware_kuehlmittel.obj",
+    "fbx/Produkte/ware_kuehlmittel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_kuehlmittel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_tholinziegel",
+   "name": "Tholinziegel",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_tholinziegel.glb",
+    "obj/Produkte/ware_tholinziegel.obj",
+    "fbx/Produkte/ware_tholinziegel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_tholinziegel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_tholinharz",
+   "name": "Tholinharz",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_tholinharz.glb",
+    "obj/Produkte/ware_tholinharz.obj",
+    "fbx/Produkte/ware_tholinharz.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_tholinharz_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_methankristall",
+   "name": "Methankristall",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_methankristall.glb",
+    "obj/Produkte/ware_methankristall.obj",
+    "fbx/Produkte/ware_methankristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_methankristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_eiskern",
+   "name": "Eiskern",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_eiskern.glb",
+    "obj/Produkte/ware_eiskern.obj",
+    "fbx/Produkte/ware_eiskern.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_eiskern_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_frostglas",
+   "name": "Frostglas",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_frostglas.glb",
+    "obj/Produkte/ware_frostglas.obj",
+    "fbx/Produkte/ware_frostglas.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_frostglas_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_rotharz",
+   "name": "Rotharz-Block",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_rotharz.glb",
+    "obj/Produkte/ware_rotharz.obj",
+    "fbx/Produkte/ware_rotharz.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_rotharz_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_sednit",
+   "name": "Sednit-Verbund",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_sednit.glb",
+    "obj/Produkte/ware_sednit.obj",
+    "fbx/Produkte/ware_sednit.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_sednit_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_pellet",
+   "name": "Isotopenpellet",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_pellet.glb",
+    "obj/Produkte/ware_pellet.obj",
+    "fbx/Produkte/ware_pellet.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_pellet_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_brennelement",
+   "name": "Brennelement",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_brennelement.glb",
+    "obj/Produkte/ware_brennelement.obj",
+    "fbx/Produkte/ware_brennelement.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_brennelement_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_brennstab",
+   "name": "Brennstab",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_brennstab.glb",
+    "obj/Produkte/ware_brennstab.obj",
+    "fbx/Produkte/ware_brennstab.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_brennstab_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_ozeaneis",
+   "name": "Ozeaneis-Block",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_ozeaneis.glb",
+    "obj/Produkte/ware_ozeaneis.obj",
+    "fbx/Produkte/ware_ozeaneis.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_ozeaneis_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_biokristall",
+   "name": "Biokristall",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_biokristall.glb",
+    "obj/Produkte/ware_biokristall.obj",
+    "fbx/Produkte/ware_biokristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_biokristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_algenoel",
+   "name": "Algenöl",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_algenoel.glb",
+    "obj/Produkte/ware_algenoel.obj",
+    "fbx/Produkte/ware_algenoel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_algenoel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_torfblock",
+   "name": "Torfblock",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_torfblock.glb",
+    "obj/Produkte/ware_torfblock.obj",
+    "fbx/Produkte/ware_torfblock.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_torfblock_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_graphen",
+   "name": "Graphen",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_graphen.glb",
+    "obj/Produkte/ware_graphen.obj",
+    "fbx/Produkte/ware_graphen.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_graphen_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_biosprit",
+   "name": "Biosprit",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_biosprit.glb",
+    "obj/Produkte/ware_biosprit.obj",
+    "fbx/Produkte/ware_biosprit.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_biosprit_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_rohdiamant",
+   "name": "Rohdiamant-Block",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_rohdiamant.glb",
+    "obj/Produkte/ware_rohdiamant.obj",
+    "fbx/Produkte/ware_rohdiamant.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_rohdiamant_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_diamant",
+   "name": "Industriediamant",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_diamant.glb",
+    "obj/Produkte/ware_diamant.obj",
+    "fbx/Produkte/ware_diamant.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_diamant_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_graphit",
+   "name": "Graphitplatte",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_graphit.glb",
+    "obj/Produkte/ware_graphit.obj",
+    "fbx/Produkte/ware_graphit.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_graphit_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_druckeis",
+   "name": "Druckeis-Block",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_druckeis.glb",
+    "obj/Produkte/ware_druckeis.obj",
+    "fbx/Produkte/ware_druckeis.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.3,
+    "tiefe": 0.5,
+    "hoehe": 0.211
+   },
+   "dreiecke": 56,
+   "teile": [
+    {
+     "name": "ware_druckeis_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_superionik",
+   "name": "Superionisches Eis",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_superionik.glb",
+    "obj/Produkte/ware_superionik.obj",
+    "fbx/Produkte/ware_superionik.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.295,
+    "tiefe": 0.26,
+    "hoehe": 0.32
+   },
+   "dreiecke": 102,
+   "teile": [
+    {
+     "name": "ware_superionik_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_kondensat",
+   "name": "Druckkondensat",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_kondensat.glb",
+    "obj/Produkte/ware_kondensat.obj",
+    "fbx/Produkte/ware_kondensat.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.348,
+    "tiefe": 0.342,
+    "hoehe": 0.42
+   },
+   "dreiecke": 600,
+   "teile": [
+    {
+     "name": "ware_kondensat_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_reaktorkern",
+   "name": "Reaktorkern",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_reaktorkern.glb",
+    "obj/Produkte/ware_reaktorkern.obj",
+    "fbx/Produkte/ware_reaktorkern.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_reaktorkern_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ware_strahlstahl",
+   "name": "Strahlenschutzstahl",
+   "gruppe": "Produkte",
+   "fp": null,
+   "dateien": [
+    "glb/Produkte/ware_strahlstahl.glb",
+    "obj/Produkte/ware_strahlstahl.obj",
+    "fbx/Produkte/ware_strahlstahl.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.22,
+    "tiefe": 0.55,
+    "hoehe": 0.165
+   },
+   "dreiecke": 36,
+   "teile": [
+    {
+     "name": "ware_strahlstahl_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_fels_1",
+   "name": "Felsbrocken 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_fels_1.glb",
+    "obj/Schmutz/schmutz_fels_1.obj",
+    "fbx/Schmutz/schmutz_fels_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.377,
+    "tiefe": 1.406,
+    "hoehe": 0.688
+   },
+   "dreiecke": 300,
+   "teile": [
+    {
+     "name": "schmutz_fels_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_fels_2",
+   "name": "Felsbrocken 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_fels_2.glb",
+    "obj/Schmutz/schmutz_fels_2.obj",
+    "fbx/Schmutz/schmutz_fels_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.355,
+    "tiefe": 1.13,
+    "hoehe": 0.866
+   },
+   "dreiecke": 400,
+   "teile": [
+    {
+     "name": "schmutz_fels_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_fels_3",
+   "name": "Felsbrocken 3",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_fels_3.glb",
+    "obj/Schmutz/schmutz_fels_3.obj",
+    "fbx/Schmutz/schmutz_fels_3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.003,
+    "tiefe": 1.301,
+    "hoehe": 1.023
+   },
+   "dreiecke": 500,
+   "teile": [
+    {
+     "name": "schmutz_fels_3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schrott_1",
+   "name": "Metallschrott 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schrott_1.glb",
+    "obj/Schmutz/schmutz_schrott_1.obj",
+    "fbx/Schmutz/schmutz_schrott_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.965,
+    "tiefe": 1.064,
+    "hoehe": 0.248
+   },
+   "dreiecke": 68,
+   "teile": [
+    {
+     "name": "schmutz_schrott_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schrott_2",
+   "name": "Metallschrott 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schrott_2.glb",
+    "obj/Schmutz/schmutz_schrott_2.obj",
+    "fbx/Schmutz/schmutz_schrott_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.871,
+    "tiefe": 0.672,
+    "hoehe": 0.18
+   },
+   "dreiecke": 352,
+   "teile": [
+    {
+     "name": "schmutz_schrott_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schrott_3",
+   "name": "Metallschrott 3",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schrott_3.glb",
+    "obj/Schmutz/schmutz_schrott_3.obj",
+    "fbx/Schmutz/schmutz_schrott_3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.335,
+    "tiefe": 0.68,
+    "hoehe": 0.468
+   },
+   "dreiecke": 208,
+   "teile": [
+    {
+     "name": "schmutz_schrott_3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_satellit_1",
+   "name": "Satellitentrümmer 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_satellit_1.glb",
+    "obj/Schmutz/schmutz_satellit_1.obj",
+    "fbx/Schmutz/schmutz_satellit_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.363,
+    "tiefe": 0.853,
+    "hoehe": 0.842
+   },
+   "dreiecke": 64,
+   "teile": [
+    {
+     "name": "schmutz_satellit_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_satellit_2",
+   "name": "Satellitentrümmer 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_satellit_2.glb",
+    "obj/Schmutz/schmutz_satellit_2.obj",
+    "fbx/Schmutz/schmutz_satellit_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.224,
+    "tiefe": 0.713,
+    "hoehe": 0.752
+   },
+   "dreiecke": 668,
+   "teile": [
+    {
+     "name": "schmutz_satellit_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_kristall_1",
+   "name": "Kristallablagerung 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_kristall_1.glb",
+    "obj/Schmutz/schmutz_kristall_1.obj",
+    "fbx/Schmutz/schmutz_kristall_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.999,
+    "tiefe": 0.823,
+    "hoehe": 0.725
+   },
+   "dreiecke": 248,
+   "teile": [
+    {
+     "name": "schmutz_kristall_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_kristall_2",
+   "name": "Kristallablagerung 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_kristall_2.glb",
+    "obj/Schmutz/schmutz_kristall_2.obj",
+    "fbx/Schmutz/schmutz_kristall_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.043,
+    "tiefe": 0.853,
+    "hoehe": 0.731
+   },
+   "dreiecke": 296,
+   "teile": [
+    {
+     "name": "schmutz_kristall_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_fass_1",
+   "name": "Altfässer 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_fass_1.glb",
+    "obj/Schmutz/schmutz_fass_1.obj",
+    "fbx/Schmutz/schmutz_fass_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.314,
+    "tiefe": 1.014,
+    "hoehe": 0.55
+   },
+   "dreiecke": 444,
+   "teile": [
+    {
+     "name": "schmutz_fass_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_fass_2",
+   "name": "Altfässer 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_fass_2.glb",
+    "obj/Schmutz/schmutz_fass_2.obj",
+    "fbx/Schmutz/schmutz_fass_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.614,
+    "tiefe": 1.264,
+    "hoehe": 0.55
+   },
+   "dreiecke": 764,
+   "teile": [
+    {
+     "name": "schmutz_fass_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_eis_1",
+   "name": "Eisablagerung 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_eis_1.glb",
+    "obj/Schmutz/schmutz_eis_1.obj",
+    "fbx/Schmutz/schmutz_eis_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.157,
+    "tiefe": 0.955,
+    "hoehe": 0.567
+   },
+   "dreiecke": 140,
+   "teile": [
+    {
+     "name": "schmutz_eis_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_eis_2",
+   "name": "Eisablagerung 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_eis_2.glb",
+    "obj/Schmutz/schmutz_eis_2.obj",
+    "fbx/Schmutz/schmutz_eis_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.985,
+    "tiefe": 0.982,
+    "hoehe": 0.634
+   },
+   "dreiecke": 160,
+   "teile": [
+    {
+     "name": "schmutz_eis_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schleim_1",
+   "name": "Schlamm 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schleim_1.glb",
+    "obj/Schmutz/schmutz_schleim_1.obj",
+    "fbx/Schmutz/schmutz_schleim_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.432,
+    "tiefe": 1.137,
+    "hoehe": 0.173
+   },
+   "dreiecke": 562,
+   "teile": [
+    {
+     "name": "schmutz_schleim_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schleim_2",
+   "name": "Schlamm 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schleim_2.glb",
+    "obj/Schmutz/schmutz_schleim_2.obj",
+    "fbx/Schmutz/schmutz_schleim_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.139,
+    "tiefe": 0.956,
+    "hoehe": 0.196
+   },
+   "dreiecke": 660,
+   "teile": [
+    {
+     "name": "schmutz_schleim_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schwefel_1",
+   "name": "Schwefelkruste 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schwefel_1.glb",
+    "obj/Schmutz/schmutz_schwefel_1.obj",
+    "fbx/Schmutz/schmutz_schwefel_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.02,
+    "tiefe": 0.824,
+    "hoehe": 0.19
+   },
+   "dreiecke": 220,
+   "teile": [
+    {
+     "name": "schmutz_schwefel_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_schwefel_2",
+   "name": "Schwefelkruste 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_schwefel_2.glb",
+    "obj/Schmutz/schmutz_schwefel_2.obj",
+    "fbx/Schmutz/schmutz_schwefel_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.142,
+    "tiefe": 0.876,
+    "hoehe": 0.175
+   },
+   "dreiecke": 260,
+   "teile": [
+    {
+     "name": "schmutz_schwefel_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_lava_1",
+   "name": "Lavagestein 1",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_lava_1.glb",
+    "obj/Schmutz/schmutz_lava_1.obj",
+    "fbx/Schmutz/schmutz_lava_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.073,
+    "tiefe": 1.068,
+    "hoehe": 0.561
+   },
+   "dreiecke": 864,
+   "teile": [
+    {
+     "name": "schmutz_lava_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "schmutz_lava_2",
+   "name": "Lavagestein 2",
+   "gruppe": "Schmutz",
+   "fp": null,
+   "dateien": [
+    "glb/Schmutz/schmutz_lava_2.glb",
+    "obj/Schmutz/schmutz_lava_2.obj",
+    "fbx/Schmutz/schmutz_lava_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.134,
+    "tiefe": 1.028,
+    "hoehe": 0.527
+   },
+   "dreiecke": 1152,
+   "teile": [
+    {
+     "name": "schmutz_lava_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wrack_raumschiff",
+   "name": "Raumschiff-Wrack (Absturz)",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/wrack_raumschiff.glb",
+    "obj/Ereignisse/wrack_raumschiff.obj",
+    "fbx/Ereignisse/wrack_raumschiff.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.595,
+    "tiefe": 6.4,
+    "hoehe": 2.508
+   },
+   "dreiecke": 1176,
+   "teile": [
+    {
+     "name": "wrack_raumschiff_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wrack_satellit",
+   "name": "Satelliten-Wrack",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/wrack_satellit.glb",
+    "obj/Ereignisse/wrack_satellit.obj",
+    "fbx/Ereignisse/wrack_satellit.fbx"
+   ],
+   "groesse_m": {
+    "breite": 6.287,
+    "tiefe": 4.8,
+    "hoehe": 2.319
+   },
+   "dreiecke": 1012,
+   "teile": [
+    {
+     "name": "wrack_satellit_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "frachter",
+   "name": "Frachter (in Not)",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/frachter.glb",
+    "obj/Ereignisse/frachter.obj",
+    "fbx/Ereignisse/frachter.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.6,
+    "tiefe": 6.004,
+    "hoehe": 1.93
+   },
+   "dreiecke": 668,
+   "teile": [
+    {
+     "name": "frachter_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "komet",
+   "name": "Komet (Kern)",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/komet.glb",
+    "obj/Ereignisse/komet.obj",
+    "fbx/Ereignisse/komet.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.772,
+    "tiefe": 3.362,
+    "hoehe": 3.027
+   },
+   "dreiecke": 924,
+   "teile": [
+    {
+     "name": "komet_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "kometeneinschlag",
+   "name": "Kometeneinschlag (Krater)",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/kometeneinschlag.glb",
+    "obj/Ereignisse/kometeneinschlag.obj",
+    "fbx/Ereignisse/kometeneinschlag.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.533,
+    "tiefe": 5.949,
+    "hoehe": 1.043
+   },
+   "dreiecke": 1486,
+   "teile": [
+    {
+     "name": "kometeneinschlag_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "meteorit",
+   "name": "Meteorit",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/meteorit.glb",
+    "obj/Ereignisse/meteorit.obj",
+    "fbx/Ereignisse/meteorit.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.0,
+    "tiefe": 2.0,
+    "hoehe": 0.911
+   },
+   "dreiecke": 566,
+   "teile": [
+    {
+     "name": "meteorit_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "erzader",
+   "name": "Erzader",
+   "gruppe": "Ereignisse",
+   "fp": null,
+   "dateien": [
+    "glb/Ereignisse/erzader.glb",
+    "obj/Ereignisse/erzader.obj",
+    "fbx/Ereignisse/erzader.fbx"
+   ],
+   "groesse_m": {
+    "breite": 3.804,
+    "tiefe": 2.13,
+    "hoehe": 0.529
+   },
+   "dreiecke": 280,
+   "teile": [
+    {
+     "name": "erzader_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "leuchtkristall",
+   "name": "Leuchtkristall (erntbar)",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/leuchtkristall.glb",
+    "obj/Welt/leuchtkristall.obj",
+    "fbx/Welt/leuchtkristall.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.355,
+    "tiefe": 1.262,
+    "hoehe": 1.485
+   },
+   "dreiecke": 248,
+   "teile": [
+    {
+     "name": "leuchtkristall_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "laterne",
+   "name": "Laterne (Lichtmast)",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/laterne.glb",
+    "obj/Welt/laterne.obj",
+    "fbx/Welt/laterne.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.7,
+    "tiefe": 1.4,
+    "hoehe": 3.31
+   },
+   "dreiecke": 184,
+   "teile": [
+    {
+     "name": "laterne_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "astronaut",
+   "name": "Astronaut",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/astronaut.glb",
+    "obj/Welt/astronaut.obj",
+    "fbx/Welt/astronaut.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.72,
+    "tiefe": 0.544,
+    "hoehe": 1.77
+   },
+   "dreiecke": 850,
+   "teile": [
+    {
+     "name": "astronaut_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sammelwagen",
+   "name": "Sammelwagen",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/sammelwagen.glb",
+    "obj/Welt/sammelwagen.obj",
+    "fbx/Welt/sammelwagen.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.198,
+    "tiefe": 1.821,
+    "hoehe": 0.851
+   },
+   "dreiecke": 2572,
+   "teile": [
+    {
+     "name": "sammelwagen_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "sammelwagen_Rad_0",
+     "drehpunkt_yoben": [
+      -0.5,
+      0.2,
+      0.42
+     ]
+    },
+    {
+     "name": "sammelwagen_Rad_1",
+     "drehpunkt_yoben": [
+      0.5,
+      0.2,
+      0.42
+     ]
+    },
+    {
+     "name": "sammelwagen_Rad_2",
+     "drehpunkt_yoben": [
+      -0.5,
+      0.2,
+      -0.42
+     ]
+    },
+    {
+     "name": "sammelwagen_Rad_3",
+     "drehpunkt_yoben": [
+      0.5,
+      0.2,
+      -0.42
+     ]
+    }
+   ]
+  },
+  {
+   "id": "aussenlager",
+   "name": "Außenlager (Pumpstation)",
+   "gruppe": "Welt",
+   "fp": 2.4,
+   "dateien": [
+    "glb/Welt/aussenlager.glb",
+    "obj/Welt/aussenlager.obj",
+    "fbx/Welt/aussenlager.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.1,
+    "tiefe": 5.1,
+    "hoehe": 2.14
+   },
+   "dreiecke": 2198,
+   "teile": [
+    {
+     "name": "aussenlager_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bauplatz",
+   "name": "Bauplatz",
+   "gruppe": "Welt",
+   "fp": 2.5,
+   "dateien": [
+    "glb/Welt/bauplatz.glb",
+    "obj/Welt/bauplatz.obj",
+    "fbx/Welt/bauplatz.fbx"
+   ],
+   "groesse_m": {
+    "breite": 5.0,
+    "tiefe": 5.0,
+    "hoehe": 3.14
+   },
+   "dreiecke": 1844,
+   "teile": [
+    {
+     "name": "bauplatz_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "grube",
+   "name": "Grube (am Andockplatz)",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/grube.glb",
+    "obj/Welt/grube.obj",
+    "fbx/Welt/grube.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.4,
+    "tiefe": 2.4,
+    "hoehe": 0.75
+   },
+   "dreiecke": 496,
+   "teile": [
+    {
+     "name": "grube_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pipeline_trasse",
+   "name": "Pipeline-Trasse (4 m)",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/pipeline_trasse.glb",
+    "obj/Welt/pipeline_trasse.obj",
+    "fbx/Welt/pipeline_trasse.fbx"
+   ],
+   "groesse_m": {
+    "breite": 1.1,
+    "tiefe": 4.0,
+    "hoehe": 1.161
+   },
+   "dreiecke": 920,
+   "teile": [
+    {
+     "name": "pipeline_trasse_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ampel",
+   "name": "Ampel (Dachlampe)",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/ampel.glb",
+    "obj/Welt/ampel.obj",
+    "fbx/Welt/ampel.fbx"
+   ],
+   "groesse_m": {
+    "breite": 0.92,
+    "tiefe": 0.92,
+    "hoehe": 0.895
+   },
+   "dreiecke": 248,
+   "teile": [
+    {
+     "name": "ampel_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "ampel_Licht",
+     "drehpunkt_yoben": [
+      0,
+      0.52,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "deko_fels_1",
+   "name": "Deko-Felsen 1",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/deko_fels_1.glb",
+    "obj/Welt/deko_fels_1.obj",
+    "fbx/Welt/deko_fels_1.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.707,
+    "tiefe": 1.698,
+    "hoehe": 1.409
+   },
+   "dreiecke": 336,
+   "teile": [
+    {
+     "name": "deko_fels_1_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "deko_fels_2",
+   "name": "Deko-Felsen 2",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/deko_fels_2.glb",
+    "obj/Welt/deko_fels_2.obj",
+    "fbx/Welt/deko_fels_2.fbx"
+   ],
+   "groesse_m": {
+    "breite": 2.875,
+    "tiefe": 2.677,
+    "hoehe": 1.94
+   },
+   "dreiecke": 504,
+   "teile": [
+    {
+     "name": "deko_fels_2_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "deko_fels_3",
+   "name": "Deko-Felsen 3",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/deko_fels_3.glb",
+    "obj/Welt/deko_fels_3.obj",
+    "fbx/Welt/deko_fels_3.fbx"
+   ],
+   "groesse_m": {
+    "breite": 4.246,
+    "tiefe": 3.102,
+    "hoehe": 2.655
+   },
+   "dreiecke": 672,
+   "teile": [
+    {
+     "name": "deko_fels_3_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "deko_krater",
+   "name": "Deko-Krater",
+   "gruppe": "Welt",
+   "fp": null,
+   "dateien": [
+    "glb/Welt/deko_krater.glb",
+    "obj/Welt/deko_krater.obj",
+    "fbx/Welt/deko_krater.fbx"
+   ],
+   "groesse_m": {
+    "breite": 4.4,
+    "tiefe": 4.4,
+    "hoehe": 0.75
+   },
+   "dreiecke": 384,
+   "teile": [
+    {
+     "name": "deko_krater_Koerper",
+     "drehpunkt_yoben": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    }
+   ]
+  }
+ ]
+}

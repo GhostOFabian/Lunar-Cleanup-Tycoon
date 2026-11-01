@@ -204,3 +204,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 31.10.2026: Spielstand-Code (Export/Import) nur als Übergang, bis die Handy-Version mit Cloud-Speicher kommt – niedrige Priorität.
 - 31.10.2026: Claude darf die wichtigsten Tests selbst durchführen und abschließen (Testmodus, eigener Spielstand).
 - 31.10.: Ampeln sitzen auf der höchsten breiten Dachfläche (≥ 0,8 m), rücken bei Schornstein/Antenne/Rakete in 35-cm-Ringen nach außen – nie freischwebend über dem Gebäude.
+- 01.11.2026: Fabians eigene Modelle ersetzen die Kenney-Modelle (Kenney archiviert). Reihenfolge beim Laden: eigenes Modell → Kenney (nur wenn zurückgeholt) → prozedurale Form.
+- 01.11.2026: Förderbänder bleiben frei verlegt (Router), übernehmen aber Profil, Farben, Stützen und Anschlüsse aus Fabians Bandteilen; feste Raster-Bandstücke werden nicht verwendet.
+- 01.11.2026 (Fabians Wunsch): Pipelines komplett unsichtbar im Boden, keine Trasse und keine Deckel.
+- 01.11.2026: Versionsnummer einheitlich – iPhone-App und Browser-Build heißen beide 0.21.

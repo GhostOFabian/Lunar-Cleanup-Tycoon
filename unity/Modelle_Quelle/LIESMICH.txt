@@ -1,0 +1,48 @@
+Lunar Cleanup Tycoon – eigene 3D-Assets
+========================================
+
+Alles in diesem Paket wurde mit dem Skript blender/lunar_models.py erzeugt
+(prozedural, keine fremden Modelle oder Texturen). Du darfst es in deinem
+Spiel frei verwenden, ändern und weitergeben.
+
+Ordner
+------
+glb/   Jedes Modell als glTF-Binärdatei (.glb) – mit Materialien, Leuchtfarben
+       und beweglichen Teilen als eigene Knoten. Empfohlen.
+       Unity: Package Manager → „glTFast“ (com.unity.cloud.gltfast) installieren,
+       dann .glb einfach in den Assets-Ordner ziehen.
+obj/   Dieselben Modelle als .obj + materialien.mtl (öffnet jedes 3D-Programm,
+       Unity ohne Zusatzpaket). Bewegliche Teile sind eigene Objekte, aber
+       ohne eigenen Drehpunkt.
+fbx/   (nur wenn das Paket in Blender gebaut wurde) FBX für Unity.
+blender/  Das Skript selbst. In Blender: Reiter „Scripting“ → Öffnen → ▶.
+vorschau/ Übersichtsbilder aller Modelle.
+manifest.json  Liste aller Modelle: Name, Gruppe, Dateien, Teile, Drehpunkte, Größe.
+
+Maße und Achsen
+---------------
+1 Einheit = 1 m. Ursprung jedes Modells: Mitte am Boden.
+glb/obj: Y nach oben, Vorderseite zeigt nach +Z (wie Unity „forward“).
+Gebäude passen in ihren Grundkreis (Radius fp aus gamedata.json).
+Förderbänder: laufen entlang +Z, Start bei z = 0, Lauffläche 0,55 m hoch,
+0,84 m breit (wie im Spiel). Kurven biegen nach rechts – für links spiegeln.
+Waren liegen mit der Unterseite auf 0, die lange Seite längs zum Band.
+
+Bewegliche Teile (Namen)
+------------------------
+<id>_Koerper   alles Feste
+<id>_Rakete    Rakete der Verkaufsstation (Start/Landung)
+<id>_Kolben    Pressenkolben (auf/ab)
+<id>_Dreh      Drehteil: Schüssel, Bohrgestänge, Schaufelrad, Kranhaken, Radar, Roboterarm
+<id>_Rad_0..n  Räder (drehen um die Querachse)
+<id>_Werkzeug  Bürste, Düse, Fräse, Pflug oder Pumpenarm vorne
+<id>_Rotor_0..3 Drohnenrotoren (drehen um die Hochachse)
+<id>_Ladung    Drohnenkorb bzw. Greifer
+<id>_Licht     Ampel-Kugel (Farbe wechselt im Spiel)
+
+Gruppen
+-------
+Gebaeude, Anlagen, Fahrzeuge, Drohnen, Foerderband, Produkte (alle 57 Waren),
+Schmutz (9 Schmutzarten), Ereignisse (Wracks, Komet, Einschlag, Meteorit,
+Frachter, Erzader), Welt (Leuchtkristall, Laterne, Astronaut, Sammelwagen,
+Außenlager, Bauplatz, Grube, Pipeline, Ampel, Deko-Felsen, Krater).

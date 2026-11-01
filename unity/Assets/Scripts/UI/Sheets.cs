@@ -271,7 +271,7 @@ namespace LunarCleanup.UI
             }
         }
 
-        static float prestigeT = -99;
+        static float prestigeT = -99, importT = -99;
         static void Stardust(Hud h)
         {
             h.Section("Sternenstaub · " + Game.StardustFree() + " frei");
@@ -447,6 +447,10 @@ namespace LunarCleanup.UI
             h.Slider("Lautstärke Musik", () => Game.S.volMusic, v => Game.S.volMusic = v);
             h.Section("Spielstand");
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);
+            h.Row("Spielstand-Code kopieren", () => "Kopiert deinen ganzen Spielstand als Text in die Zwischenablage – in Notizen sichern oder auf ein anderes Gerät übertragen.", () => "Kopieren", () => true, () => { GUIUtility.systemCopyBuffer = Game.ExportCode(); Game.Toast("Spielstand-Code kopiert (" + (GUIUtility.systemCopyBuffer.Length / 1024 + 1) + " KB)", "good"); }, false);
+            h.Row("Spielstand-Code einfügen", () => Time.unscaledTime - importT < 4 ? "Wirklich? Noch einmal tippen ersetzt deinen Spielstand durch den Code aus der Zwischenablage (der alte bleibt als Sicherung)." : "Lädt einen kopierten Spielstand-Code aus der Zwischenablage.", () => Time.unscaledTime - importT < 4 ? "Ja, laden" : "Einfügen", () => true,
+                () => { if (Time.unscaledTime - importT < 4) { string err = Game.ImportCode(GUIUtility.systemCopyBuffer); Game.Toast(err == "" ? "Spielstand geladen" : err, err == "" ? "good" : "bad"); importT = -99; if (err == "") h.CloseSheet(); } else importT = Time.unscaledTime; }, false);
+            if (Game.HasImportBackup) h.Row("Import rückgängig", () => "Holt den Spielstand von vor dem letzten Einfügen zurück.", () => "Zurück", () => true, () => { if (Game.UndoImport()) { Game.Toast("Alter Spielstand wiederhergestellt", "good"); h.CloseSheet(); } }, false);
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
             if (Game.TestMode)
@@ -455,6 +459,11 @@ namespace LunarCleanup.UI
                 h.Row("Alles maximal ausbauen", () => "Basisstufe, alle Gebäude, Upgrades, Forschungen, Außenlager und Fahrzeuge auf diesem Planeten (Editor: F12).", () => "Ausbauen", () => true, () => { Game.DevMaxOut(); h.CloseSheet(); }, true);
                 h.Row("+1 Mio Credits", () => "Geld zum Ausprobieren.", () => "+1 Mio", () => true, () => Game.Earn(1e6), false);
                 h.Row("Planet säubern", () => "Erst auf 81 %, beim zweiten Mal komplett sauber.", () => "Säubern", () => true, () => Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f), false);
+                h.Row("Wrack-Absturz", () => "Ein Wrack stürzt sichtbar vom Himmel, der Suchtrupp birgt es.", () => "Absturz", () => true, () => { var cs = Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } if (!Game.StartEvent(cs, "wreck")) Game.Toast("Kein freier Platz für ein Wrack (erst ein paar Parzellen säubern)"); h.CloseSheet(); }, false);
+                h.Row("Kometeneinschlag", () => "Ein Kometenbrocken schlägt ein.", () => "Einschlag", () => true, () => { var cs = Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } if (!Game.StartEvent(cs, "impact")) Game.Toast("Kein freier Platz (erst ein paar Parzellen säubern)"); h.CloseSheet(); }, false);
+                h.Row("Komet am Himmel", () => "Ein Komet zieht in wenigen Sekunden über den Himmel (am schönsten weit rausgezoomt).", () => "Komet", () => true, () => { LunarCleanup.Gameplay.WorldView.CometNow = true; LunarCleanup.Gameplay.WorldView.FreighterNow = false; h.CloseSheet(); }, false);
+                h.Row("Frachter am Himmel", () => "Ein Frachter fliegt in wenigen Sekunden vorbei (weit rausgezoomt am besten zu sehen).", () => "Frachter", () => true, () => { LunarCleanup.Gameplay.WorldView.CometNow = true; LunarCleanup.Gameplay.WorldView.FreighterNow = true; h.CloseSheet(); }, false);
+                h.Row("Meteoritenschauer", () => "Ein paar Meteore schlagen auf sauberen Parzellen ein (erst ein paar Parzellen säubern).", () => "Schauer", () => Game.Cur.nClean >= 3, () => { Game.Meteor(Game.Cur); h.CloseSheet(); }, false);
                 h.Row("Vierteltag vorspulen", () => "Tag und Nacht testen.", () => "Vorspulen", () => true, () => { var cs = Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + Game.DayLen(Game.Cur.pid) / 4; }, false);
                 h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
             }
@@ -468,7 +477,7 @@ namespace LunarCleanup.UI
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");
             foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => oo.price, () => true, () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Unity-Version 0.10. Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp. Noch nicht übertragen: Meteoritenschauer, Ausbaustufen, Sternenstaub-Neustart.");
+            h.Note("Lunar Cleanup Tycoon · Version " + Application.version + ". Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp; Modelle von Fabian.");
         }
 
         /// <summary>Welche Upgrades zu welchem Gebäude gehören (Antippen eines Gebäudes zeigt sie oben im Fenster).</summary>

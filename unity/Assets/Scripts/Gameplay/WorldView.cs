@@ -29,10 +29,10 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
-            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
+            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
-            { var deco = New("Deko"); Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
+            { var deco = New("Deko"); int dseed = ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff; if (!LcKit.Decorate(deco, pd, dseed, Mathf.Clamp(pd.N / 3, 40, 400))) Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
         }
         Transform New(string n) { var g = new GameObject(n); g.transform.SetParent(transform, false); return g.transform; }
@@ -62,13 +62,13 @@ namespace LunarCleanup.Gameplay
                     if (id != "u1") continue; string top = ps.bld.Contains("u3") ? "u3" : ps.bld.Contains("u2") ? "u2" : ps.bld.Contains("u1") ? "u1" : null;
                     if (top == null) { if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "") { var s0 = Models.Site(B.fp); s0.transform.SetParent(baseRoot, false); Place(s0.transform, ps.lay.pos[id], yaw); } continue; }
                     var ub = Models.Building(top, B.fp, acc, acc2); ub.root.name = "Entladeanlage"; ub.root.transform.SetParent(baseRoot, false); Place(ub.root.transform, ps.lay.pos[id], yaw); blds["u1"] = ub; Grow(ub.root.transform, Mathf.Max(Game.Blvl(ps, "u1"), Mathf.Max(Game.Blvl(ps, "u2"), Game.Blvl(ps, "u3"))));
-                    foreach (var u in Game.Units) if (ps.bld.Contains(u) && GameData.Bld[u].st != null) for (int k = 0; k < GameData.Bld[u].st.docks; k++) { var dp = Game.DockPos(ps, u, k); var cp = ps.lay.pos[u]; var dir2 = (dp - cp); var pp = cp + dir2.normalized * (dir2.magnitude - 1.3f); var lp = ub.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; var toC = ub.root.transform.InverseTransformPoint(pd.PlanDir(cp + (dp - cp).normalized * 0f) * pd.R); Kit.Pit(ub.root.transform, lp, new Vector3(-lp.x, 0, -lp.z), Kit.HouseW(top, B.fp)); }
+                    foreach (var u in Game.Units) if (ps.bld.Contains(u) && GameData.Bld[u].st != null) for (int k = 0; k < GameData.Bld[u].st.docks; k++) { var dp = Game.DockPos(ps, u, k); var cp = ps.lay.pos[u]; var dir2 = (dp - cp); var pp = cp + dir2.normalized * (dir2.magnitude - 1.3f); var lp = ub.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; var toC = ub.root.transform.InverseTransformPoint(pd.PlanDir(cp + (dp - cp).normalized * 0f) * pd.R); PitAt(ub.root.transform, lp, new Vector3(-lp.x, 0, -lp.z), Kit.HouseW(top, B.fp)); }
                     continue;
                 }
                 if (ps.bld.Contains(id))
                 {
                     var bp = Models.Building(id, B.fp, acc, acc2); bp.root.transform.SetParent(baseRoot, false); Place(bp.root.transform, ps.lay.pos[id], Mathf.Round(yaw / (Mathf.PI / 2)) * (Mathf.PI / 2)); blds[id] = bp; Grow(bp.root.transform, Game.Blvl(ps, id)); // Modelle achsparallel: Bänder treffen gerade Flächen
-                    if (B.st != null && (id == "u1" || id == "u2" || id == "u3")) for (int k = 0; k < B.st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; var lp = bp.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; Kit.Pit(bp.root.transform, lp, -new Vector3(lp.x, 0, lp.z), Kit.HouseW(id, B.fp)); }
+                    if (B.st != null && (id == "u1" || id == "u2" || id == "u3")) for (int k = 0; k < B.st.docks; k++) { var dp = Game.DockPos(ps, id, k); var cp = ps.lay.pos[id]; var pp = cp + (dp - cp) * .72f; var lp = bp.root.transform.InverseTransformPoint(pd.PlanDir(pp) * pd.R); lp.y = .14f; PitAt(bp.root.transform, lp, -new Vector3(lp.x, 0, lp.z), Kit.HouseW(id, B.fp)); }
                 }
                 else if (Game.Gs(ps) >= B.stage && Game.BuildWhy(ps, id) == "")
                 {
@@ -82,9 +82,9 @@ namespace LunarCleanup.Gameplay
                 if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 10) continue;
                 var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f);
                 var post = new GameObject("Laterne"); post.transform.SetParent(baseRoot, false); Place(post.transform, off, 0);
-                MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8);
-                MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f);
-                var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, 4.3f, 0);
+                bool lcLamp = LcKit.Spawn("Welt/laterne", post.transform, Vector3.zero, -45 + lamps.Count * 90, acc, null, 1.3f) != null; /* eigenes Modell, etwas größer als 1:1 (Basis wirkt sonst zu dunkel) */
+                if (!lcLamp) { MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8); MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f); }
+                var lg = new GameObject("Licht"); lg.transform.SetParent(post.transform, false); lg.transform.localPosition = new Vector3(0, lcLamp ? 3.9f : 4.3f, 0);
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 26; L.color = new Color(.93f, .96f, 1f); /* kaltweißes LED-Licht statt gelblich */ L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
                 var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(19, 19, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
@@ -104,6 +104,7 @@ namespace LunarCleanup.Gameplay
                 float hmax = pd.Height(cl.c), hmin = hmax; for (int k = 0; k < 16; k++) foreach (float rr in new[] { 1.8f, 3.5f }) { float a = k * Mathf.PI / 8; float h = pd.Height(pd.ToDir(cl, Mathf.Cos(a) * rr, Mathf.Sin(a) * rr)); hmax = Mathf.Max(hmax, h); hmin = Mathf.Min(hmin, h); }
                 bp.root.transform.position = cl.c * (pd.R + hmax);
                 if (hmax - hmin > .02f) { float dep = hmax - hmin + .3f; MeshKit.Cyl(bp.root.transform, MeshKit.Mat(GameData.Hex("#6b717c"), .05f, .2f), new Vector3(0, -dep / 2 + .02f, 0), 3.4f, 3.6f, dep, 28); } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                LcKit.Spawn("Ereignisse/erzader", bp.root.transform, new Vector3(r.bag ? 3.6f : -3.8f, -.05f, 1.2f), (r.cell * 37) % 360, ps.P.col0); /* Erzader neben dem Abbau (eigenes Modell) */
                 rigViews.Add((bp, r));
             }
         }
@@ -164,6 +165,7 @@ namespace LunarCleanup.Gameplay
                 var l = MeshKit.Ball(baseRoot, lamp, Vector3.zero, .14f); l.transform.position = pd.Surf(p, .1f);
             }
         }
+        static void PitAt(Transform t, Vector3 pos, Vector3 toCenter, float houseW) { if (!LcKit.Pit(t, pos, toCenter)) Kit.Pit(t, pos, toCenter, houseW); }
         void BuildOutposts()
         {
             pipes.Clear(); pipeLamps.Clear(); var sites = Game.OutpostSites(ps.pid);
@@ -182,8 +184,8 @@ namespace LunarCleanup.Gameplay
                     var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .75f, .55f); var dark = MeshKit.Mat(GameData.Hex("#2b2f36"), .1f, .2f);
                     var lampM = new Material(MeshKit.Glow(GameData.Hex("#6ff2d2"), 1.5f));
                     // Pipeline unsichtbar: läuft unter der Erde bis direkt an Pumpenhaus und Lagersockel und taucht dort von unten ein (nur Revisionsdeckel sichtbar)
-                    Inlet(pumpWall, steel); Inlet(wall, steel);
-                    Trench(pumpWall, wall, dark, steel, lampM); pipeLamps.Add((lampM, o));
+                    /* Fabian 01.11.: Pipeline ganz im Boden – keine Trasse, keine Deckel, keine Steigrohre sichtbar */
+                    pipeLamps.Add((lampM, o));
                 }
                 else if (Game.ResDone("outpost") || Game.ResDone("drones"))
                 {
@@ -200,8 +202,9 @@ namespace LunarCleanup.Gameplay
             for (int y = 0; y < H; y++) for (int x = 0; x < W; x++)
                 {
                     float u = Mathf.Abs(x - W / 2f + .5f) / (W / 2f); bool chev = Mathf.Abs(Mathf.Repeat(y + u * 14, 32) - 16) < 3 && u < .8f;
-                    byte g = (byte)(chev ? 120 : 40 + (x + y) % 3 * 4); if (u > .9f) g = 160;
-                    px[y * W + x] = new Color32(g, g, (byte)(g + 6), 255);
+                    /* Fabians Bandfarben: Gurt LC_band, Mitnehmer-Pfeile LC_platte, helle Kante */
+                    var c = chev ? new Color(.29f, .314f, .376f) : new Color(.137f, .153f, .18f) * (1 + (x + y) % 3 * .04f); if (u > .9f) c = new Color(.42f, .45f, .5f);
+                    px[y * W + x] = (Color32)c;
                 }
             beltTex.SetPixels32(px); beltTex.Apply(true); return beltTex;
         }
@@ -236,8 +239,8 @@ namespace LunarCleanup.Gameplay
             var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true, LF, s0);
             var go = new GameObject(b.id); go.transform.SetParent(beltRoot, false); go.AddComponent<MeshFilter>().sharedMesh = deck;
             var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", BeltTex()); m.SetFloat("_Smoothness", .3f); m.SetFloat("_Metallic", .2f);
-            go.AddComponent<MeshRenderer>().sharedMaterial = m; beltMats.Add(m);
-            var rail = MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var frame = MeshKit.Mat(GameData.Hex("#2f3540"), .6f, .45f);
+            go.AddComponent<MeshRenderer>().sharedMaterial = m; beltMats.Add(m); bool lc = LcKit.HasBelt;
+            var rail = lc ? LcKit.PalMat("LC_stahl", Color.white) : MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var gold = lc ? LcKit.PalMat("LC_akzent", GameData.Hex("#ffbf4d")) : MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var frame = lc ? LcKit.PalMat("LC_dunkel", Color.white) : MeshKit.Mat(GameData.Hex("#2f3540"), .6f, .45f);
             // Seitenbanden: liegen genau an den Bandkanten und folgen jeder Kurve
             AddPart(Extrude(rp, cum, Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande links");
             AddPart(Extrude(rp, cum, Box2(BW, BW + .09f, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande rechts");
@@ -247,6 +250,11 @@ namespace LunarCleanup.Gameplay
             var post = MeshKit.Mat(GameData.Hex("#3a4150"), .6f, .45f); float L = cum[n - 1];
             foreach (var (p, tan, top) in SupportSpots(b, rp, cum, s0, H))
             {
+                if (lc) /* Fabians Bandstütze, in der Höhe auf diese Stelle gestreckt (normal 0,24 m, hoch 1,24 m) */
+                {
+                    bool hi = top > .7f; var dc0 = pd.PlanDir(p); var sg = LcKit.Spawn(hi ? "Foerderband/band_stuetze_hoch" : "Foerderband/band_stuetze", beltRoot, Vector3.zero, 0, GameData.Hex("#ffbf4d"));
+                    sg.transform.position = dc0 * pd.R; sg.transform.rotation = Quaternion.LookRotation(Tangent(dc0, tan), dc0) * sg.transform.localRotation; var ls = sg.transform.localScale; ls.y *= top / (hi ? 1.23f : .23f); sg.transform.localScale = ls; continue;
+                }
                 var nrm = new Vector2(-tan.y, tan.x);
                 foreach (float sd in new[] { -1f, 1f })
                 {
@@ -352,7 +360,7 @@ namespace LunarCleanup.Gameplay
                         // genauer: liegt ein Eckpunkt von a innerhalb der Hülle von b? (Abstand zum Mittelpunkt kleiner als b's Ausdehnung in dieser Richtung)
                         out_.Add("Gebäude " + a + " und " + b + " kommen sich nahe (Abstand " + (ps.lay.pos[a] - ps.lay.pos[b]).magnitude.ToString("0.0") + " m, Ausdehnung " + rad[a].ToString("0.0") + " + " + rad[b].ToString("0.0") + " m)");
                     }
-            if (pipeMiss > 0) out_.Add(pipeMiss + " Pipeline(s) treffen die Wand des Rohstofflagers nicht");
+            /* Pipelines liegen seit 01.11. unsichtbar im Boden – keine Prüfung der Wandtreffer mehr */
             return out_;
         }
         /// <summary>Alle Dreiecke eines Gebäudemodells in Weltkoordinaten (ohne Bodenplatte/Lampe).</summary>
@@ -400,6 +408,8 @@ namespace LunarCleanup.Gameplay
             var steel = MeshKit.Mat(GameData.Hex("#8a93a3"), .7f, .5f); var gold = MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var dark = MeshKit.Mat(GameData.Hex("#101318"), 0, .1f);
             var g = new GameObject(wall ? "Anschluss" : "Übergabe"); g.transform.SetParent(beltRoot, false); g.transform.position = d * pd.R; g.transform.rotation = rot; var t = g.transform;
             float w = BW * 2 + .5f;
+            /* Fabians Anschlussmodelle (gleiche Maße wie unten): Eingang am Bandende, Ausgang am Anfang, Übergabesäule ohne Wand */
+            if (LcKit.Spawn(wall ? (atEnd ? "Foerderband/anschluss_eingang" : "Foerderband/anschluss_ausgang") : "Foerderband/uebergabe_saeule", t, new Vector3(0, H - .55f, 0), 0, GameData.Hex("#ffbf4d"))) return;
             if (wall)
             {
                 // Rahmen: ragt 0,3 m aus der Wand und steckt 0,4 m darin
@@ -420,8 +430,9 @@ namespace LunarCleanup.Gameplay
         void Tunnel(Vector2[] rp, float[] cum, float a, float b, float H)
         {
             if (b - a < .3f) return; var sp = SubPath(rp, cum, a, b); var c = new float[sp.Length]; for (int i = 1; i < sp.Length; i++) c[i] = c[i - 1] + (sp[i] - sp[i - 1]).magnitude;
-            AddPart(Extrude(sp, c, Box2(-BW - .25f, BW + .25f, H - .42f, H + .58f), true, false), MeshKit.Mat(GameData.Hex("#aeb5c0"), .5f, .5f), "Zulauf");
-            AddPart(Extrude(sp, c, Box2(-BW - .27f, BW + .27f, H + .5f, H + .62f), true, false), MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f), "Zulauf Dach");
+            bool lc = LcKit.HasBelt;
+            AddPart(Extrude(sp, c, Box2(-BW - .25f, BW + .25f, H - .42f, H + .58f), true, false), lc ? LcKit.PalMat("LC_stahl", Color.white) : MeshKit.Mat(GameData.Hex("#aeb5c0"), .5f, .5f), "Zulauf");
+            AddPart(Extrude(sp, c, Box2(-BW - .27f, BW + .27f, H + .5f, H + .62f), true, false), lc ? LcKit.PalMat("LC_akzent", GameData.Hex("#ffbf4d")) : MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f), "Zulauf Dach");
         }
         // ---------- Brücken: kreuzen/berühren sich zwei Bänder auf gleicher Höhe, steigt das spätere Band darüber ----------
         readonly Dictionary<string, List<Vector3>> bridges = new Dictionary<string, List<Vector3>>(); // x = von s, y = bis s, z = Anhebung
@@ -630,12 +641,7 @@ namespace LunarCleanup.Gameplay
             var smat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); smat.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(smat, true); smat.SetColor("_BaseColor", Color.white);
             sg.AddComponent<MeshRenderer>().sharedMaterial = smat;
             // Atmosphärenleuchten hinter dem Planeten
-            if (th.hasGlow)
-            {
-                var halo = MeshKit.Part(skyRoot, MeshKit.Quad, null, Vector3.zero, Vector3.one * pd.R * 2.9f); halo.name = "Atmosphäre";
-                var hm = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); hm.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(hm, true);
-                var gc = th.glow; gc.a = Mathf.Clamp01(th.glowOp * 2.2f); hm.SetColor("_BaseColor", gc); halo.GetComponent<MeshRenderer>().sharedMaterial = hm; halo.AddComponent<Billboard>();
-            }
+            BuildAtmo(th.hasGlow ? th.glow : new Color(.55f, .68f, .9f), th.hasGlow ? Mathf.Clamp01(.35f + th.glowOp * 2f) : .22f); // Atmosphärenring am Planetenrand (WorldView.Space.cs)
             // Nachbarkörper am Himmel: wie die echten Vorbilder (Erde, Jupiter, Saturn, Neptun, Monde, Sterne)
             BuildSkyBody(ps.pid, th.giant);
         }
@@ -734,7 +740,8 @@ namespace LunarCleanup.Gameplay
                     float sp = it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1]; if (beltTrim.TryGetValue(b.id, out var tr) && (sp < tr.x - .2f || sp > tr.y + .2f)) continue; // im Gebäude: unsichtbar
                     var p = PointAt(Vis(b).rp, cum, sp, out var tan); var d = pd.PlanDir(p);
                     var M = GameData.Mats[it.m]; Vector3 sc = M.shape == "brick" ? new Vector3(.3f, .2f, .5f) : M.shape == "ingot" ? new Vector3(.22f, .16f, .55f) : M.shape == "gem" ? new Vector3(.3f, .3f, .3f) : M.shape == "barrel" ? new Vector3(.32f, .4f, .32f) : new Vector3(.42f, .34f, .42f);
-                    var mx = Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + Lift(b.id, sp) + .02f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
+                    var wb = LcKit.Ware(M.key); /* eigenes Warenmodell (Fabian): Ursprung unten, schon in Metern */
+                    var mx = wb != null ? Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + Lift(b.id, sp) + .02f), Quaternion.LookRotation(Tangent(d, tan), d), Vector3.one) : Matrix4x4.TRS(d * (pd.R + BeltDeck(b) + Lift(b.id, sp) + .02f + sc.y / 2), Quaternion.LookRotation(Tangent(d, tan), d), sc);
                     if (!itemMx.TryGetValue(it.m, out var list)) { list = new List<Matrix4x4>(); itemMx[it.m] = list; }
                     list.Add(mx);
                 }
@@ -742,6 +749,7 @@ namespace LunarCleanup.Gameplay
             foreach (var kv in itemMx)
             {
                 if (kv.Value.Count == 0) continue;
+                var wm = LcKit.Ware(GameData.Mats[kv.Key].key); if (wm != null) { foreach (var mx in kv.Value) for (int sm = 0; sm < wm.mats.Length; sm++) Graphics.DrawMesh(wm.mesh, mx, wm.mats[sm], 0, null, sm); continue; }
                 if (!itemMat.TryGetValue(kv.Key, out var mat)) { var M = GameData.Mats[kv.Key]; mat = M.shape == "gem" ? MeshKit.Mat(M.col, .1f, .9f, M.col * .5f) : MeshKit.Mat(M.col, M.shape == "ingot" ? .85f : .2f, M.shape == "ingot" ? .75f : .45f); itemMat[kv.Key] = mat; }
                 var sh0 = GameData.Mats[kv.Key].shape; var mesh0 = sh0 == "barrel" ? MeshKit.CylMesh(.5f, .5f, 1f, 14) : sh0 == "gem" ? MeshKit.Sphere : itemMesh; /* Fässer rund, Kristalle als Kugel – sonst sehen Waren wie Stützen aus */
                 foreach (var mx in kv.Value) Graphics.DrawMesh(mesh0, mx, mat, 0); /* einzeln statt Instancing: braucht keine Instancing-Shadervariante (die fehlte im Build – Waren waren unsichtbar) */
@@ -790,7 +798,7 @@ namespace LunarCleanup.Gameplay
             foreach (var L in ps.sv.lifters)
             {
                 alive.Add(L.id);
-                if (!lifters.TryGetValue(L.id, out var dp)) { dp = Models.Drone(GameData.Hex("#ffbf4d"), true); dp.root.name = "Lastdrohne"; if (!Kit.Has("space/craft_cargoB")) dp.root.transform.localScale = Vector3.one * 2.1f; dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = L.d * (pd.R + 3); lifters[L.id] = dp; liftAlt[L.id] = 3; }
+                if (!lifters.TryGetValue(L.id, out var dp)) { dp = Models.Drone(GameData.Hex("#ffbf4d"), true); dp.root.name = "Lastdrohne"; if (!Kit.Has("space/craft_cargoB") && !LcKit.Has("Drohnen/lastdrohne")) dp.root.transform.localScale = Vector3.one * 2.1f; dp.root.transform.SetParent(vehRoot, false); dp.root.transform.position = L.d * (pd.R + 3); lifters[L.id] = dp; liftAlt[L.id] = 3; }
                 float goal = L.mode == "idle" ? 3f : L.mode == "fetch" && ps.pd.Arc(L.d, ps.sv.veh.Find(x => x.id == L.veh)?.d ?? L.d) < 6 ? 4.2f : 14f;
                 if (L.mode == "carry" && ps.sv.veh.Find(x => x.id == L.veh) is VehSave cv && ps.pd.Arc(L.d, ps.pd.cells[L.cell].c) < 8) goal = 4.2f;
                 float alt = Mathf.Lerp(liftAlt[L.id], goal, 1 - Mathf.Exp(-2f * Time.deltaTime)); liftAlt[L.id] = alt;
@@ -821,10 +829,14 @@ namespace LunarCleanup.Gameplay
                 {
                     var g = new GameObject("Leuchtkristall"); g.transform.SetParent(vehRoot, false); var d = Game.CrystalDir(ps, c);
                     g.transform.position = pd.Surf(d); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d)) * Quaternion.Euler(0, c.id * 47 % 360, 0);
-                    // Kristallbüschel: ein großer Mittelkristall und 6 schräge Spitzen auf einem dunklen Gesteinssockel
+                    // Kristallbüschel: eigenes Modell (Kristallteile in der Farbe der Sorte) oder ein großer Mittelkristall und 6 schräge Spitzen auf einem dunklen Gesteinssockel
+                    var lcc = LcKit.Spawn("Welt/leuchtkristall", g.transform, Vector3.zero, 0, crMat[c.t].color);
+                    if (lcc) { foreach (var r in lcc.GetComponentsInChildren<Renderer>()) { var ms = r.sharedMaterials; for (int q = 0; q < ms.Length; q++) if (ms[q] && (ms[q].name.Contains("kristall") || ms[q].IsKeywordEnabled("_EMISSION"))) ms[q] = crMat[c.t]; r.sharedMaterials = ms; } lcc.transform.localScale *= 1.05f; }
+                    else {
                     MeshKit.Cyl(g.transform, MeshKit.Mat(GameData.Hex("#3a3632"), 0, .15f), new Vector3(0, .08f, 0), .45f, .6f, .2f, 7);
                     MeshKit.Cyl(g.transform, crMat[c.t], new Vector3(0, .8f, 0), 0, .26f, 1.5f, 6);
                     for (int k = 0; k < 6; k++) { float tilt = 22 + (c.id * 13 + k * 29) % 24, len = .6f + ((c.id + k * 7) % 5) * .12f; var rot = Quaternion.Euler(0, k * 60 + c.id * 11, 0) * Quaternion.Euler(tilt, 0, 0); MeshKit.Cyl(g.transform, crMat[c.t], rot * new Vector3(0, len / 2, 0) + rot * Vector3.forward * .1f, 0, .14f, len, 5, rot.eulerAngles); }
+                    }
                     { var sch = MeshKit.Part(g.transform, MeshKit.Quad, crPool[c.t], new Vector3(0, .05f, 0), new Vector3(4.5f, 4.5f, 1), new Vector3(90, 0, 0)); sch.name = "Schein"; NoShadow(sch); } /* der Leuchtschein wirft keinen eckigen Schatten */
                     cv = (g, crMat[c.t], c.t); crys[c.id] = cv;
                 }
@@ -886,6 +898,7 @@ namespace LunarCleanup.Gameplay
             float t = Time.time;
             if (blds.TryGetValue("presse", out var pr) && pr.piston) { bool on = ps.mach["presse"].cur >= 0; float y = on ? pr.pistonY - .5f * Mathf.Pow(Mathf.Abs(Mathf.Sin(t * 1.6f)), 3) : pr.pistonY; pr.piston.localPosition = new Vector3(0, y, 0); }
             if (blds.TryGetValue("research", out var rs) && rs.spin) rs.spin.Rotate(Vector3.up, 20 * Time.deltaTime, Space.Self);
+            foreach (var (sid, sp) in new[] { ("hangar", 45f), ("werkstatt", 8f), ("lifter", 6f) }) if (blds.TryGetValue(sid, out var sb) && sb.spin) sb.spin.Rotate(Vector3.up, sp * Time.deltaTime, Space.Self); // Radar, Kranhaken (eigene Modelle)
             if (blds.TryGetValue("sell", out var sl) && sl.rocket)
             {
                 if (rocketT >= 0)
@@ -907,8 +920,9 @@ namespace LunarCleanup.Gameplay
         }
     }
 
+    /// <summary>Leuchtschein dreht sich immer zur Kamera (bleibt, wo er ist).</summary>
     public class Billboard : MonoBehaviour
     {
-        void LateUpdate() { var c = Camera.main; if (!c) return; var dir = (c.transform.position).normalized; transform.position = -dir * 40; transform.rotation = Quaternion.LookRotation(transform.position - c.transform.position, c.transform.up); }
+        void LateUpdate() { var c = Camera.main; if (!c) return; transform.rotation = Quaternion.LookRotation(transform.position - c.transform.position, c.transform.up); }
     }
 }

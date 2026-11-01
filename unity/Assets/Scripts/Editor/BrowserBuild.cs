@@ -60,7 +60,7 @@ namespace LunarCleanup.EditorTools
         }
 
         /// <summary>Materialien in Resources: dadurch sind Lit/Unlit/Partikel/Himmel samt der benutzten Schlüsselwörter im Build.</summary>
-        static void MakeShaderKeep()
+        internal static void MakeShaderKeep()
         {
             if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
             if (!AssetDatabase.IsValidFolder(Keep)) AssetDatabase.CreateFolder("Assets/Resources", "ShaderKeep");

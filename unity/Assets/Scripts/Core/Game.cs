@@ -36,7 +36,7 @@ namespace LunarCleanup.Core
 
     public static partial class Game
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnPlanetChanged = null; Offline = false; }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnMeteors = null; OnPlanetChanged = null; Offline = false; }
         public static SaveData S;
         public static Dictionary<string, PState> P = new Dictionary<string, PState>();
         public static int NM;
@@ -44,6 +44,10 @@ namespace LunarCleanup.Core
         public static event Action<Vector3, string, string> OnFloat;     // Richtung, Text, Art
         public static event Action<string, double> OnRocket;
         public static event Action<Vector3> OnBoom;
+        /// <summary>Meteoritenschauer auf diesen Parzellen (die Ansicht lässt Meteore einschlagen).</summary>
+        public static event Action<List<int>> OnMeteors;
+        /// <summary>Wohin die Kamera gerade schaut (Planetenrichtung), von der Ansicht gesetzt.</summary>
+        public static Vector3 ViewDir; public static float ViewCos = .97f;
         public static event Action OnPlanetChanged;
         public static Vector3 CartGoal;                                  // wohin der Sammelwagen fährt (Blickpunkt der Kamera)
         public static bool Offline;
@@ -177,6 +181,36 @@ namespace LunarCleanup.Core
             }
             return null;
         }
+
+        // ================= Spielstand-Code (Sichern/Übertragen zwischen Geräten) =================
+        const string CodePrefix = "LCU1:";
+        /// <summary>Ganzer Spielstand als Text (gezippt, Base64) – zum Kopieren in Notizen/Nachrichten.</summary>
+        public static string ExportCode()
+        {
+            Save(); var raw = System.Text.Encoding.UTF8.GetBytes(PlayerPrefs.GetString(Key, ""));
+            using (var ms = new System.IO.MemoryStream()) { using (var gz = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress)) gz.Write(raw, 0, raw.Length); return CodePrefix + Convert.ToBase64String(ms.ToArray()); }
+        }
+        /// <summary>Lädt einen Spielstand-Code. Der bisherige Stand bleibt als Sicherung erhalten. Rückgabe: Fehlertext oder "".</summary>
+        public static string ImportCode(string code)
+        {
+            try
+            {
+                code = (code ?? "").Trim(); if (!code.StartsWith(CodePrefix)) return "Das ist kein Lunar-Cleanup-Code (er beginnt mit " + CodePrefix + ")";
+                var bytes = Convert.FromBase64String(code.Substring(CodePrefix.Length).Replace("\n", "").Replace(" ", ""));
+                string json; using (var ms = new System.IO.MemoryStream(bytes)) using (var gz = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Decompress)) using (var rd = new System.IO.StreamReader(gz)) json = rd.ReadToEnd();
+                var s = JsonUtility.FromJson<SaveData>(json);
+                if (s == null || s.saveVersion < 1 || s.planets == null || !s.planets.Any(p => p.pid == "moon")) return "Code ist unvollständig oder beschädigt";
+                Save(); PlayerPrefs.SetString(Key + "-vorImport", PlayerPrefs.GetString(Key, ""));
+                if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid));
+                S = s; GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
+                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon";
+                Save(); OnPlanetChanged?.Invoke(); return "";
+            }
+            catch (Exception e) { return "Code nicht lesbar (" + e.GetType().Name + ")"; }
+        }
+        /// <summary>Holt den Stand von vor dem letzten Import zurück.</summary>
+        public static bool UndoImport() { string j = PlayerPrefs.GetString(Key + "-vorImport", ""); if (j == "") return false; PlayerPrefs.SetString(Key, j); PlayerPrefs.DeleteKey(Key + "-vorImport"); PlayerPrefs.Save(); S = Load() ?? Fresh(); GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v; P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); OnPlanetChanged?.Invoke(); return true; }
+        public static bool HasImportBackup => PlayerPrefs.GetString(Key + "-vorImport", "") != "";
 
         public static void ResetAll() { PlayerPrefs.DeleteKey(Key); PlayerPrefs.DeleteKey(Key + "-bak"); S = Fresh(); GUpg.Clear(); P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); OnPlanetChanged?.Invoke(); }
 

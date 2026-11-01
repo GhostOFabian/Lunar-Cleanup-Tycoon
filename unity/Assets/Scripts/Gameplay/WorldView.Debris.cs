@@ -11,7 +11,7 @@ namespace LunarCleanup.Gameplay
     public partial class WorldView
     {
         class DebItem { public int cell, gi; public Matrix4x4 m; public bool on; }
-        class DebBatch { public Mesh mesh; public Material mat; public int chunk; public readonly List<DebItem> items = new List<DebItem>(); public Matrix4x4[] arr = new Matrix4x4[0]; public int n; public bool dirty = true; }
+        class DebBatch { public Mesh mesh; public Material mat; public Material[] mats; public int chunk; public readonly List<DebItem> items = new List<DebItem>(); public Matrix4x4[] arr = new Matrix4x4[0]; public int n; public bool dirty = true; }
         readonly List<DebBatch> debBatches = new List<DebBatch>();
         readonly Dictionary<int, List<DebItem>> debByCell = new Dictionary<int, List<DebItem>>();
         readonly Dictionary<int, List<DebBatch>> debBatchOfCell = new Dictionary<int, List<DebBatch>>();
@@ -46,7 +46,7 @@ namespace LunarCleanup.Gameplay
         void BuildDebris()
         {
             debBatches.Clear(); debByCell.Clear(); debBatchOfCell.Clear(); debWatch.Clear(); debFor = ps.pid;
-            var keyed = new Dictionary<(int chunk, int type), DebBatch>(); var rnd = new System.Random(pd.N * 31 + 7); int G = GameData.GRID, CELLS = G * G;
+            var keyed = new Dictionary<(int chunk, int type, int v), DebBatch>(); var rnd = new System.Random(pd.N * 31 + 7); int G = GameData.GRID, CELLS = G * G;
             float R() => (float)rnd.NextDouble();
             foreach (var cl in pd.cells)
             {
@@ -56,9 +56,11 @@ namespace LunarCleanup.Gameplay
                     int gi = -1; for (int t = 0; t < 20; t++) { int c = (int)(R() * CELLS); if (c >= CELLS) c = CELLS - 1; if (cl.inside[c]) { gi = c; break; } }
                     if (gi < 0) continue;
                     float x = -cl.H + ((gi % G) + .5f) * cl.cs + (R() - .5f) * .3f, y = -cl.H + ((gi / G) + .5f) * cl.cs + (R() - .5f) * .3f, yaw = R() * 360f, s = .7f + R() * .8f;
-                    if (!keyed.TryGetValue((cl.chunk, cl.type), out var bt)) { var sh = DebShape(D); bt = new DebBatch { mesh = sh.mesh, mat = sh.mat, chunk = cl.chunk }; bt.mat.enableInstancing = true; keyed[(cl.chunk, cl.type)] = bt; debBatches.Add(bt); }
-                    var dir = pd.ToDir(cl, x, y); var nrm = pd.SurfNormal(dir, cl.id); var size = DebShape(D).size * s;
-                    var pos = pd.Surf(dir, size.y * .35f, cl.id); var rot = Quaternion.FromToRotation(Vector3.up, nrm) * Quaternion.Euler(0, yaw, 0);
+                    int v = (int)(R() * 3); var lc = LcKit.Debris(D.deb, v); /* eigenes Modell (Fabian), sonst einfache Form */
+                    if (!keyed.TryGetValue((cl.chunk, cl.type, lc != null ? v : 0), out var bt)) { if (lc != null) bt = new DebBatch { mesh = lc.mesh, mats = lc.mats, chunk = cl.chunk }; else { var sh = DebShape(D); bt = new DebBatch { mesh = sh.mesh, mat = sh.mat, chunk = cl.chunk }; bt.mat.enableInstancing = true; } keyed[(cl.chunk, cl.type, lc != null ? v : 0)] = bt; debBatches.Add(bt); }
+                    var dir = pd.ToDir(cl, x, y); var nrm = pd.SurfNormal(dir, cl.id);
+                    var size = lc != null ? Vector3.one * (.62f / Mathf.Max(.3f, Mathf.Max(lc.size.x, lc.size.z)) * s) : DebShape(D).size * s;
+                    var pos = pd.Surf(dir, lc != null ? -.03f : size.y * .35f, cl.id); var rot = Quaternion.FromToRotation(Vector3.up, nrm) * Quaternion.Euler(0, yaw, 0);
                     var it = new DebItem { cell = cl.id, gi = gi, m = Matrix4x4.TRS(pos, rot, size) };
                     bt.items.Add(it);
                     if (!debByCell.TryGetValue(cl.id, out var li)) { li = new List<DebItem>(); debByCell[cl.id] = li; } li.Add(it);
@@ -106,8 +108,9 @@ namespace LunarCleanup.Gameplay
                 for (int i = 0; i < b.n; i += 1023)
                 {
                     int cnt = Mathf.Min(1023, b.n - i);
-                    if (i == 0) Graphics.DrawMeshInstanced(b.mesh, 0, b.mat, b.arr, cnt, null, ShadowCastingMode.On, true);
-                    else { var part = new Matrix4x4[cnt]; System.Array.Copy(b.arr, i, part, 0, cnt); Graphics.DrawMeshInstanced(b.mesh, 0, b.mat, part, cnt, null, ShadowCastingMode.On, true); }
+                    var arr = b.arr; if (i > 0) { arr = new Matrix4x4[cnt]; System.Array.Copy(b.arr, i, arr, 0, cnt); }
+                    if (b.mats == null) Graphics.DrawMeshInstanced(b.mesh, 0, b.mat, arr, cnt, null, ShadowCastingMode.On, true);
+                    else for (int sm = 0; sm < b.mats.Length; sm++) Graphics.DrawMeshInstanced(b.mesh, sm, b.mats[sm], arr, cnt, null, ShadowCastingMode.On, true);
                 }
             }
         }
