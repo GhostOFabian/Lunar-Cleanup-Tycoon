@@ -126,7 +126,7 @@ namespace LunarCleanup.UI
         {
             var img = Glass(parent, name, bg, radius); img.raycastTarget = true; var b = img.gameObject.AddComponent<Button>(); b.targetGraphic = img;
             var cb = b.colors; cb.normalColor = Color.white; cb.highlightedColor = new Color(1, 1, 1, .92f); cb.pressedColor = new Color(.8f, .8f, .8f, 1); cb.disabledColor = new Color(1, 1, 1, .35f); cb.fadeDuration = .06f; b.colors = cb;
-            b.onClick.AddListener(() => onClick?.Invoke()); return b;
+            b.onClick.AddListener(() => { double c0 = LunarCleanup.Core.Game.S != null ? LunarCleanup.Core.Game.S.credits : 0; onClick?.Invoke(); if (LunarCleanup.Core.Game.S != null && LunarCleanup.Core.Game.S.credits < c0 - .5) LunarCleanup.Gameplay.Sfx.Play("buy", 1, .35f); else LunarCleanup.Gameplay.Sfx.Play("click", 1, .3f); }); return b; /* Klick bei jedem Knopf, Kauf-Klang wenn Credits ausgegeben wurden */
         }
         public static RectTransform Bar(Transform parent, string name, Color col, out RectTransform fill, float h = 5)
         {

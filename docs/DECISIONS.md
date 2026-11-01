@@ -227,3 +227,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Festgefahrene Fahrzeuge werden nach 25 s ohne Fortschritt automatisch an die Werkstatt gesetzt; zusätzlich „Alle zurücksetzen“.
 - 01.11.2026 (Fabian): Geysire sind Partikel aus Bodenschloten (kein Modell), Inhalt richtet sich nach der Flüssigkeit des Planeten.
 - 01.11.2026: Dateien zum Mac immer unter einem neuen Pfad in /mnt/user-data/outputs ablegen – derselbe Pfad wird beim zweiten Übertragen mit altem Inhalt geschrieben.
+- 01.11.2026: Klang bleibt prozedural (Projektregel „keine fremden Assets“), dafür Glocken mit unharmonischen Teiltönen, gefiltertes rosa Rauschen und Akkordflächen je Planetengruppe.
+- 01.11.2026 (Fabian): Kamera folgt beim Wischen nicht mehr der Putzstelle (ruhiger), nur der Bildrand schwenkt.
+- 01.11.2026 (Fabian): Erfolge mit drei Stufen und Belohnungen zum Abholen; Speicherung als „t:id:stufe“/„c:id:stufe“ in S.achievements.
+- 01.11.2026 (Fabian): Reiseprämie bei 100 % + doppelter Tiefenabbau auf sauberen Planeten + Reise auf Kredit, damit niemand festsitzt.

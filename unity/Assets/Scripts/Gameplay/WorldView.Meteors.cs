@@ -34,7 +34,7 @@ namespace LunarCleanup.Gameplay
                 var from = to + nn * far * .45f + side * sgn * far * .6f + up * far * (.1f + Random.value * .15f) + Random.insideUnitSphere * far * .05f;
                 mets.Add(new Met { from = from, to = to, cell = cells[i], delay = i * .45f + Random.value * .35f, dur = 1.6f + Random.value * .5f });
             }
-            Sfx.Play("rocket", 1.4f, .25f);
+            Sfx.Play("whistle", 1f, .4f);
         }
 
         void UpdateMeteors()
@@ -63,7 +63,7 @@ namespace LunarCleanup.Gameplay
                 var d = m.to.normalized; Destroy(m.go); mets.RemoveAt(i);
                 EmitDust(d, new Color(1, .54f, .23f), 45); EmitDust(d, new Color(.33f, .33f, .33f), 35);
                 Flash(m.to, new Color(1f, .7f, .4f));
-                Sfx.Play("pop", .5f + Random.value * .2f, .6f); if (Time.time - lastBuzz > 4) { Sfx.Buzz(); lastBuzz = Time.time; } /* einmal pro Schauer vibrieren */
+                Sfx.PlayAt("boom", m.to, .9f + Random.value * .25f, .7f, 260); if (Time.time - lastBuzz > 4) { Sfx.Buzz(); lastBuzz = Time.time; } /* einmal pro Schauer vibrieren */
                 if (cam) { float dist = (cam.transform.position - m.to).magnitude; Shake = Mathf.Max(Shake, Mathf.Clamp01(1.2f - dist / 250f)); }
                 SpawnMetRock(m.cell, m.to);
             }

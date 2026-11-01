@@ -66,7 +66,7 @@ namespace LunarCleanup.Gameplay
             {
                 if (!g.ps) continue; var em = g.ps.emission;
                 if (g.burst > 0) { g.burst -= dt; float k = Mathf.Clamp01(g.burst / 1.2f); em.rateOverTime = 20 + 140 * k; if (g.burst <= 0) { em.rateOverTime = 3; g.wait = 20 + Random.value * 40; } continue; }
-                g.wait -= dt; if (g.wait <= 0) g.burst = 3 + Random.value * 4;
+                g.wait -= dt; if (g.wait <= 0) { g.burst = 3 + Random.value * 4; if (Game.S != null) Game.S.stats.geysers++; Sfx.PlayAt("geyser", g.ps.transform.position, .85f + Random.value * .3f, .55f, 90); }
             }
         }
     }

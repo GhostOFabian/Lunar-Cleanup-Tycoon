@@ -35,7 +35,7 @@ namespace LunarCleanup.Core
                         string extra = "";
                         if (t.key == "impact") { for (int k = 0; k < 3; k++) { var cl = pd.cells[t.cell]; ps.sv.crystals.Add(new CrystalSave { id = ++ps.sv.crN, cell = t.cell, g = .2f, t = Rng.Next(5), x = (float)(Rng.NextDouble() - .5) * cl.H, y = (float)(Rng.NextDouble() - .5) * cl.H, claim = -1 }); } extra = " · 3 Leuchtkristalle wachsen an der Einschlagstelle"; }
                         if (!Offline && ps.pid == S.planet) { Toast((t.key == "wreck" ? "Wrack geborgen" : "Kometentrümmer geborgen") + " · +" + Fmt(cr) + " Cr" + extra, "good"); FloatTxt(pd.cells[t.cell].c, "+" + Fmt(cr) + " Cr", "big"); }
-                        EvEnd(ps, null); t.mode = "back"; t.key = "";
+                        EvEnd(ps, null); t.mode = "back"; t.key = ""; S.stats.salvage++;
                     }
                     break;
                 case "back":

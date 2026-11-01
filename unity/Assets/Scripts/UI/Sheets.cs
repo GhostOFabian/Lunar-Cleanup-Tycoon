@@ -298,6 +298,8 @@ namespace LunarCleanup.UI
             }
             foreach (var pid in GameData.POrder) if (!Regions.Any(r => r.ids.Contains(pid)) && Game.P.ContainsKey(pid) == travel) { PlanetRow(h, pid); shown++; } /* Sicherheitsnetz für neue Planeten */
             if (shown == 0) h.Note(travel ? "Noch keine Planeten." : "Alle Planeten sind freigeschaltet.");
+            if (Game.S.debt > 0) h.Note("Reisekredit offen: " + Cr(Game.S.debt) + " – wird mit der Hälfte jeder Einnahme abbezahlt.");
+            if (!travel && Game.S.debt > 0 && Game.StardustPending() > 0) h.Note("Tipp: Ein Sternenstaub-Neustart (Reiter Sternenstaub) bringt jetzt +" + Game.StardustPending() + " Sternenstaub für dauerhafte Boni.");
             else if (!travel) h.Note("Freischalten kannst du immer den nächsten Planeten der Reihe.");
         }
         static void PlanetRow(Hud h, string pid)
@@ -312,6 +314,7 @@ namespace LunarCleanup.UI
             {
                 int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
                 if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); });
+                if (Game.CanCredit(key)) h.Row("   Auf Kredit reisen", () => "Dir fehlen " + Cr(P.unlockCost - Game.S.credits) + ". Der Rest wird geliehen (+10 %) und mit der Hälfte deiner Einnahmen abbezahlt.", () => "Kredit", () => Game.CanCredit(key), () => { if (Game.UnlockOnCredit(key)) h.CloseSheet(); }, false);
                 else h.Row(P.name, () => size + " · " + P.sub + " · noch nicht erreichbar");
             }
         }
@@ -350,9 +353,31 @@ namespace LunarCleanup.UI
                 if (!Game.P.ContainsKey(kv.Key)) continue; string pid = kv.Key; var al = kv.Value;
                 h.Row(GameData.Planets[pid].name + " · " + Game.FindsOn(pid) + "/" + al.Length, () => string.Join(" · ", al.Select((f, i) => Game.HasFind(pid, i) ? f.name : "???")) + (Game.FindsOn(pid) >= al.Length ? " · Album komplett: +5 % Erlös" : " · Funde gibt es beim Reinigen (3 %, auf seltsamen Parzellen 8 %)"));
             }
-            h.Section("Erfolge · " + Game.S.achievements.Count + "/" + Game.Achievements.Count);
-            foreach (var a in Game.Achievements) { var aa = a; h.Row(a.name, () => aa.desc + (Game.S.achievements.Contains(aa.id) ? " · geschafft" : "")); }
             if (Game.S.daily != null && Game.S.daily.streak > 0) h.Note("Tagesbonus: Tag " + Game.S.daily.streak + " von 7 – komm morgen wieder, die Belohnung steigt.");
+        }
+        static string Medal(int t) => t >= 3 ? "<color=#ffd24d>●●●</color>" : t == 2 ? "<color=#ffd24d>●●</color><color=#4a5266>●</color>" : t == 1 ? "<color=#ffd24d>●</color><color=#4a5266>●●</color>" : "<color=#4a5266>●●●</color>";
+        /// <summary>Fabian 01.11.: Erfolge mit Bronze/Silber/Gold, Belohnung zum Abholen, nach Kategorien.</summary>
+        static void Achievements(Hud h)
+        {
+            int got = Game.Achievements.Sum(a => Game.AchTier(a)), all = Game.Achievements.Count * 3;
+            h.Note(got + " von " + all + " Stufen erreicht" + (Game.S.title != "" ? " · Dein Titel: " + Game.S.title : "") + ". Bronze bringt Credits, Silber zusätzlich Sternenstaub, Gold Sternenstaub und manchmal einen Titel.");
+            var pend = new List<(Game.AchDef a, int t)>(); foreach (var a in Game.Achievements) for (int t = 0; t < Game.AchTier(a); t++) if (!Game.AchClaimed(a, t)) pend.Add((a, t));
+            if (pend.Count > 0)
+            {
+                h.Section("Jetzt abholen");
+                foreach (var (a, t) in pend) { var aa = a; int tt = t; h.Row(Game.TierName[t] + ": " + a.name, () => Game.Fmt(aa.tiers[tt]) + (aa.unit != "" ? " " + aa.unit : "") + " · " + Game.AchRewardText(aa, tt), () => Game.AchClaimed(aa, tt) ? "Abgeholt" : "Abholen", () => !Game.AchClaimed(aa, tt), () => Game.ClaimAch(aa, tt)); }
+            }
+            foreach (var cat in Game.AchCats)
+            {
+                var list = Game.Achievements.Where(a => a.cat == cat).ToList(); if (list.Count == 0) continue;
+                h.Section(cat + " · " + list.Sum(a => Game.AchTier(a)) + "/" + list.Count * 3);
+                foreach (var a in list)
+                {
+                    var aa = a;
+                    h.Row(a.name, () => { int t = Game.AchTier(aa); double v; try { v = aa.val(); } catch { v = 0; } string u = aa.unit != "" ? " " + aa.unit : "";
+                        return Medal(t) + "  " + (t >= 3 ? "Gold geschafft · " + Game.Fmt(v) + u : Game.Fmt(System.Math.Min(v, aa.tiers[t])) + " / " + Game.Fmt(aa.tiers[t]) + u + " bis " + Game.TierName[t] + " · Belohnung " + Game.AchRewardText(aa, t)); });
+                }
+            }
         }
         static void Stats(Hud h)
         {
@@ -372,9 +397,10 @@ namespace LunarCleanup.UI
         static void Goals(Hud h)
         {
             /* Fabian 01.11.: Kodex (Entdeckungen, Funde, Erfolge) und Statistik je Planet als eigene Reiter */
-            h.Tabs("Ziele", "Kodex", "Statistik"); int gtab = h.Tab;
-            if (gtab == 1) { Codex(h); return; }
-            if (gtab == 2) { Stats(h); return; }
+            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik"); int gtab = h.Tab;
+            if (gtab == 1) { Achievements(h); return; }
+            if (gtab == 2) { Codex(h); return; }
+            if (gtab == 3) { Stats(h); return; }
             Game.DailyContracts(); var cs = Game.S.contracts;
             /* Fabian 01.11.: Abholbares immer ganz oben */
             bool qReady = Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count) && Game.QuestProgress(Game.S.quest) >= 1;

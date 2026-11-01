@@ -158,7 +158,7 @@ namespace LunarCleanup.Gameplay
             if (k < 1) return;
             var d = crashTo.normalized; crashT = -1; if (crashGo) Destroy(crashGo); crashGo = null;
             EmitDust(d, crashImpact ? new Color(.6f, .85f, 1f) : new Color(1, .54f, .23f), 90); EmitDust(d, new Color(.33f, .33f, .33f), 70);
-            Sfx.Play("pop", .45f, .7f); Sfx.Buzz(); smokeT = 0; smokeAt = d;
+            Sfx.Play("boom", .8f, .7f); Sfx.Buzz(); smokeT = 0; smokeAt = d;
         }
         /// <summary>Nach dem Einschlag: 12 Sekunden lang eine dunkle Rauchsäule über der Absturzstelle.</summary>
         void Smoke()

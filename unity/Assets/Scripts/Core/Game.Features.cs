@@ -20,7 +20,7 @@ namespace LunarCleanup.Core
             // Kombo: nur eigene Handreinigung
             if (live && strokeCells.Contains(id))
             {
-                float now = Time.realtimeSinceStartup; ComboN = now - comboLast <= FeatureData.COMBO_WINDOW ? Mathf.Min(FeatureData.COMBO_MAX, ComboN + 1) : 1; comboLast = now;
+                float now = Time.realtimeSinceStartup; ComboN = now - comboLast <= FeatureData.COMBO_WINDOW ? Mathf.Min(FeatureData.COMBO_MAX, ComboN + 1) : 1; if (ComboN > S.stats.comboMax) S.stats.comboMax = ComboN; comboLast = now;
                 if (ComboN > 1) { double extra = bonus * FeatureData.COMBO_STEP * (ComboN - 1); Earn(extra); FloatTxt(ps.pd.cells[id].c, "Kombo ×" + ComboN + " · +" + Fmt(extra), "good"); }
             }
             // Wrack-Ereignis: rechtzeitig sauber = Bonus
@@ -164,6 +164,7 @@ namespace LunarCleanup.Core
                 }
                 ps.dirtyCells.Add(cid);
             }
+            S.stats.meteors += patch.Count;
             if (!Offline && ps.pid == S.planet) { if (OnMeteors != null) OnMeteors(patch); else foreach (int cid in patch) OnBoom?.Invoke(pd.cells[cid].c); Toast((patch.Count >= 4 ? "Großer " : "") + "Meteoritenschauer: " + patch.Count + " Parzellen – die Fahrzeuge räumen auf", "bad"); }
         }
         static void DirtyAt(Act a, float x, float y, float r, float s)
@@ -195,38 +196,72 @@ namespace LunarCleanup.Core
             Save(); OnPlanetChanged?.Invoke(); Toast("Neustart Nr. " + n.resets + " · +" + gain + " Sternenstaub (jetzt " + StardustFree() + " frei)", "good");
         }
 
-        // ---------- Erfolge ----------
-        public class AchDef { public string id, name, desc; public Func<bool> ok; }
+        // ---------- Erfolge (Fabian 01.11.: Stufen Bronze/Silber/Gold, Belohnungen, Kategorien) ----------
+        // Erreichte Stufe: „t:<id>:<stufe>“, abgeholte Belohnung: „c:<id>:<stufe>“ in S.achievements (alte Einträge ohne Präfix stören nicht).
+        public class AchDef { public string id, cat, name, unit; public double[] tiers; public Func<double> val; public string[] titles; }
+        public static readonly string[] AchCats = { "Reinigen", "Planeten", "Fahrzeuge", "Produktion", "Entdecker", "Ereignisse", "Geheim" };
+        public static readonly string[] TierName = { "Bronze", "Silber", "Gold" };
+        static AchDef A(string cat, string id, string name, string unit, Func<double> val, double b, double s, double g, string title = null) => new AchDef { cat = cat, id = id, name = name, unit = unit, val = val, tiers = new[] { b, s, g }, titles = title != null ? new[] { null, null, title } : null };
+        static int Wonders() { int n = 0; foreach (var pid in GameData.POrder) if (PlayerPrefs.GetInt("LunarCleanup.Entdeckt." + pid, 0) == 1) n++; return n; }
+        static int Albums() => FeatureData.Finds.Keys.Count(p => FindsOn(p) >= FeatureData.Finds[p].Length);
         public static readonly List<AchDef> Achievements = new List<AchDef>
         {
-            A("p10", "Frischer Start", "10 Parzellen gereinigt", () => TotalClean() >= 10),
-            A("p100", "Putzkolonne", "100 Parzellen gereinigt", () => TotalClean() >= 100),
-            A("p1000", "Planetenpfleger", "1.000 Parzellen gereinigt", () => TotalClean() >= 1000),
-            A("p10000", "Sternenkehrer", "10.000 Parzellen gereinigt", () => TotalClean() >= 10000),
-            A("hand1k", "Fleißige Hände", "1.000 m² von Hand gewischt", () => S.stats.handM2 >= 1000),
-            A("brick", "Erster Brick", "Den ersten Brick gepresst", () => S.stats.bricks > 0),
-            A("barren", "Erster Barren", "Den ersten Metallbarren gegossen", () => S.stats.barren > 0),
-            A("cr1m", "Millionär", "1 Million Credits verdient", () => S.stats.earned >= 1e6),
-            A("cr1b", "Milliardär", "1 Milliarde Credits verdient", () => S.stats.earned >= 1e9),
-            A("crys25", "Kristallsammler", "25 Leuchtkristalle geerntet", () => S.stats.crystals >= 25),
-            A("find1", "Glücksfund", "Den ersten Schatz gefunden", () => S.finds.Count >= 1),
-            A("album", "Album komplett", "Ein Fundalbum komplett", () => FeatureData.Finds.Keys.Any(p => FindsOn(p) >= FeatureData.Finds[p].Length)),
-            A("combo10", "Wischwirbel", "Kombo ×10 erreicht", () => ComboN >= FeatureData.COMBO_MAX),
-            A("mars", "Roter Planet", "Den Mars erreicht", () => P.ContainsKey("mars")),
-            A("done1", "Blitzblank", "Einen Planeten komplett gereinigt", () => S.done.Count >= 1),
-            A("fleet10", "Flottenchef", "10 Fahrzeuge gleichzeitig im Einsatz", () => P.Values.Any(p => p.sv.veh.Count >= 10)),
-            A("vlvl4", "Veteran", "Ein Fahrzeug auf Stufe 4", () => P.Values.Any(p => p.sv.veh.Any(v => VehLvl(v) >= 4))),
-            A("reset1", "Wiedergeburt", "Den ersten Sternenstaub-Neustart gemacht", () => S.resets >= 1),
-            A("daily7", "Treue Seele", "Tagesbonus 7 Tage in Folge", () => S.daily != null && S.daily.streak >= 7),
+            A("Reinigen", "cells", "Parzellen gereinigt", "Parzellen", () => TotalClean(), 100, 1000, 10000, "Sternenkehrer"),
+            A("Reinigen", "hand", "Von Hand gewischt", "m²", () => S.stats.handM2, 1000, 10000, 100000, "Goldene Hand"),
+            A("Reinigen", "unload", "Behälter geleert", "mal", () => S.stats.handUnloads, 10, 100, 1000),
+            A("Reinigen", "combo", "Kombo erreicht", "×", () => S.stats.comboMax, 3, 6, 10, "Wischwirbel"),
+            A("Ereignisse", "meteor", "Meteoriten-Einschläge erlebt", "Einschläge", () => S.stats.meteors, 10, 100, 1000),
+            A("Planeten", "reach", "Planeten erreicht", "Planeten", () => P.Count, 3, 9, 18, "Weltenbummler"),
+            A("Planeten", "done", "Planeten komplett sauber", "Planeten", () => S.done.Count, 1, 6, 18, "Planetenretter"),
+            A("Planeten", "stage", "Höchste Basisstufe", "", () => P.Values.Max(p => p.sv.stage), 3, 5, 5),
+            A("Planeten", "expand", "Ausbaustufen", "Stufen", () => P.Values.Sum(p => p.sv.exp), 1, 5, 20),
+            A("Fahrzeuge", "fleet", "Fahrzeuge gleichzeitig", "Fahrzeuge", () => P.Values.Max(p => p.sv.veh.Count), 3, 10, 15, "Flottenchef"),
+            A("Fahrzeuge", "vlvl", "Höchste Fahrzeugstufe", "", () => P.Values.SelectMany(p => p.sv.veh).Select(v => (double)VehLvl(v)).DefaultIfEmpty(0).Max(), 2, 4, 6),
+            A("Fahrzeuge", "lifts", "Drohnen-Abholungen", "Flüge", () => S.stats.lifts, 25, 250, 2500),
+            A("Fahrzeuge", "air", "Lastdrohnen-Flüge", "Flüge", () => S.stats.airlifts, 5, 50, 500),
+            A("Produktion", "bricks", "Bricks gepresst", "Bricks", () => S.stats.bricks, 100, 10000, 1e6),
+            A("Produktion", "barren", "Barren gegossen", "Barren", () => S.stats.barren, 50, 5000, 5e5),
+            A("Produktion", "rockets", "Raketen gestartet", "Starts", () => S.planets.Sum(p => p.nRockets), 10, 100, 1000, "Raumfrachter"),
+            A("Produktion", "earned", "Credits verdient", "Cr", () => S.stats.earned, 1e6, 1e9, 1e12, "Tycoon"),
+            A("Produktion", "sold", "Waren verkauft", "Cr", () => S.stats.sold, 1e5, 1e8, 1e11),
+            A("Entdecker", "finds", "Funde gemacht", "Funde", () => S.finds.Count, 1, 25, 100, "Schatzsucher"),
+            A("Entdecker", "albums", "Fundalben komplett", "Alben", () => Albums(), 1, 5, 18),
+            A("Entdecker", "wonders", "Entdeckungen gesehen", "Orte", () => Wonders(), 1, 9, 18, "Entdecker"),
+            A("Entdecker", "crystals", "Leuchtkristalle geerntet", "Kristalle", () => S.stats.crystals, 25, 250, 2500),
+            A("Ereignisse", "wrecks", "Wracks und Trümmer geborgen", "Bergungen", () => S.stats.salvage, 1, 10, 50),
+            A("Ereignisse", "storms", "Stürme überstanden", "Stürme", () => S.stats.storms, 1, 20, 200),
+            A("Ereignisse", "geysers", "Geysir-Ausbrüche gesehen", "Ausbrüche", () => S.stats.geysers, 10, 100, 1000),
+            A("Geheim", "reset", "Sternenstaub-Neustarts", "Neustarts", () => S.resets, 1, 3, 10, "Wiedergeboren"),
+            A("Geheim", "daily", "Tagesbonus in Folge", "Tage", () => S.daily != null ? S.daily.streak : 0, 3, 5, 7),
+            A("Geheim", "night", "Nachts gespielt", "min", () => S.stats.nightMin, 10, 60, 300, "Nachteule"),
         };
-        static AchDef A(string id, string n, string d, Func<bool> ok) => new AchDef { id = id, name = n, desc = d, ok = ok };
         static int TotalClean() => P.Values.Sum(p => p.nClean);
-        static float achT;
-        /// <summary>Alle 3 s prüfen (nur live).</summary>
+        public static int AchTier(AchDef a) { int t = 0; for (int i = 0; i < 3; i++) if (S.achievements.Contains("t:" + a.id + ":" + i)) t = i + 1; return t; }
+        public static bool AchClaimed(AchDef a, int tier) => S.achievements.Contains("c:" + a.id + ":" + tier);
+        public static int AchPending() { if (S == null) return 0; int n = 0; foreach (var a in Achievements) for (int i = 0; i < AchTier(a); i++) if (!AchClaimed(a, i)) n++; return n; }
+        public static double AchCredits(int tier) => Math.Round(4000 * Math.Pow(Cur.P.diff, .9) * (tier == 0 ? 1 : tier == 1 ? 6 : 30));
+        public static int AchDust(int tier) => tier == 0 ? 0 : tier == 1 ? 1 : 3;
+        public static string AchRewardText(AchDef a, int tier) => Fmt(AchCredits(tier)) + " Cr" + (AchDust(tier) > 0 ? " + " + AchDust(tier) + " Sternenstaub" : "") + (a.titles != null && tier < a.titles.Length && a.titles[tier] != null ? " + Titel „" + a.titles[tier] + "“" : "");
+        public static bool ClaimAch(AchDef a, int tier)
+        {
+            if (tier >= AchTier(a) || AchClaimed(a, tier)) return false; S.achievements.Add("c:" + a.id + ":" + tier);
+            Earn(AchCredits(tier)); S.stardust += AchDust(tier); string tt = a.titles != null && tier < a.titles.Length ? a.titles[tier] : null; if (tt != null) S.title = tt;
+            Toast(TierName[tier] + " abgeholt: " + AchRewardText(a, tier), "good"); return true;
+        }
+        static float achT, nightT;
+        /// <summary>Alle 3 s prüfen (nur live). Beim ersten Start nach dem Umbau werden schon erreichte Stufen still eingetragen – Belohnungen zum Abholen.</summary>
         public static void AchievementStep(float dt)
         {
-            if (S == null || Offline) return; achT += dt; if (achT < 3) return; achT = 0;
-            foreach (var a in Achievements) { if (S.achievements.Contains(a.id)) continue; bool ok; try { ok = a.ok(); } catch { ok = false; } if (ok) { S.achievements.Add(a.id); Toast("Erfolg: " + a.name + " – " + a.desc, "good"); } }
+            if (S == null || Offline) return;
+            if (Cur != null && !IsDay(Cur)) { nightT += dt; if (nightT >= 60) { nightT = 0; S.stats.nightMin++; } }
+            achT += dt; if (achT < 3) return; achT = 0; bool quiet = !S.achievements.Contains("v2"); if (quiet) S.achievements.Add("v2");
+            int quietN = 0;
+            foreach (var a in Achievements)
+            {
+                double v; try { v = a.val(); } catch { continue; }
+                for (int i = 0; i < 3; i++) { string k = "t:" + a.id + ":" + i; if (S.achievements.Contains(k) || v < a.tiers[i]) continue; S.achievements.Add(k); if (quiet) quietN++; else Toast("Erfolg " + TierName[i] + ": " + a.name + " · " + Fmt(a.tiers[i]) + (a.unit != "" ? " " + a.unit : "") + " – Belohnung unter Ziele → Erfolge", "good"); }
+            }
+            if (quietN > 0) Toast("Erfolg-System neu: " + quietN + " Stufen schon erreicht – Belohnungen unter Ziele → Erfolge abholen", "good");
         }
     }
 }

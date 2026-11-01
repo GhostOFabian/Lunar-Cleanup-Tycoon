@@ -71,7 +71,7 @@ namespace LunarCleanup.Core
             Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps);
+            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes();
             if (!P.ContainsKey(S.planet)) S.planet = "moon";
         }
 
@@ -147,6 +147,7 @@ namespace LunarCleanup.Core
             if (sv.cart.owned && sv.cart.d.sqrMagnitude < .5f) sv.cart.d = ps.pd.PlanDir(ps.lay.start);
             CalcFront(ps);
             if (S.done == null) S.done = new List<string>(); if (!S.done.Contains(sv.pid) && CleanPct(ps) >= .999f) S.done.Add(sv.pid);
+            if (S.done.Contains(sv.pid) && !sv.prize) pendingPrize.Add(ps); /* alte Spielstände: Prämie nachzahlen, wenn der nächste Planet noch fehlt */
             return ps;
         }
 
@@ -207,7 +208,7 @@ namespace LunarCleanup.Core
                 Save(); PlayerPrefs.SetString(Key + "-vorImport", PlayerPrefs.GetString(Key, ""));
                 if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid));
                 S = s; GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon";
+                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); if (!P.ContainsKey(S.planet)) S.planet = "moon";
                 Save(); OnPlanetChanged?.Invoke(); return "";
             }
             catch (Exception e) { return "Code nicht lesbar (" + e.GetType().Name + ")"; }
@@ -247,7 +248,23 @@ namespace LunarCleanup.Core
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
             return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1);
         }
-        public static void Earn(double cr) { S.credits += cr; S.stats.earned += cr; }
+        public static void Earn(double cr) { S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
+        /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
+        /// A) Reiseprämie: Wer einen Planeten komplett reinigt, bekommt einmalig die Reisekosten zum nächsten Planeten.</summary>
+        static readonly List<PState> pendingPrize = new List<PState>();
+        static void ProcessPrizes() { foreach (var q in pendingPrize) TravelPrize(q, true); pendingPrize.Clear(); }
+        static void TravelPrize(PState ps, bool live)
+        {
+            if (ps.sv.prize) return; ps.sv.prize = true; int i = Array.IndexOf(GameData.POrder, ps.pid); if (i < 0 || i + 1 >= GameData.POrder.Length) return; string nx = GameData.POrder[i + 1]; if (P.ContainsKey(nx)) return;
+            double c = GameData.Planets[nx].unlockCost; S.credits += c; if (live) Toast("Reiseprämie für den sauberen Planeten: +" + Fmt(c) + " Cr – genug für die Reise nach " + GameData.Planets[nx].name, "good");
+        }
+        /// <summary>C) Reise auf Kredit: fehlt Geld, wird der Rest geliehen und mit der Hälfte jeder Einnahme abbezahlt.</summary>
+        public static bool CanCredit(string pid) => !P.ContainsKey(pid) && UnlockWhy(pid) == "" && S.credits < GameData.Planets[pid].unlockCost && S.debt <= 0;
+        public static bool UnlockOnCredit(string pid)
+        {
+            if (!CanCredit(pid)) return false; double c = GameData.Planets[pid].unlockCost, miss = c - S.credits; S.debt += miss * 1.1; S.credits += miss; /* 10 % Gebühr */
+            bool ok = Unlock(pid); if (ok) Toast("Reise auf Kredit: " + Fmt(miss * 1.1) + " Cr werden mit der Hälfte deiner Einnahmen abbezahlt", "good"); return ok;
+        }
         public static bool Fail(string t) { Toast(t, "bad"); return false; }
         public static string Lacks(double c) => "Dir fehlen noch " + Fmt(c - S.credits) + " Cr";
         public static void Toast(string t, string k = "") { if (!Offline) OnToast?.Invoke(t, k); }
@@ -361,7 +378,7 @@ namespace LunarCleanup.Core
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
             foreach (int b in cl.nb) ps.dirtyCells.Add(b);
-            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); if (ps.sv.tDone <= 0) { ps.sv.tDone = ps.sv.tPlay; ps.sv.tDoneAt = Now(); } ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
+            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); TravelPrize(ps, ps.pid == S.planet); if (ps.sv.tDone <= 0) { ps.sv.tDone = ps.sv.tPlay; ps.sv.tDoneAt = Now(); } ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
         }
 
         // ================= Handgerät =================
@@ -391,7 +408,7 @@ namespace LunarCleanup.Core
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
                 float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
-                float got = CleanAt(ps, a, l.x, l.y, r, k);
+                float got = CleanAt(ps, a, l.x, l.y, r * 1.2f, k * .8f); /* Fabian 01.11.: weicherer, etwas größerer Pinsel – sanfter Rand statt harter Kante, gleiche Kraft */
                 if (got <= 0) continue;
                 float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
                 ps.sv.hand[a.D.mat] += amt; mat = a.D.mat; S.stats.handM2 += got / a.cl.nIn * pd.CellArea(a.cl); total += amt;
@@ -1020,7 +1037,7 @@ namespace LunarCleanup.Core
         }
         public static double RigCost(PState ps) => Math.Round(3000 * ps.P.diff * Math.Pow(1.45, ps.sv.rigs.Count));
         public static int RigMat(PState ps, int id) => GameData.Dirt[ps.pd.cells[id].type].mat;
-        public static float RigRate(PState ps, RigSave r) => GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1) * (EvOn(ps, "vein") ? FeatureData.VEIN_MULT : 1) * (1 + .25f * ExpN(ps)) * SpecF(ps, "rig");
+        public static float RigRate(PState ps, RigSave r) => (IsDone(ps.pid) ? 2f : 1f) /* B) sauberer Planet: Tiefenabbau doppelt */ * GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1) * (EvOn(ps, "vein") ? FeatureData.VEIN_MULT : 1) * (1 + .25f * ExpN(ps)) * SpecF(ps, "rig");
         public static float RigBufCap(RigSave r) => r.bag ? 600 : GameData.RigBuf;
         public static double RigUpCost(PState ps, RigSave r) => Math.Round(2500 * ps.P.diff * Math.Pow(1.9, r.lv));
         public static double BagCost(PState ps) => Math.Round(60000 * ps.P.diff);
@@ -1638,7 +1655,7 @@ namespace LunarCleanup.Core
             {
                 sv.hzT += dt;
                 if (sv.hzOn > 0) { sv.hzOn -= dt; cur = st; if (sv.hzOn <= 0) { sv.hzOn = 0; sv.hzT = 0; } }
-                else if (sv.hzT >= st.every) { sv.hzOn = st.dur; sv.hzT = 0; sv.hzWarned = false; cur = st; if (ps.pid == S.planet) Toast(st.name + " zieht auf!", "bad"); }
+                else if (sv.hzT >= st.every) { sv.hzOn = st.dur; sv.hzT = 0; sv.hzWarned = false; cur = st; S.stats.storms++; if (ps.pid == S.planet) Toast(st.name + " zieht auf!", "bad"); }
                 if (sv.hzOn <= 0 && !sv.hzWarned && st.every - sv.hzT <= 30) { sv.hzWarned = true; if (ps.pid == S.planet) Toast(st.name + " in 30 s" + (ResDone("shield") ? (sv.shield ? " – Sturmschild ist bereit" : " – Sturmschild einschalten?") : ""), "bad"); }
             }
             ps.shOn = cur != null && sv.shield && ResDone("shield") && sv.energy > 3;

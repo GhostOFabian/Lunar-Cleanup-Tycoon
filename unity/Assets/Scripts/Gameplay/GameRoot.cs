@@ -27,7 +27,7 @@ namespace LunarCleanup.Gameplay
         // Eingabe
         enum Mode { None, Wipe, Pan, Ui }
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
-        GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos;
+        GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos, wipeS;
         bool lastTouch; int followCell = -1; Vector2 followRef; // Touch-Ende merken; Kamera folgt der Parzelle, die gerade gereinigt wird
         /// <summary>Bildschirm-Pixel je Layout-Punkt (iPhone ≈ 3, Browser ≈ 1): Tipp-Grenzen in echter Fingergröße statt fester Pixel.</summary>
         static float U => Mathf.Max(1f, Mathf.Min(Screen.width / 390f, Screen.height / 844f));
@@ -132,7 +132,7 @@ namespace LunarCleanup.Gameplay
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
-            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(); PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
+            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
@@ -391,7 +391,7 @@ namespace LunarCleanup.Gameplay
             {
                 downPos = lastPos = pos; downT = Time.time; moved = false;
                 if (Hud.PointerOverUi(pid) || offlineRunning) { mode = Mode.Ui; return; }
-                if (!mapMode && Hit(pos, out var dir) && Game.CanClean(dir) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; }
+                if (!mapMode && Hit(pos, out var dir) && Game.CanClean(dir) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; wipeS = pos; }
                 else mode = Mode.Pan;
             }
             if (pressed)
@@ -404,7 +404,9 @@ namespace LunarCleanup.Gameplay
                     if (ex < edge) ep.x = (edge - ex) / edge; else if (ex > 1 - edge) ep.x = -(ex - (1 - edge)) / edge;
                     if (ey < edge * 1.6f) ep.y = (edge * 1.6f - ey) / (edge * 1.6f); else if (ey > 1 - edge * 2.2f) ep.y = -(ey - (1 - edge * 2.2f)) / (edge * 2.2f);
                     if (ep != Vector2.zero) Pan(ep * Screen.height * .45f * dt);
-                    if (Hit(pos, out var dir))
+                    /* Fabian 01.11.: Wischen weicher – Fingerposition leicht geglättet (Zittern und Bildraten-Sprünge verschwinden) */
+                    wipeS = Vector2.Lerp(wipeS, pos, 1 - Mathf.Exp(-28 * dt));
+                    if (Hit(wipeS, out var dir))
                     {
                         // Zwischenpunkte, damit auch schnelle Striche lückenlos reinigen
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
@@ -413,9 +415,9 @@ namespace LunarCleanup.Gameplay
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
                         brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
-                        Sfx.Wipe(amt > 0);
-                        FollowWipe(dir, pos, dt);
-                        if (amt > 0 && Random.value < .6f) { int c = Game.Cur.pd.CellOf(dir); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, 3); }
+                        Sfx.Wipe(true, spd / Mathf.Max(.5f, rr), amt > 0);
+                        /* Kamera bleibt beim Wischen ruhig – sie schwenkt nur am Bildrand (oben). Feine Staubspur hinter dem Finger, dichter bei schnellen Strichen */
+                        if (amt > 0) { int c = Game.Cur.pd.CellOf(dir); int nd = Mathf.Clamp(Mathf.RoundToInt(1 + spd / Mathf.Max(.5f, rr) * .4f), 1, 6); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, nd); }
                     }
                 }
                 else if (mode == Mode.Pan) Pan(pos - lastPos);
