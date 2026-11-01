@@ -31,7 +31,7 @@ namespace LunarCleanup.Gameplay
             foreach (Transform c in transform) Destroy(c.gameObject);
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); flashes.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
-            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; wonderFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
+            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; wonderFor = null; geyFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); int dseed = ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff; if (!LcKit.Decorate(deco, pd, dseed, Mathf.Clamp(pd.N / 3, 40, 400))) Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
         }

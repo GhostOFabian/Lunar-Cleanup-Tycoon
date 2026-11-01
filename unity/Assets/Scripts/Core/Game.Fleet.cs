@@ -23,13 +23,25 @@ namespace LunarCleanup.Core
         public static bool BuyFleetPlus() { if (VehMax(Cur) >= VEH_CAP || S.credits < FleetPlusCost()) return false; S.credits -= FleetPlusCost(); S.fleetPlus++; Toast("Flottenplatz gekauft – jetzt bis " + VehMax(Cur) + " Fahrzeuge je Planet", "good"); return true; }
 
         /// <summary>Fabian 01.11.: Fahrzeug zurücksetzen – steckt es fest, steht es danach wieder an der Garage und sucht sich neue Arbeit. Ladung und Zustand bleiben.</summary>
-        public static bool ResetVeh(VehSave v)
+        public static bool ResetVeh(VehSave v) => ResetVeh(Cur, v, true);
+        public static bool ResetVeh(PState ps, VehSave v, bool toast)
         {
-            var ps = Cur; if (!ps.sv.veh.Contains(v) || v.mode == "boom") return false;
-            if (v.lift >= 0 || v.mode == "lifted" || v.mode == "liftwait") return Fail("Das Fahrzeug hängt gerade an einer Lastdrohne");
+            if (!ps.sv.veh.Contains(v) || v.mode == "boom") return false;
+            if (v.lift >= 0 || v.mode == "lifted" || v.mode == "liftwait") return toast && Fail("Das Fahrzeug hängt gerade an einer Lastdrohne");
             if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
-            v.d = ps.pd.PlanDir(ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start); v.mode = v.mode == "broken" ? "broken" : "seek"; v.sid = null; v.cell = -1; v.ti = -1; v.busy = false;
-            ps.vnav.Remove(v.id); ps.lqnav.Remove(v.id); Toast(VehName(v) + " steht wieder an der Basis", "good"); return true;
+            if (v.cr >= 0) { var c = ps.sv.crystals.Find(x => x.id == v.cr); if (c != null && c.claim == v.id) c.claim = -1; v.cr = -1; }
+            /* nebeneinander an der Werkstatt (sonst am Start), damit sie sich nicht gegenseitig blockieren */
+            int k = ps.sv.veh.IndexOf(v); var home = ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start; var off = new Vector2((k % 5 - 2) * 1.6f, (k / 5) * 1.6f);
+            v.d = ps.pd.PlanDir(home + off); v.mode = v.mode == "broken" ? "broken" : "seek"; v.sid = null; v.cell = -1; v.ti = -1; v.busy = false;
+            ps.vnav.Remove(v.id); ps.lqnav.Remove(v.id); if (toast) Toast(VehName(v) + " steht wieder an der Basis", "good"); return true;
+        }
+        /// <summary>Alle Fahrzeuge dieses Planeten zurück an die Werkstatt.</summary>
+        public static void ResetAllVeh() { var ps = Cur; int n = 0; foreach (var v in ps.sv.veh) if (ResetVeh(ps, v, false)) n++; if (ps.sv.cart.owned && ps.sv.cart.mode != "wait") { ps.sv.cart.d = ps.pd.PlanDir(ps.lay.start); ps.sv.cart.mode = Sum(ps.sv.cart.tank) > .05f ? "back" : "park"; ps.sv.cart.wt = 0; } Toast(n + " Fahrzeuge stehen wieder an der Basis", "good"); }
+        /// <summary>Fabian 01.11.: Sammelwagen lässt sich sprengen (30 % zurück), danach leerst du wieder selbst.</summary>
+        public static void DestroyCart()
+        {
+            var ps = Cur; var c = ps.sv.cart; if (!c.owned) return; double r = Math.Round(CartCost(ps) * BOOM_REFUND); Earn(r);
+            OnBoom?.Invoke(c.d); c.owned = false; c.mode = "park"; c.to = ""; Array.Clear(c.tank, 0, c.tank.Length); Toast("Sammelwagen gesprengt · +" + Fmt(r) + " Cr", "good");
         }
         public static void SelfDestruct(VehSave v)
         {

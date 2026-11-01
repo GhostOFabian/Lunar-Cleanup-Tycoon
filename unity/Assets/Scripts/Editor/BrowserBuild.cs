@@ -83,6 +83,7 @@ namespace LunarCleanup.EditorTools
                 /* Planetenboden mit Reliefkarte (kleine Krater/Steine): Lit + Normal Map + Detailtextur */
                 var nmPath = Keep + "/NormalTex.asset"; var nt = AssetDatabase.LoadAssetAtPath<Texture2D>(nmPath); if (!nt) { nt = new Texture2D(8, 8, TextureFormat.RGBA32, true, true); var px = new Color[64]; for (int i = 0; i < 64; i++) px[i] = new Color(.5f, .5f, 1, 1); nt.SetPixels(px); nt.Apply(); AssetDatabase.CreateAsset(nt, nmPath); }
                 var dn = new Material(lit); dn.SetTexture("_DetailAlbedoMap", dt); dn.SetFloat("_DetailAlbedoMapScale", .3f); dn.EnableKeyword("_DETAIL_MULX2"); dn.SetTexture("_BumpMap", nt); dn.EnableKeyword("_NORMALMAP"); Save(dn, "LitDetailNormal");
+                var dne = new Material(dn); dne.EnableKeyword("_EMISSION"); dne.SetTexture("_EmissionMap", dt); dne.SetColor("_EmissionColor", Color.white); Save(dne, "LitDetailNormalEmission"); /* Planetenboden mit leuchtenden grünen Rändern */
             }
             if (pu) { var a = new Material(pu); MeshKit.MakeTransparent(a, true); Save(a, "ParticlesAdditive"); var b = new Material(pu); MeshKit.MakeTransparent(b, false); Save(b, "ParticlesAlpha"); Save(new Material(pu), "Particles"); }
             foreach (var (n, s) in new[] { ("Unlit", "Universal Render Pipeline/Unlit"), ("Sky", "Skybox/Panoramic"), ("Sprites", "Sprites/Default"), ("UnlitColor", "Unlit/Color") }) { var sh = Shader.Find(s); if (sh) Save(new Material(sh), n); }

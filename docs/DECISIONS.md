@@ -224,3 +224,6 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Fahrzeugliste zeigt nur Status; alle Aktionen im Fahrzeug-Fenster. „Zurücksetzen“ stellt ein Fahrzeug an die Garage (Ladung/Zustand bleiben).
 - 01.11.2026 (Fabian): Rakete als eigener HUD-Knopf; geerntete Kristalle (kristall) standardmäßig verkaufen.
 - 01.11.2026: Kenney-Modelle aus dem Projekt entfernt (eigene Modelle + prozedurale Formen reichen).
+- 01.11.2026 (Fabian): Festgefahrene Fahrzeuge werden nach 25 s ohne Fortschritt automatisch an die Werkstatt gesetzt; zusätzlich „Alle zurücksetzen“.
+- 01.11.2026 (Fabian): Geysire sind Partikel aus Bodenschloten (kein Modell), Inhalt richtet sich nach der Flüssigkeit des Planeten.
+- 01.11.2026: Dateien zum Mac immer unter einem neuen Pfad in /mnt/user-data/outputs ablegen – derselbe Pfad wird beim zweiten Übertragen mit altem Inhalt geschrieben.

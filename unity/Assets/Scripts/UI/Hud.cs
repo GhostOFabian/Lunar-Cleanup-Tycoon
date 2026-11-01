@@ -95,8 +95,8 @@ namespace LunarCleanup.UI
             var hl = mr.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 8; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
             Meter(mr, "ENERGIE", new Color(1f, .85f, .3f), () => Game.Fmt(Game.Cur.sv.energy), () => Game.Cur.sv.energy / Game.EnergyCap(Game.Cur),
                 () => Game.IsDay(Game.Cur) ? "TAG" : "NACHT", () => OpenSheet("energy"));
-            Meter(mr, "ROH", Pal.Clean, () => Game.Fmt(Game.RohSum(Game.Cur)) + "/" + Game.Fmt(Game.RohCap(Game.Cur)), () => Game.RohSum(Game.Cur) / Game.RohCap(Game.Cur));
-            Meter(mr, "PROD", Pal.Prod, () => Game.Cur.bld.Contains("prod") ? Game.Fmt(Game.ProdSum(Game.Cur)) + "/" + Game.Fmt(Game.ProdCap(Game.Cur)) : "–", () => Game.ProdSum(Game.Cur) / Game.ProdCap(Game.Cur), () => Game.Gs(Game.Cur) < 2 ? "PROD" : Game.Cur.sv.flowLv == 2 ? "STAU" : Game.Cur.sv.flowLv == 1 ? "ENGPASS" : "PROD"); /* Ampel im HUD */
+            Meter(mr, "ROH", Pal.Clean, () => Game.Fmt(Game.RohSum(Game.Cur)) + "/" + Game.Fmt(Game.RohCap(Game.Cur)), () => Game.RohSum(Game.Cur) / Game.RohCap(Game.Cur), null, () => OpenSheet("production", "0"));
+            Meter(mr, "PROD", Pal.Prod, () => Game.Cur.bld.Contains("prod") ? Game.Fmt(Game.ProdSum(Game.Cur)) + "/" + Game.Fmt(Game.ProdCap(Game.Cur)) : "–", () => Game.ProdSum(Game.Cur) / Game.ProdCap(Game.Cur), () => Game.Gs(Game.Cur) < 2 ? "PROD" : Game.Cur.sv.flowLv == 2 ? "STAU" : Game.Cur.sv.flowLv == 1 ? "ENGPASS" : "PROD", () => OpenSheet("production", "0")); /* Ampel im HUD */
         }
         void Meter(Transform p, string label, Color col, Func<string> val, Func<float> f, Func<string> labelLive = null, Action click = null)
         {
@@ -322,7 +322,7 @@ namespace LunarCleanup.UI
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
             goalGo.SetActive(false); /* Zielkarte nur noch im Ziele-Fenster */
-            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellCap(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten · " + Game.Fmt(cg) + "/" + Game.Fmt(cc) : "Rakete leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellCap(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }

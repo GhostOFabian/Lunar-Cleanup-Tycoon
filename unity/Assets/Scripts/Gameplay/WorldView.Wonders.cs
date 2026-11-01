@@ -9,6 +9,9 @@ namespace LunarCleanup.Gameplay
     public partial class WorldView
     {
         public Vector3 WonderDir => wonderAt;
+        /// <summary>Für den Kodex: gibt es auf dem Planeten eine Entdeckung, und wurde sie schon gesehen?</summary>
+        public static bool TryWonder(string pid, out string name, out string text) { if (WonderInfo.TryGetValue(pid, out var w)) { name = w.name; text = w.text; return true; } name = text = null; return false; }
+        public static bool WonderKnown(string pid) => PlayerPrefs.GetInt("LunarCleanup.Entdeckt." + pid, 0) == 1;
         GameObject wonder; string wonderFor; float wonderT; Vector3 wonderAt; Transform wonderSpin; readonly List<Transform> wonderBits = new List<Transform>(); readonly List<Vector3> wonderBase = new List<Vector3>();
         static readonly Dictionary<string, (string name, string text)> WonderInfo = new Dictionary<string, (string, string)>
         {
@@ -127,7 +130,7 @@ namespace LunarCleanup.Gameplay
 
         void UpdateWonder()
         {
-            if (ps == null || pd == null) return; if (wonderFor != ps.pid) BuildWonder(); if (MapMode) return;
+            if (ps == null || pd == null) return; if (wonderFor != ps.pid) BuildWonder(); UpdateGeysers(); if (MapMode) return;
             wonderT += Time.deltaTime; float tt = wonderT; var up = wonderAt; var w = wonder ? wonder.transform : null;
             Vector3 W(Vector3 local) => w ? w.TransformPoint(local) : pd.Surf(up, local.y);
             void Puff(Vector3 pos, Vector3 vel, Color c, float size, float life) { if (dust) dust.Emit(new ParticleSystem.EmitParams { position = pos, velocity = vel, startColor = c, startSize = size, startLifetime = life, applyShapeToPosition = false }, 1); }

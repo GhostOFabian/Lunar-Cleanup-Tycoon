@@ -10,7 +10,9 @@ namespace LunarCleanup.Gameplay
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
         const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
-        class Chunk { public Texture2D tex, nrm; public Color32[] px; public int per, size; public bool dirty; public Material mat; }
+        class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty; public Material mat; }
+        /// <summary>Fabian 01.11.: grüne Ränder sauberer Parzellen leuchten weit rausgezoomt (0 = nah, 1 = ganzer Planet); setzt GameRoot.</summary>
+        public static float GlowK; float glowSet = -1;
         int NT = 64; /* Pixel je Parzelle in der Reliefkarte */
         PState ps; PlanetData pd; Theme th;
         readonly List<Chunk> chunks = new List<Chunk>();
@@ -21,7 +23,7 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; th = ps.P.theme;
             TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : pd.N > 1500 ? 64 : 96; /* kleine Planeten: feinere Textur, aus der Nähe nicht mehr blockig */ NT = pd.N > 7000 ? TILE / 2 + 4 : TILE; craters.Clear();
-            foreach (Transform c in transform) Destroy(c.gameObject); foreach (var oc in chunks) if (oc != null) { Destroy(oc.tex); if (oc.nrm) Destroy(oc.nrm); Destroy(oc.mat); } chunks.Clear(); /* alte Texturen freigeben (sonst wächst der Speicher bei jedem Planetenwechsel) */
+            foreach (Transform c in transform) Destroy(c.gameObject); foreach (var oc in chunks) if (oc != null) { Destroy(oc.tex); if (oc.nrm) Destroy(oc.nrm); if (oc.gtex) Destroy(oc.gtex); Destroy(oc.mat); } chunks.Clear(); /* alte Texturen freigeben (sonst wächst der Speicher bei jedem Planetenwechsel) */
             int F = pd.faceCenters.Length; var lists = new List<int>[F]; chunkIds = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
             foreach (var cl in pd.cells) lists[cl.chunk].Add(cl.id);
             tileOf = new int[pd.N];
@@ -30,6 +32,7 @@ namespace LunarCleanup.Gameplay
                 var ids = lists[f]; if (ids.Count == 0) { chunks.Add(null); continue; }
                 int per = Mathf.CeilToInt(Mathf.Sqrt(ids.Count)), size = per * TILE;
                 var ch = new Chunk { per = per, size = size, px = new Color32[size * size], tex = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 } };
+                ch.gs = Mathf.Max(1, size / 2); ch.gpx = new Color32[ch.gs * ch.gs]; ch.gtex = new Texture2D(ch.gs, ch.gs, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear };
                 for (int i = 0; i < ids.Count; i++) tileOf[ids[i]] = i;
                 var mesh = BuildMesh(ids, per);
                 var go = new GameObject("Abschnitt " + f); go.transform.SetParent(transform, false);
@@ -38,6 +41,7 @@ namespace LunarCleanup.Gameplay
                 var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .05f); m.SetFloat("_Metallic", 0); m.SetFloat("_SpecularHighlights", 0); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); m.SetFloat("_EnvironmentReflections", 0); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF"); // kein Blenden bei flachem Sonnenstand
                 m.SetFloat("_BumpScale", 1f); m.EnableKeyword("_NORMALMAP"); /* Normal-Map wird unten parallel berechnet: kleine Krater, Steine und Plattenfugen reagieren auf das Sonnenlicht */
                 m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 13, per * 13)); m.SetFloat("_DetailAlbedoMapScale", .16f); /* feine Körnung statt grober Flecken */ m.EnableKeyword("_DETAIL_MULX2");
+                m.EnableKeyword("_EMISSION"); m.SetTexture("_EmissionMap", ch.gtex); m.SetColor("_EmissionColor", Color.black); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 mr.sharedMaterial = m; ch.mat = m;
                 chunks.Add(ch); chunkIds[f] = ids;
             }
@@ -51,8 +55,9 @@ namespace LunarCleanup.Gameplay
                 var ch = chunks[f]; if (ch == null) continue; int size = ch.per * NT;
                 var t = new Texture2D(size, size, TextureFormat.RGBA32, true, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 }; t.SetPixels32(nrmPx[f]); t.Apply(true, true);
                 ch.nrm = t; ch.mat.SetTexture("_BumpMap", t);
-                ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.dirty = false;
+                ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.gtex.SetPixels32(ch.gpx); ch.gtex.Apply(true); ch.dirty = false;
             }
+            glowSet = -1;
             // Planetenkugel darunter, damit zwischen den Platten nie Lücken sichtbar werden
             var core = MeshKit.Ball(transform, MeshKit.Mat(th.baseC[0] * .5f, 0, .1f), Vector3.zero, (pd.R - 4f) * 2); core.name = "Kern"; // tief genug unter Tälern und Kratern
         }
@@ -110,6 +115,7 @@ namespace LunarCleanup.Gameplay
         }
 
         /* Fugen: dezent statt knallig – helle Stahlfuge an der Basis, warmes Bernstein an putzbaren Parzellen, Rot bei Meteoritenstaub */
+        static readonly Color CleanLine = new Color(.3f, 1f, .5f) /* Fabian 01.11.: saubere Parzellen mit grünem Rand */;
         static readonly Color BaseLine = new Color(.22f, .58f, 1f) /* Basis: kräftiges Blau, damit man das Basisgelände sofort erkennt */, FrontLine = new Color(1f, .74f, .38f), MeteorLine = new Color(1f, .42f, .3f);
         const float PAD = 1.5f / 64f; // Rand je Feld in der Textur, damit beim Verkleinern (Mipmaps) keine Nachbarfarben durchscheinen
         static float EdgeA(float ed, float w) => ed >= w ? 0 : ed <= w * .4f ? 1 : 1 - Mathf.SmoothStep(0, 1, (ed - w * .4f) / (w * .6f));
@@ -283,7 +289,8 @@ namespace LunarCleanup.Gameplay
                         col = Color.Lerp(cleanC, dirtC, g);
                         if (!cl.Wet) { float rh = Relief(crs, x, y, ed, edgeW); col *= 1 + Mathf.Clamp(rh * 1.8f, -.16f, .1f); } // Kraterböden dunkler, Ränder heller
                         float ea = EdgeA(ed, edgeW);
-                        if (ea > 0) col = clean && act == null ? col * (1 - .16f * ea) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
+                        if (ea > 0) col = clean && act == null ? Color.Lerp(col, CleanLine, .75f * ea) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
+                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = clean && act == null ? ea : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(CleanLine.r * gl, CleanLine.g * gl, CleanLine.b * gl, 1); }
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }
@@ -295,7 +302,8 @@ namespace LunarCleanup.Gameplay
         {
             if (ps == null) return;
             if (ps.dirtyCells.Count > 0) { foreach (int id in ps.dirtyCells) PaintCell(id); ps.dirtyCells.Clear(); }
-            foreach (var ch in chunks) if (ch != null && ch.dirty) { ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.dirty = false; }
+            foreach (var ch in chunks) if (ch != null && ch.dirty) { ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.gtex.SetPixels32(ch.gpx); ch.gtex.Apply(true); ch.dirty = false; }
+            if (Mathf.Abs(GlowK - glowSet) > .02f) { glowSet = GlowK; var ec = Color.white * (.12f + 1.6f * GlowK); foreach (var ch in chunks) if (ch != null) ch.mat.SetColor("_EmissionColor", ec); }
         }
 
         /// <summary>Strahl gegen die Planetenkugel; liefert die Richtung des Treffpunkts.</summary>

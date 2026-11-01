@@ -66,7 +66,9 @@ namespace LunarCleanup.UI
             if (tab == 1)
             {
                 var c = ps.sv.cart;
-                if (c.owned) h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E");
+                if (c.owned) h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E" + (Time.unscaledTime - cartBoomT < 4 ? " · Noch einmal tippen zum Sprengen" : ""),
+                    () => Time.unscaledTime - cartBoomT < 4 ? "Ja, sprengen" : "Sprengen", () => true, () => { if (Time.unscaledTime - cartBoomT < 4) { Game.DestroyCart(); cartBoomT = -99; } else cartBoomT = Time.unscaledTime; }, false);
+                if (ps.sv.veh.Count > 0) h.Row("Alle zurücksetzen", () => "Hängen Fahrzeuge fest? Alle fahren sofort zurück an die Werkstatt und suchen sich neue Arbeit. (Wer 25 s feststeckt, wird ohnehin zurückgesetzt.)", () => "Zurücksetzen", () => true, () => Game.ResetAllVeh(), false);
                 if (ps.sv.veh.Count == 0) { h.Note("Noch keine Fahrzeuge. Unter „Kaufen“ findest du alle, die hier fahren können."); return; }
                 /* Fabian 01.11.: übersichtliche Liste – Optionen erst nach dem Antippen eines Fahrzeugs */
                 h.Section("Deine Fahrzeuge · " + ps.sv.veh.Count);
@@ -150,14 +152,29 @@ namespace LunarCleanup.UI
             }
         }
         // Produktions-Ampel: Engpässe mit Ursache und den passenden Upgrades
+        static string Lamp(int lvl) => lvl >= 2 ? "<color=#ff6a5c>●</color> Rot" : lvl == 1 ? "<color=#ffd24d>●</color> Gelb" : lvl == 0 ? "<color=#6ff2a0>●</color> Grün" : "<color=#8a93a6>●</color> Pause";
+        /// <summary>Fabian 01.11.: Ampel zeigt den Zustand jeder Station; bei Gelb/Rot steht das Problem dabei und direkt darunter die Upgrades, die es beheben.</summary>
         static void Ampel(Hud h)
         {
-            var r = Game.FlowReport(ps); var bad = r.Where(n => n.lvl > 0).OrderByDescending(n => n.lvl).ToList();
-            h.Section("Ampel");
-            if (bad.Count == 0) { h.Note("", () => { var rr = Game.FlowReport(ps); return Game.FlowLevel(rr) == 0 ? "Grün: alles im Fluss, kein Stau." : "Ampel hat sich geändert – Fenster neu öffnen."; }); return; }
-            foreach (var n in bad) h.Row((n.lvl == 2 ? "Rot: " : "Gelb: ") + n.name, () => n.why);
-            var fixes = bad.SelectMany(n => n.fix).Distinct().Where(id => GameData.Up.ContainsKey(id) && UpVisible(GameData.Up[id])).Take(5).ToList();
-            if (fixes.Count > 0) { h.Section("Hilft gegen den Stau"); foreach (var f in fixes) UpRow(h, f); }
+            var r = Game.FlowReport(ps); int lv = Game.FlowLevel(r); var bad = r.Where(n => n.lvl > 0).OrderByDescending(n => n.lvl).ToList();
+            h.Section("Ampel · " + (lv >= 2 ? "Rot" : lv == 1 ? "Gelb" : "Grün"));
+            h.Note(lv == 0 ? "Alles im Fluss – der Betriebsbonus wächst bis +30 %." : lv == 1 ? "Ein Engpass bremst die Produktion. Der Betriebsbonus hält." : "Stau – der Betriebsbonus sinkt. Behebe das Problem mit einem der Upgrades darunter.");
+            foreach (var n in bad) FlowRows(h, n);
+            h.Section("Alle Stationen");
+            foreach (var n in r.Where(n => n.lvl <= 0)) h.Row(n.name, () => Lamp(n.lvl) + " · " + n.why);
+        }
+        static void FlowRows(Hud h, Game.FlowItem n)
+        {
+            h.Row(n.name, () => Lamp(n.lvl) + " · " + n.why);
+            var fixes = (n.fix ?? new string[0]).Where(id => GameData.Up.ContainsKey(id) && UpVisible(GameData.Up[id]) && Game.Lvl(id) < GameData.Up[id].max).Take(3).ToList();
+            if (fixes.Count == 0 && n.fix != null && n.fix.Length > 0) h.Note("   Die passenden Upgrades sind schon ausgereizt – baue die Basis weiter aus oder verkaufe mehr.");
+            foreach (var f in fixes) UpRow(h, f);
+        }
+        /// <summary>Ampel eines Gebäudes oben im Gebäudefenster.</summary>
+        static void BuildingAmpel(Hud h, string id)
+        {
+            var r = Game.FlowReport(ps).Where(n => n.id == id || (Game.IsUnit(id) && Game.IsUnit(n.id))).ToList(); if (r.Count == 0) return;
+            h.Section("Ampel"); foreach (var n in r) { if (n.lvl > 0) FlowRows(h, n); else h.Row(n.name, () => Lamp(n.lvl) + " · " + n.why); }
         }
         // Produktionsplan: Rezepte an/aus
         static void Plan(Hud h)
@@ -299,6 +316,7 @@ namespace LunarCleanup.UI
             }
         }
 
+        static float cartBoomT = -99;
         static float prestigeT = -99, importT = -99, demolishT = -99;
         static void Stardust(Hud h)
         {
@@ -317,8 +335,46 @@ namespace LunarCleanup.UI
         }
         static void SdRow(Hud h, SdNode n) { var nn = n; h.Row(n.name, () => nn.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
 
+        static string Dur(double sec) { if (sec <= 0) return "–"; long t = (long)sec; long d = t / 86400, hh = t % 86400 / 3600, mm = t % 3600 / 60; return d > 0 ? d + " T " + hh + " h" : hh > 0 ? hh + " h " + mm + " min" : Mathf.Max(1, mm) + " min"; }
+        static void Codex(Hud h)
+        {
+            h.Section("Entdeckungen · " + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.WonderKnown(pid)) + "/" + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.TryWonder(pid, out _, out _)));
+            foreach (var pid in GameData.POrder)
+            {
+                if (!LunarCleanup.Gameplay.WorldView.TryWonder(pid, out var wn, out var wt)) continue; bool known = LunarCleanup.Gameplay.WorldView.WonderKnown(pid);
+                h.Row(GameData.Planets[pid].name + " · " + (known ? wn : "???"), () => known ? wt : Game.P.ContainsKey(pid) ? "Noch nicht entdeckt – schau dich auf dem Planeten um." : "Planet noch nicht erreicht.");
+            }
+            h.Section("Funde");
+            foreach (var kv in FeatureData.Finds)
+            {
+                if (!Game.P.ContainsKey(kv.Key)) continue; string pid = kv.Key; var al = kv.Value;
+                h.Row(GameData.Planets[pid].name + " · " + Game.FindsOn(pid) + "/" + al.Length, () => string.Join(" · ", al.Select((f, i) => Game.HasFind(pid, i) ? f.name : "???")) + (Game.FindsOn(pid) >= al.Length ? " · Album komplett: +5 % Erlös" : " · Funde gibt es beim Reinigen (3 %, auf seltsamen Parzellen 8 %)"));
+            }
+            h.Section("Erfolge · " + Game.S.achievements.Count + "/" + Game.Achievements.Count);
+            foreach (var a in Game.Achievements) { var aa = a; h.Row(a.name, () => aa.desc + (Game.S.achievements.Contains(aa.id) ? " · geschafft" : "")); }
+            if (Game.S.daily != null && Game.S.daily.streak > 0) h.Note("Tagesbonus: Tag " + Game.S.daily.streak + " von 7 – komm morgen wieder, die Belohnung steigt.");
+        }
+        static void Stats(Hud h)
+        {
+            h.Section("Statistik");
+            h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
+            h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
+            h.Row("Gesamt", () => Game.S.stats.cells + " Parzellen gereinigt · " + Game.S.planets.Sum(p => p.nRockets) + " Raketen · " + Game.S.stats.crystals + " Kristalle · " + Cr(Game.S.stats.sold) + " verkauft");
+            h.Section("Planeten");
+            foreach (var pid in GameData.POrder)
+            {
+                if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; string key = pid;
+                h.Row(q.P.name, () => { var sv = Game.P[key].sv; int pct = Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100); string t = pct + " % sauber · Spielzeit " + Dur(sv.tPlay);
+                    if (sv.tDone > 0) t += " · komplett sauber nach " + Dur(sv.tDone) + " Spielzeit" + (sv.tDoneAt > 0 && sv.tFirst > 0 ? " (" + Dur(sv.tDoneAt - sv.tFirst) + " seit dem ersten Besuch)" : "");
+                    else if (Game.IsDone(key)) t += " · komplett sauber"; return t; });
+            }
+        }
         static void Goals(Hud h)
         {
+            /* Fabian 01.11.: Kodex (Entdeckungen, Funde, Erfolge) und Statistik je Planet als eigene Reiter */
+            h.Tabs("Ziele", "Kodex", "Statistik"); int gtab = h.Tab;
+            if (gtab == 1) { Codex(h); return; }
+            if (gtab == 2) { Stats(h); return; }
             Game.DailyContracts(); var cs = Game.S.contracts;
             /* Fabian 01.11.: Abholbares immer ganz oben */
             bool qReady = Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count) && Game.QuestProgress(Game.S.quest) >= 1;
@@ -345,25 +401,12 @@ namespace LunarCleanup.UI
                 int k = i; if (Game.PGoalClaimed(ps, k) || pReady.Contains(k)) continue;
                 h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k));
             }
-            h.Section("Statistik");
-            h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
-            h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
-            h.Row("Gesamt", () => Game.S.stats.cells + " Parzellen gereinigt · " + Game.S.planets.Sum(p => p.nRockets) + " Raketen · " + Game.S.stats.crystals + " Kristalle · " + Cr(Game.S.stats.sold) + " verkauft");
             var ev = ps.sv.ev;
             if (ev != null && ev.key != "")
             {
                 var E = Game.EvDef(ev.key); h.Section("Ereignis");
                 h.Row(E != null ? E.name : "Ereignis", () => (E != null ? E.hint : "") + " · noch " + Mathf.CeilToInt(Mathf.Max(0, ps.sv.ev.t) / 60f) + " min", () => ps.sv.ev.cell >= 0 ? "Hinfliegen" : "OK", () => true, () => { h.CloseSheet(); h.OnFocusEvent?.Invoke(); }, false);
             }
-            h.Section("Funde");
-            foreach (var kv in FeatureData.Finds)
-            {
-                if (!Game.P.ContainsKey(kv.Key)) continue; string pid = kv.Key; var al = kv.Value;
-                h.Row(GameData.Planets[pid].name + " · " + Game.FindsOn(pid) + "/" + al.Length, () => string.Join(" · ", al.Select((f, i) => Game.HasFind(pid, i) ? f.name : "???")) + (Game.FindsOn(pid) >= al.Length ? " · Album komplett: +5 % Erlös" : " · Funde gibt es beim Reinigen (3 %, auf seltsamen Parzellen 8 %)"));
-            }
-            h.Section("Erfolge · " + Game.S.achievements.Count + "/" + Game.Achievements.Count);
-            foreach (var a in Game.Achievements) { var aa = a; h.Row(a.name, () => aa.desc + (Game.S.achievements.Contains(aa.id) ? " · geschafft" : "")); }
-            if (Game.S.daily != null && Game.S.daily.streak > 0) h.Note("Tagesbonus: Tag " + Game.S.daily.streak + " von 7 – komm morgen wieder, die Belohnung steigt.");
             h.Section("Hauptziele");
             for (int i = 0; i < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count); i++)
             {
@@ -567,6 +610,7 @@ namespace LunarCleanup.UI
         static void Building(Hud h, string id)
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
+            BuildingAmpel(h, id);
             BuildingUpgrades(h, id); BuildingLevel(h, id);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { ProductionOverview(h); if (id == "sell" || id == "roh" || id == "prod") Selling(h); return; }
             if (id == "energy" || id == "rtg" || id == "geo" || id == "reactor") { Energy(h); return; }

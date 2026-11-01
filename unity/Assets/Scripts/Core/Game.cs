@@ -103,7 +103,7 @@ namespace LunarCleanup.Core
 
         static PlanetSave NewPlanet(string pid)
         {
-            var ps = new PlanetSave { pid = pid, freq = GameData.Planets[pid].freq };
+            var ps = new PlanetSave { pid = pid, freq = GameData.Planets[pid].freq, tFirst = Now() };
             foreach (var id in GameData.BOrder) { var B = GameData.Bld[id]; if (B.auto && B.stage <= 1) ps.bld.Add(id); }
             return ps;
         }
@@ -361,7 +361,7 @@ namespace LunarCleanup.Core
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
             foreach (int b in cl.nb) ps.dirtyCells.Add(b);
-            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
+            if (!IsDone(ps.pid) && CleanPct(ps) >= 1) { S.done.Add(ps.pid); if (ps.sv.tDone <= 0) { ps.sv.tDone = ps.sv.tPlay; ps.sv.tDoneAt = Now(); } ps.baseVersion++; if (ps.pid == S.planet) { Toast(ps.P.name + " ist komplett sauber! Dauerhaft +10 % Verkaufspreis und +1 Fahrzeugplatz auf allen Planeten", "good"); Toast("Neu auf " + ps.P.name + ": Tiefenabbau – baue Bohrtürme auf sauberen Parzellen (Basis → Tiefenabbau)", "good"); } }
         }
 
         // ================= Handgerät =================
@@ -809,6 +809,16 @@ namespace LunarCleanup.Core
         }
         public static Vector2 ParkPos(PState ps, VehSave v) { int i = ps.sv.veh.IndexOf(v); return ps.lay.park + new Vector2((i % 4) * 1.8f, (i / 4) * 1.8f); }
 
+        /* Fabian 01.11.: Fahrzeuge blieben nach einem Neustart zwischen den Förderbändern hängen – wer 25 s unterwegs ist und sich kaum bewegt, steht danach wieder an der Basis */
+        static readonly HashSet<string> MovingModes = new HashSet<string> { "drive", "toUnload", "toCrystal", "toRig", "toRoh", "toShop", "sweep" };
+        static void StuckCheck(PState ps, VehSave v, float dt)
+        {
+            if (!MovingModes.Contains(v.mode) || v.lift >= 0) { v.stuckT = 0; v.stuckP = v.d; return; }
+            if (ps.pd.Arc(v.d, v.stuckP) > 1.5f) { v.stuckP = v.d; v.stuckT = 0; return; }
+            v.stuckT += dt; if (v.stuckT < 25) return;
+            v.stuckT = 0; bool live = !Offline && ps.pid == S.planet; if (live) Debug.Log("Lunar Cleanup: " + VehName(v) + " steckte fest (" + v.mode + ") – zurückgesetzt");
+            ResetVeh(ps, v, false); v.stuckP = v.d;
+        }
         static void VehStep(PState ps, VehSave v, float dt, float f)
         {
             var T = GameData.Veh[v.type]; var pd = ps.pd; float bf = (T.batt > 0 && v.bat >= 0 && v.bat <= 0 ? .3f : 1) * (v.wear > .85f ? .8f : 1);
@@ -1191,6 +1201,15 @@ namespace LunarCleanup.Core
         {
             string best = null; float bf = 10; foreach (var s in GameData.Stations) { if (!ps.bld.Contains(s) || s == not) continue; float fr = StBuf(ps, s) - Sum(ps.st[s].buf); if (fr > bf) { bf = fr; best = s; } } return best;
         }
+        /* Fabian 01.11.: manche Drohnen standen nur herum – verwaiste Reservierungen (Fahrzeug/Außenlager/Bohrturm wartet auf eine Drohne, die es nicht mehr anfliegt) alle 2 s lösen */
+        static float droneSanT;
+        static void DroneSanity(PState ps, float dt)
+        {
+            droneSanT += dt; if (droneSanT < 2) return; droneSanT = 0; var dl = ps.sv.drones;
+            foreach (var v in ps.sv.veh) if (v.drone >= 0 && !dl.Any(d => d.id == v.drone && d.tk == "v" && d.tgt == v.id && (d.mode == "out" || d.mode == "load"))) v.drone = -1;
+            foreach (var o in ps.sv.outposts) if (o.dc >= 0 && !dl.Any(d => d.id == o.dc && d.tk == "o" && d.tko == o.id && (d.mode == "out" || d.mode == "load"))) o.dc = -1;
+            foreach (var r in ps.sv.rigs) if (r.dc >= 0 && !dl.Any(d => d.id == r.dc && d.tk == "r" && d.tgt == r.cell && (d.mode == "out" || d.mode == "load"))) r.dc = -1;
+        }
         static void DroneStep(PState ps, DroneSave dr, float dt, float f)
         {
             var pd = ps.pd; float R = pd.R; var hd = HangarDir(ps); float spd = DroneSpeed(ps) * Mathf.Max(.25f, f) * ps.vm, cap = DroneCap(ps), load = Sum(dr.tank); dr.busy = false;
@@ -1207,7 +1226,7 @@ namespace LunarCleanup.Core
                         foreach (var v in ps.sv.veh)
                         {
                             if (v.drone >= 0) continue; if (!(v.mode == "seek" || v.mode == "drive" || v.mode == "clean" || v.mode == "toUnload" || v.mode == "wait")) continue;
-                            float tk = Sum(v.tank), c = TankCap(ps, v); if (tk < c * .4f) continue; float dist = pd.Arc(v.d, hd); if (dist < GameData.DroneMinDist) continue;
+                            float tk = Sum(v.tank), c = TankCap(ps, v); if (tk < c * .25f) continue; /* früher abholen: weniger Leerlauf im Hangar */ float dist = pd.Arc(v.d, hd); if (dist < GameData.DroneMinDist) continue;
                             float sc = tk / c * dist; if (sc > bs) { bs = sc; best = v; }
                         }
                         StSave bo = null;
@@ -1260,7 +1279,7 @@ namespace LunarCleanup.Core
                 case "back": dr.busy = true; if (MoveDir(ref dr.d, hd, spd * dt, R)) dr.mode = "drop"; break;
                 case "drop":
                     {
-                        if (load < .05f) { Array.Clear(dr.tank, 0, NM); dr.mode = "idle"; break; } float fr = RohCap(ps) - RohSum(ps); if (fr <= .01f) break;
+                        if (load < .05f) { Array.Clear(dr.tank, 0, NM); dr.mode = "idle"; break; } float fr = RohCap(ps) - RohSum(ps); if (fr <= .01f) { dr.wt += dt; if (dr.wt > 4) { dr.wt = 0; var alt = DroneStation(ps, null); if (alt != null) { dr.sid = alt; dr.mode = "toSt"; } } break; } /* Lager voll: Ladung zur Entladeanlage bringen statt zu warten */
                         float amt = Mathf.Min(load, Mathf.Min(fr, GameData.DroneRate * dt)), k = amt / load; for (int m = 0; m < NM; m++) { float x = dr.tank[m] * k; dr.tank[m] -= x; ps.sv.roh[m] += x; }
                         break;
                     }
@@ -1662,10 +1681,11 @@ namespace LunarCleanup.Core
         }
         static void StepPlanet(PState ps, float dt)
         {
+            if (ps.pid == S.planet) ps.sv.tPlay += dt;
             EnergyStep(ps, dt); float f = ps.ef;
             CartStep(ps, dt);
-            foreach (var v in ps.sv.veh.ToArray()) VehStep(ps, v, dt, f);
-            if (ps.bld.Contains("hangar")) foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f);
+            foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
+            if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
             CrystalStep(ps, dt);
             foreach (var r in ps.sv.rigs) { RigStep(ps, r, dt, f); if (r.dc >= 0 && !(ps.bld.Contains("hangar") && ps.sv.drones.Any(d => d.id == r.dc && d.tk == "r" && d.tgt == r.cell && (d.mode == "out" || d.mode == "load")))) r.dc = -1; }

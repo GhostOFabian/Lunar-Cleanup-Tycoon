@@ -9,7 +9,7 @@ namespace LunarCleanup.Core
     [Serializable] public class Stats { public double sold, earned; public float bricks, barren; public int handUnloads, lifts, airlifts, crystals, cells; public float handM2; }
 
     [Serializable] public class StSave { public string id; public float[] buf; public int[] docks = new int[0]; public int cell = -1, dc = -1; [NonSerialized] public bool busy; }
-    [Serializable] public class VehSave { public int cr = -1; public float crT; public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; public float xp; public int spec, skin; public string vname = ""; public int zone; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT, driveT, skipT; [NonSerialized] public int skipCell = -1; [NonSerialized] public float sweepT, sweepCheck; }
+    [Serializable] public class VehSave { public int cr = -1; public float crT; public int id; public string type; public Vector3 d; public string mode = "seek"; public int cell = -1, ti = -1, last = -1; public float[] tank; public string sid; public float coll, qT, fullT, ph; public float bat = -1, wear, doom, repT; public bool repSlow; public int drone = -1, lift = -1, rep, rig = -1; public float xp; public int spec, skin; public string vname = ""; public int zone; [NonSerialized] public bool busy, charging; [NonSerialized] public string avoid; [NonSerialized] public float avoidT, idleT, driveT, skipT; [NonSerialized] public int skipCell = -1; [NonSerialized] public float sweepT, sweepCheck, stuckT; [NonSerialized] public Vector3 stuckP; }
     [Serializable] public class DroneSave { public int id; public Vector3 d; public string mode = "idle", sid = "", tk = "v", tko = ""; public float[] tank; public int tgt = -1; public float wt; [NonSerialized] public bool busy; }
     [Serializable] public class LifterSave { public int id; public Vector3 d; public string mode = "idle"; public int veh = -1, cell = -1; }
     [Serializable] public class CrystalSave { public int id, cell, t, claim = -1; public float x, y, g; }
@@ -37,6 +37,7 @@ namespace LunarCleanup.Core
         public string pid;
         public int freq; // Planetengröße (0 = Stand vor v6.4 → alte Größe)
         public int stage = 1, techF, nextVeh = 1, nRockets;
+        public long tFirst, tDoneAt; public double tPlay, tDone; // Fabian 01.11.: Statistik – erster Besuch, Spielzeit auf dem Planeten, Spielzeit bis komplett sauber
         public List<string> bld = new List<string>();
         public List<KV> upg = new List<KV>();
         public float[] hand, roh, prod, sellBuf;

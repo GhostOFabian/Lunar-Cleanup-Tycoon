@@ -132,7 +132,7 @@ namespace LunarCleanup.Gameplay
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
-            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam();
+            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(); PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
@@ -463,6 +463,18 @@ namespace LunarCleanup.Gameplay
             }
             /* Wrack oder Einschlag antippen: Stand des Suchtrupps zeigen */
             { var ep = Game.EventPlace(ps); if (ep.HasValue) { var sp = cam.WorldToScreenPoint(ps.pd.Surf(ep.Value, 1)); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < 50 * U) { var tt = Game.TeamText(ps); if (tt != null) { Game.Toast(tt.Replace(" · Tippen: hinsehen", "")); return; } } } }
+            /* Fabian 01.11.: Fahrzeug (oder Sammelwagen) antippen öffnet sein Fenster */
+            {
+                VehSave bv = null; float bpx = 40f * U; bool cartHit = false;
+                foreach (var v in ps.sv.veh)
+                {
+                    if (v.mode == "boom") continue; var wp = ps.pd.Surf(v.d, .8f); var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0 || Vector3.Dot(v.d.normalized, (cam.transform.position - wp).normalized) < -.05f) continue;
+                    float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bv = v; }
+                }
+                if (ps.sv.cart.owned) { var wp = ps.pd.Surf(ps.sv.cart.d, .8f); var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < bpx) { cartHit = true; } }
+                if (cartHit) { hud.OpenSheet("vehicles", "1"); return; }
+                if (bv != null) { hud.OpenSheet("vehicle", bv.id.ToString()); return; }
+            }
             /* Gebäude im Bild antippen: Mittelpunkt und Rand der Grundfläche in Bildschirmpunkte umrechnen – trifft auch das Dach hoher Gebäude */
             {
                 string bb = null; float bs = 1e9f;
