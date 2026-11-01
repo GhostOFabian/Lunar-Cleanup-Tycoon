@@ -219,3 +219,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Planetenmenü mit Reitern „Reisen“, „Neue Planeten“, „Sternenstaub“; Planeten nach Regionen (innere Planeten, Monde der Gasriesen, Zwergplaneten, Exoplaneten), Sternenstaub-Boni nach Gruppen (Schneller Start, Einnahmen, Funde und Optik).
 - 01.11.2026 (Fabian): Vor jedem Anschlussrahmen 1,8 m gerades Band (Router-Startpunkt), damit Kurven nicht durch die Rahmen schneiden.
 - 01.11.2026 (Fabian): Versionsnummer steigt mit größeren Updates (0.22 ab Build 17); die Build-Nummer wird im Spiel mit angezeigt.
+- 01.11.2026 (Fabian): Keine Andockstationen-Modelle an der Entladeanlage; Fahrzeuge halten an denselben Andockplätzen ohne Grube.

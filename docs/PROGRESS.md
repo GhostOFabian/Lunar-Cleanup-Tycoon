@@ -200,3 +200,4 @@
 ## Unity 0.22 Build 17 (01.11.2026)
 - Versionsnummer 0.22 (vorher seit Build 12 unverändert 0.21). Startmenü und Einstellungen zeigen „Version 0.22 · Build 17“ (Build-Nummer aus `Resources/Data/build.txt`, schreibt der iPhone-/Browser-Build). Browser-Build v=15 trägt dieselbe Nummer.
 - Auf Fabians iPhone installiert (Device Hub: 0.22 (17)).
+- Build 18: Weltraumhintergrund schärfer (Handy 4096 × 2048, Nebel weich hochgerechnet, Sterne als weiche Punkte; nur der aktuelle Himmel bleibt im Speicher). Sammelwagen lädt ab, wenn er nah am Abladeplatz ist oder 40 s unterwegs war (blieb vorher bei „bringt gerade eine Ladung weg“ stehen); Hinweis, wenn das Rohstofflager voll ist. Andockstationen (Abkippgruben) an der Entladeanlage entfernt. Browser v=16 mit Versionsanzeige „0.22 · Build 18“.

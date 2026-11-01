@@ -408,7 +408,7 @@ namespace LunarCleanup.Core
             if (c.owned) /* mit Sammelwagen: nur noch in den Wagen leeren – er wird gerufen */
             {
                 if (ps.pd.Arc(c.d, CartGoal) < 8 && c.mode != "back" && c.mode != "drop") { LoadCart(ps); return; }
-                if (c.mode == "park") { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); } else Toast(c.mode == "go" ? "Der Sammelwagen ist unterwegs zu dir" : "Der Sammelwagen bringt gerade eine Ladung weg und kommt danach", "good");
+                if (c.mode == "park") { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); } else Toast(c.mode == "go" ? "Der Sammelwagen ist unterwegs zu dir" : c.mode == "drop" && RohCap(ps) - RohSum(ps) < .05f ? "Der Sammelwagen wartet – das Rohstofflager ist voll" : "Der Sammelwagen bringt gerade eine Ladung weg und kommt danach", "good");
                 return;
             }
             string best = null; float bf = 0;
@@ -436,7 +436,7 @@ namespace LunarCleanup.Core
         {
             var c = ps.sv.cart; float tot = HandSum(), free = CartCap() - Sum(c.tank); float amt = Mathf.Min(tot, free); if (amt <= .05f) { Fail("Der Sammelwagen ist voll"); return; }
             float k = amt / tot; for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; c.tank[m] += x; }
-            c.mode = "back"; c.to = ""; S.stats.handUnloads++; Toast(Fmt(amt) + " E in den Sammelwagen", "good");
+            c.mode = "back"; c.to = ""; c.wt = 0; S.stats.handUnloads++; Toast(Fmt(amt) + " E in den Sammelwagen", "good");
         }
         static void CartStep(PState ps, float dt)
         {
@@ -444,17 +444,17 @@ namespace LunarCleanup.Core
             switch (c.mode)
             {
                 case "park":
-                    if (tot > .05f) { c.mode = "back"; break; }
+                    if (tot > .05f) { c.mode = "back"; c.wt = 0; break; }
                     if (here && HandSum() >= HandCap() * .95f) { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); break; }
                     NavMove(ps, c, pd.PlanDir(ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start), step, -1); break;
                 case "go":
-                    if (!here) { c.mode = tot > .05f ? "back" : "park"; break; }
+                    if (!here) { c.mode = tot > .05f ? "back" : "park"; c.wt = 0; break; }
                     if (pd.Arc(c.d, CartGoal) < 3.2f || NavMove(ps, c, CartGoal, step, -1)) { c.mode = "wait"; c.wt = 0; Toast("Der Sammelwagen ist da – tippe auf deinen Behälter", "good"); }
                     break;
                 case "wait":
-                    if (!here) { c.mode = tot > .05f ? "back" : "park"; break; }
+                    if (!here) { c.mode = tot > .05f ? "back" : "park"; c.wt = 0; break; }
                     c.wt += dt; if (pd.Arc(c.d, CartGoal) > 8) { c.mode = "go"; break; }
-                    if ((HandSum() < .05f && c.wt > 8) || c.wt > 120) c.mode = tot > .05f ? "back" : "park";
+                    if ((HandSum() < .05f && c.wt > 8) || c.wt > 120) { c.mode = tot > .05f ? "back" : "park"; c.wt = 0; }
                     break;
                 case "back":
                     if (tot < .05f) { c.mode = "park"; c.to = ""; break; }
@@ -462,13 +462,15 @@ namespace LunarCleanup.Core
                     {
                         c.to = "roh"; float bf = 1; foreach (var s in GameData.Stations) if (ps.bld.Contains(s)) { float f = StBuf(ps, s) - Sum(ps.st[s].buf); if (f > bf) { bf = f; c.to = s; } }
                     }
-                    { var p = ps.lay.pos[c.to]; var dropAt = c.to == "roh" ? p + new Vector2(-GameData.Bld["roh"].fp - 1.6f, 0) : StLoc(ps, c.to, 6.4f, 0); if (NavMove(ps, c, pd.PlanDir(dropAt), step, -1)) { c.mode = "drop"; c.wt = 0; } }
+                    { var p = ps.lay.pos[c.to]; var dropAt = c.to == "roh" ? p + new Vector2(-GameData.Bld["roh"].fp - 1.6f, 0) : StLoc(ps, c.to, 6.4f, 0); var dd = pd.PlanDir(dropAt); c.wt += dt;
+                      /* Fabian 01.11.: Wagen blieb stehen („bringt gerade eine Ladung weg“), wenn der Abladeplatz im neuen Layout nicht erreichbar war – nah dran oder nach 40 s wird trotzdem abgeladen */
+                      if (NavMove(ps, c, dd, step, -1) || pd.Arc(c.d, dd) < 4f || c.wt > 40) { c.mode = "drop"; c.wt = 0; } }
                     break;
                 case "drop":
                     {
                         float[] dst = c.to == "roh" ? ps.sv.roh : ps.st[c.to].buf; float free = c.to == "roh" ? RohCap(ps) - RohSum(ps) : StBuf(ps, c.to) - Sum(dst);
                         float amt = Mathf.Min(tot, free, 30 * dt); if (amt > 0) { float k = amt / tot; for (int m = 0; m < NM; m++) { float x = c.tank[m] * k; c.tank[m] -= x; dst[m] += x; } }
-                        c.wt += dt; if (Sum(c.tank) < .05f) { Array.Clear(c.tank, 0, NM); c.mode = "park"; } else if (free <= .05f && c.wt > 4) { c.to = ""; c.mode = "back"; }
+                        c.wt += dt; if (Sum(c.tank) < .05f) { Array.Clear(c.tank, 0, NM); c.mode = "park"; } else if (free <= .05f && c.wt > 4) { c.to = ""; c.mode = "back"; c.wt = 0; }
                         break;
                     }
             }

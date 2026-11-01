@@ -234,7 +234,8 @@ namespace LunarCleanup.Gameplay
             }
         }
         /* Abkippgrube: Trichter mit Rutsche zur Anlage (Fabians grube-Modell ist ein Ring auf flachem Boden – wirkte wie ein Reifen, Fabian 01.11.) */
-        static void PitAt(Transform t, Vector3 pos, Vector3 toCenter, float houseW) => Kit.Pit(t, pos, toCenter, houseW);
+        /* Fabian 01.11.: Andockstationen (Abkippgruben) an der Entladeanlage sehen nicht gut aus – keine Modelle mehr, die Fahrzeuge halten einfach an der Anlage */
+        static void PitAt(Transform t, Vector3 pos, Vector3 toCenter, float houseW) { }
         void BuildOutposts()
         {
             pipes.Clear(); pipeLamps.Clear(); var sites = Game.OutpostSites(ps.pid);
