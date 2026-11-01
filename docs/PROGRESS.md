@@ -64,6 +64,7 @@
 - Nachtoptik nur per Software-Rendering geprüft (Scheinwerfer, Lichtkegel sichtbar); auf echten Handys noch ungesehen. Der Wegfindungstest schwankt gelegentlich knapp über der Grenze (zeitabhängig).
 
 ## Nächste Schritte (Stand Build 27, 01.11.2026)
+0. Für morgen (Fabian 01.11., Build 33 sieht sonst perfekt aus): Meteorit am Boden zeigt ein schwarzes Quadrat (Brandfleck-Quad mit GlowTex ist nicht transparent auf dem Handy); Bohrturm/Erzbagger: der große graue Sockelkreis und die braune Achteck-Platte daneben sehen schlecht aus.
 1. TestFlight-Upload und App-Store-Eintrag (Symbol, Screenshots, Datenschutz, Altersfreigabe) – braucht Fabians Apple-Entwicklerkonto.
 2. Konto-Speicher (Game Center/iCloud) anbinden – der Knopf in den Einstellungen ist da, die Anmeldung noch nicht.
 3. In-App-Käufe an den App Store anbinden (Angebote stehen in `Core/Platform.cs`).
