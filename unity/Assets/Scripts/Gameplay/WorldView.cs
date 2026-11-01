@@ -165,7 +165,8 @@ namespace LunarCleanup.Gameplay
                 var l = MeshKit.Ball(baseRoot, lamp, Vector3.zero, .14f); l.transform.position = pd.Surf(p, .1f);
             }
         }
-        static void PitAt(Transform t, Vector3 pos, Vector3 toCenter, float houseW) { if (!LcKit.Pit(t, pos, toCenter)) Kit.Pit(t, pos, toCenter, houseW); }
+        /* Abkippgrube: Trichter mit Rutsche zur Anlage (Fabians grube-Modell ist ein Ring auf flachem Boden – wirkte wie ein Reifen, Fabian 01.11.) */
+        static void PitAt(Transform t, Vector3 pos, Vector3 toCenter, float houseW) => Kit.Pit(t, pos, toCenter, houseW);
         void BuildOutposts()
         {
             pipes.Clear(); pipeLamps.Clear(); var sites = Game.OutpostSites(ps.pid);
@@ -485,12 +486,20 @@ namespace LunarCleanup.Gameplay
                 for (int i = 0; i < j; i++)
                 {
                     var A = live[i]; float HA0 = BeltDeck(A); var mine = new List<(float u, float s)>();
-                    foreach (var (u, q) in smp[B.id])
-                        foreach (var (s, p) in smp[A.id])
+                    var LB = smp[B.id]; var LA = smp[A.id];
+                    for (int ib = 0; ib < LB.Count; ib++)
+                    {
+                        var (u, q) = LB[ib];
+                        for (int ia = 0; ia < LA.Count; ia++)
                         {
-                            if ((p - q).magnitude >= BW * 2 + .3f) continue; float HA = HA0 + Lift(A.id, s); if (Mathf.Abs(HA - HB) >= .62f) continue;
+                            var (s, p) = LA[ia]; float dd = (p - q).magnitude;
+                            if (dd >= BW * 2 + .3f) continue; float HA = HA0 + Lift(A.id, s); if (Mathf.Abs(HA - HB) >= .62f) continue;
+                            /* Fabian 01.11.: parallel laufende Bänder nicht als Brücke anheben („fliegende Bänder“) – nur echte Kreuzungen oder echtes Überlappen */
+                            var tb = LB[Mathf.Min(ib + 1, LB.Count - 1)].p - LB[Mathf.Max(ib - 1, 0)].p; var ta = LA[Mathf.Min(ia + 1, LA.Count - 1)].p - LA[Mathf.Max(ia - 1, 0)].p;
+                            if (tb.sqrMagnitude > 1e-6f && ta.sqrMagnitude > 1e-6f && Mathf.Abs(Vector2.Dot(tb.normalized, ta.normalized)) > .9f && dd > BW * 2 + .06f) continue;
                             mine.Add((u, s)); marks.Add((u, HA + 1.0f - HB)); break;
                         }
+                    }
                     if (mine.Count == 0) continue;
                     float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
                     /* Kreuzung nah am Ende von B (dort darf B nicht hoch)? Dann hebt sich A, wenn A dort weit genug von seinen Enden ist */

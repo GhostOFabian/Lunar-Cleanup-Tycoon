@@ -224,7 +224,7 @@ namespace LunarCleanup.Gameplay
         void Pulse() { }
         /// <summary>Stellplatz für den Ampelmast neben dem Gebäude: Ecke der Grundfläche (Gebäuderaum), 0,8 m nach außen versetzt.
         /// bh = Gebäudehöhe in Metern.</summary>
-        static bool SideSpot(Models.BuildingParts bp, out Vector3 spot, out float bh)
+        bool SideSpot(Models.BuildingParts bp, out Vector3 spot, out float bh)
         {
             spot = Vector3.zero; bh = 0; var root = bp.root.transform; Bounds all = default; bool have = false;
             foreach (var r in bp.root.GetComponentsInChildren<MeshRenderer>())
@@ -237,8 +237,25 @@ namespace LunarCleanup.Gameplay
             if (!have) return false;
             var sc = root.lossyScale; float ox = .8f / Mathf.Max(.01f, sc.x), oz = .8f / Mathf.Max(.01f, sc.z);
             bh = all.max.y * sc.y;
-            /* feste Ecke (+x, −z): Bandanschlüsse liegen in der Wandmitte, Ecken bleiben frei */
-            spot = new Vector3(all.max.x + ox, 0, all.min.z - oz); return true;
+            /* Fabian 01.11.: freie Ecke suchen – nie in einem Band, nie in einem anderen Gebäude; sonst etwas weiter draußen */
+            var cand = new List<Vector3>();
+            foreach (float push in new[] { 1f, 1.8f, 2.8f })
+                foreach (var (sx, sz) in new[] { (1, -1), (-1, -1), (1, 1), (-1, 1) })
+                    cand.Add(new Vector3((sx > 0 ? all.max.x : all.min.x) + sx * ox * push, 0, (sz > 0 ? all.max.z : all.min.z) + sz * oz * push));
+            foreach (var c in cand) if (SpotFree(root.TransformPoint(c), bp)) { spot = c; return true; }
+            spot = cand[0]; return true;
+        }
+        /// <summary>Ist an dieser Weltstelle Platz für einen Ampelmast (1 m neben jedem sichtbaren Band, außerhalb fremder Gebäude)?</summary>
+        bool SpotFree(Vector3 world, Models.BuildingParts self)
+        {
+            var p = pd.PlanLocal(world.normalized);
+            foreach (var kv in beltInfo)
+            {
+                var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value;
+                for (int i = 1; i < rp.Length; i++) { if (cum[i] < s0 - .5f || cum[i - 1] > s1 + .5f) continue; if (SegDist(p, rp[i - 1], rp[i]) < BW + 1.0f) return false; }
+            }
+            foreach (var kv in blds) { if (kv.Value == self || !ps.lay.pos.TryGetValue(kv.Key, out var c)) continue; if ((p - c).magnitude < GameData.Bld[kv.Key].fp * .95f) return false; }
+            return true;
         }
         /// <summary>Dachmitte im Gebäude-Koordinatensystem: Kasten jedes Bauteils im Gebäuderaum (nicht in Weltachsen, sonst zu groß), Mitte der Grundfläche,
         /// höchste breite Fläche dort; ragt etwas hinein (Rakete, Schornstein, Antenne), rückt die Ampel in Ringen nach außen, bis sie frei steht.</summary>

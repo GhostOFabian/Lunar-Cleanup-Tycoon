@@ -176,3 +176,4 @@
 - Bandenden ohne Wand auf Bandhöhe (Entladeanlage auf Stelzen, Rohstofflager, Verkaufsstation): Fabians Übergabesäule am Modellrand statt Tunnel bis in die Mitte.
 - Editor-Fernsteuerung `Editor/RemoteCommands.cs` (Befehle über `Temp/claude_cmd.txt`).
 - Getestet im Editor (Mond, Mars, Meteoritenschauer, Frachter). Auf dem iPhone noch offen: Testliste 0.21.
+- iPhone-Playtest 01.11. früh (Fabian): Ringe am Boden (Kratermodell) und an der Entladeanlage (Grubenmodell) entfernt – Felsen bzw. Trichtergruben mit Rutsche; Ampelmasten suchen eine freie Ecke ohne Band/Gebäude; parallel laufende Bänder werden nicht mehr als lange Brücke angehoben („fliegende Bänder“), nur echte Kreuzungen.

@@ -314,7 +314,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Felsen und Krater auf der Oberfläche (nur Deko). Liefert false, wenn die Modelle fehlen.</summary>
         public static bool Decorate(Transform parent, PlanetData pd, int seed, int count)
         {
-            if (!Has("Welt/deko_fels_1")) return false; var r = new System.Random(seed); string[] deco = { "Welt/deko_fels_1", "Welt/deko_fels_2", "Welt/deko_fels_3", "Welt/deko_fels_1", "Welt/deko_krater", "Ereignisse/meteorit" };
+            if (!Has("Welt/deko_fels_1")) return false; var r = new System.Random(seed); string[] deco = { "Welt/deko_fels_1", "Welt/deko_fels_2", "Welt/deko_fels_3", "Welt/deko_fels_1", "Welt/deko_fels_2", "Ereignisse/meteorit" }; /* deko_krater raus (Fabian 01.11.): Ringwall ohne ausgehobenen Boden sah wie ein Reifen aus */
             for (int i = 0; i < count; i++)
             {
                 var cl = pd.cells[r.Next(pd.N)]; if (cl.IsBase || cl.ring <= 2) continue;
