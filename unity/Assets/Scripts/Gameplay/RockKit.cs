@@ -85,6 +85,26 @@ namespace LunarCleanup.Gameplay
             }
             tex.SetPixels32(px); tex.Apply(true, true); return tex;
         }
+        static Texture2D crack;
+        /// <summary>Leuchtende Risse (für frisch eingeschlagene Meteoriten): schwarz mit glühenden Adern.</summary>
+        public static Texture2D CrackTex()
+        {
+            if (crack) return crack; const int N = 128; crack = new Texture2D(N, N, TextureFormat.RGBA32, true) { name = "Glutrisse", wrapMode = TextureWrapMode.Repeat };
+            var px = new Color32[N * N];
+            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++)
+            {
+                var p = new Vector3(x / (float)N * 6, y / (float)N * 6, 0); float v = Mathf.Abs(Fbm(p, 91, 3)); float c = Mathf.Clamp01(1 - v * 7); c = c * c;
+                float spot = Mathf.Clamp01((Fbm(p * .5f, 92, 2) + .1f) * 3); c = Mathf.Max(c, spot * .35f);
+                px[y * N + x] = new Color32((byte)(255 * c), (byte)(150 * c), (byte)(60 * c), 255);
+            }
+            crack.SetPixels32(px); crack.Apply(true, true); return crack;
+        }
+        /// <summary>Eigenes Material für einen glühenden Meteoriten (Leuchtkraft wird beim Abkühlen heruntergeregelt).</summary>
+        public static Material MeteorMat()
+        {
+            var m = new Material(MeshKit.Mat(new Color(.22f, .19f, .17f), .1f, .25f)) { name = "Meteorit" }; m.SetTexture("_BaseMap", Tex());
+            m.EnableKeyword("_EMISSION"); m.SetTexture("_EmissionMap", CrackTex()); m.SetColor("_EmissionColor", new Color(1f, .45f, .12f) * 3); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; return m;
+        }
         /// <summary>Gesteinsmaterial in einer Grundfarbe (je Farbe einmal, für GPU-Instancing).</summary>
         public static Material Mat(Color c)
         {

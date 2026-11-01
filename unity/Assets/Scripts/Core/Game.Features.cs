@@ -15,7 +15,7 @@ namespace LunarCleanup.Core
 
         // ---------- Parzelle fertig: Kombo, Funde, Wrack ----------
         static void OnCellDone(PState ps, int id, double bonus)
-        { S.stats.cells++;
+        { S.stats.cells++; HistCell(ps);
             bool live = !Offline && ps.pid == S.planet;
             // Kombo: nur eigene Handreinigung
             if (live && strokeCells.Contains(id))
@@ -49,6 +49,7 @@ namespace LunarCleanup.Core
             if (ev.key != "")
             {
                 ev.t -= dt;
+                if (ev.t <= 0 && ev.key == "pile" && ev.cell >= 0) { ps.act.Remove(ev.cell); ps.dirtyCells.Add(ev.cell); if (!Offline && ps.pid == S.planet) Toast("Der Müllberg wurde wieder abgeholt – nächstes Mal mit mehr Fahrzeugen!", "bad"); EvEnd(ps, null); return; }
                 if (ev.t <= 0) { string n = EvDef(ev.key)?.name ?? "Ereignis"; if ((ev.key == "wreck" || ev.key == "impact") && ps.sv.team.mode != "back") Toast(ev.key == "wreck" ? "Das Wrack ist weggesunken – der Suchtrupp kam zu spät" : "Die Kometentrümmer sind verglüht"); EvEnd(ps, ev.key == "wreck" ? null : n + " ist vorbei"); }
                 return;
             }
@@ -61,7 +62,7 @@ namespace LunarCleanup.Core
         /// <summary>Ereignis starten (key = null: zufällig nach Gewicht). Liefert false, wenn es hier nicht passt.</summary>
         public static bool StartEvent(PState ps, string key)
         {
-            var list = FeatureData.Events.Where(e => (e.key != "vein" || ps.sv.rigs.Count > 0) && (e.key != "freighter" || ps.bld.Contains("sell"))).ToList(); if (list.Count == 0) return false;
+            var list = FeatureData.Events.Where(e => (e.key != "vein" || ps.sv.rigs.Count > 0) && (e.key != "freighter" || ps.bld.Contains("sell")) && (e.key != "pile" || ps.sv.veh.Count >= PILE_TEAM) && (e.key != "trader" || RohSum(ps) + ProdSum(ps) >= 20)).ToList(); if (list.Count == 0) return false;
             EventDef E = key != null ? list.FirstOrDefault(e => e.key == key) : null;
             if (E == null) { float sw = list.Sum(e => e.w), r = (float)fr.NextDouble() * sw; foreach (var e in list) { r -= e.w; if (r <= 0) { E = e; break; } } E ??= list[0]; }
             var ev = ps.sv.ev ?? (ps.sv.ev = new EventSave()); ev.key = E.key; ev.t = E.dur; ev.cell = -1; var pd = ps.pd;
@@ -85,7 +86,9 @@ namespace LunarCleanup.Core
                 int n = FeatureData.COMET_MIN + fr.Next(FeatureData.COMET_MAX - FeatureData.COMET_MIN + 1);
                 for (int k = 0, tr = 0; k < n && tr < 400; tr++) { int id = fr.Next(pd.N); var cl = pd.cells[id]; if (cl.IsBase || cl.ring < 2 || cl.Wet || !ps.clean[id] || ps.sv.crystals.Any(c => c.cell == id)) continue; float a = (float)fr.NextDouble() * 6.283f, rr = (float)fr.NextDouble() * cl.H * .5f; ps.sv.crystals.Add(new CrystalSave { id = ++ps.sv.crN, cell = id, t = fr.Next(CrystalTypes.Length), x = Mathf.Cos(a) * rr, y = Mathf.Sin(a) * rr, g = 1 }); k++; }
             }
-            if (!Offline && ps.pid == S.planet) Toast(E.name + "! " + E.hint, "good"); if (E.key == "wreck" || E.key == "impact") SendTeam(ps);
+            else if (E.key == "pile") { if (!StartPile(ps)) { ev.key = ""; return false; } OnBoom?.Invoke(pd.cells[ev.cell].c); }
+            else if (E.key == "trader") { if (!StartTrader(ps)) { ev.key = ""; return false; } }
+            if (!Offline && ps.pid == S.planet) Toast(E.name + "! " + (E.key == "trader" ? "Ein Händler kauft " + GameData.Mats[ev.mat].name + " für das Dreifache – 3 Minuten lang. Tippe oben auf die Meldung." : E.hint), "good"); if (E.key == "wreck" || E.key == "impact") SendTeam(ps);
             return true;
         }
         public static Vector3? EventPlace(PState ps) { var ev = ps.sv.ev; if (ev == null || ev.key == "" || ev.cell < 0) return null; return ps.pd.cells[ev.cell].c; }

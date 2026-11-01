@@ -11,7 +11,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Kamera-Ruckeln (0..1), klingt von selbst ab. GameRoot.ApplyCam wackelt damit.</summary>
         public static float Shake; static float lastBuzz = -99;
         class Met { public Vector3 from, to; public float t, delay, dur; public GameObject go; public Transform ball; public int cell; public bool done; }
-        class MetRock { public int cell; public GameObject go; public Light glow; public float t; }
+        class MetRock { public int cell; public GameObject go; public Light glow; public float t; public Material hot, burn; }
         readonly List<Met> mets = new List<Met>();
         readonly List<MetRock> metRocks = new List<MetRock>();
 
@@ -73,6 +73,8 @@ namespace LunarCleanup.Gameplay
             {
                 var r = metRocks[i]; r.t += Time.deltaTime;
                 if (r.glow) r.glow.intensity = Mathf.Lerp(4, 0, r.t / 8f);
+                if (r.hot) r.hot.SetColor("_EmissionColor", new Color(1f, .45f, .12f) * Mathf.Lerp(3f, .35f, Mathf.Clamp01(r.t / 40f)) * (.85f + .15f * Mathf.Sin(Time.time * 3 + r.cell))); /* kühlt langsam ab, glimmt aber weiter */
+                if (r.burn) r.burn.SetColor("_BaseColor", new Color(1f, .45f, .15f, Mathf.Lerp(.5f, 0, r.t / 25f)));
                 bool gone = !r.go || r.t > 180 || (r.t > 3 && ps != null && ps.pd == pd && !ps.act.ContainsKey(r.cell));
                 if (!gone) continue;
                 if (r.go) { EmitDust(r.go.transform.position.normalized, new Color(.6f, .55f, .5f), 12); Destroy(r.go); }
@@ -82,13 +84,20 @@ namespace LunarCleanup.Gameplay
 
         void SpawnMetRock(int cell, Vector3 at)
         {
-            var g = LcKit.Event("meteorit", transform);
-            if (!g) { g = new GameObject("Meteorit"); g.transform.SetParent(transform, false); MeshKit.Part(g.transform, MeshKit.Sphere, MeshKit.Mat(new Color(.25f, .22f, .2f), 0, .2f), new Vector3(0, .3f, 0), new Vector3(1.1f, .8f, 1f)); }
+            /* Fabian 01.11.: Meteoriten als echter, glühender Gesteinsbrocken in einem Brandfleck statt Kugel auf Scheibe */
+            var g = new GameObject("Meteorit"); g.transform.SetParent(transform, false); var hot = RockKit.MeteorMat();
+            var rk = new GameObject("Brocken"); rk.transform.SetParent(g.transform, false); rk.transform.localPosition = new Vector3(0, -.12f, 0); rk.transform.localScale = new Vector3(1.25f, 1f, 1.15f) * 1.1f; rk.transform.localRotation = Quaternion.Euler(Random.value * 20, Random.value * 360, Random.value * 20);
+            rk.AddComponent<MeshFilter>().sharedMesh = RockKit.Mesh(Random.Range(0, RockKit.Variants), true); rk.AddComponent<MeshRenderer>().sharedMaterial = hot;
+            for (int q = 0; q < 5; q++) { var sm = RockKit.Spawn(g.transform, Random.Range(0, RockKit.Variants), new Color(.2f, .18f, .16f), .18f + Random.value * .22f); float a = Random.value * 6.283f, d0 = .9f + Random.value * .9f; sm.transform.localPosition = new Vector3(Mathf.Cos(a) * d0, -.04f, Mathf.Sin(a) * d0); sm.GetComponent<MeshRenderer>().sharedMaterial = hot; } // Splitter
+            var burn = new Material(MeshKit.Mat(new Color(.05f, .04f, .03f), 0, .05f)); MeshKit.MakeTransparent(burn, false); burn.SetTexture("_BaseMap", MeshKit.GlowTex()); burn.SetColor("_BaseColor", new Color(.06f, .045f, .035f, .9f));
+            var scorch = MeshKit.Part(g.transform, MeshKit.Quad, burn, new Vector3(0, .04f, 0), Vector3.one * 5.2f, new Vector3(90, 0, 0)); NoShadow(scorch); // Brandfleck
+            var rim = new Material(MeshKit.Mat(new Color(1f, .4f, .1f), 0, .1f, new Color(1f, .4f, .1f) * 1.5f)); MeshKit.MakeTransparent(rim, true); rim.SetTexture("_BaseMap", MeshKit.GlowTex()); rim.SetColor("_BaseColor", new Color(1f, .45f, .15f, .5f));
+            var glowQ = MeshKit.Part(g.transform, MeshKit.Quad, rim, new Vector3(0, .06f, 0), Vector3.one * 2.6f, new Vector3(90, 0, 0)); NoShadow(glowQ); // Glut am Boden
             var n = at.normalized; g.transform.position = pd.Surf(n, 0, cell);
             g.transform.rotation = Quaternion.FromToRotation(Vector3.up, n) * Quaternion.AngleAxis(Random.value * 360, Vector3.up);
             g.transform.localScale *= .7f + Random.value * .5f;
             var lg = new GameObject("Glut"); lg.transform.SetParent(g.transform, false); lg.transform.localPosition = new Vector3(0, 1.2f, 0); var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.color = new Color(1f, .45f, .2f); L.range = 8; L.intensity = 4; L.shadows = LightShadows.None;
-            metRocks.Add(new MetRock { cell = cell, go = g, glow = L });
+            metRocks.Add(new MetRock { cell = cell, go = g, glow = L, hot = hot, burn = rim });
         }
 
         /// <summary>Kurzer heller Lichtblitz an einer Stelle.</summary>

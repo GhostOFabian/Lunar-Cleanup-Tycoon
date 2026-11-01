@@ -74,8 +74,9 @@ namespace LunarCleanup.Gameplay
             hud.OnNav = k => { if (k == "clean") { hud.CloseSheet(); FocusFront(); } else hud.OpenSheet(k); };
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
             hud.OnHome = () => { var ps = Game.Cur; hud.CloseSheet(); StartCoroutine(Fly(ps.pd.cells[ps.pd.baseCell].c, 64)); }; /* Fabian 01.11.: direkt zurück zur Basis-Ansicht */
-            hud.OnFocusQuest = FocusQuest; hud.OnPhoto = () => { photo = true; if (uiRoot) uiRoot.SetActive(false); }; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
+            hud.OnFocusQuest = FocusQuest; hud.OnPhoto = () => { photo = true; hud.SetPhoto(true); }; hud.OnPhotoExit = () => { photo = false; hud.SetPhoto(false); }; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
+            Game.OnDoomImpact += pid => StartCoroutine(DoomImpact(pid)); /* Fabian 01.11.: Riesenmeteor */
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket(); Game.OnMeteors += cells => world.MeteorShower(cells); Game.OnCellFlash += id => world.FlashCell(id);
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
             { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 4.5f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 16; brushLight.color = new Color(1f, .96f, .88f); brushLight.intensity = 0; brushLight.shadows = LightShadows.None; }
@@ -119,7 +120,7 @@ namespace LunarCleanup.Gameplay
         {
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             { var kb0 = Keyboard.current; bool tl = (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Mouse.current.position.ReadValue().x < 80 && Mouse.current.position.ReadValue().y > Screen.height - 80) || (ETouch.activeTouches.Count > 0 && ETouch.activeTouches[0].screenPosition.x < 80 && ETouch.activeTouches[0].screenPosition.y > Screen.height - 80);
-              if ((kb0 != null && kb0.pKey.wasPressedThisFrame && preview == null) || (photo && tl)) { photo = !photo; if (uiRoot) uiRoot.SetActive(!photo); } }
+              if ((kb0 != null && kb0.pKey.wasPressedThisFrame && preview == null) || (photo && tl)) { photo = !photo; hud.SetPhoto(photo); } }
             if (!dailyDone && !offlineRunning && Time.realtimeSinceStartup > 3) { dailyDone = true; var dtx = Game.DailyCheck(); if (dtx != null) Game.Toast(dtx, "good"); }
             bool menu = Hud.I.MenuOpen; if (menu) { Twist(4 * dt); } /* Startmenü: Kamera dreht sich langsam um die Basis, kein Wischen */
             if (!menu) HandleInput(dt);
@@ -131,6 +132,7 @@ namespace LunarCleanup.Gameplay
             if (!offlineRunning) Game.Step(dt);
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
+            if (Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12 && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
@@ -445,9 +447,17 @@ namespace LunarCleanup.Gameplay
 
         bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
 
+        bool exploding;
+        IEnumerator DoomImpact(string pid)
+        {
+            if (pid != Game.S.planet || exploding) { Game.Ruin(pid); yield break; }
+            exploding = true; hud.CloseSheet(); yield return world.Explode(planet.transform); yield return new WaitForSeconds(.3f);
+            Game.Ruin(pid); exploding = false; /* baut den nächsten Planeten auf (Travel → BuildPlanet) */
+        }
         void Tap(Vector2 pos)
         {
             var ps = Game.Cur;
+            if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */
             {
                 CrystalSave bc = null; float bpx = Mathf.Max(44f, Screen.height * .045f);

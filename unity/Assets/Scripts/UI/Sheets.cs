@@ -315,7 +315,7 @@ namespace LunarCleanup.UI
             if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand"; }
             int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = Game.Num(nP) + " Parzellen";
             if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
-            else if (have) h.Row(P.name, () => Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => "Reisen", () => true, () => { Game.Travel(key); h.CloseSheet(); }, false);
+            else if (have) h.Row(P.name, () => Game.Ruined(key) ? "Zerstört vom Riesenmeteor – wird neu aufgebaut, noch " + Mathf.CeilToInt(Game.RuinLeft(key) / 60f) + " min" : Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => Game.Ruined(key) ? "Gesperrt" : "Reisen", () => !Game.Ruined(key), () => { Game.Travel(key); h.CloseSheet(); }, false);
             else
             {
                 int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
@@ -351,7 +351,7 @@ namespace LunarCleanup.UI
             if (i < 0 || i >= ps.sv.flags.Count) return; var f = ps.sv.flags[i];
             if (!f.got) { h.Note("Die Schatztruhe an dieser Flagge ist noch verschlossen. Reinige die Parzelle und tippe die Truhe an."); return; }
             /* Fabian 01.11.: jede Flagge erzählt ein Stück Geschichte, darunter eine Randnotiz – und dann kommt dein Kommentar */
-            var e = Game.FlagStory(ps, f);
+            var e = Game.FlagStory(ps, f); Game.CheckPutzi(ps, e);
             h.Section(Raw + FlagStories.ArcTitle(ps.pid) + " · " + e.title);
             h.Note(Raw + "<b>" + e.who + "</b>"); h.Note(Raw + e.body); h.Note(Raw + "<i><color=#9fb0c8>" + e.note + "</color></i>");
             if (e.finale) h.Note("<color=#ffd24d>Das war das letzte Kapitel dieser Geschichte.</color>");
@@ -430,6 +430,9 @@ namespace LunarCleanup.UI
             h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
             h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
             h.Row("Gesamt", () => Game.S.stats.cells + " Parzellen gereinigt · " + Game.S.planets.Sum(p => p.nRockets) + " Raketen · " + Game.S.stats.crystals + " Kristalle · " + Cr(Game.S.stats.sold) + " verkauft");
+            h.Section("Verlauf");
+            h.BarChart("Einnahmen je Stunde", Game.IncomeHours(24), Pal.Credit, "vor 24 h", "jetzt", v => Game.Fmt(v) + " Cr");
+            foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var cd = Game.CellDays(Game.P[pid], 7); if (cd.Sum() <= 0) continue; h.BarChart(GameData.Planets[pid].name + " · Parzellen je Tag", cd, Pal.Clean, "vor 7 Tagen", "heute", v => Game.Fmt(v)); }
             h.Section("Planeten");
             foreach (var pid in GameData.POrder)
             {
@@ -474,6 +477,12 @@ namespace LunarCleanup.UI
             if (gtab == 2) { Codex(h); return; }
             if (gtab == 3) { Stats(h); return; }
             Game.DailyContracts(); var cs = Game.S.contracts;
+            /* Fabian 01.11.: Herausforderungen mit Zeitlimit */
+            { Game.ChalRefresh(); var ch = Game.S.chal; h.Section("Herausforderungen");
+              if (ch.act != "") { var c = Game.Chal(ch.act); if (c != null) h.Row(c.name + " · läuft", () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(c.id))) + " · " + Mathf.Min(100, Mathf.FloorToInt((float)Game.ChalProgress() * 100)) + " % · noch " + Dur(Mathf.Max(0, Game.S.chal.left)), () => "+" + Cr(Game.ChalReward(c.id)), () => false, null, false); }
+              else foreach (var id in ch.offer) { var c = Game.Chal(id); if (c == null) continue; var cid = id; h.Row(c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(cid))) + " in " + Mathf.RoundToInt(c.time / 60) + " min · Belohnung " + Cr(Game.ChalReward(cid)) + (c.sd > 0 ? " + " + c.sd + " Sternenstaub" : ""), () => "Starten", () => Game.S.chal.act == "", () => Game.ChalStart(cid), false); }
+              if (ch.act == "" && ch.offer.Count == 0) h.Note("Neue Herausforderungen in " + Dur(System.Math.Max(0L, ch.refresh - Game.Now())) + ".");
+              if (ch.done > 0) h.Note("Geschafft: " + ch.done); }
             /* Fabian 01.11.: Abholbares immer ganz oben */
             bool qReady = Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count) && Game.QuestProgress(Game.S.quest) >= 1;
             var dReady = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done && Game.ContractProg(cs.list[k]) >= cs.list[k].target).ToList();
@@ -645,7 +654,7 @@ namespace LunarCleanup.UI
             h.Section("Sprache · Language");
             h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);
             h.Section("Foto-Modus");
-            h.Row("Oberfläche ausblenden", () => "Für schöne Bilder deiner Basis. Taste P oder ein Tipp oben links blendet sie wieder ein.", () => "Foto-Modus", () => true, () => { h.CloseSheet(); h.OnPhoto?.Invoke(); }, false);
+            h.Row("Oberfläche ausblenden", () => "Für schöne Bilder deiner Basis – mach dann einfach einen Screenshot. Der Knopf oben links holt die Oberfläche zurück.", () => "Foto-Modus", () => true, () => { h.CloseSheet(); h.OnPhoto?.Invoke(); }, false);
             h.Section("Ton");
             h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
             h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);

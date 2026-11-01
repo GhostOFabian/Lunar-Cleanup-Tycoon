@@ -20,6 +20,8 @@ namespace LunarCleanup.Core
             new EventDef { key = "comet", name = "Kometenschweif", hint = "Ein Kometenschweif lässt Leuchtkristalle wachsen", dur = 180, w = 2 },
             new EventDef { key = "solar", name = "Sonnensturm", hint = "Sonnensturm: Solarstrom doppelt, Fahrzeuge etwas langsamer", dur = 300, w = 2 },
             new EventDef { key = "vein", name = "Erzader", hint = "Eine Erzader: Bohrturm und Bagger fördern doppelt", dur = 600, w = 1.5f },
+            new EventDef { key = "pile", name = "Riesiger Müllberg", hint = "Ein riesiger Müllberg ist abgeladen worden – nur mindestens 3 Fahrzeuge zusammen schaffen ihn. Große Belohnung!", dur = 900, w = 1.5f },
+            new EventDef { key = "trader", name = "Händlerschiff", hint = "Ein Händler ist gelandet und zahlt 3 Minuten lang das Dreifache – tippe auf die Meldung oben", dur = 180, w = 1.5f },
             new EventDef { key = "freighter", name = "Frachter in Not", hint = "Ein Frachter zahlt beim nächsten vollen Raketenstart 50 % mehr", dur = 300, w = 1.5f },
         };
         public const float WRECK_AMT = 3f, WRECK_BONUS = 500, SOLAR_MULT = 2f, SOLAR_VEH = .75f, VEIN_MULT = 2f, FREIGHTER_MULT = 1.5f; public const int COMET_MIN = 6, COMET_MAX = 10;
@@ -73,8 +75,21 @@ namespace LunarCleanup.Core
             { "mars", new WeatherDef { key = "dustdevil", name = "Staubteufel", every = 90, dur = 40 } },
             { "europa", new WeatherDef { key = "icefog", name = "Eisnebel", every = 0, dur = 0 } },
             { "io", new WeatherDef { key = "lavafont", name = "Lavafontänen", every = 30, dur = 6 } },
-            { "venus", new WeatherDef { key = "lightning", name = "Blitze", every = 12, dur = .3f } },
             { "titan", new WeatherDef { key = "methrain", name = "Methanregen", every = 240, dur = 90 } },
+            /* Fabian 01.11.: Wetter auf allen Planeten mit Atmosphäre oder Ausgasung */
+            { "ganymed", new WeatherDef { key = "snow", name = "Eisschnee", every = 200, dur = 80 } },
+            { "enceladus", new WeatherDef { key = "snow", name = "Geysirschnee", every = 120, dur = 70 } },
+            { "triton", new WeatherDef { key = "snow", name = "Stickstoffschnee", every = 180, dur = 90 } },
+            { "pluto", new WeatherDef { key = "snow", name = "Tholin-Schnee", every = 220, dur = 90 } },
+            { "eris", new WeatherDef { key = "snow", name = "Methanschnee", every = 160, dur = 80 } },
+            { "sedna", new WeatherDef { key = "snow", name = "Roter Schnee", every = 240, dur = 90 } },
+            { "proxima", new WeatherDef { key = "embers", name = "Sternenfunken", every = 90, dur = 30 } },
+            { "trappist", new WeatherDef { key = "mist", name = "Leuchtnebel", every = 0, dur = 0 } },
+            { "kepler", new WeatherDef { key = "rain", name = "Regen", every = 180, dur = 100 } },
+            { "cancri", new WeatherDef { key = "embers", name = "Hitzeflimmern", every = 60, dur = 25 } },
+            { "gliese", new WeatherDef { key = "mist", name = "Dampfschwaden", every = 0, dur = 0 } },
+            { "poltergeist", new WeatherDef { key = "wisps", name = "Geisterlichter", every = 0, dur = 0 } },
+            { "venus", new WeatherDef { key = "lightning", name = "Blitze", every = 12, dur = .3f } },
         };
 
         // ---------- F2 Automatik-Regeln ----------

@@ -18,7 +18,8 @@ namespace LunarCleanup.Core
     [Serializable] public class BeltSave { public string id; public List<float> s = new List<float>(); public List<int> m = new List<int>(); public List<float> a = new List<float>(); }
     [Serializable] public class MachSave { public string id; public float[] inp, outp; public int cur = -1, bat = 1, made; public float prog; public int lastOut = -1; }
     // ---- Vorbereitet für geplante Erweiterungen (docs/IDEEN_SPEC.md) – alle mit Standardwert, noch nicht benutzt ----
-    [Serializable] public class EventSave { public string key = ""; public float t; public int cell = -1; public bool done; }
+    [Serializable] public class EventSave { public string key = ""; public float t; public int cell = -1; public bool done; public int mat = -1; public float amt0; /* Händler: Ware; Müllberg: Anfangsmenge */ }
+    [Serializable] public class ChalSave { public List<string> offer = new List<string>(); public string act = ""; public double v0; public float left; public long refresh; public int done; } // Fabian 01.11.: Herausforderungen
     [Serializable] public class DailySave { public int lastDay, streak; }
     [Serializable] public class RuleSave { public string ifK = "", thenK = "", arg = ""; public float val; public bool on = true; }
     [Serializable] public class SeasonSave { public string key = ""; public float clean; public bool claimed; }
@@ -35,6 +36,7 @@ namespace LunarCleanup.Core
     public class PlanetSave
     {
         public string pid;
+        public List<int> cellD = new List<int>(); public int cellDay; /* gereinigte Parzellen je Tag (letzte 14) */
         [NonSerialized] public float sellIdle, sellLast, sellAge; public float sellRate; /* mittlerer Zufluss in den Frachtraum (E/s) */ /* Rakete: wie lange schon nichts Neues in den Frachtraum kam */
         public int freq; // Planetengröße (0 = Stand vor v6.4 → alte Größe)
         public int stage = 1, techF, nextVeh = 1, nRockets;
@@ -113,5 +115,11 @@ namespace LunarCleanup.Core
         public List<RouteSave> routes = new List<RouteSave>();    // C4
         public List<string> notifyOff = new List<string>();       // F1 abgeschaltete Benachrichtigungen
         public bool music = true, vibrate = true;                 // A4/A5
+        /* Fabian 01.11. (Build 29): neue Felder, alle mit Default */
+        public bool putzi;                                        // Putzi-7 begleitet dich (nach seinem Finale)
+        public string ruin = ""; public long ruinUntil;           // zerstörter Planet und bis wann er neu aufgebaut wird
+        public float doomNext = -1, doomT = -1; public string doomPid = ""; // Riesenmeteor: Zeit bis zum nächsten, Countdown, Ziel
+        public List<double> incH = new List<double>(); public long incHour; // Einnahmen je Stunde (letzte 48)
+        public ChalSave chal = new ChalSave();
     }
 }

@@ -15,7 +15,7 @@ namespace LunarCleanup.Gameplay
         GameObject wonder; string wonderFor; float wonderT; Vector3 wonderAt; Transform wonderSpin; readonly List<Transform> wonderBits = new List<Transform>(); readonly List<Vector3> wonderBase = new List<Vector3>();
         static readonly Dictionary<string, (string name, string text)> WonderInfo = new Dictionary<string, (string, string)>
         {
-            { "moon", ("Alte Landestelle", "Neben deiner Basis steht eine uralte Landefähre – die Fußspuren sind noch da.") },
+            /* Fabian 01.11.: Landefähre auf dem Mond entfernt („hat keinen Nutzen und sieht komisch aus“) */
             { "mars", ("Staubteufel", "Wirbelstürme aus rotem Staub ziehen über die Ebene.") },
             { "europa", ("Eisgeysir", "Unter dem Eis brodelt ein Ozean – ab und zu schießt eine Fontäne hoch.") },
             { "titan", ("Methanregen", "Über Titan nieselt es – flüssiges Methan.") },

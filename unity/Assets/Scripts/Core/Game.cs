@@ -250,7 +250,7 @@ namespace LunarCleanup.Core
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
             return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1);
         }
-        public static void Earn(double cr) { S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
+        public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
         /// A) Reiseprämie: Wer einen Planeten komplett reinigt, bekommt einmalig die Reisekosten zum nächsten Planeten.</summary>
         static readonly List<PState> pendingPrize = new List<PState>();
@@ -375,6 +375,7 @@ namespace LunarCleanup.Core
         {
             var cl = ps.pd.cells[id];
             if (!ps.clean[id]) { ps.nClean++; if (!Offline && ps.pid == S.planet) OnCellFlash?.Invoke(id); }
+            PileDone(ps, id); /* Müllberg-Belohnung auch auf schon bezahlten Parzellen */
             ps.clean[id] = true; ps.act.Remove(id); ps.dirtyCells.Add(id);
             foreach (var v in ps.sv.veh) if (v.cell == id && (v.mode == "drive" || v.mode == "clean")) { v.mode = "seek"; v.cell = -1; }
             if (!ps.paid[id])
@@ -416,7 +417,8 @@ namespace LunarCleanup.Core
                 var a = EnsureAct(ps, sc); if (a == null) continue;
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
-                float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard));
+                float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
+                if (IsPile(ps, sc)) k = Mathf.Min(k, PileK(ps, sc, null, dt));
                 float got = CleanAt(ps, a, l.x, l.y, r, k); /* Pinsel wieder wie bis Build 21 (Fabian: Build 22 war schlechter) */
                 if (got <= 0) continue;
                 float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
@@ -746,10 +748,10 @@ namespace LunarCleanup.Core
             {
                 var a = kv.Value; if (a.K.tier > T.tier || a.sum < a.cl.nIn * GameData.DONE || (a.cl.Wet && !T.fly) || !ZoneOk(v, a.cl)) continue;
                 int crowd = 0; foreach (var o in ps.sv.veh) if (o != v && o.cell == kv.Key && (o.mode == "drive" || o.mode == "clean")) crowd++;
-                if (crowd >= (a.K.tier > 0 ? 4 : 3)) continue;
+                bool pile = IsPile(ps, kv.Key); if (crowd >= (pile ? 8 : a.K.tier > 0 ? 4 : 3)) continue;
                 float left = a.sum / a.cl.nIn, team = crowd > 0 && left > .35f ? -6 * Math.Min(crowd, 2) - (a.K.hard > 1.3f ? 6 : 0) : crowd * 14;
                 if (kv.Key == v.skipCell && v.skipT > 0) continue;
-                float sc = pd.Arc(v.d, a.cl.c) + team - (v.last == kv.Key ? 8 : 0) + Spread(ps, v, kv.Key); if (sc < bs) { bs = sc; best = kv.Key; }
+                float sc = pd.Arc(v.d, a.cl.c) + team - (v.last == kv.Key ? 8 : 0) + Spread(ps, v, kv.Key) - (pile ? 400 : 0); /* Müllberg: alle hin */ if (sc < bs) { bs = sc; best = kv.Key; }
             }
             foreach (int id in ps.front)
             {
@@ -876,7 +878,8 @@ namespace LunarCleanup.Core
                             break;
                         }
                         v.ph += dt * 4; var loc = pd.ToLocal(a.cl, v.d); float wg = arrived ? .4f : 0;
-                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * VehBonus(v, "power") * SpecF(ps, "veh") * TeamF(ps, v) * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard));
+                        float k = 1 - Mathf.Exp(-T.power * VEH_BUFF * hf * Uv("vpower", ps) * VehBonus(v, "power") * SpecF(ps, "veh") * TeamF(ps, v) * (PowOK(ps) ? 1 : .3f) * dt * (arrived ? 1 : .5f) / (a.D.hard * a.K.hard * PileHard(ps, v.cell, v)));
+                        if (IsPile(ps, v.cell)) k = Mathf.Min(k, PileK(ps, v.cell, v, dt)); /* Müllberg: Abtrag je Fahrzeug begrenzt – nur viele zusammen schaffen ihn */
                         float rem = CleanAt(ps, a, loc.x + Mathf.Cos(v.ph) * wg, loc.y + Mathf.Sin(v.ph) * wg, T.radius * Uv("vradius", ps), k);
                         if (rem > 0) { float amt = rem / a.cl.nIn * a.amt; v.tank[a.D.mat] += amt; v.coll += amt; VehXp(v, rem / a.cl.nIn * pd.CellArea(a.cl)); }
                         v.last = v.cell; break;
@@ -1493,7 +1496,7 @@ namespace LunarCleanup.Core
             S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); Travel(pid);
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }
-        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
+        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
 
         // ================= Ziele =================
         static PState Moon => P["moon"];
@@ -1697,13 +1700,13 @@ namespace LunarCleanup.Core
         public static void Step(float dt)
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
-            ResearchStep(dt);
+            ResearchStep(dt); DoomStep(dt); ChalStep(dt);
             AchievementStep(dt); if (!Offline) { StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt)
         {
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
-            EnergyStep(ps, dt); float f = ps.ef;
+            EnergyStep(ps, dt); PutziStep(ps, dt); float f = ps.ef;
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }

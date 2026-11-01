@@ -15,7 +15,9 @@ namespace LunarCleanup.UI
     {
         public static Hud I;
         public Action<string> OnNav;              // Klick in der unteren Leiste
-        public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto, OnHome;
+        public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto, OnHome, OnPhotoExit; GameObject photoGo; CanvasGroup photoCg; float photoT;
+        /// <summary>Foto-Modus: Oberfläche weg, nur ein dezenter Knopf zum Zurückholen (wird nach 3 s fast unsichtbar, bleibt aber antippbar).</summary>
+        public void SetPhoto(bool on) { if (root) root.gameObject.SetActive(!on); if (photoGo) { photoGo.SetActive(on); photoT = 0; } }
         RectTransform root, sheetPanel, sheetContent, toastBox, floatLayer;
         TextMeshProUGUI credits, rate, pname, pprog, goalKick, goalText, goalReward, handTxt, sheetKick, sheetTitle, offlineTxt;
         RectTransform goalFill, handFill, rocketFill; Image rocketImg; TextMeshProUGUI rocketTxt; Image handImg, pdot; GameObject sheetGo, offlineGo, goalGo, goalBadge; TextMeshProUGUI goalBadgeTxt;
@@ -57,6 +59,7 @@ namespace LunarCleanup.UI
             });
             var ver = UiKit.Text(bg.transform, "Version", Game.VersionText, 10, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.Center); ver.rectTransform.Anchor(0, 0, 1, 0, 0, 330, 0, -360);
         }
+        void LateUpdate() { if (photoGo && photoGo.activeSelf) { photoT += Time.unscaledDeltaTime; photoCg.alpha = photoT < 3 ? 1 : Mathf.Lerp(photoCg.alpha, .28f, Time.unscaledDeltaTime * 2); } }
         public void ShowMenu() { if (menuGo) { CloseSheet(); menuGo.SetActive(true); } }
 
         public void Build(Transform canvas)
@@ -65,6 +68,10 @@ namespace LunarCleanup.UI
             root = UiKit.Rt(canvas, "SafeArea").Anchor(0, 0, 1, 1); root.gameObject.AddComponent<SafeAreaFitter>();
             floatLayer = UiKit.Rt(root, "Schwebetexte").Anchor(0, 0, 1, 1);
             BuildTop(); BuildGoal(); BuildBottom(); BuildMenu(); BuildSheet(); BuildOffline();
+            /* Fabian 01.11.: Foto-Modus mit sichtbarem Knopf zum Zurückholen der Oberfläche (liegt außerhalb der ausgeblendeten Oberfläche) */
+            { var pb = UiKit.Btn(canvas, "Foto-Modus beenden", () => OnPhotoExit?.Invoke(), new Color(.05f, .08f, .15f, .55f), 22); photoGo = pb.gameObject; photoCg = photoGo.AddComponent<CanvasGroup>();
+              ((RectTransform)pb.transform).Anchor(0, 1, 0, 1, 24, -140, -330, 70);
+              var pt = UiKit.Text(pb.transform, "Text", "Oberfläche einblenden", 15, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); pt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); photoGo.SetActive(false); }
             toastBox = UiKit.Rt(root, "Meldungen").Anchor(0, 1, 1, 1, 24, -330, 24, 196);
             var vl = toastBox.gameObject.AddComponent<VerticalLayoutGroup>(); vl.spacing = 6; vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.childAlignment = TextAnchor.UpperCenter;
             Game.OnToast += Toast;
@@ -119,7 +126,7 @@ namespace LunarCleanup.UI
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
-            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
             ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -144, 12, 112); /* sitzt jetzt dort, wo früher die Zielkarte war */
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
@@ -128,7 +135,10 @@ namespace LunarCleanup.UI
         void UpdateWarn(PState ps)
         {
             string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
-            if (tt != null) { t = tt; warnTarget = "focus"; }
+            if (Game.DoomActive) { t = "RIESENMETEOR auf " + Game.P[Game.S.doomPid].P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s"; warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
+            else if (Game.EvOn(ps, "trader")) { t = "Händler kauft " + GameData.Mats[ps.sv.ev.mat].name + " ×3 · " + Game.Fmt(Game.TraderStock(ps)) + " E = " + Game.Fmt(Game.TraderValue(ps)) + " Cr · noch " + Mathf.CeilToInt(ps.sv.ev.t) + " s · antippen"; warnTarget = "trader"; }
+            else if (Game.EvOn(ps, "pile")) { int crew = Game.PileCrew(ps); t = "Müllberg · " + Mathf.RoundToInt(Game.PileLeft(ps) * 100) + " % übrig · " + crew + " Fahrzeuge dran" + (crew < Game.PILE_TEAM ? " (mind. " + Game.PILE_TEAM + " nötig)" : "") + " · noch " + Mathf.CeilToInt(ps.sv.ev.t / 60f) + " min"; warnTarget = "focus"; }
+            else if (tt != null) { t = tt; warnTarget = "focus"; }
             else if (st != null && Game.StormOn(ps)) { t = st.name + (ps.shOn ? " · Schild hält 80 % ab" : " · " + Game.StormFx(st)) + " · noch " + Mathf.CeilToInt(ps.sv.hzOn) + " s"; warnTarget = "hazard"; }
             else if (st != null && Game.StormIn(ps) <= 30) { t = "Achtung: " + st.name + " in " + Mathf.CeilToInt(Game.StormIn(ps)) + " s" + (Game.ResDone("shield") ? (ps.sv.shield ? " · Schild bereit" : " · Tippen: Schild einschalten") : " · Tippen für Infos"); warnTarget = "hazard"; }
             else if (ps.sv.veh.Any(v => v.mode == "broken" || v.mode == "fieldRepair")) { int n = ps.sv.veh.Count(v => v.mode == "broken" || v.mode == "fieldRepair"); t = n + (n > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen" + (ps.bld.Contains("werkstatt") ? " – fährt zur Werkstatt" : " – baue eine Roboterwerkstatt (Basisstufe 3)"); warnTarget = "vehicles"; }
@@ -230,6 +240,22 @@ namespace LunarCleanup.UI
                 binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); b.interactable = on; cg.alpha = on ? 1 : .38f; });
             }
             var line = UiKit.Glass(sheetContent, "Linie", new Color(1, 1, 1, .07f), 1); UiKit.LE(line, 1, 1);
+        }
+        /// <summary>Fabian 01.11.: kleines Säulendiagramm (Statistik). Werte älteste zuerst; Beschriftung links/rechts unten.</summary>
+        public void BarChart(string title, double[] vals, Color col, string left, string right, Func<double, string> fmt)
+        {
+            var box = UiKit.Glass(sheetContent, "Diagramm " + title, new Color(1, 1, 1, .05f), 12); UiKit.LE(box, 150, 150);
+            double mx = 0, sum = 0; foreach (var v in vals) { mx = Math.Max(mx, v); sum += v; }
+            var tt = UiKit.Text(box.transform, "Titel", title, 13, Pal.Ink, true, FontStyles.Bold); tt.rectTransform.Anchor(0, 1, 1, 1, 12, -26, 12, 6);
+            var mt = UiKit.Text(box.transform, "Max", mx > 0 ? "max " + fmt(mx) : "noch keine Daten", 11, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.TopRight); mt.rectTransform.Anchor(0, 1, 1, 1, 12, -26, 12, 8);
+            var area = UiKit.Rt(box.transform, "Säulen").Anchor(0, 0, 1, 1, 12, 26, 12, 32); int n = vals.Length;
+            for (int i = 0; i < n; i++)
+            {
+                float h = mx > 0 ? (float)(vals[i] / mx) : 0; var b = UiKit.Glass(area, "S" + i, new Color(col.r, col.g, col.b, i == n - 1 ? 1 : .75f), 3);
+                b.rectTransform.anchorMin = new Vector2((float)i / n, 0); b.rectTransform.anchorMax = new Vector2((i + .78f) / n, Mathf.Max(.015f, h)); b.rectTransform.offsetMin = b.rectTransform.offsetMax = Vector2.zero;
+            }
+            var l = UiKit.Text(box.transform, "Links", left, 10, Pal.Ink2); l.rectTransform.Anchor(0, 0, .5f, 0, 12, 6, 0, -22);
+            var r = UiKit.Text(box.transform, "Rechts", right, 10, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.Right); r.rectTransform.Anchor(.5f, 0, 1, 0, 0, 6, 12, -22);
         }
         public void BigButton(string label, Func<bool> enabled, Action click)
         {
@@ -333,7 +359,7 @@ namespace LunarCleanup.UI
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
-            { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
+            { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
               if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
             { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }

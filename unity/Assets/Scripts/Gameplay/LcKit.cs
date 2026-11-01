@@ -251,10 +251,57 @@ namespace LunarCleanup.Gameplay
             string path = "Gebaeude/" + id; if (!Has(path)) return null;
             var bp = new Models.BuildingParts(); var g = new GameObject(id); bp.root = g; var t = g.transform;
             var m = Spawn(path, t, Vector3.zero, 0, acc, acc2); bp.lamp = MeshKit.Glow(Hex("#6ff2d2"), 2.5f);
+            if (id == "u1" || id == "u2" || id == "u3") StripDockPipes(m, t, path); /* Fabian 01.11.: die Saugrohre zu den Andockplätzen weg */
             var rk = Part(m, "_Rakete"); if (rk) { rk.SetParent(t, true); rk.localRotation = Quaternion.identity; rk.localPosition = new Vector3(0, rk.localPosition.y, 0); bp.rocket = rk; bp.rocketY = rk.localPosition.y; }
             var kb = Part(m, "_Kolben"); if (kb) { var h = new GameObject("Kolbenhalter").transform; h.SetParent(t, false); kb.SetParent(h, true); bp.piston = h; bp.pistonY = 0; } // Halter fährt auf/ab, der Kolben behält seine Lage
             var dr = Part(m, "_Dreh"); if (dr) bp.spin = Spinner(dr, t.up, Vector3.up); // Schüssel, Radar, Kran: dreht sich um die Hochachse
             return bp;
+        }
+
+        static readonly Dictionary<Mesh, Mesh> stripped = new Dictionary<Mesh, Mesh>();
+        /// <summary>Entfernt aus dem Entladeanlagen-Modell die Saugrohre (Stahlrohre schräg vom Andockplatz zum Trichter) samt Gelenkkugeln und Mint-Lämpchen.
+        /// Das Modell ist ein einziges Mesh – die Rohre werden über ihre Form erkannt: ein Rohrstück, dessen oberes Ende näher an der Trichterachse liegt als das untere.</summary>
+        static void StripDockPipes(GameObject m, Transform root, string path)
+        {
+            var pf = Prefab(path); if (!pf) return; var srcR = pf.GetComponentsInChildren<Renderer>(); var dstMf = m.GetComponentsInChildren<MeshFilter>();
+            for (int ri = 0; ri < dstMf.Length; ri++)
+            {
+                var mf = dstMf[ri]; var src = mf.sharedMesh; if (!src || !src.isReadable) continue;
+                if (stripped.TryGetValue(src, out var done) && done) { mf.sharedMesh = done; continue; }
+                var mats = ri < srcR.Length ? srcR[ri].sharedMaterials : new Material[0]; var M = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                var v = src.vertices; var wv = new Vector3[v.Length]; for (int i = 0; i < v.Length; i++) wv[i] = M.MultiplyPoint3x4(v[i]);
+                var comps = new List<(int sub, List<int> tris, Bounds b, Vector3 top, Vector3 bot, bool steel)>();
+                for (int sm = 0; sm < src.subMeshCount; sm++)
+                {
+                    string mn = sm < mats.Length && mats[sm] ? mats[sm].name.ToLowerInvariant() : ""; bool steel = mn.Contains("stahl"), mint = mn.Contains("mint"); if (!steel && !mint) continue;
+                    var tr = src.GetTriangles(sm); var par = new Dictionary<long, long>(); long Key(Vector3 p) => ((long)Mathf.RoundToInt(p.x * 500) * 73856093) ^ ((long)Mathf.RoundToInt(p.y * 500) * 19349663) ^ ((long)Mathf.RoundToInt(p.z * 500) * 83492791);
+                    long Find(long x) { while (par.TryGetValue(x, out var y) && y != x) { if (par.TryGetValue(y, out var z)) par[x] = z; x = y; } return x; }
+                    void Union(long a, long b) { if (!par.ContainsKey(a)) par[a] = a; if (!par.ContainsKey(b)) par[b] = b; a = Find(a); b = Find(b); if (a != b) par[a] = b; }
+                    for (int i = 0; i < tr.Length; i += 3) { long a = Key(wv[tr[i]]), b = Key(wv[tr[i + 1]]), c = Key(wv[tr[i + 2]]); Union(a, b); Union(b, c); }
+                    var groups = new Dictionary<long, List<int>>(); for (int i = 0; i < tr.Length; i += 3) { long r = Find(Key(wv[tr[i]])); if (!groups.TryGetValue(r, out var l)) groups[r] = l = new List<int>(); l.Add(i); }
+                    foreach (var g in groups.Values)
+                    {
+                        var b = new Bounds(wv[tr[g[0]]], Vector3.zero); Vector3 top = wv[tr[g[0]]], bot = top;
+                        foreach (int i in g) for (int k = 0; k < 3; k++) { var p = wv[tr[i + k]]; b.Encapsulate(p); if (p.y > top.y) top = p; if (p.y < bot.y) bot = p; }
+                        comps.Add((sm, g, b, top, bot, steel));
+                    }
+                }
+                // Trichterachse: Mitte der vier senkrechten Beine
+                var legs = comps.Where(c => c.steel && c.b.min.y < .3f && c.b.size.y > 1f && Mathf.Max(c.b.size.x, c.b.size.z) < .35f).ToList(); if (legs.Count < 3) continue;
+                var ax = Vector3.zero; foreach (var l in legs) ax += l.b.center; ax /= legs.Count; float H(Vector3 p) => new Vector2(p.x - ax.x, p.z - ax.z).magnitude;
+                var kill = new HashSet<(int, int)>(); var ends = new List<Vector3>();
+                foreach (var c in comps) if (c.steel && c.b.size.y > .2f && c.b.size.magnitude > .5f && c.bot.y > .6f && H(c.top) + .15f < H(c.bot)) { kill.Add((c.sub, c.tris[0])); ends.Add(c.top); ends.Add(c.bot); }
+                if (kill.Count == 0) continue;
+                foreach (var c in comps) if (c.b.size.magnitude < .45f && c.b.min.y > .5f && ends.Any(e => (e - c.b.center).magnitude < .3f)) kill.Add((c.sub, c.tris[0])); // Gelenkkugeln, Lämpchen
+                var nm = Object.Instantiate(src); nm.name = src.name + " ohne Saugrohre";
+                for (int sm = 0; sm < src.subMeshCount; sm++)
+                {
+                    var rm = new HashSet<int>(); foreach (var c in comps) if (c.sub == sm && kill.Contains((c.sub, c.tris[0]))) foreach (int i in c.tris) rm.Add(i);
+                    if (rm.Count == 0) continue; var tr = src.GetTriangles(sm); var keep = new List<int>(tr.Length); for (int i = 0; i < tr.Length; i += 3) if (!rm.Contains(i)) { keep.Add(tr[i]); keep.Add(tr[i + 1]); keep.Add(tr[i + 2]); }
+                    nm.SetTriangles(keep, sm);
+                }
+                stripped[src] = nm; mf.sharedMesh = nm;
+            }
         }
 
         // ---------- Bohrturm und Erzbagger ----------

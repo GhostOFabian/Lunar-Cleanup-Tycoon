@@ -48,6 +48,27 @@ namespace LunarCleanup.Gameplay
                         for (int k = 0; k < 10; k++) { var d = Offset(cdir, Random.Range(-30f, 30f), Random.Range(-30f, 30f)); dust.Emit(new ParticleSystem.EmitParams { position = pd.Surf(d, Random.Range(8f, 16f)), velocity = -d * 14f, startColor = new Color(.95f, .75f, .45f, .35f), startSize = .08f, startLifetime = .9f, applyShapeToPosition = false }, 1); }
                         break;
                     }
+                case "snow": case "rain":
+                    {
+                        float ph = wxT % W.every; if (ph > W.dur || wxEmit < .04f) break; bool rain = W.key == "rain"; float fade = Mathf.Clamp01(ph / 8f) * Mathf.Clamp01((W.dur - ph) / 8f);
+                        var col = rain ? new Color(.75f, .85f, 1f, .4f) : Color.Lerp(Color.white, GameData.Dirt[ps.P.start].lightC, .35f); col.a = (rain ? .4f : .75f);
+                        int n = Mathf.RoundToInt((rain ? 16 : 9) * fade);
+                        for (int k = 0; k < n; k++) { var d = Offset(cdir, Random.Range(-32f, 32f), Random.Range(-32f, 32f)); var drift = Vector3.Cross(d, Vector3.up).normalized * (rain ? 0 : Mathf.Sin(Time.time * .3f) * 1.2f); dust.Emit(new ParticleSystem.EmitParams { position = pd.Surf(d, Random.Range(10f, 18f)), velocity = -d * (rain ? 16f : 1.8f) + drift, startColor = col, startSize = rain ? .07f : Random.Range(.08f, .2f), startLifetime = rain ? 1.1f : 7f }, 1); }
+                        break;
+                    }
+                case "mist":
+                    {
+                        if (wxEmit < .1f) break; var c0 = ps.pid == "trappist" ? new Color(.45f, 1f, .75f, .16f) : new Color(.92f, .9f, .85f, .2f);
+                        for (int k = 0; k < 3; k++) { var d = Offset(cdir, Random.Range(-40f, 40f), Random.Range(-40f, 40f)); dust.Emit(new ParticleSystem.EmitParams { position = pd.Surf(d, Random.Range(.3f, 1.6f)), velocity = Random.insideUnitSphere * .25f + d * .1f, startColor = c0, startSize = Random.Range(3f, 6f), startLifetime = 9f }, 1); }
+                        break;
+                    }
+                case "embers": case "wisps":
+                    {
+                        bool wisp = W.key == "wisps"; if (!wisp) { float ph = wxT % W.every; if (ph > W.dur) break; } if (wxEmit < .06f) break;
+                        var c1 = wisp ? new Color(.6f, .8f, 1f, .8f) : ps.pid == "cancri" ? new Color(1f, .9f, .6f, .7f) : new Color(1f, .45f, .2f, .8f);
+                        for (int k = 0; k < (wisp ? 1 : 4); k++) { var d = Offset(cdir, Random.Range(-30f, 30f), Random.Range(-30f, 30f)); dust.Emit(new ParticleSystem.EmitParams { position = pd.Surf(d, Random.Range(.2f, wisp ? 3f : 1f)), velocity = d * Random.Range(.4f, 1.5f) + Random.insideUnitSphere * (wisp ? .6f : .3f), startColor = c1, startSize = wisp ? Random.Range(.4f, .8f) : Random.Range(.06f, .14f), startLifetime = wisp ? 6f : 3f }, 1); }
+                        break;
+                    }
                 case "lavafont":
                     {
                         if (wxT % W.every > .05f + dt) break; // kurz alle W.every Sekunden

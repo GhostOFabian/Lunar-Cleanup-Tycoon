@@ -861,7 +861,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); UpdateWonder(); UpdateFlags(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); UpdateWonder(); UpdateFlags(); UpdateBuild29(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
