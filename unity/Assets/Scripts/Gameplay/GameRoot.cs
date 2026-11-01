@@ -33,7 +33,19 @@ namespace LunarCleanup.Gameplay
         static float U => Mathf.Max(1f, Mathf.Min(Screen.width / 390f, Screen.height / 844f));
 
         UniversalRenderPipelineAsset urpA; bool dailyDone, photo;
-        public static bool GfxHigh => PlayerPrefs.GetInt("LunarCleanup.GrafikSparsam", 0) == 0;
+#if UNITY_IOS
+        const int GfxDefaultSparsam = 1; /* Fabian 01.11.: mit „Hoch“ blieb das iPhone schwarz – Start immer in der sicheren Handy-Stufe, „Hoch“ nur auf Probe */
+#else
+        const int GfxDefaultSparsam = 0;
+#endif
+        static bool gfxTrial; static float gfxRevert = -1;
+        public static bool GfxHigh => gfxTrial || PlayerPrefs.GetInt("LunarCleanup.GrafikSparsam", GfxDefaultSparsam) == 0;
+        public static float GfxTrialLeft => gfxRevert < 0 ? 0 : Mathf.Max(0, gfxRevert - Time.realtimeSinceStartup);
+        /// <summary>„Hoch“ ausprobieren: 15 s lang, dann automatisch zurück – außer du tippst „Behalten“ (wie beim Wechsel der Bildschirmauflösung). Bleibt das Bild schwarz, ist nach 15 s alles wieder normal.</summary>
+        public static void TryHigh() { gfxTrial = true; gfxRevert = Time.realtimeSinceStartup + 15; ApplyGraphics(); }
+        public static void KeepHigh() { gfxTrial = false; gfxRevert = -1; PlayerPrefs.SetInt("LunarCleanup.GrafikSparsam", 0); PlayerPrefs.Save(); ApplyGraphics(); }
+        public static void SetLow() { gfxTrial = false; gfxRevert = -1; PlayerPrefs.SetInt("LunarCleanup.GrafikSparsam", 1); PlayerPrefs.Save(); ApplyGraphics(); }
+        static void GfxTick() { if (gfxRevert > 0 && Time.realtimeSinceStartup > gfxRevert) { SetLow(); Game.Toast("Grafik zurück auf „Sparsam“", ""); } }
         /// <summary>Grafikstufe setzen: „Hoch“ = PC-Stufe (SSAO, weiche Schatten, Tiefenbild), „Sparsam“ = Handy-Stufe. Danach die URP-Feinheiten wieder anwenden.</summary>
         public static void ApplyGraphics()
         {
@@ -127,6 +139,7 @@ namespace LunarCleanup.Gameplay
 
         void Update()
         {
+            GfxTick();
             if (Game.S == null) return; float dt = Mathf.Min(Time.deltaTime, .1f);
             { var kb0 = Keyboard.current; bool tl = (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Mouse.current.position.ReadValue().x < 80 && Mouse.current.position.ReadValue().y > Screen.height - 80) || (ETouch.activeTouches.Count > 0 && ETouch.activeTouches[0].screenPosition.x < 80 && ETouch.activeTouches[0].screenPosition.y > Screen.height - 80);
               if ((kb0 != null && kb0.pKey.wasPressedThisFrame && preview == null) || (photo && tl)) { photo = !photo; hud.SetPhoto(photo); } }

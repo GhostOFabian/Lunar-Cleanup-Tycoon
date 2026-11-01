@@ -1962,5 +1962,11 @@
 "Hoch – wie am PC: Umgebungsschatten, weiche Schatten, mehr Tiefe": "High – like on PC: ambient occlusion, soft shadows, more depth",
 "Sparsam – schont den Akku, weniger Schatten": "Light – saves battery, fewer shadows",
 "Sparsam": "Light",
-"Hoch": "High"
+"Hoch": "High",
+"Hoch – Probe läuft. Sieht alles gut aus? Sonst geht es in ": "High – trial running. Does everything look fine? Otherwise it switches back in ",
+" s von selbst zurück.": " s.",
+"Sparsam – schont den Akku. „Hoch“ wird 15 s ausprobiert und springt zurück, wenn du nicht bestätigst.": "Light – saves battery. “High” is tried for 15 s and switches back unless you confirm.",
+"Behalten": "Keep",
+"Hoch testen": "Try high",
+"Grafik zurück auf „Sparsam“": "Graphics back to “Light”"
 }
