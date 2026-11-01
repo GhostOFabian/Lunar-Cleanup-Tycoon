@@ -15,7 +15,7 @@ namespace LunarCleanup.EditorTools
         const string BundleId = "com.fabian.lunarcleanup";
         const string OutDir = "Builds/iOS";
         const string IconPath = "Assets/Icons/AppIcon.png"; // 1024 × 1024, ohne Transparenz – iOS rundet die Ecken selbst
-        const string Version = "0.21";
+        internal const string Version = "0.22"; // Fabian 01.11.: Builds 14–16 brachten so viel Neues, dass 0.21 nicht mehr passt
         internal const string TeamKey = "LunarCleanup.AppleTeamId";
 
         [MenuItem("Lunar Cleanup/iPhone-Version bauen und aufs iPhone")]
@@ -57,6 +57,11 @@ namespace LunarCleanup.EditorTools
 
         /// <summary>Alle iOS-Einstellungen an einer Stelle. Mehrfach ausführen ist ungefährlich.</summary>
         [MenuItem("Lunar Cleanup/iPhone: nur Einstellungen setzen")]
+        /// <summary>Build-Nummer ins Spiel schreiben (Resources/Data/build.txt), damit Einstellungen und Startmenü „Version 0.22 · Build 17“ zeigen.</summary>
+        internal static void WriteBuildInfo()
+        {
+            File.WriteAllText("Assets/Resources/Data/build.txt", PlayerSettings.iOS.buildNumber); AssetDatabase.ImportAsset("Assets/Resources/Data/build.txt");
+        }
         public static void Apply()
         {
             var ios = NamedBuildTarget.iOS;
@@ -89,7 +94,7 @@ namespace LunarCleanup.EditorTools
 
             // Jede neue Fassung braucht eine höhere Build-Nummer (TestFlight lehnt doppelte ab)
             int.TryParse(PlayerSettings.iOS.buildNumber, out var n);
-            PlayerSettings.iOS.buildNumber = (n + 1).ToString();
+            PlayerSettings.iOS.buildNumber = (n + 1).ToString(); WriteBuildInfo();
 
             AssetDatabase.SaveAssets();
             Debug.Log("Lunar Cleanup: iOS-Einstellungen gesetzt (" + BundleId + ", Hochformat, iOS 15+, Team " + (team.Length > 0 ? team : "– noch keins, in Xcode wählen") + ").");

@@ -36,6 +36,8 @@ namespace LunarCleanup.Core
 
     public static partial class Game
     {
+        /// <summary>„Version 0.22 · Build 17“ – Build-Nummer aus Resources/Data/build.txt (schreibt der iPhone-/Browser-Build).</summary>
+        public static string VersionText { get { var b = Resources.Load<TextAsset>("Data/build"); string n = b != null ? b.text.Trim() : ""; return "Version " + Application.version + (n != "" ? " · Build " + n : ""); } }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnMeteors = null; OnCellFlash = null; OnPlanetChanged = null; Offline = false; }
         public static SaveData S;
         public static Dictionary<string, PState> P = new Dictionary<string, PState>();

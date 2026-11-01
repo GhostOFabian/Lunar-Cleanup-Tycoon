@@ -521,7 +521,7 @@ namespace LunarCleanup.UI
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");
             foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => oo.price, () => true, () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
             h.Section("Über");
-            h.Note("Lunar Cleanup Tycoon · Version " + Application.version + ". Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp; Modelle von Fabian.");
+            h.Note("Lunar Cleanup Tycoon · " + Game.VersionText + ". Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp; Modelle von Fabian.");
         }
 
         /// <summary>Welche Upgrades zu welchem Gebäude gehören (Antippen eines Gebäudes zeigt sie oben im Fenster).</summary>

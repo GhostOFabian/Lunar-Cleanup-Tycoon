@@ -25,6 +25,7 @@ namespace LunarCleanup.EditorTools
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Lunar Cleanup: erst den Play-Modus beenden."); return; }
             MakeShaderKeep();
+            PlayerSettings.bundleVersion = IosBuild.Version; IosBuild.WriteBuildInfo(); // gleiche Versionsnummer wie auf dem iPhone
             PlayerSettings.WebGL.compressionFormat = pub ? WebGLCompressionFormat.Gzip : WebGLCompressionFormat.Disabled; // unkomprimiert läuft auf jedem einfachen Webserver
             PlayerSettings.WebGL.decompressionFallback = pub; // GitHub Pages: der Browser entpackt selbst
             PlayerSettings.WebGL.nameFilesAsHashes = false;

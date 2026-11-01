@@ -55,7 +55,7 @@ namespace LunarCleanup.UI
                 Application.Quit();
 #endif
             });
-            var ver = UiKit.Text(bg.transform, "Version", "Version " + Application.version, 10, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.Center); ver.rectTransform.Anchor(0, 0, 1, 0, 0, 330, 0, -360);
+            var ver = UiKit.Text(bg.transform, "Version", Game.VersionText, 10, Pal.Ink2, false, FontStyles.Normal, TextAlignmentOptions.Center); ver.rectTransform.Anchor(0, 0, 1, 0, 0, 330, 0, -360);
         }
         public void ShowMenu() { if (menuGo) { CloseSheet(); menuGo.SetActive(true); } }
 

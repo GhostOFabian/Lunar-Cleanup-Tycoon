@@ -196,3 +196,7 @@
 - Browser: parallele Schleifen laufen im WebGL-Build nacheinander (`Core/Par.cs`), vorher blieb der Browser beim Laden hängen.
 - Startmenü (Spiel starten / Einstellungen / Beenden).
 - Build 16: Suchtrupp ist nur noch im Einsatz zu sehen (geparkt neben der Zentrale sah er aus wie ein festgefahrenes Fahrzeug).
+
+## Unity 0.22 Build 17 (01.11.2026)
+- Versionsnummer 0.22 (vorher seit Build 12 unverändert 0.21). Startmenü und Einstellungen zeigen „Version 0.22 · Build 17“ (Build-Nummer aus `Resources/Data/build.txt`, schreibt der iPhone-/Browser-Build). Browser-Build v=15 trägt dieselbe Nummer.
+- Auf Fabians iPhone installiert (Device Hub: 0.22 (17)).
