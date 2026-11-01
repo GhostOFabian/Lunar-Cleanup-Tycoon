@@ -6,9 +6,19 @@ namespace LunarCleanup.Core
 {
     public static partial class Game
     {
-        public const int VEH_MAX = 24;          // Obergrenze je Planet (plus Shop-Platz)
+        public const int VEH_MAX = 15, VEH_CAP = 20; // Fabian 01.11.: Flotte 15 je Planet, mit teuren Flottenplätzen bis 20
         const float BOOM_TIME = 4f, BOOM_REFUND = .3f;
-        public static int VehMax(PState ps) => VEH_MAX + (S != null ? S.extraSlots : 0);
+        public static int VehMax(PState ps) => Math.Min(VEH_CAP, VEH_MAX + (S != null ? S.fleetPlus + S.extraSlots : 0));
+        /// <summary>Fabian 01.11.: voll ausgebaute Fahrzeuge waren zu schnell – Fahrwerk höchstens ×2, Bürsten höchstens ×4,6 (Kosten bleiben).</summary>
+        static void DampVehicleUpgrades()
+        {
+            var de = new System.Globalization.CultureInfo("de-DE");
+            void D(string id, double step) { if (!GameData.Up.TryGetValue(id, out var u)) return; for (int l = 0; l < u.vals.Length; l++) u.vals[l] = 1 + step * l; if (u.show != null) for (int l = 0; l < u.show.Length && l < u.vals.Length; l++) u.show[l] = "×" + u.vals[l].ToString("0.00", de); }
+            D("vspeed", .05); D("vpower", .12);
+        }
+        /// <summary>Preis des nächsten Flottenplatzes: 25 Mio, dann je Platz ×6.</summary>
+        public static double FleetPlusCost() => 25e6 * Math.Pow(6, S.fleetPlus);
+        public static bool BuyFleetPlus() { if (VehMax(Cur) >= VEH_CAP || S.credits < FleetPlusCost()) return false; S.credits -= FleetPlusCost(); S.fleetPlus++; Toast("Flottenplatz gekauft – jetzt bis " + VehMax(Cur) + " Fahrzeuge je Planet", "good"); return true; }
 
         public static void SelfDestruct(VehSave v)
         {

@@ -23,6 +23,8 @@ namespace LunarCleanup.Gameplay
             var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
             string key = ps.pid + "|" + ps.sv.freq + "|" + string.Join(",", ps.bld.OrderBy(x => x)) + "|" + string.Join(",", live.Select(x => x.id));
             if (key == routedKey) return; routedKey = key; routed.Clear(); sharedEnd.Clear();
+            /* Fabian 01.11.: Reisen schneller – fertige Wege je Basis-Stand auf dem Gerät merken (Wegsuche kostete auf großen Basen mehrere Sekunden) */
+            if (RouteCache.TryGet(key, routed, sharedEnd)) return;
             // Grundflächen aus den echten Modellen (Planebene), Höhe 0,3–3,5 m
             var feet = new Dictionary<string, Foot>();
             foreach (var id in ps.bld)
@@ -52,6 +54,7 @@ namespace LunarCleanup.Gameplay
                 var nord = front.Concat(rest).ToList(); if (nord.Select(x => x.id).SequenceEqual(order.Select(x => x.id))) { nord = rest.Concat(front).ToList(); } order = nord;
             }
             routed.Clear(); sharedEnd.Clear(); foreach (var kv in bestR) routed[kv.Key] = kv.Value; foreach (var kv in bestS) sharedEnd[kv.Key] = kv.Value;
+            RouteCache.Put(key, routed, sharedEnd);
         }
 
         /// <summary>Alle Bänder in dieser Reihenfolge verlegen. Rückgabe: Bänder, die ein anderes nah an einem Bandende kreuzen.</summary>
@@ -238,6 +241,59 @@ namespace LunarCleanup.Gameplay
                 for (int k = 0; k <= 8; k++) { float aa = a0 + da * k / 8f; o.Add(ctr + new Vector2(Mathf.Cos(aa), Mathf.Sin(aa)) * rr); }
             }
             o.Add(p[p.Count - 1]); return o.ToArray();
+        }
+    }
+    /// <summary>Gemerkte Bandwege: im Speicher und als Datei (persistentDataPath/bandwege.txt). Neue Version → Cache leer.</summary>
+    public static class RouteCache
+    {
+        const string Ver = "lc-2026-11-01a"; // bei Änderungen an Wegsuche oder Gebäudemodellen erhöhen
+        static Dictionary<string, (Dictionary<string, Vector2[]> r, Dictionary<string, string> s)> mem;
+        public static int Count { get { Load(); return mem.Count; } }
+        static string FilePath => System.IO.Path.Combine(Application.persistentDataPath, "bandwege.txt");
+        static void Load()
+        {
+            if (mem != null) return; mem = new Dictionary<string, (Dictionary<string, Vector2[]>, Dictionary<string, string>)>();
+            var seed = Resources.Load<TextAsset>("Data/bandwege"); if (seed) Parse(seed.text.Split('\n')); // vorberechnet im Editor (Basis-Prüfung)
+            try { if (System.IO.File.Exists(FilePath)) Parse(System.IO.File.ReadAllLines(FilePath)); }
+            catch (System.Exception e) { Debug.LogWarning("Lunar Cleanup: Bandwege-Cache nicht lesbar: " + e.Message); }
+        }
+        static void Parse(string[] lines)
+        {
+            try
+            {
+                if (lines.Length == 0 || lines[0].Trim() != Ver) return;
+                string key = null; Dictionary<string, Vector2[]> r = null; Dictionary<string, string> sh = null; var inv = System.Globalization.CultureInfo.InvariantCulture;
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var l = lines[i].TrimEnd('\r'); if (l.Length < 2) continue; var parts = l.Split('\t');
+                    if (parts[0] == "K") { key = parts[1]; r = new Dictionary<string, Vector2[]>(); sh = new Dictionary<string, string>(); mem[key] = (r, sh); }
+                    else if (parts[0] == "R" && r != null) { var pts = parts[2].Split(';'); var a = new Vector2[pts.Length]; for (int k = 0; k < pts.Length; k++) { var xy = pts[k].Split(','); a[k] = new Vector2(float.Parse(xy[0], inv), float.Parse(xy[1], inv)); } r[parts[1]] = a; }
+                    else if (parts[0] == "S" && sh != null) sh[parts[1]] = parts[2];
+                }
+            }
+            catch (System.Exception e) { Debug.LogWarning("Lunar Cleanup: Bandwege-Cache nicht lesbar: " + e.Message); }
+        }
+        /// <summary>Editor: alle gemerkten Wege als Startdatei ins Spiel legen.</summary>
+        public static int ExportSeed(string path) { Load(); var b = new System.Text.StringBuilder(); System.IO.File.Copy(FilePath, path, true); return mem.Count; }
+        public static bool TryGet(string key, Dictionary<string, Vector2[]> routed, Dictionary<string, string> shared)
+        {
+            Load(); if (!mem.TryGetValue(key, out var e)) return false;
+            foreach (var kv in e.r) routed[kv.Key] = kv.Value; foreach (var kv in e.s) shared[kv.Key] = kv.Value; return true;
+        }
+        static bool fileOk;
+        public static void Put(string key, Dictionary<string, Vector2[]> routed, Dictionary<string, string> shared)
+        {
+            Load(); mem[key] = (new Dictionary<string, Vector2[]>(routed), new Dictionary<string, string>(shared));
+            try
+            {
+                if (!fileOk) { bool ok = false; try { if (System.IO.File.Exists(FilePath)) using (var rd = new System.IO.StreamReader(FilePath)) ok = rd.ReadLine()?.Trim() == Ver; } catch { } if (!ok) System.IO.File.WriteAllText(FilePath, Ver + "\n"); fileOk = true; }
+                var sb = new System.Text.StringBuilder(); var inv = System.Globalization.CultureInfo.InvariantCulture;
+                sb.Append("K\t").Append(key).Append('\n');
+                foreach (var r in routed) { sb.Append("R\t").Append(r.Key).Append('\t'); for (int k = 0; k < r.Value.Length; k++) { if (k > 0) sb.Append(';'); sb.Append(r.Value[k].x.ToString("0.###", inv)).Append(',').Append(r.Value[k].y.ToString("0.###", inv)); } sb.Append('\n'); }
+                foreach (var x in shared) sb.Append("S\t").Append(x.Key).Append('\t').Append(x.Value).Append('\n');
+                System.IO.File.AppendAllText(FilePath, sb.ToString()); // nur anhängen – schnell, auch bei vielen Ausbaustufen
+            }
+            catch (System.Exception e) { Debug.LogWarning("Lunar Cleanup: Bandwege-Cache nicht gespeichert: " + e.Message); }
         }
     }
 }

@@ -31,7 +31,7 @@ namespace LunarCleanup.Gameplay
             foreach (Transform c in transform) Destroy(c.gameObject);
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); flashes.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
-            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
+            BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; wonderFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); int dseed = ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff; if (!LcKit.Decorate(deco, pd, dseed, Mathf.Clamp(pd.N / 3, 40, 400))) Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
         }
@@ -50,6 +50,7 @@ namespace LunarCleanup.Gameplay
         // ---------- Basis ----------
         void BuildBase()
         {
+            var swB = System.Diagnostics.Stopwatch.StartNew(); long tm0 = 0; string Tm(string n) { long e = swB.ElapsedMilliseconds; string r = n + " " + (e - tm0) + " · "; tm0 = e; return r; }
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
             blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
@@ -75,8 +76,9 @@ namespace LunarCleanup.Gameplay
                     var s = Models.Site(B.fp); s.transform.SetParent(baseRoot, false); Place(s.transform, ps.lay.pos[id], yaw);
                 }
             }
-            RouteBelts(); PlanBridges(); ChooseRotations(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); BuildLamps(acc); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
-            BuildOutposts(); BuildRigs();
+            string tmLog = Tm("Gebäude");
+            RouteBelts(); tmLog += Tm("Wege"); PlanBridges(); tmLog += Tm("Brücken"); ChooseRotations(); tmLog += Tm("Drehen"); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); tmLog += Tm("Bänder"); BuildLamps(acc); tmLog += Tm("Laternen"); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
+            BuildOutposts(); BuildRigs(); tmLog += Tm("Außenlager"); Debug.Log("Lunar Cleanup: Basis-Zeiten (ms) " + tmLog);
             builtVersion = ps.baseVersion;
         }
 
@@ -277,7 +279,7 @@ namespace LunarCleanup.Gameplay
         }
 
         /// <summary>Bandhöhe über dem Boden: so hoch, dass Rahmen und Stützen komplett unter dem Band liegen.</summary>
-        public static float BeltDeck(BeltDef b) => b.h + .55f;
+        public static float BeltDeck(BeltDef b) => Mathf.Min(b.h, .5f) + .55f; /* Fabian 01.11.: alle Bänder am Boden (im Prototyp lagen b_rs/b_rap 1,6–2,7 m hoch und schwebten an den Raketen) – Kreuzungen lösen die Brücken */
         const float BW = .42f; // halbe Bandbreite
 
         /// <summary>Förderband als durchgehendes Profil entlang der Kurve: Lauffläche, Seitenbanden, Rahmen – alles folgt exakt derselben Linie.</summary>
@@ -847,7 +849,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); UpdateWonder(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>

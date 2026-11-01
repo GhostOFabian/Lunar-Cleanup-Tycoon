@@ -21,14 +21,38 @@ namespace LunarCleanup.Gameplay
             Color.RGBToHSV(P.col0, out float h0, out _, out _);
             float hA = Mathf.Repeat(h0 + .52f + idx * .071f, 1), hB = Mathf.Repeat(hA + .1f + (float)rnd.NextDouble() * .2f, 1);
             Color n1 = Color.HSVToRGB(hA, .75f, 1), n2 = Color.HSVToRGB(hB, .65f, 1);
+            /* Fabian 01.11.: jeder Himmel deutlich anders – feste Nebelfarben und -stärke je Planet */
+            float nebK = 1f, bandS = 1f;
+            switch (pid)
+            {
+                case "moon": n1 = GameData.Hex("#3d6dff"); n2 = GameData.Hex("#9a5cff"); nebK = .8f; break;
+                case "mars": n1 = GameData.Hex("#ff5a3a"); n2 = GameData.Hex("#ffb05a"); nebK = 1.3f; break;
+                case "europa": n1 = GameData.Hex("#2fd0ff"); n2 = GameData.Hex("#4a7bff"); nebK = 1.4f; break;
+                case "titan": n1 = GameData.Hex("#ff9a2a"); n2 = GameData.Hex("#ffd36a"); nebK = .9f; bandS = .5f; break;
+                case "io": n1 = GameData.Hex("#ffe03a"); n2 = GameData.Hex("#ff6a2a"); nebK = 1.4f; break;
+                case "venus": n1 = GameData.Hex("#ffcf7a"); n2 = GameData.Hex("#ff8a4a"); nebK = 1.1f; bandS = .3f; break;
+                case "ganymed": n1 = GameData.Hex("#6a8aff"); n2 = GameData.Hex("#c0a0ff"); nebK = 1.1f; break;
+                case "enceladus": n1 = GameData.Hex("#9af2ff"); n2 = GameData.Hex("#ffffff"); nebK = 1.2f; break;
+                case "triton": n1 = GameData.Hex("#ff7ab0"); n2 = GameData.Hex("#7a9aff"); nebK = 1.5f; break;
+                case "pluto": n1 = GameData.Hex("#ffb38a"); n2 = GameData.Hex("#8a6aff"); nebK = 1.2f; break;
+                case "eris": n1 = GameData.Hex("#b0c8ff"); n2 = GameData.Hex("#e8eeff"); nebK = .9f; bandS = 1.6f; break;
+                case "sedna": n1 = GameData.Hex("#ff3a4a"); n2 = GameData.Hex("#ff9a7a"); nebK = 1.5f; break;
+                case "proxima": n1 = GameData.Hex("#ff4a2a"); n2 = GameData.Hex("#ffd04a"); nebK = 1.6f; break;
+                case "trappist": n1 = GameData.Hex("#3affd0"); n2 = GameData.Hex("#3a8aff"); nebK = 1.6f; break;
+                case "kepler": n1 = GameData.Hex("#6aff6a"); n2 = GameData.Hex("#3ad0ff"); nebK = 1.5f; break;
+                case "cancri": n1 = GameData.Hex("#ff7a2a"); n2 = GameData.Hex("#ffffff"); nebK = 1.3f; break;
+                case "gliese": n1 = GameData.Hex("#7affff"); n2 = GameData.Hex("#b07aff"); nebK = 1.4f; break;
+                case "poltergeist": n1 = GameData.Hex("#5affb0"); n2 = GameData.Hex("#d04aff"); nebK = 1.8f; break;
+            }
             int W = SystemInfo.systemMemorySize > 3000 ? 2048 : 1024, H = W / 2; var px = new Color32[W * H];
             var band = new Vector3((float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f).normalized; // Achse des Milchstraßenbands
             var nebC = new Vector3((float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f).normalized; // Zentrum des hellsten Nebels
             var gal = new Vector3((float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f, (float)rnd.NextDouble() - .5f).normalized;
             float seed = (float)rnd.NextDouble() * 100; Color bg = new Color(.006f, .008f, .018f);
             var img = new Color[W * H];
-            for (int y = 0; y < H; y += 2) // Nebel in halber Auflösung (schneller), je 2×2 Pixel gleich
+            System.Threading.Tasks.Parallel.For(0, H / 2, yy => // Nebel in halber Auflösung, auf allen Prozessorkernen
             {
+                int y = yy * 2;
                 float lat = (y + 1f) / H * Mathf.PI - Mathf.PI / 2, cl = Mathf.Cos(lat), sl = Mathf.Sin(lat);
                 for (int x = 0; x < W; x += 2)
                 {
@@ -37,11 +61,11 @@ namespace LunarCleanup.Gameplay
                     float n = Fbm(d * 2.2f + Vector3.one * seed, 5), m = Fbm(d * 4.5f - Vector3.one * seed, 4);
                     float neb = Mathf.Clamp01(n * 1.6f - .55f) * (.35f + .65f * Mathf.Clamp01(Vector3.Dot(d, nebC) * .8f + .5f));
                     float dust = Mathf.Clamp01(m * 1.4f - .6f);
-                    var col = bg + n1 * (neb * .32f) + n2 * (Mathf.Clamp01(m * 1.5f - .7f) * neb * .5f) + new Color(.55f, .5f, .62f) * (bandK * (.06f + .1f * n)) - new Color(.02f, .02f, .02f) * dust * bandK;
+                    var col = bg + n1 * (neb * .42f * nebK) + n2 * (Mathf.Clamp01(m * 1.5f - .7f) * neb * .6f * nebK) + new Color(.55f, .5f, .62f) * (bandK * bandS * (.06f + .1f * n)) - new Color(.02f, .02f, .02f) * dust * bandK;
                     float gk = Mathf.Exp(-(1 - Vector3.Dot(d, gal)) * 900); col += new Color(.9f, .8f, 1f) * gk * .55f; // ferne Galaxie
                     img[y * W + x] = col; img[y * W + x + 1] = col; img[(y + 1) * W + x] = col; img[(y + 1) * W + x + 1] = col;
                 }
-            }
+            });
             // Sterne: viele kleine, im Band dichter; einige große mit Schein
             int nStars = W * H / 180;
             for (int i = 0; i < nStars; i++)

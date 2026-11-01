@@ -86,6 +86,7 @@ namespace LunarCleanup.Core
         public long lastActive;
         public bool sound = true;
         public ContractSave contracts = new ContractSave();
+        public int fleetPlus; // Fabian 01.11.: gekaufte Flottenplätze über 15 hinaus (höchstens 5)
         public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe
         public float volSfx = .8f, volMusic = .6f; // Lautstärke Geräusche / Musik (0–1)
         public List<string> resDone = new List<string>();

@@ -210,3 +210,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026: Versionsnummer einheitlich – iPhone-App und Browser-Build heißen beide 0.21.
 - 01.11.2026 (Fabian): Meteoritenschauer etwa 3× seltener als im Browser-Prototyp (Unity weicht hier bewusst ab).
 - 01.11.2026: Runde Gebäude haben keine geraden Wände – Anschlussrahmen stehen dort davor statt hinein; Gebäude drehen sich nur in 90°-Schritten (Unterteile wie Entladeanlage und Raketenplattform nie).
+- 01.11.2026 (Fabian): Flotte je Planet max. 15 Fahrzeuge, mit teuren Flottenplätzen (25 Mio × 6^n) bis 20; Fahrzeug-Upgrades bewusst schwächer als im Prototyp.
+- 01.11.2026 (Fabian): Bohrtürme/Erzbagger: 5 frei platzierbar + 3 je Außenlager, abreißbar mit 30 % Erstattung; fünfter Außenlagerplatz auf der Gegenseite der Basis.
+- 01.11.2026: Bandwege werden je Basis-Zustand zwischengespeichert (Datei im persistentDataPath + Startdatei im Spiel); bei Router-Änderungen Cache-Version (`RouteCache.Ver`) erhöhen.
+- 01.11.2026: Upgrades erscheinen nur im Upgrade-Menü und im jeweiligen Gebäudeblatt, nie zusätzlich als Reiter in anderen Menüs.

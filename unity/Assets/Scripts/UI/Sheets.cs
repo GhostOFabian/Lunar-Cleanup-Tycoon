@@ -45,13 +45,14 @@ namespace LunarCleanup.UI
         static readonly Color AccVeh = new Color(.43f, .95f, .82f), AccBld = new Color(1f, .75f, .3f), AccDrone = new Color(.5f, .7f, 1f);
         static void Vehicles(Hud h)
         {
-            h.Tabs("Kaufen", "Flotte " + ps.sv.veh.Count + "/" + Game.VehSlots(ps), "Upgrades");
+            h.Tabs("Kaufen", "Flotte " + ps.sv.veh.Count + "/" + Game.VehSlots(ps)); /* Upgrades nur noch im Upgrades-Menü (Fabian 01.11.: keine doppelte Menüführung) */
             int tab = h.Tab;
             if (tab == 0)
             {
                 var c = ps.sv.cart;
                 if (!c.owned) h.Card("Sammelwagen", () => "Kommt zu dir, wenn dein Behälter voll ist, und bringt die Ladung zur Entladestation. Danach leerst du den Behälter nur noch in den Wagen.", AccVeh, () => Cr(Game.CartCost(ps)), () => Game.S.credits >= Game.CartCost(ps), () => Game.BuyCart());
                 h.Section("Fahrzeuge · " + ps.sv.veh.Count + " von " + Game.VehSlots(ps) + " Plätzen (höchstens " + Game.VehMax(ps) + ")");
+                if (Game.VehMax(ps) < Game.VEH_CAP) h.Row("Flottenplatz", () => "Erhöht die Obergrenze auf allen Planeten um 1 (höchstens " + Game.VEH_CAP + ")", () => Cr(Game.FleetPlusCost()), () => Game.S.credits >= Game.FleetPlusCost(), () => Game.BuyFleetPlus(), false);
                 foreach (var t in GameData.VehOrder)
                 {
                     var T = GameData.Veh[t]; if (!string.IsNullOrEmpty(T.planet) && T.planet != ps.pid && !(T.home ?? new string[0]).Contains(ps.pid) && !Game.P.ContainsKey(T.planet)) continue;
@@ -82,21 +83,15 @@ namespace LunarCleanup.UI
                 if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
                 return;
             }
-            foreach (var u in GameData.Upg.Where(x => (x.cat == "Fahrzeuge" || x.cat == "Drohnen") && UpVisible(x))) UpRow(h, u.id);
         }
 
         static void Production(Hud h)
         {
-            h.Tabs("Ampel", "Verkauf", "Plan", "Upgrades");
+            h.Tabs("Ampel", "Verkauf", "Plan");
             int tab = h.Tab;
             if (tab == 0) { ProductionOverview(h); return; }
             if (tab == 1) { Selling(h); return; }
-            if (tab == 2) { if (!ps.bld.Contains("presse")) h.Note("Baue die Staubpresse (Basisstufe 2), um mit der Veredelung zu beginnen."); Plan(h); return; }
-            foreach (var cat in new[] { "Entladestationen", "Förderbänder", "Maschinen", "Lager", "Verkauf", "Außenlager" })
-            {
-                var list = GameData.Upg.Where(u => u.cat == cat && UpVisible(u)).ToList(); if (list.Count == 0) continue;
-                h.Section(cat); foreach (var u in list) UpRow(h, u.id);
-            }
+            if (!ps.bld.Contains("presse")) h.Note("Baue die Staubpresse (Basisstufe 2), um mit der Veredelung zu beginnen."); Plan(h);
         }
         static void ProductionOverview(Hud h)
         {
@@ -176,13 +171,13 @@ namespace LunarCleanup.UI
 
         static void Base(Hud h)
         {
-            h.Tabs("Bauen", "Ausbau", "Upgrades");
+            h.Tabs("Bauen", "Ausbau");
             int tab = h.Tab; var st = GameData.Stages; int s = ps.sv.stage;
             if (tab == 0)
             {
                 h.Section("Basisstufe " + s + " · " + st[s - 1].name);
                 if (s < st.Count) { var nx = st[s]; h.Card("Stufe " + nx.n + ": " + nx.name, () => nx.txt, AccBld, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage(), "Basis ausbauen"); }
-                else h.Card("Ausbaustufe " + (ps.sv.exp + 1), () => { string w = Game.ExpWhy(ps); return "+2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe. Es gibt kein Ende – jede Stufe kostet mehr." + (w != "" ? " " + w + "." : " Tiefe: " + Game.Fmt(Mathf.Min(ps.sv.deep, Game.ExpNeed(ps))) + " / " + Game.Fmt(Game.ExpNeed(ps)) + " E."); }, AccBld,
+                else h.Card("Ausbaustufe " + (ps.sv.exp + 1), () => { string w = Game.ExpWhy(ps); return "+25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe. Es gibt kein Ende – jede Stufe kostet mehr." + (w != "" ? " " + w + "." : " Tiefe: " + Game.Fmt(Mathf.Min(ps.sv.deep, Game.ExpNeed(ps))) + " / " + Game.Fmt(Game.ExpNeed(ps)) + " E."); }, AccBld,
                     () => Cr(Game.ExpCost(ps)), () => Game.ExpWhy(ps) == "" && Game.S.credits >= Game.ExpCost(ps), () => Game.BuyExp(), ps.sv.exp > 0 ? "Ausbaustufe " + ps.sv.exp : null);
                 h.Section("Gebäude");
                 int n = 0;
@@ -202,7 +197,6 @@ namespace LunarCleanup.UI
                 h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
                 return;
             }
-            foreach (var u in GameData.Upg.Where(x => (x.cat == "Basis" || x.cat == "Tiefenabbau" || x.cat == "Strahlenschutz") && UpVisible(x))) UpRow(h, u.id);
         }
         static void Specialize(Hud h)
         {
@@ -247,12 +241,6 @@ namespace LunarCleanup.UI
         static void Planets(Hud h)
         {
             if (Game.S.done.Count > 0 || Game.S.stardust > 0) Stardust(h);
-            h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
-            for (int i = 0; i < Game.PlanetGoals.Length; i++)
-            {
-                int k = i; if (Game.PGoalClaimed(ps, k)) continue;
-                h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k));
-            }
             h.Section("Reiseziele");
             foreach (var pid in GameData.POrder)
             {
@@ -271,7 +259,7 @@ namespace LunarCleanup.UI
             }
         }
 
-        static float prestigeT = -99, importT = -99;
+        static float prestigeT = -99, importT = -99, demolishT = -99;
         static void Stardust(Hud h)
         {
             h.Section("Sternenstaub · " + Game.StardustFree() + " frei");
@@ -284,8 +272,25 @@ namespace LunarCleanup.UI
         static void Goals(Hud h)
         {
             Game.DailyContracts(); var cs = Game.S.contracts;
+            /* Fabian 01.11.: Abholbares immer ganz oben */
+            bool qReady = Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count) && Game.QuestProgress(Game.S.quest) >= 1;
+            var dReady = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done && Game.ContractProg(cs.list[k]) >= cs.list[k].target).ToList();
+            var pReady = Enumerable.Range(0, Game.PlanetGoals.Length).Where(k => !Game.PGoalClaimed(ps, k) && Game.PGoalProg(ps, k) >= 1).ToList();
+            if (qReady || dReady.Count > 0 || pReady.Count > 0)
+            {
+                h.Section("Jetzt abholen");
+                if (qReady) { var Q = GameData.Quests[Game.S.quest]; h.Row("Hauptziel: " + Q.t, () => "Belohnung " + Cr(Q.r), () => "Abholen", () => true, () => Game.ClaimQuest()); }
+                foreach (int k in dReady) { int kk = k; h.Row("Tagesauftrag: " + Game.ContractText(cs.list[kk]), () => "Belohnung " + Cr(cs.list[kk].reward), () => "Abholen", () => !cs.list[kk].done, () => Game.ClaimContract(kk)); }
+                foreach (int k in pReady) { int kk = k; h.Row("Planetenziel: " + Game.PlanetGoals[kk].text, () => "Belohnung " + Cr(Game.PGoalReward(ps, kk)), () => "Abholen", () => !Game.PGoalClaimed(ps, kk), () => Game.ClaimPGoal(kk)); }
+            }
             h.Section("Tägliche Aufträge" + (cs.bonus ? " · alle geschafft" : " · alle drei: +50 % Bonus"));
-            for (int i = 0; i < cs.list.Count; i++) { int k = i; var it = cs.list[k]; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k)); }
+            for (int i = 0; i < cs.list.Count; i++) { int k = i; var it = cs.list[k]; if (dReady.Contains(k)) continue; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k)); }
+            h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
+            for (int i = 0; i < Game.PlanetGoals.Length; i++)
+            {
+                int k = i; if (Game.PGoalClaimed(ps, k) || pReady.Contains(k)) continue;
+                h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k));
+            }
             h.Section("Statistik");
             h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
             h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
@@ -330,12 +335,14 @@ namespace LunarCleanup.UI
                 if (!r.bag && r.lv < Game.RIG_MAXLV) h.Row("Bohrturm verbessern", () => "Stufe " + r.lv + " → " + (r.lv + 1) + " · +30 % Förderung. Auf Stufe " + Game.RIG_MAXLV + " kannst du ihn zum Erzbagger umbauen.", () => Cr(Game.RigUpCost(ps, r)), () => Game.S.credits >= Game.RigUpCost(ps, r), () => Game.RigUp(cell));
                 else if (!r.bag) h.Row("Zum Erzbagger umbauen", () => "×2,5 Förderung, alle Rohstoffe zu gleichen Teilen, doppeltes Lager.", () => Cr(Game.BagCost(ps)), () => Game.S.credits >= Game.BagCost(ps), () => Game.RigToBagger(cell));
                 foreach (var id in new[] { "rcare", "rigrate" }) if (UpVisible(GameData.Up[id])) UpRow(h, id);
+                h.Row(r.bag ? "Erzbagger abreißen" : "Bohrturm abreißen", () => Time.unscaledTime - demolishT < 4 ? "Wirklich? Noch einmal tippen reißt ihn ab, das Lager geht verloren." : "Macht den Platz frei · " + Cr(Game.RigRefund(ps, r)) + " zurück", () => Time.unscaledTime - demolishT < 4 ? "Ja, abreißen" : "Abreißen", () => true,
+                    () => { if (Time.unscaledTime - demolishT < 4) { Game.DemolishRig(cell); demolishT = -99; h.CloseSheet(); } else demolishT = Time.unscaledTime; }, false);
                 return;
             }
             h.Section("Tiefenabbau");
             string w = Game.RigWhy(ps, cell);
             h.Note(w != "" ? w + "." : "Tiefenvorkommen: " + Game.RichTxt(rich) + " (×" + Dec(rich, 2) + ") " + GameData.Mats[m].name + ". Ein Bohrturm fördert hier dauerhaft, deine Fahrzeuge holen die Ladung ab.");
-            if (w == "") h.Row("Bohrturm bauen", () => ps.sv.rigs.Count + " von " + Game.RigMax(ps), () => Cr(Game.RigCost(ps)), () => Game.S.credits >= Game.RigCost(ps), () => { if (Game.BuildRig(cell)) h.OpenSheet("rig", cell.ToString()); });
+            if (w == "") h.Row("Bohrturm bauen", () => { int oc = Game.RigOutpost(ps, cell); return oc >= 0 ? "Am Außenlager: " + Game.RigsAt(ps, oc) + " von " + Game.RIG_PER_OUTPOST : "Frei: " + ps.sv.rigs.Count(x => Game.RigOutpost(ps, x.cell) < 0) + " von " + Game.RIG_FREE; }, () => Cr(Game.RigCost(ps)), () => Game.S.credits >= Game.RigCost(ps), () => { if (Game.BuildRig(cell)) h.OpenSheet("rig", cell.ToString()); });
         }
 
         static void Outpost(Hud h, int cell)

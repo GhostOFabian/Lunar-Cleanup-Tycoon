@@ -23,7 +23,7 @@ namespace LunarCleanup.Core
         {
             var ps = Cur; string w = ExpWhy(ps); if (w != "") return Fail(w); double c = ExpCost(ps); if (S.credits < c) return Fail(Lacks(c));
             S.credits -= c; ps.sv.exp++; ps.sv.deep = 0; ps.baseVersion++;
-            Toast(ps.P.name + ": Ausbaustufe " + ps.sv.exp + " – +2 Bohrtürme, +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe", "good"); return true;
+            Toast(ps.P.name + ": Ausbaustufe " + ps.sv.exp + " – +25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe", "good"); return true;
         }
 
         // ---------- Ausrichtung ----------

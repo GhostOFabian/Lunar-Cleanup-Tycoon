@@ -180,3 +180,11 @@
 - Playtest 01.11. vormittags: Meteore ~3× seltener (mind. 150 s), eine Vibration pro Schauer; Frachter nah vor der Kamera mit Licht, Positionslichtern und Triebwerk (kein Schatten); fertig gereinigte Parzelle leuchtet 1,4 s grün auf; Gebäude wählen die Drehung (0/90/180/270°) mit den meisten geraden Wandtreffern; Anschlussrahmen rücken an runden Tanks/Kuppeln vor, statt hineinzuschneiden; Laternen und Ampeln suchen freie Plätze (sonst Ampel aufs Dach).
 - Basis-Prüfung (alle 18 Planeten + alte Größen, volle Basen, ohne Fotos): 552 → 12 Befunde (`docs/basischeck_0.21.txt`). Rest: Entladeanlage nah an Kraftwerk (Mond, Kepler, Gliese, Mars alt), zwei Bandpaare zu nah (Venus, Io 13). Wandsuche über Dreiecksraster (≈50× schneller, auch auf dem Handy beim Gebäudekauf).
 
+- Wunschliste 01.11. 09:18 (Build 14): gereinigter Boden je Planet mit eigener Farbe und eigenem Muster (Regolithbänder, Dünen, Eisrisse, Schwefel, Moos, Diamant, Leuchtadern, Tholin), Krater/Hügel bleiben; je Planet eine Entdeckung (z. B. Mars-Staubteufel, Europa-Eisgeysir, Io-Feuervulkan, Pluto-Herz) mit Meldung „Entdeckt: …“ beim ersten Besuch; Weltraumhintergrund je Planet mit eigenen Nebelfarben.
+- Außenlager: fünfter Platz auf der Gegenseite; Bohrtürme/Erzbagger: 5 frei + 3 je Außenlager, abreißbar (30 % zurück, zweimal tippen).
+- Fahrzeug-Upgrades gedämpft (Tempo +5 %/Stufe, Leistung +12 %/Stufe); Flotte max. 15, mit teuren Flottenplätzen bis 20.
+- Wischen: schnelles Wischen reinigt bis 3× pro Strecke, Kamera folgt weicher.
+- Menüs: Upgrades nur noch im Upgrade-Menü und in den Gebäudeblättern (keine doppelten Reiter); Planetenziele im Ziele-Menü; abholbare Ziele oben unter „Jetzt abholen“.
+- Schneller: Boden parallel (Mars 5,5 → 1,8 s), Bandwege zwischengespeichert + mitgelieferte Startdatei (`Resources/Data/bandwege.txt`, 320 Basen) – Basisaufbau beim Planetenwechsel ≈ 0,2 s statt ≈ 5 s; Offline-Aufholen in größeren Schritten (bis 4 s) bei langer Abwesenheit.
+- Bänder an der Rakete/hohen Gebäuden liegen auf Wandanschlusshöhe statt in der Luft.
+- Basis-Prüfung jetzt auch mit Teilausbauten: 4 Restbefunde (Mond/Kepler Gebäude-Hüllkreise knapp, Io/Ganymed ein Anschlussrahmen, Venus ein Bandpaar zu nah). Browser-Build nicht neu gebaut.

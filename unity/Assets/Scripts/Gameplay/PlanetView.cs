@@ -22,7 +22,7 @@ namespace LunarCleanup.Gameplay
             ps = state; pd = ps.pd; th = ps.P.theme;
             TILE = pd.N > 12000 ? 24 : pd.N > 7000 ? 32 : pd.N > 3500 ? 48 : pd.N > 1500 ? 64 : 96; /* kleine Planeten: feinere Textur, aus der Nähe nicht mehr blockig */ NT = pd.N > 7000 ? TILE / 2 + 4 : TILE; craters.Clear();
             foreach (Transform c in transform) Destroy(c.gameObject); foreach (var oc in chunks) if (oc != null) { Destroy(oc.tex); if (oc.nrm) Destroy(oc.nrm); Destroy(oc.mat); } chunks.Clear(); /* alte Texturen freigeben (sonst wächst der Speicher bei jedem Planetenwechsel) */
-            int F = pd.faceCenters.Length; var lists = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
+            int F = pd.faceCenters.Length; var lists = new List<int>[F]; chunkIds = new List<int>[F]; for (int i = 0; i < F; i++) lists[i] = new List<int>();
             foreach (var cl in pd.cells) lists[cl.chunk].Add(cl.id);
             tileOf = new int[pd.N];
             for (int f = 0; f < F; f++)
@@ -36,11 +36,21 @@ namespace LunarCleanup.Gameplay
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>(); mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // Hügel werfen keine langen schwarzen Schatten über den Planeten
                 var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", ch.tex); m.SetColor("_BaseColor", Color.white); m.SetFloat("_Smoothness", .05f); m.SetFloat("_Metallic", 0); m.SetFloat("_SpecularHighlights", 0); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); m.SetFloat("_EnvironmentReflections", 0); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF"); // kein Blenden bei flachem Sonnenstand
-                ch.nrm = BuildNormal(ids, per); m.SetTexture("_BumpMap", ch.nrm); m.SetFloat("_BumpScale", 1f); m.EnableKeyword("_NORMALMAP"); /* kleine Krater, Steine und Plattenfugen reagieren auf das Sonnenlicht */
+                m.SetFloat("_BumpScale", 1f); m.EnableKeyword("_NORMALMAP"); /* Normal-Map wird unten parallel berechnet: kleine Krater, Steine und Plattenfugen reagieren auf das Sonnenlicht */
                 m.SetTexture("_DetailAlbedoMap", Detail()); m.SetTextureScale("_DetailAlbedoMap", new Vector2(per * 13, per * 13)); m.SetFloat("_DetailAlbedoMapScale", .16f); /* feine Körnung statt grober Flecken */ m.EnableKeyword("_DETAIL_MULX2");
                 mr.sharedMaterial = m; ch.mat = m;
-                chunks.Add(ch);
-                foreach (int id in ids) PaintCell(id);
+                chunks.Add(ch); chunkIds[f] = ids;
+            }
+            /* Fabian 01.11.: Reisen schneller – Boden und Normal-Maps auf allen Prozessorkernen berechnen (reine Rechnerei, keine Unity-Objekte) */
+            style = StyleFor(ps.pid); foreach (var cl in pd.cells) Craters(cl);
+            var nrmPx = new Color32[F][];
+            System.Threading.Tasks.Parallel.For(0, F, f => { if (chunks[f] != null) nrmPx[f] = NormalPixels(chunkIds[f], chunks[f].per); });
+            System.Threading.Tasks.Parallel.For(0, pd.N, id => PaintCell(id));
+            for (int f = 0; f < F; f++)
+            {
+                var ch = chunks[f]; if (ch == null) continue; int size = ch.per * NT;
+                var t = new Texture2D(size, size, TextureFormat.RGBA32, true, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 }; t.SetPixels32(nrmPx[f]); t.Apply(true, true);
+                ch.nrm = t; ch.mat.SetTexture("_BumpMap", t);
                 ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.dirty = false;
             }
             // Planetenkugel darunter, damit zwischen den Platten nie Lücken sichtbar werden
@@ -104,6 +114,65 @@ namespace LunarCleanup.Gameplay
         const float PAD = 1.5f / 64f; // Rand je Feld in der Textur, damit beim Verkleinern (Mipmaps) keine Nachbarfarben durchscheinen
         static float EdgeA(float ed, float w) => ed >= w ? 0 : ed <= w * .4f ? 1 : 1 - Mathf.SmoothStep(0, 1, (ed - w * .4f) / (w * .6f));
 
+        // ---------- Sauberer Boden je Planet (Fabian 01.11.: geputzt soll der Planet strahlen, jeder anders) ----------
+        class CStyle { public Color a, b, c, acc; public int kind; public float sparkle; }
+        CStyle style;
+        static Color Hx(string h) => GameData.Hex(h);
+        static CStyle St(string a, string b, string c, string acc, int kind, float sparkle) => new CStyle { a = Hx(a), b = Hx(b), c = Hx(c), acc = Hx(acc), kind = kind, sparkle = sparkle };
+        /// <summary>kind: 0 Regolith mit hellen Bändern, 1 Dünen, 2 Eis mit Rissen, 3 Schwefelflecken, 4 Moos/Algen, 5 Diamantfunkeln, 6 leuchtende Adern, 7 Tholin-Flecken</summary>
+        static CStyle StyleFor(string pid)
+        {
+            switch (pid)
+            {
+                case "moon": return St("#8f96a3", "#c9ced8", "#eef1f6", "#ffffff", 0, .006f);
+                case "mars": return St("#a8532e", "#c97a4a", "#e3a56f", "#5a2c20", 1, .002f);
+                case "europa": return St("#cfe3f2", "#eaf4fb", "#ffffff", "#b5643e", 2, .01f);
+                case "titan": return St("#b7742e", "#d79a4e", "#8a5426", "#5a3a1e", 1, .002f);
+                case "io": return St("#e8d24a", "#f2e27a", "#d9a531", "#d0521c", 3, .003f);
+                case "venus": return St("#b88a4a", "#d6ab68", "#8e6232", "#f2c674", 1, .004f);
+                case "ganymed": return St("#7d7468", "#a99f90", "#ddd5c7", "#efe9dd", 0, .004f);
+                case "enceladus": return St("#e2f0fc", "#ffffff", "#c8e2f8", "#3d93ff", 2, .014f);
+                case "triton": return St("#d8a9a0", "#ecc8bc", "#f6e0d6", "#a96a66", 7, .006f);
+                case "pluto": return St("#ead8bf", "#f6ecdc", "#c07a52", "#9a4a32", 7, .006f);
+                case "eris": return St("#c8d0dc", "#eef2f8", "#ffffff", "#a6c8ff", 0, .012f);
+                case "sedna": return St("#9a3a2e", "#c25a44", "#e08a66", "#6a2420", 1, .003f);
+                case "proxima": return St("#6e3424", "#9a5236", "#c87a4e", "#ff8a4a", 1, .004f);
+                case "trappist": return St("#3d8a96", "#5fb0b6", "#8fd4c8", "#2e6a80", 4, .004f);
+                case "kepler": return St("#4f7a3a", "#6f9a4a", "#9cbf62", "#3a5a2a", 4, .002f);
+                case "cancri": return St("#2a2a32", "#3e3e4a", "#5a5866", "#c8f6ff", 5, .035f);
+                case "gliese": return St("#6f8e9a", "#9ab6c0", "#c6dce2", "#eaf7ff", 2, .008f);
+                case "poltergeist": return St("#1f3a32", "#2e5446", "#3f6a58", "#5effd0", 6, .004f);
+                default: return null;
+            }
+        }
+        static float H3(int x, int y, int z) { unchecked { int h = x * 374761393 + y * 668265263 + z * 1442695041; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) & 0xffff) / 65535f; } }
+        /// <summary>Glatter 3D-Rauschwert 0..1 (gleich über Parzellengrenzen hinweg).</summary>
+        static float N3(Vector3 p)
+        {
+            int xi = Mathf.FloorToInt(p.x), yi = Mathf.FloorToInt(p.y), zi = Mathf.FloorToInt(p.z); float fx = p.x - xi, fy = p.y - yi, fz = p.z - zi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+            float L(int dx, int dy, int dz) => H3(xi + dx, yi + dy, zi + dz);
+            float x00 = Mathf.Lerp(L(0, 0, 0), L(1, 0, 0), fx), x10 = Mathf.Lerp(L(0, 1, 0), L(1, 1, 0), fx), x01 = Mathf.Lerp(L(0, 0, 1), L(1, 0, 1), fx), x11 = Mathf.Lerp(L(0, 1, 1), L(1, 1, 1), fx);
+            return Mathf.Lerp(Mathf.Lerp(x00, x10, fy), Mathf.Lerp(x01, x11, fy), fz);
+        }
+        static Color CleanCol(CStyle st, Vector3 w, float nz, float nz2)
+        {
+            float n1 = N3(w * .06f), n2 = N3(w * .28f + new Vector3(31, 7, 13)), n3 = N3(w * 1.4f + new Vector3(5, 91, 3));
+            var col = Color.Lerp(st.a, st.b, Mathf.SmoothStep(0, 1, n1 * .8f + n3 * .2f)); col = Color.Lerp(col, st.c, Mathf.Clamp01((n2 - .55f) * 2.2f));
+            switch (st.kind)
+            {
+                case 0: { float band = Mathf.Abs(N3(w * .045f + new Vector3(3, 3, 3)) - .5f); if (band < .05f) col = Color.Lerp(col, st.acc, (1 - band / .05f) * .45f); col *= .94f + .1f * n3; break; } // helle Rillenbänder
+                case 1: { float r = Mathf.Sin((w.x * .8f + w.z * .55f + w.y * .3f) * 2.4f + n2 * 7f) * .5f + .5f; col *= .86f + .22f * r; if (n1 < .3f) col = Color.Lerp(col, st.acc, (.3f - n1) * 1.6f); break; } // Dünenrippel, dunkle Basaltflecken
+                case 2: { float cr = Mathf.Abs(N3(w * .2f + new Vector3(17, 2, 9)) - .5f), cr2 = Mathf.Abs(N3(w * .5f + new Vector3(4, 40, 1)) - .5f); if (cr < .018f) col = Color.Lerp(col, st.acc, (1 - cr / .018f) * .85f); else if (cr2 < .012f) col = Color.Lerp(col, st.acc, (1 - cr2 / .012f) * .4f); break; } // Eis mit farbigen Rissen
+                case 3: { float sp = N3(w * .15f + new Vector3(8, 8, 8)); if (sp > .66f) col = Color.Lerp(col, st.acc, Mathf.Clamp01((sp - .66f) * 5)); if (n3 > .86f) col = Color.Lerp(col, new Color(.12f, .1f, .08f), (n3 - .86f) * 6); float g = N3(w * .09f + new Vector3(60, 1, 1)); if (g < .22f) col = Color.Lerp(col, new Color(.55f, .75f, .3f), (.22f - g) * 2.5f); break; } // Schwefel: orange Flecken, schwarze Schlote, grüne Stellen
+                case 4: { float tuft = N3(w * 2.2f); col *= .85f + .3f * tuft; if (n2 > .7f) col = Color.Lerp(col, st.acc, (n2 - .7f) * 2.5f); break; } // Moos/Algen
+                case 5: { col *= .9f + .2f * n3; break; } // Graphit (Funkeln unten)
+                case 6: { float v = Mathf.Abs(N3(w * .18f + new Vector3(2, 9, 4)) - .5f); if (v < .03f) col = Color.Lerp(col, st.acc * 1.4f, (1 - v / .03f)); break; } // leuchtende Adern
+                case 7: { if (n1 > .62f) col = Color.Lerp(col, st.acc, Mathf.Clamp01((n1 - .62f) * 3)); float cell = N3(w * .7f); col *= .92f + .14f * Mathf.Abs(cell - .5f) * 2; break; } // Tholin-Flecken, Grübchen
+            }
+            if (st.sparkle > 0) { var q = w * 6f; if (H3(Mathf.FloorToInt(q.x), Mathf.FloorToInt(q.y), Mathf.FloorToInt(q.z)) > 1 - st.sparkle) col = Color.Lerp(col, st.kind == 5 ? st.acc * 1.3f : Color.white, .75f); } // Glitzern
+            return col;
+        }
+
         // ---------- Relief: kleine Einschläge und Steinchen (nur Optik; große Krater/Hügel stecken im Gelände selbst) ----------
         readonly Dictionary<int, Vector4[]> craters = new Dictionary<int, Vector4[]>();
         Vector4[] Craters(Cell cl)
@@ -135,7 +204,8 @@ namespace LunarCleanup.Gameplay
             float gx = Mathf.Abs(Mathf.Repeat(x + id * .37f, 2.4f) - 1.2f), gy = Mathf.Abs(Mathf.Repeat(y, 2.4f) - 1.2f); float g = Mathf.Max(gx, gy);
             return g > 1.12f ? -.03f : g > 1.02f ? -.03f * (g - 1.02f) / .1f : .004f * Noise(x * 3f, y * 3f, id);
         }
-        Texture2D BuildNormal(List<int> ids, int per)
+        List<int>[] chunkIds;
+        Color32[] NormalPixels(List<int> ids, int per)
         {
             int size = per * NT; var px = new Color32[size * size]; var hgt = new float[(NT + 2) * (NT + 2)];
             for (int i = 0; i < size * size; i++) px[i] = new Color32(128, 128, 255, 255);
@@ -157,8 +227,7 @@ namespace LunarCleanup.Gameplay
                     }
             }
             /* linear (keine Gamma-Umrechnung); R=x, G=y, B=z, A=1: passt zu beiden Normal-Map-Formaten (RGB und AG) */
-            var t = new Texture2D(size, size, TextureFormat.RGBA32, true, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 };
-            t.SetPixels32(px); t.Apply(true, true); return t; // keine Kopie im Hauptspeicher behalten
+            return px;
         }
 
 
@@ -200,7 +269,7 @@ namespace LunarCleanup.Gameplay
                             g = Mathf.SmoothStep(0, 1, Mathf.Clamp01(g * 1.15f));
                         }
                         float nz = Noise(x * .9f + id, y * .9f, 11), nz2 = Noise(x * 2.7f, y * 2.7f + id, 5);
-                        Color cleanC = Color.Lerp(Color.Lerp(c1, c0, .5f + .5f * nz), c2, Mathf.Clamp01(nz2 - .55f) * 1.5f);
+                        Color cleanC = style != null ? CleanCol(style, cl.c * pd.R + cl.e1 * x + cl.e2 * y, nz, nz2) : Color.Lerp(Color.Lerp(c1, c0, .5f + .5f * nz), c2, Mathf.Clamp01(nz2 - .55f) * 1.5f);
                         Color dirtC = Color.Lerp(D.darkC, D.baseC, .5f + .5f * nz); if (nz2 > .45f) dirtC = Color.Lerp(dirtC, D.lightC, (nz2 - .45f) * 1.6f);
                         dirtC *= kindTint; dirtC *= .93f + .14f * Noise(x * 2.1f, y * 2.1f, 3); /* weiche Körnung statt Pixelrauschen */
                         if (cl.Wet)

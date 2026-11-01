@@ -66,7 +66,7 @@ namespace LunarCleanup.Core
         // ================= Start, Speichern, Laden =================
         public static void Init()
         {
-            GameData.Load(); NM = GameData.Mats.Count;
+            GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps);
@@ -985,7 +985,23 @@ namespace LunarCleanup.Core
             int idx = Array.IndexOf(GameData.POrder, pid); uint a = (uint)(((ulong)id * 2654435761UL + (ulong)((idx + 1) * 40503)) & 0xffffffffUL);
             uint h = a ^ (a >> 15); h = unchecked(h * 2246822519u); h ^= h >> 13; return .6f + (h % 1000) / 1000f;
         }
-        public static int RigMax(PState ps) => 2 + 2 * ps.sv.stage + 2 * ExpN(ps);
+        /// <summary>Fabian 01.11.: bis zu 3 Bohrtürme/Bagger an jedem gebauten Außenlager plus 5 freie.</summary>
+        public const int RIG_PER_OUTPOST = 3, RIG_FREE = 5;
+        public static int RigMax(PState ps) => RIG_FREE + RIG_PER_OUTPOST * ps.sv.outposts.Count;
+        /// <summary>Gehört die Parzelle zum Bereich eines Außenlagers (das Lager selbst oder bis 2 Parzellen daneben)? Liefert die Lager-Zelle oder −1.</summary>
+        public static int RigOutpost(PState ps, int id)
+        {
+            foreach (var o in ps.sv.outposts) { if (o.cell == id) return o.cell; foreach (int n in ps.pd.cells[o.cell].nb) { if (n == id) return o.cell; foreach (int n2 in ps.pd.cells[n].nb) if (n2 == id) return o.cell; } }
+            return -1;
+        }
+        public static int RigsAt(PState ps, int outpostCell) => ps.sv.rigs.Count(r => RigOutpost(ps, r.cell) == outpostCell);
+        /// <summary>Abriss: 30 % der Baukosten (und des Bagger-Umbaus) kommen zurück.</summary>
+        public static double RigRefund(PState ps, RigSave r) => Math.Round(RigCost(ps) / 1.45 * .3 + (r.bag ? BagCost(ps) * .3 : 0));
+        public static bool DemolishRig(int cell)
+        {
+            var ps = Cur; var r = ps.sv.rigs.Find(x => x.cell == cell); if (r == null) return false; double back = RigRefund(ps, r);
+            ps.sv.rigs.Remove(r); Earn(back); ps.baseVersion++; Toast((r.bag ? "Erzbagger" : "Bohrturm") + " abgerissen · +" + Fmt(back) + " Cr", "good"); return true;
+        }
         public static double RigCost(PState ps) => Math.Round(3000 * ps.P.diff * Math.Pow(1.45, ps.sv.rigs.Count));
         public static int RigMat(PState ps, int id) => GameData.Dirt[ps.pd.cells[id].type].mat;
         public static float RigRate(PState ps, RigSave r) => GameData.RigBase * RigRich(ps.pid, r.cell) * Uv("rigrate", ps) * (1 + .3f * r.lv) * (r.bag ? 2.5f : 1) * (EvOn(ps, "vein") ? FeatureData.VEIN_MULT : 1) * (1 + .25f * ExpN(ps)) * SpecF(ps, "rig");
@@ -1004,7 +1020,9 @@ namespace LunarCleanup.Core
             if (cl.Wet) return "Nicht auf " + GameData.Liq[cl.liq].name;
             if (ps.sv.rigs.Any(r => r.cell == id)) return "Hier steht schon ein Bohrturm"; if (ps.sv.outposts.Any(o => o.cell == id)) return "Hier steht ein Außenlager";
             if (OutpostSites(ps.pid).Contains(id)) return "Dieser Platz ist für ein Außenlager reserviert";
-            if (ps.sv.rigs.Count >= RigMax(ps)) return "Höchstens " + RigMax(ps) + " Bohrtürme auf Basisstufe " + ps.sv.stage + (ps.sv.stage < 5 ? " – die nächste Stufe erlaubt 2 mehr" : "");
+            int oc = RigOutpost(ps, id);
+            if (oc >= 0) { if (RigsAt(ps, oc) >= RIG_PER_OUTPOST) return "An diesem Außenlager stehen schon " + RIG_PER_OUTPOST + " Bohrtürme – reiß einen ab oder bau woanders"; }
+            else if (ps.sv.rigs.Count(r => RigOutpost(ps, r.cell) < 0) >= RIG_FREE) return "Höchstens " + RIG_FREE + " freie Bohrtürme – weitere nur direkt an einem Außenlager (je " + RIG_PER_OUTPOST + ")";
             return "";
         }
         public static int BestRigCell(PState ps)
@@ -1083,16 +1101,18 @@ namespace LunarCleanup.Core
             int ring = Mathf.Clamp(Mathf.RoundToInt(maxR * .45f), GameData.OutMinRing, Math.Max(GameData.OutMinRing, maxR - 1));
             var cand = pd.cells.Where(c => !c.IsBase && c.ring == ring).ToList(); var o = new List<int>();
             foreach (var u in new[] { bc.e1, bc.e2, -bc.e1, -bc.e2 }) { int best = -1; float bs = -1e9f; foreach (var c in cand) { if (o.Contains(c.id)) continue; float sc = Vector3.Dot(c.c - bc.c, u); if (sc > bs) { bs = sc; best = c.id; } } if (best >= 0) o.Add(best); }
+            /* Fabian 01.11.: fünfter Platz genau auf der anderen Seite des Planeten */
+            { int anti = -1; float bd = 2; foreach (var c in pd.cells) { if (c.IsBase || c.Wet || o.Contains(c.id)) continue; float d = Vector3.Dot(c.c.normalized, bc.c.normalized); if (d < bd) { bd = d; anti = c.id; } } if (anti >= 0) o.Add(anti); }
             Sites[pid] = o; return o;
         }
         public static double OutpostCost(PState ps) => Math.Round(20000 * ps.P.diff * Math.Pow(1.6, ps.sv.outposts.Count));
         public static string OutpostWhy(PState ps, int id)
         {
             var cl = ps.pd.cells[id];
-            if (!OutpostSites(ps.pid).Contains(id)) return "Außenlager nur auf den vier markierten Außenlager-Plätzen";
+            if (!OutpostSites(ps.pid).Contains(id)) return "Außenlager nur auf den fünf markierten Außenlager-Plätzen";
             if (!ResDone("outpost")) return "Erst Außenlager-Logistik erforschen"; if (Gs(ps) < 4) return "Erst Basisstufe 4 auf einem Planeten";
             if (!ps.clean[id] || cl.IsBase) return "Nur auf sauberen Parzellen"; if (cl.ring < GameData.OutMinRing) return "Zu nah an der Basis – mindestens " + GameData.OutMinRing + " Parzellen entfernt";
-            if (ps.sv.outposts.Count >= GameData.OutMax) return "Höchstens " + GameData.OutMax + " Außenlager pro Planet";
+            if (ps.sv.outposts.Count >= OutpostSites(ps.pid).Count) return "Alle Außenlager-Plätze sind belegt";
             if (ps.sv.outposts.Any(o => o.cell == id)) return "Hier steht schon ein Außenlager"; return "";
         }
         public static bool BuildOutpost(int id)

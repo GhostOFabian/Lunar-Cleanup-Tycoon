@@ -84,7 +84,7 @@ namespace LunarCleanup.Gameplay
 
         void BuildPlanet()
         {
-            var ps = Game.Cur; planet.Build(ps); world.Build(ps); hud.CloseSheet();
+            var ps = Game.Cur; var sw = System.Diagnostics.Stopwatch.StartNew(); planet.Build(ps); long tP = sw.ElapsedMilliseconds; world.Build(ps); Debug.Log("Lunar Cleanup: Planet " + ps.pid + " aufgebaut – Boden " + tP + " ms, Basis " + (sw.ElapsedMilliseconds - tP) + " ms"); hud.CloseSheet();
             var c = ps.pd.cells[ps.pd.baseCell]; cd = ps.clean[ps.pd.start] ? c.c : (ps.pd.cells[ps.pd.start].c * .7f + c.c * .3f).normalized; north = c.e2; mapMode = false; alt = altGoal = 64;
             ApplyCam();
         }
@@ -98,7 +98,8 @@ namespace LunarCleanup.Gameplay
             while (el < t)
             {
                 float t0 = Time.realtimeSinceStartup;
-                while (el < t && Time.realtimeSinceStartup - t0 < .03f) { float d = Mathf.Min(1, t - el); Game.Step(d); el += d; }
+                float stepS = t > 7200 ? 4 : t > 1800 ? 3 : t > 600 ? 2 : 1; /* Fabian 01.11.: lange Abwesenheit in größeren Schritten – dieselbe Simulation, nur gröber */
+                while (el < t && Time.realtimeSinceStartup - t0 < .06f) { float d = Mathf.Min(stepS, t - el); Game.Step(d); el += d; }
                 if (t > 600) hud.ShowOffline("Deine Basis hat weitergearbeitet … " + Mathf.FloorToInt(el / t * 100) + " %");
                 yield return null;
             }
@@ -269,7 +270,7 @@ namespace LunarCleanup.Gameplay
                         ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + (r.bag ? "_bagger" : "_bohrturm") + ".png"), 2); yield return null; yield return null;
                     }
                 // Teil-Ausbauten: nach jedem gekauften Gebäude (so wie beim echten Spielen) – jede Zwischenstufe hat andere Bänder und Wege
-                if (f == 0 && !CheckNoPhotos)
+                if (f == 0)
                 {
                     var ord = Game.BuildOrder(); int partBad = 0;
                     for (int k = 1; k < ord.Count; k++)
@@ -405,7 +406,9 @@ namespace LunarCleanup.Gameplay
                     {
                         // Zwischenpunkte, damit auch schnelle Striche lückenlos reinigen
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
-                        for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt / steps, out int m0); if (m0 >= 0) mat = m0; }
+                        /* Fabian 01.11.: Wischen fühlte sich klebrig an – zügige Striche reinigen bis zu 3× mehr je Bild, damit man nicht hängen bleibt */
+                        float spd = hasLastWipe ? Game.Cur.pd.Arc(lastWipe, dir) / Mathf.Max(.001f, dt) : 0, boost = 1 + 2 * Mathf.Clamp01((spd / Mathf.Max(.5f, rr) - 2f) / 10f);
+                        for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; }
                         lastWipe = dir; hasLastWipe = true;
                         brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
                         Sfx.Wipe(amt > 0);
@@ -433,7 +436,7 @@ namespace LunarCleanup.Gameplay
                 int nb = -1; float bd = -2; foreach (int n in pd.cells[followCell].nb) { if (ps.clean[n] || pd.cells[n].IsBase || !Game.Workable(ps, n)) continue; float d = Vector3.Dot(pd.cells[n].c, dir); if (d > bd) { bd = d; nb = n; } }
                 if (nb >= 0) { followCell = nb; followRef = pos; }
             }
-            var to = pd.cells[followCell].c; float k = 1 - Mathf.Exp(-1.3f * dt); var n0 = cd; cd = Vector3.Slerp(cd, to, k).normalized; north = Quaternion.FromToRotation(n0, cd) * north;
+            var to = pd.cells[followCell].c; float k = 1 - Mathf.Exp(-.55f * dt); /* sanfter: die Stelle unter dem Finger rutscht nicht mehr weg */ var n0 = cd; cd = Vector3.Slerp(cd, to, k).normalized; north = Quaternion.FromToRotation(n0, cd) * north;
         }
 
         bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
