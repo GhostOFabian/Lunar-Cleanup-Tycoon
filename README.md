@@ -3,7 +3,7 @@ Clean the planets and automate your factory.
 
 Mobiles 3D-Spiel aus Reinigungssimulation, Idle-Tycoon und Automatisierung: Wische verschmutzte Parzellen eines Mondes sauber, baue Fahrzeuge, Förderbänder, Pressen, Schmelzen, Drohnen und Außenlager auf, verkaufe per Rakete – und arbeite dich über 10 Planeten bis zum Pluto vor. Die Automatik arbeitet auch offline weiter.
 
-![Mondbasis](assets/screens/03-basis.jpg)
+![Mondbasis](assets/screens/v22-basis.jpg)
 
 Webseite mit Screenshots: `index.html` (über GitHub Pages: https://ghostofabian.github.io/Lunar-Cleanup-Tycoon/ – einmalig unter Settings → Pages „Deploy from a branch“, `main`, `/ (root)` aktivieren).
 

@@ -73,6 +73,7 @@ namespace LunarCleanup.Gameplay
             hud = cv.AddComponent<Hud>(); hud.Build(cv.transform);
             hud.OnNav = k => { if (k == "clean") { hud.CloseSheet(); FocusFront(); } else hud.OpenSheet(k); };
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
+            hud.OnHome = () => { var ps = Game.Cur; hud.CloseSheet(); StartCoroutine(Fly(ps.pd.cells[ps.pd.baseCell].c, 64)); }; /* Fabian 01.11.: direkt zurück zur Basis-Ansicht */
             hud.OnFocusQuest = FocusQuest; hud.OnPhoto = () => { photo = true; if (uiRoot) uiRoot.SetActive(false); }; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket(); Game.OnMeteors += cells => world.MeteorShower(cells); Game.OnCellFlash += id => world.FlashCell(id);

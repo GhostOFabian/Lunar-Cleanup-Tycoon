@@ -15,15 +15,15 @@ namespace LunarCleanup.UI
     {
         public static Hud I;
         public Action<string> OnNav;              // Klick in der unteren Leiste
-        public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto;
+        public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto, OnHome;
         RectTransform root, sheetPanel, sheetContent, toastBox, floatLayer;
         TextMeshProUGUI credits, rate, pname, pprog, goalKick, goalText, goalReward, handTxt, sheetKick, sheetTitle, offlineTxt;
-        RectTransform goalFill, handFill; Image handImg, pdot; GameObject sheetGo, offlineGo, goalGo;
+        RectTransform goalFill, handFill, rocketFill; Image rocketImg; TextMeshProUGUI rocketTxt; Image handImg, pdot; GameObject sheetGo, offlineGo, goalGo, goalBadge; TextMeshProUGUI goalBadgeTxt;
         readonly List<Action> liveLabels = new List<Action>(); Action lowWarn;
         readonly List<(TextMeshProUGUI v, RectTransform fill, Func<string> val, Func<float> f)> meters = new List<(TextMeshProUGUI, RectTransform, Func<string>, Func<float>)>();
         readonly Dictionary<string, Image> navIcons = new Dictionary<string, Image>(); readonly Dictionary<string, TextMeshProUGUI> navTxt = new Dictionary<string, TextMeshProUGUI>();
         readonly List<Action> binders = new List<Action>();
-        string sheetKind, sheetArg; float bindT, lastCred; double credShown;
+        string sheetKind, sheetArg; float bindT, lastCred, badgeT; double credShown;
         public bool SheetOpen => sheetGo && sheetGo.activeSelf;
         public bool MenuOpen => menuGo && menuGo.activeSelf;
         public void HideMenu() { if (menuGo) menuGo.SetActive(false); }
@@ -85,6 +85,9 @@ namespace LunarCleanup.UI
             pprog = UiKit.Text(pc.transform, "Fortschritt", "", 11, Pal.Ink2); pprog.rectTransform.Anchor(0, 0, 1, .48f, 40, 6, 6, 0); pprog.textWrappingMode = TextWrappingModes.NoWrap; pprog.enableAutoSizing = true; pprog.fontSizeMin = 7; pprog.fontSizeMax = 11; /* „983/983 sauber · Stufe 5“ passt sonst nicht aufs Handy */
             var gb = UiKit.Btn(top, "Ziele", () => OpenSheet("goals"), Pal.Glass, 14); ((RectTransform)gb.transform).Anchor(.79f, 0, .885f, 1, 2, 0, 2, 0);
             UiKit.Img(gb.transform, "Icon", UiKit.Icon("goals"), Pal.Ink2).rectTransform.Anchor(.5f, .5f, .5f, .5f, -11, -11, -11, -11);
+            /* Fabian 01.11.: Ziele nicht mehr dauerhaft im Bild – ein Punkt am Ziele-Knopf zeigt, dass etwas abholbar ist */
+            var bd = UiKit.Img(gb.transform, "Abholbar", UiKit.Circle(Pal.C("#ffd35a"), Pal.C("#e0a020")), Color.white); bd.rectTransform.Anchor(1, 1, 1, 1, -20, -20, 2, 2); goalBadge = bd.gameObject;
+            goalBadgeTxt = UiKit.Text(bd.transform, "Zahl", "", 11, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); goalBadgeTxt.rectTransform.Anchor(0, 0, 1, 1); goalBadge.SetActive(false);
             var sb = UiKit.Btn(top, "Einstellungen", () => OpenSheet("settings"), Pal.Glass, 14); ((RectTransform)sb.transform).Anchor(.895f, 0, 1, 1, 2, 0, 0, 0);
             UiKit.Img(sb.transform, "Icon", UiKit.Icon("gear"), Pal.Ink2).rectTransform.Anchor(.5f, .5f, .5f, .5f, -11, -11, -11, -11);
             // Anzeigen
@@ -116,7 +119,7 @@ namespace LunarCleanup.UI
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
             var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
-            ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -228, 12, 196);
+            ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -144, 12, 112); /* sitzt jetzt dort, wo früher die Zielkarte war */
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
         }
@@ -141,8 +144,17 @@ namespace LunarCleanup.UI
             UiKit.Img(hb.transform, "Icon", UiKit.Icon("bucket"), Pal.Clean).rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             handTxt = UiKit.Text(hb.transform, "Wert", "0/60", 13, Pal.Ink, true, FontStyles.Bold); handTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); handTxt.alignment = TextAlignmentOptions.MidlineLeft;
             UiKit.Bar(hb.transform, "Balken", Pal.Clean, out handFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
+            /* Fabian 01.11.: Rakete nicht mehr versteckt – Frachtraum-Anzeige über dem Behälter, Tippen startet die Rakete (leer: öffnet den Verkauf) */
+            var rb = UiKit.Btn(root, "Rakete", () => { var ps = Game.Cur; if (ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0) Game.LaunchRocket(); else OpenSheet("production", "1"); }, Pal.Glass, 16); rocketImg = rb.GetComponent<Image>();
+            ((RectTransform)rb.transform).Anchor(0, 0, 0, 0, 12, 142, -120, -194);
+            UiKit.Img(rb.transform, "Icon", UiKit.Icon("rocket"), Pal.Credit).rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
+            rocketTxt = UiKit.Text(rb.transform, "Wert", "", 12, Pal.Ink, true, FontStyles.Bold); rocketTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); rocketTxt.alignment = TextAlignmentOptions.MidlineLeft; rocketTxt.enableAutoSizing = true; rocketTxt.fontSizeMin = 8; rocketTxt.fontSizeMax = 12; rocketTxt.textWrappingMode = TextWrappingModes.NoWrap;
+            UiKit.Bar(rb.transform, "Balken", Pal.Credit, out rocketFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
             var mb = UiKit.Btn(root, "Karte", () => OnMap?.Invoke(), Pal.Glass, 16); ((RectTransform)mb.transform).Anchor(1, 0, 1, 0, -64, 78, 12, -130);
             UiKit.Img(mb.transform, "Icon", UiKit.Icon("globe"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
+            /* Fabian 01.11.: ein Tipp zurück zur Basis-Ansicht */
+            var hm = UiKit.Btn(root, "Zur Basis", () => OnHome?.Invoke(), Pal.Glass, 16); ((RectTransform)hm.transform).Anchor(1, 0, 1, 0, -64, 142, 12, -194);
+            UiKit.Img(hm.transform, "Icon", UiKit.Icon("home"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
             var nav = UiKit.Glass(root, "Leiste", Pal.GlassHi, 2); nav.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -66);
             var hl = nav.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true; hl.padding = new RectOffset(4, 4, 6, 6); hl.spacing = 2;
             foreach (var (k, lbl, ic) in new[] { ("clean", "Reinigen", "clean"), ("vehicles", "Fahrzeuge", "car"), ("production", "Produktion", "factory"), ("base", "Basis", "home"), ("upgrades", "Upgrades", "up"), ("planets", "Planeten", "planet") })
@@ -309,12 +321,9 @@ namespace LunarCleanup.UI
             foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
-            int q = Game.S.quest; bool has = q < Game.QuestsSupported && q < GameData.Quests.Count; goalGo.SetActive(has && !SheetOpen && !MenuOpen);
-            if (has)
-            {
-                float pr = Game.QuestProgress(q); goalKick.text = "Ziel " + (q + 1) + " von " + GameData.Quests.Count + (pr >= 1 ? " · antippen zum Abholen" : "");
-                goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
-            }
+            goalGo.SetActive(false); /* Zielkarte nur noch im Ziele-Fenster */
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellCap(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten · " + Game.Fmt(cg) + "/" + Game.Fmt(cc) : "Rakete leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }
         }

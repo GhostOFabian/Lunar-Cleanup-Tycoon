@@ -220,3 +220,7 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Vor jedem Anschlussrahmen 1,8 m gerades Band (Router-Startpunkt), damit Kurven nicht durch die Rahmen schneiden.
 - 01.11.2026 (Fabian): Versionsnummer steigt mit größeren Updates (0.22 ab Build 17); die Build-Nummer wird im Spiel mit angezeigt.
 - 01.11.2026 (Fabian): Keine Andockstationen-Modelle an der Entladeanlage; Fahrzeuge halten an denselben Andockplätzen ohne Grube.
+- 01.11.2026 (Fabian): Ziele nicht dauerhaft im HUD; Abholbares zeigt ein Punkt am Ziele-Knopf.
+- 01.11.2026 (Fabian): Fahrzeugliste zeigt nur Status; alle Aktionen im Fahrzeug-Fenster. „Zurücksetzen“ stellt ein Fahrzeug an die Garage (Ladung/Zustand bleiben).
+- 01.11.2026 (Fabian): Rakete als eigener HUD-Knopf; geerntete Kristalle (kristall) standardmäßig verkaufen.
+- 01.11.2026: Kenney-Modelle aus dem Projekt entfernt (eigene Modelle + prozedurale Formen reichen).

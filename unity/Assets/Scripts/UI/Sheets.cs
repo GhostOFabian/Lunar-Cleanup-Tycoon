@@ -17,6 +17,7 @@ namespace LunarCleanup.UI
             switch (kind)
             {
                 case "vehicles": title = "Fahrzeuge"; Vehicles(h); break;
+                case "vehicle": { var v = ps.sv.veh.FirstOrDefault(x => x.id.ToString() == arg); if (v == null) { title = "Fahrzeuge"; Vehicles(h); } else { title = Game.VehName(v); Vehicle(h, v); } break; }
                 case "production": title = "Produktion"; Production(h); break;
                 case "base": title = "Basis"; Base(h); break;
                 case "upgrades": title = "Upgrades"; Upgrades(h); break;
@@ -67,22 +68,35 @@ namespace LunarCleanup.UI
                 var c = ps.sv.cart;
                 if (c.owned) h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E");
                 if (ps.sv.veh.Count == 0) { h.Note("Noch keine Fahrzeuge. Unter „Kaufen“ findest du alle, die hier fahren können."); return; }
-                h.Note("Zu viele kleine Fahrzeuge? Mit der Selbstzerstörung machst du Platz für größere – 30 % des Kaufpreises kommen zurück.");
+                /* Fabian 01.11.: übersichtliche Liste – Optionen erst nach dem Antippen eines Fahrzeugs */
+                h.Section("Deine Fahrzeuge · " + ps.sv.veh.Count);
                 foreach (var v in ps.sv.veh)
                 {
                     var vv = v;
-                    h.Row(Game.VehName(v), () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(GameData.Veh[vv.type].tank * Game.Uv("vtank")) + " · Stufe " + Game.VehLvl(vv) + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " %" : ""),
-                        () => Game.Gs(ps) < 3 || !ps.sv.veh.Contains(vv) ? "–" : vv.mode == "toShop" || vv.mode == "repair" ? "In Werkstatt" : Game.RepsLeft(vv) <= 0 ? "Ersetzen " + Cr(Game.ReplaceCost(ps, vv)) : "Warten " + Cr(Game.RepCost(ps, vv)),
-                        () => Game.Gs(ps) >= 3 && ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && vv.mode != "boom" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
-                        () => { if (Game.RepsLeft(vv) <= 0) Game.ReplaceVeh(ps, vv, false); else if (Game.SendToShop(ps, vv, false)) Game.Toast("Fährt zur Werkstatt", "good"); }, false);
-                    h.Row("   Spezialisierung / Selbstzerstörung", () => Game.VehLvl(vv) >= 2 ? "Spezialisierung: " + FeatureData.VehSpecName[vv.spec] : "Spezialisierung ab Stufe 2",
-                        () => vv.mode == "boom" ? "Läuft …" : "Sprengen +" + Cr(Game.BoomRefund(ps, vv)), () => ps.sv.veh.Contains(vv) && vv.mode != "boom", () => Game.SelfDestruct(vv), false);
-                    if (Game.VehLvl(vv) >= 2) h.Row("   Spezialisierung wechseln", () => "", () => "Wechseln", () => true, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
-                    h.Row("   Arbeitsbereich", () => Game.Zones[vv.zone] + " · Teamarbeit: mehrere Fahrzeuge auf einer Parzelle reinigen je Partner 10 % stärker", () => "Ändern", () => true, () => vv.zone = (vv.zone + 1) % Game.Zones.Length, false);
+                    h.Row(Game.VehName(v), () => Game.VehStatus(vv) + " · Stufe " + Game.VehLvl(vv) + " · Tank " + Mathf.RoundToInt(Game.Sum(vv.tank) / Mathf.Max(.01f, GameData.Veh[vv.type].tank * Game.Uv("vtank")) * 100) + " %" + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " %" : ""),
+                        () => "Optionen", () => ps.sv.veh.Contains(vv), () => h.OpenSheet("vehicle", vv.id.ToString()), false);
                 }
                 if (Game.Gs(ps) >= 3) h.Row("Automatische Wartung", () => "Ab 75 % Verschleiß fährt jedes Fahrzeug selbst zur Werkstatt; nach zwei Reparaturen wird es automatisch ersetzt.", () => ps.sv.autoMaint ? "An" : "Aus", () => true, () => ps.sv.autoMaint = !ps.sv.autoMaint, false);
                 return;
             }
+        }
+
+        static void Vehicle(Hud h, VehSave vv)
+        {
+            var T = GameData.Veh[vv.type];
+            h.Note(T.desc);
+            h.Row("Zustand", () => Game.VehStatus(vv) + " · Tank " + Game.Fmt(Game.Sum(vv.tank)) + "/" + Game.Fmt(T.tank * Game.Uv("vtank")) + " E · Stufe " + Game.VehLvl(vv) + (Game.Gs(ps) >= 3 ? " · Zustand " + Mathf.RoundToInt(Mathf.Max(0, 1 - vv.wear) * 100) + " %" : ""),
+                () => "Zeigen", () => ps.sv.veh.Contains(vv), () => { LunarCleanup.Gameplay.GameRoot.FocusReq = vv.d; LunarCleanup.Gameplay.GameRoot.ZoomReq = 24; h.CloseSheet(); }, false);
+            h.Row("Zurücksetzen", () => "Steckt das Fahrzeug fest? Es fährt sofort zurück an die Basis und sucht sich neue Arbeit. Ladung und Zustand bleiben.", () => "Zurücksetzen", () => ps.sv.veh.Contains(vv) && vv.mode != "boom", () => Game.ResetVeh(vv), false);
+            h.Row("Arbeitsbereich", () => Game.Zones[vv.zone] + " · mehrere Fahrzeuge auf einer Parzelle reinigen je Partner 10 % stärker", () => "Ändern", () => true, () => vv.zone = (vv.zone + 1) % Game.Zones.Length, false);
+            h.Row("Spezialisierung", () => Game.VehLvl(vv) >= 2 ? FeatureData.VehSpecName[vv.spec] : "ab Stufe 2", () => "Wechseln", () => Game.VehLvl(vv) >= 2, () => Game.VehSetSpec(vv, (vv.spec + 1) % FeatureData.VehSpec.Length), false);
+            if (Game.Gs(ps) >= 3)
+                h.Row("Werkstatt", () => Game.RepsLeft(vv) <= 0 ? "Nach zwei Reparaturen wird es ersetzt" : "Reparieren in der Roboterwerkstatt",
+                    () => vv.mode == "toShop" || vv.mode == "repair" ? "In Werkstatt" : Game.RepsLeft(vv) <= 0 ? "Ersetzen " + Cr(Game.ReplaceCost(ps, vv)) : "Warten " + Cr(Game.RepCost(ps, vv)),
+                    () => ps.sv.veh.Contains(vv) && vv.mode != "toShop" && vv.mode != "repair" && vv.mode != "boom" && (Game.RepsLeft(vv) <= 0 ? Game.S.credits >= Game.ReplaceCost(ps, vv) : ps.bld.Contains("werkstatt") && vv.wear > .05f && Game.S.credits >= Game.RepCost(ps, vv)),
+                    () => { if (Game.RepsLeft(vv) <= 0) Game.ReplaceVeh(ps, vv, false); else if (Game.SendToShop(ps, vv, false)) Game.Toast("Fährt zur Werkstatt", "good"); }, false);
+            h.Row("Selbstzerstörung", () => "Macht Platz für ein größeres Fahrzeug – 30 % des Kaufpreises kommen zurück", () => vv.mode == "boom" ? "Läuft …" : "Sprengen +" + Cr(Game.BoomRefund(ps, vv)), () => ps.sv.veh.Contains(vv) && vv.mode != "boom", () => Game.SelfDestruct(vv), false);
+            h.BigButton("Zurück zur Flotte", () => true, () => h.OpenSheet("vehicles", "1"));
         }
 
         static void Production(Hud h)
@@ -316,6 +330,12 @@ namespace LunarCleanup.UI
                 if (qReady) { var Q = GameData.Quests[Game.S.quest]; h.Row("Hauptziel: " + Q.t, () => "Belohnung " + Cr(Q.r), () => "Abholen", () => true, () => Game.ClaimQuest()); }
                 foreach (int k in dReady) { int kk = k; h.Row("Tagesauftrag: " + Game.ContractText(cs.list[kk]), () => "Belohnung " + Cr(cs.list[kk].reward), () => "Abholen", () => !cs.list[kk].done, () => Game.ClaimContract(kk)); }
                 foreach (int k in pReady) { int kk = k; h.Row("Planetenziel: " + Game.PlanetGoals[kk].text, () => "Belohnung " + Cr(Game.PGoalReward(ps, kk)), () => "Abholen", () => !Game.PGoalClaimed(ps, kk), () => Game.ClaimPGoal(kk)); }
+            }
+            /* Fabian 01.11.: Hauptziel steht nicht mehr dauerhaft im Bild, sondern hier */
+            if (!qReady && Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count))
+            {
+                int qi = Game.S.quest; var Q = GameData.Quests[qi]; h.Section("Hauptziel " + (qi + 1) + " von " + GameData.Quests.Count);
+                h.Row(Q.t, () => Mathf.RoundToInt(Game.QuestProgress(qi) * 100) + " % · Belohnung " + Cr(Q.r), () => "Zeigen", () => true, () => { h.CloseSheet(); h.OnFocusQuest?.Invoke(); }, false);
             }
             h.Section("Tägliche Aufträge" + (cs.bonus ? " · alle geschafft" : " · alle drei: +50 % Bonus"));
             for (int i = 0; i < cs.list.Count; i++) { int k = i; var it = cs.list[k]; if (dReady.Contains(k)) continue; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k)); }

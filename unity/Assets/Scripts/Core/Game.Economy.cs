@@ -13,7 +13,8 @@ namespace LunarCleanup.Core
         public static bool PlanOn(PState ps, string key) => string.IsNullOrEmpty(key) || !ps.sv.planOff.Contains(key);
         public static void TogglePlan(string key) { var sv = Cur.sv; if (sv.planOff.Contains(key)) sv.planOff.Remove(key); else sv.planOff.Add(key); Toast(PlanOn(Cur, key) ? "Rezept eingeschaltet" : "Rezept ausgeschaltet – die Ware bleibt roh"); }
         /// <summary>Ist die Ware zum Verkauf freigegeben? Standard: alle Produkte und Rohstoffe, die keine Maschine hier veredelt.</summary>
-        public static bool SellOn(PState ps, int m) => ps.sv.sellYes.Contains(m) || (!ps.sv.autoOff.Contains(m) && (!GameData.Mats[m].raw || !RawRoute(ps, m)));
+        public static bool SellOn(PState ps, int m) => ps.sv.sellYes.Contains(m) || (!ps.sv.autoOff.Contains(m) && (!GameData.Mats[m].raw || m == KristallIx || !RawRoute(ps, m))); /* Fabian 01.11.: geerntete Kristalle werden standardmäßig mit verschickt */
+        static int KristallIx => GameData.MatIx.TryGetValue("kristall", out var k) ? k : -1;
         public static bool AutoOn(PState ps, int m) => SellOn(ps, m);
         public static void ToggleAuto(int m)
         {

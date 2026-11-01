@@ -44,6 +44,7 @@ namespace LunarCleanup.EditorTools
                     case "night": { var cs = LunarCleanup.Core.Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + LunarCleanup.Core.Game.DayLen(LunarCleanup.Core.Game.Cur.pid) / 4; Write("ok night"); break; }
                     case "wreck": case "impact": { var cs = LunarCleanup.Core.Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Write((LunarCleanup.Core.Game.StartEvent(cs, c) ? "ok " : "kein Platz ") + c); break; }
                     default:
+                        if (c.StartsWith("gameview ")) { var a2 = c.Substring(9).Split(' '); Write(SetGameView(int.Parse(a2[0]), int.Parse(a2[1]))); break; }
                         if (c.StartsWith("rshot ")) { var cam = Camera.main; var rt = new RenderTexture(720, 1280, 24); var old = cam.targetTexture; float oa = cam.aspect; cam.targetTexture = rt; cam.aspect = 720f / 1280f; cam.Render(); var prev = RenderTexture.active; RenderTexture.active = rt; var tx = new Texture2D(720, 1280, TextureFormat.RGB24, false); tx.ReadPixels(new Rect(0, 0, 720, 1280), 0, 0); tx.Apply(); RenderTexture.active = prev; cam.targetTexture = old; cam.aspect = oa; cam.ResetAspect(); string f = "Temp/r_" + c.Substring(6) + ".jpg"; File.WriteAllBytes(f, tx.EncodeToJPG(88)); Object.DestroyImmediate(tx); rt.Release(); Write("ok " + f); break; }
                         if (c.StartsWith("shot")) { string f = "Temp/shot_" + (c.Length > 5 ? c.Substring(5) : "x") + ".png"; ScreenCapture.CaptureScreenshot(f, 2); Write("ok " + f); break; }
                         if (c.StartsWith("look ")) { var ps = LunarCleanup.Core.Game.Cur; var id = c.Substring(5); if (ps.lay.pos.ContainsKey(id)) { LunarCleanup.Gameplay.GameRoot.FocusReq = ps.pd.PlanDir(ps.lay.pos[id]); Write("ok " + c); } else Write("fehlt " + id); break; }
@@ -61,6 +62,25 @@ namespace LunarCleanup.EditorTools
                 }
             }
             catch (System.Exception e) { Write("Fehler: " + e); }
+        }
+        /// <summary>Game-Ansicht auf eine feste Auflösung stellen (für Hochformat-Screenshots mit Oberfläche).</summary>
+        static string SetGameView(int w, int h)
+        {
+            var asm = typeof(Editor).Assembly; var gvs = asm.GetType("UnityEditor.GameViewSizes"); var single = typeof(ScriptableSingleton<>).MakeGenericType(gvs);
+            var inst = single.GetProperty("instance").GetValue(null); var grpType = (GameViewSizeGroupType)gvs.GetProperty("currentGroupType").GetValue(inst);
+            var group = gvs.GetMethod("GetGroup").Invoke(inst, new object[] { (int)grpType }); var gType = group.GetType();
+            int total = (int)gType.GetMethod("GetTotalCount").Invoke(group, null); int idx = -1;
+            for (int i = 0; i < total; i++) { var sz = gType.GetMethod("GetGameViewSize").Invoke(group, new object[] { i }); var st = sz.GetType(); if ((int)st.GetProperty("width").GetValue(sz) == w && (int)st.GetProperty("height").GetValue(sz) == h) { idx = i; break; } }
+            if (idx < 0)
+            {
+                var szType = asm.GetType("UnityEditor.GameViewSize"); var enumType = asm.GetType("UnityEditor.GameViewSizeType");
+                var ctor = szType.GetConstructor(new[] { enumType, typeof(int), typeof(int), typeof(string) }); var sz = ctor.Invoke(new object[] { System.Enum.Parse(enumType, "FixedResolution"), w, h, "LC " + w + "x" + h });
+                gType.GetMethod("AddCustomSize").Invoke(group, new[] { sz }); idx = total;
+            }
+            var gvType = asm.GetType("UnityEditor.GameView"); var gv = EditorWindow.GetWindow(gvType);
+            var prop = gvType.GetProperty("selectedSizeIndex", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (prop != null) prop.SetValue(gv, idx); else gvType.GetMethod("SizeSelectionCallback", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).Invoke(gv, new object[] { idx, null });
+            gv.Repaint(); return "ok gameview " + w + "x" + h + " #" + idx;
         }
         static void Write(string s) { try { File.WriteAllText(Out, System.DateTime.Now.ToString("HH:mm:ss") + " " + s); } catch { } }
     }

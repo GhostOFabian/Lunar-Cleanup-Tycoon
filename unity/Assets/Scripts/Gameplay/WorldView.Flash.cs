@@ -21,14 +21,22 @@ namespace LunarCleanup.Gameplay
             var cen = Vector2.zero; foreach (var p in poly) cen += p; cen /= K;
             var v = new List<Vector3>(); var tr = new List<int>(); var fv = new List<Vector3>(); var ft = new List<int>();
             Vector3 P(Vector2 q, float lift) => pd.Surf(pd.ToDir(cl, q.x, q.y), lift, id);
-            fv.Add(P(cen, .06f));
-            for (int k = 0; k < K; k++)
-            {
-                var o = poly[k]; var dir = (o - cen); float L = dir.magnitude; var i = L > w ? cen + dir * ((L - w) / L) : cen;
-                v.Add(P(o, .07f)); v.Add(P(i, .07f)); fv.Add(P(i, .06f));
-                int a = k * 2, b = ((k + 1) % K) * 2; tr.AddRange(new[] { a, b, a + 1, a + 1, b, b + 1 });
-                ft.AddRange(new[] { 0, 1 + k, 1 + (k + 1) % K });
-            }
+            /* Fabian 01.11.: auf hügeligen Parzellen verschwand das Grün im Boden – Fläche und Rand fein unterteilt, jeder Punkt sitzt auf der echten Bodenhöhe */
+            const int S = 8, RR = 6; // Teilstücke je Kante, Ringe von der Mitte nach außen
+            var outer = new List<Vector2>(); for (int k = 0; k < K; k++) for (int j = 0; j < S; j++) outer.Add(Vector2.Lerp(poly[k], poly[(k + 1) % K], j / (float)S));
+            int M = outer.Count;
+            Vector2 Inner(Vector2 o) { var dir = o - cen; float L = dir.magnitude; return L > w ? cen + dir * ((L - w) / L) : cen; }
+            // Rand: äußere Linie und innere Linie, je M Punkte
+            for (int k = 0; k < M; k++) { v.Add(P(outer[k], .12f)); v.Add(P(Inner(outer[k]), .12f)); int a = k * 2, b = ((k + 1) % M) * 2; tr.AddRange(new[] { a, b, a + 1, a + 1, b, b + 1 }); }
+            // Fläche: Mitte + RR Ringe bis zur inneren Randlinie
+            fv.Add(P(cen, .1f));
+            for (int r = 1; r <= RR; r++) for (int k = 0; k < M; k++) fv.Add(P(Vector2.Lerp(cen, Inner(outer[k]), r / (float)RR), .1f));
+            for (int k = 0; k < M; k++) ft.AddRange(new[] { 0, 1 + k, 1 + (k + 1) % M });
+            for (int r = 1; r < RR; r++) for (int k = 0; k < M; k++)
+                {
+                    int a = 1 + (r - 1) * M + k, b = 1 + (r - 1) * M + (k + 1) % M, c = 1 + r * M + k, d = 1 + r * M + (k + 1) % M;
+                    ft.AddRange(new[] { a, c, b, b, c, d });
+                }
             var root = new GameObject("Aufleuchten"); root.transform.SetParent(transform, false);
             Mesh Make(List<Vector3> vs, List<int> ts) { var m = new Mesh(); m.SetVertices(vs); m.SetTriangles(ts, 0); m.RecalculateBounds(); return m; }
             var ring = new Material(MeshKit.Unlit(new Color(FlashC.r, FlashC.g, FlashC.b, 1), true)); ring.SetFloat("_Cull", 0);
