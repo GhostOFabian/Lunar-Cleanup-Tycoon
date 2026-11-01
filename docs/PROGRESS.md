@@ -187,4 +187,4 @@
 - Menüs: Upgrades nur noch im Upgrade-Menü und in den Gebäudeblättern (keine doppelten Reiter); Planetenziele im Ziele-Menü; abholbare Ziele oben unter „Jetzt abholen“.
 - Schneller: Boden parallel (Mars 5,5 → 1,8 s), Bandwege zwischengespeichert + mitgelieferte Startdatei (`Resources/Data/bandwege.txt`, 320 Basen) – Basisaufbau beim Planetenwechsel ≈ 0,2 s statt ≈ 5 s; Offline-Aufholen in größeren Schritten (bis 4 s) bei langer Abwesenheit.
 - Bänder an der Rakete/hohen Gebäuden liegen auf Wandanschlusshöhe statt in der Luft.
-- Basis-Prüfung jetzt auch mit Teilausbauten: 4 Restbefunde (Mond/Kepler Gebäude-Hüllkreise knapp, Io/Ganymed ein Anschlussrahmen, Venus ein Bandpaar zu nah). Browser-Build nicht neu gebaut.
+- Basis-Prüfung jetzt auch mit Teilausbauten: 4 Restbefunde (Mond/Kepler Gebäude-Hüllkreise knapp, Io/Ganymed ein Anschlussrahmen, Venus ein Bandpaar zu nah). Browser-Build v=13 und Webseite neu gebaut.
