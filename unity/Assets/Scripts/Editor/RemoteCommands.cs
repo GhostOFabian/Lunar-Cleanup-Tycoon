@@ -31,6 +31,8 @@ namespace LunarCleanup.EditorTools
                     case "build-sim": EditorApplication.ExecuteMenuItem("Lunar Cleanup/iPhone-Version für den Simulator bauen (Mac)"); Write("ok build-sim"); break;
                     case "build-device": EditorApplication.ExecuteMenuItem("Lunar Cleanup/iPhone-Version nur bauen (Xcode-Projekt)"); Write("ok build-device"); break;
                     /* Spielbefehle (nur im Play-Modus) */
+                    case "flash": { var ps = LunarCleanup.Core.Game.Cur; var w = Object.FindFirstObjectByType<LunarCleanup.Gameplay.WorldView>(); int best = 0; float bd = -2; for (int i = 0; i < ps.pd.N; i++) { if (ps.pd.cells[i].IsBase) continue; float d = Vector3.Dot(ps.pd.cells[i].c.normalized, LunarCleanup.Core.Game.ViewDir); if (d > bd) { bd = d; best = i; } } w.FlashCell(best); Write("ok flash " + best); break; }
+                    case "basecheck": LunarCleanup.Gameplay.GameRoot.CheckNoPhotos = true; LunarCleanup.Gameplay.GameRoot.CheckReq = true; Write("ok basecheck"); break;
                     case "meteor": LunarCleanup.Core.Game.Meteor(LunarCleanup.Core.Game.Cur); Write("ok meteor"); break;
                     case "maxout": LunarCleanup.Core.Game.DevMaxOut(); Write("ok maxout"); break;
                     case "clean": LunarCleanup.Core.Game.DevCleanTo(.5f); Write("ok clean"); break;

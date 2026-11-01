@@ -13,7 +13,7 @@ namespace LunarCleanup.Gameplay
         void SpaceFx()
         {
             var cam = Camera.main; if (!cam || pd == null) return;
-            UpdateAtmo(cam); FarLights(cam); AmbientComet(cam); UpdateCrash(); UpdateMeteors();
+            UpdateAtmo(cam); FarLights(cam); AmbientComet(cam); UpdateCrash(); UpdateMeteors(); UpdateFlashes();
         }
         static Material GlowMat(Texture tex, Color c)
         {
@@ -97,11 +97,21 @@ namespace LunarCleanup.Gameplay
                 cometA = mid - along * len / 2; cometB = mid + along * len / 2; cometDur = Random.Range(8f, 12f); cometT = 0;
                 skyComet = new GameObject("Komet"); skyComet.transform.SetParent(transform, false); skyComet.transform.position = cometA;
                 bool freighter = !FreighterNow.HasValue ? Random.value < .35f : FreighterNow.Value; FreighterNow = null;
-                if (freighter && LcKit.Has("Ereignisse/frachter")) /* Frachter fliegt gemächlich vorbei: eigenes Modell mit Triebwerksglühen, ohne Schweif */
+                if (freighter && LcKit.Has("Ereignisse/frachter")) /* Fabian 01.11.: Frachter nah vor der Kamera, hell beleuchtet, ohne Schatten – vorher nur ein dunkler Schatten über der Welt */
                 {
-                    cometDur = Random.Range(14f, 20f); var fm = LcKit.Spawn("Ereignisse/frachter", skyComet.transform, Vector3.zero, 0, GameData.Hex("#ffbf4d"), null, dist * .012f);
-                    skyComet.transform.rotation = Quaternion.LookRotation(along, up);
-                    var eng = MeshKit.Part(skyComet.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.5f, .8f, 1f, 1)), new Vector3(0, .9f, -3.4f) * dist * .012f, Vector3.one * dist * .03f); NoShadow(eng); eng.AddComponent<Billboard>();
+                    float fd = Mathf.Clamp((cp - pd.Surf(cam.transform.position.normalized)).magnitude * .75f, 35f, 260f);
+                    var fmid = cp + (fw + up * Random.Range(-.06f, .06f)).normalized * fd; /* Bildmitte – oben verdeckt die Anzeige den Himmel */ float side = Random.value < .5f ? 1 : -1;
+                    var fal = (rt * side + up * Random.Range(-.08f, .08f)).normalized; float flen = fd * 1.9f;
+                    cometA = fmid - fal * flen / 2; cometB = fmid + fal * flen / 2; cometDur = Random.Range(9f, 13f); skyComet.transform.position = cometA;
+                    float sc = fd * .03f; var fm = LcKit.Spawn("Ereignisse/frachter", skyComet.transform, Vector3.zero, 0, GameData.Hex("#ffbf4d"), null, sc);
+                    skyComet.transform.rotation = Quaternion.LookRotation(fal, up);
+                    if (fm) foreach (var r in fm.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
+                    var eng = MeshKit.Part(skyComet.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.5f, .8f, 1f, 1)), new Vector3(0, .9f, -3.3f) * sc, Vector3.one * sc * 3.2f); NoShadow(eng); eng.AddComponent<Billboard>();
+                    foreach (var (pos, col) in new[] { (new Vector3(-1.9f, 1f, 0), new Color(1f, .2f, .2f, 1)), (new Vector3(1.9f, 1f, 0), new Color(.2f, 1f, .35f, 1)), (new Vector3(0, 2.1f, 1.5f), new Color(1, 1, 1, 1)) })
+                    { var nl = MeshKit.Part(skyComet.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), col), pos * sc, Vector3.one * sc * .9f); NoShadow(nl); nl.AddComponent<Billboard>(); nl.AddComponent<Blink>(); }
+                    var fl = new GameObject("Licht"); fl.transform.SetParent(skyComet.transform, false); fl.transform.localPosition = new Vector3(0, 6f, 3f) * sc; var L = fl.AddComponent<Light>(); L.type = LightType.Point; L.color = new Color(1f, .97f, .9f); L.range = sc * 16; L.intensity = 4; L.shadows = LightShadows.None;
+                    var trf = skyComet.AddComponent<TrailRenderer>(); trf.time = 1.6f; trf.minVertexDistance = sc * .3f; trf.alignment = LineAlignment.View; trf.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; trf.widthCurve = new AnimationCurve(new Keyframe(0, sc * 1.2f), new Keyframe(1, 0)); trf.material = GlowMat(MeshKit.GlowTex(), Color.white);
+                    var gf = new Gradient(); gf.SetKeys(new[] { new GradientColorKey(new Color(.55f, .85f, 1f), 0), new GradientColorKey(new Color(.3f, .5f, 1f), 1) }, new[] { new GradientAlphaKey(.7f, 0), new GradientAlphaKey(0, 1) }); trf.colorGradient = gf;
                     return;
                 }
                 var head = MeshKit.Part(skyComet.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.85f, .95f, 1f, 1)), Vector3.zero, Vector3.one * dist * .03f); NoShadow(head); head.AddComponent<Billboard>();
@@ -160,4 +170,6 @@ namespace LunarCleanup.Gameplay
     }
     /// <summary>Langsames Drehen um eine schräge Achse (Kometenkern).</summary>
     public class SlowSpin : MonoBehaviour { public float speed = 25; readonly Vector3 ax = new Vector3(.3f, 1, .2f).normalized; void Update() => transform.Rotate(ax, speed * Time.deltaTime, Space.Self); }
+    /// <summary>Positionslicht: blinkt im Sekundentakt.</summary>
+    public class Blink : MonoBehaviour { Vector3 s0; float ph; void Start() { s0 = transform.localScale; ph = Random.value; } void Update() { float k = Mathf.Repeat(Time.time + ph, 1f) < .5f ? 1 : .25f; transform.localScale = s0 * k; } }
 }

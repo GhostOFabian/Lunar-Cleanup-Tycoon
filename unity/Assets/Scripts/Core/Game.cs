@@ -36,7 +36,7 @@ namespace LunarCleanup.Core
 
     public static partial class Game
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnMeteors = null; OnPlanetChanged = null; Offline = false; }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { OnToast = null; OnFloat = null; OnRocket = null; OnBoom = null; OnMeteors = null; OnCellFlash = null; OnPlanetChanged = null; Offline = false; }
         public static SaveData S;
         public static Dictionary<string, PState> P = new Dictionary<string, PState>();
         public static int NM;
@@ -46,6 +46,8 @@ namespace LunarCleanup.Core
         public static event Action<Vector3> OnBoom;
         /// <summary>Meteoritenschauer auf diesen Parzellen (die Ansicht lässt Meteore einschlagen).</summary>
         public static event Action<List<int>> OnMeteors;
+        /// <summary>Eine Parzelle ist gerade fertig sauber geworden (nur live auf dem aktuellen Planeten).</summary>
+        public static event Action<int> OnCellFlash;
         /// <summary>Wohin die Kamera gerade schaut (Planetenrichtung), von der Ansicht gesetzt.</summary>
         public static Vector3 ViewDir; public static float ViewCos = .97f;
         public static event Action OnPlanetChanged;
@@ -342,7 +344,7 @@ namespace LunarCleanup.Core
         static void FinishCell(PState ps, int id)
         {
             var cl = ps.pd.cells[id];
-            if (!ps.clean[id]) ps.nClean++;
+            if (!ps.clean[id]) { ps.nClean++; if (!Offline && ps.pid == S.planet) OnCellFlash?.Invoke(id); }
             ps.clean[id] = true; ps.act.Remove(id); ps.dirtyCells.Add(id);
             foreach (var v in ps.sv.veh) if (v.cell == id && (v.mode == "drive" || v.mode == "clean")) { v.mode = "seek"; v.cell = -1; }
             if (!ps.paid[id])

@@ -199,11 +199,11 @@ namespace LunarCleanup.Gameplay
                 if (!blds.TryGetValue(id, out var bp) || !bp.root) continue;
                 if (!ampel.TryGetValue(id, out var a) || !a.go)
                 {
-                    if (!SideSpot(bp, out var spot, out float bh)) continue;
+                    bool onRoof = false; if (!SideSpot(bp, out var spot, out float bh)) { if (!RoofSpot(bp, out spot)) continue; onRoof = true; bh = 0; }
                     /* Ampelmast neben dem Gebäude (an einer freien Ecke, auf dem Boden) – gut sichtbar, nicht auf oder im Dach */
                     var g = new GameObject("Ampel " + id); g.transform.SetParent(bp.root.transform, false); g.transform.localPosition = spot; g.transform.localRotation = Quaternion.identity;
                     var sc = bp.root.transform.lossyScale; g.transform.localScale = new Vector3(1 / Mathf.Max(.01f, sc.x), 1 / Mathf.Max(.01f, sc.y), 1 / Mathf.Max(.01f, sc.z)); // ab hier Meter, egal wie groß das Gebäude ist
-                    float ph = Mathf.Clamp(bh * .75f, 2.6f, 4.6f); var dark = MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f);
+                    float ph = onRoof ? .5f : Mathf.Clamp(bh * .75f, 2.6f, 4.6f); var dark = MeshKit.Mat(new Color(.2f, .22f, .26f), .6f, .4f);
                     MeshKit.Box(g.transform, dark, new Vector3(0, .06f, 0), new Vector3(.7f, .12f, .7f)); // Fußplatte
                     MeshKit.Cyl(g.transform, dark, new Vector3(0, ph / 2, 0), .07f, .09f, ph, 10); // Mast
                     var mat = MeshKit.Mat(Color.gray, 0, .6f, Color.gray); mat = new Material(mat);
@@ -239,11 +239,15 @@ namespace LunarCleanup.Gameplay
             bh = all.max.y * sc.y;
             /* Fabian 01.11.: freie Ecke suchen – nie in einem Band, nie in einem anderen Gebäude; sonst etwas weiter draußen */
             var cand = new List<Vector3>();
-            foreach (float push in new[] { 1f, 1.8f, 2.8f })
+            foreach (float push in new[] { 1f, 1.8f, 2.8f, 4f })
+            {
                 foreach (var (sx, sz) in new[] { (1, -1), (-1, -1), (1, 1), (-1, 1) })
                     cand.Add(new Vector3((sx > 0 ? all.max.x : all.min.x) + sx * ox * push, 0, (sz > 0 ? all.max.z : all.min.z) + sz * oz * push));
+                foreach (var (sx, sz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }) /* Seitenmitten */
+                    cand.Add(new Vector3(sx == 0 ? all.center.x : (sx > 0 ? all.max.x : all.min.x) + sx * ox * push, 0, sz == 0 ? all.center.z : (sz > 0 ? all.max.z : all.min.z) + sz * oz * push));
+            }
             foreach (var c in cand) if (SpotFree(root.TransformPoint(c), bp)) { spot = c; return true; }
-            spot = cand[0]; return true;
+            return false; /* nirgends frei: Ampel kommt aufs Dach */
         }
         /// <summary>Ist an dieser Weltstelle Platz für einen Ampelmast (1 m neben jedem sichtbaren Band, außerhalb fremder Gebäude)?</summary>
         bool SpotFree(Vector3 world, Models.BuildingParts self)
@@ -255,6 +259,7 @@ namespace LunarCleanup.Gameplay
                 for (int i = 1; i < rp.Length; i++) { if (cum[i] < s0 - .5f || cum[i - 1] > s1 + .5f) continue; if (SegDist(p, rp[i - 1], rp[i]) < BW + 1.0f) return false; }
             }
             foreach (var kv in blds) { if (kv.Value == self || !ps.lay.pos.TryGetValue(kv.Key, out var c)) continue; if ((p - c).magnitude < GameData.Bld[kv.Key].fp * .95f) return false; }
+            foreach (var q in lampSpots) if ((p - q).magnitude < 1.2f) return false; // nicht in eine Laterne
             return true;
         }
         /// <summary>Dachmitte im Gebäude-Koordinatensystem: Kasten jedes Bauteils im Gebäuderaum (nicht in Weltachsen, sonst zu groß), Mitte der Grundfläche,

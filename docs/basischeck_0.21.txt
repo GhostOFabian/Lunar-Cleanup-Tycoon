@@ -1,0 +1,227 @@
+Basis-Prüfung 01.11.2026 08:45
+
+== Mond: 1 Befunde
+  - Gebäude energy und u1 kommen sich nahe (Abstand 10.8 m, Ausdehnung 5.3 + 5.9 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Mars: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rap (raff→prod): Start über überdachten Zulauf mit raff verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Europa: alles in Ordnung
+  · b_rr (roh→raff): Ende über überdachten Zulauf mit raff verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Titan: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+
+== Io: 1 Befunde
+  - b_u1: Eingang-Rahmen an roh schneidet in die Wand
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus: 1 Befunde
+  - Bänder b_rap und b_rs überschneiden sich (bei 13.2 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton: alles in Ordnung
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+
+== Pluto: alles in Ordnung
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna: alles in Ordnung
+  · b_u1 (u1→roh): Ende über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+
+== Proxima b: alles in Ordnung
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+
+== Trappist-1e: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b: 1 Befunde
+  - Gebäude rtg und u1 kommen sich nahe (Abstand 7.7 m, Ausdehnung 2.0 + 5.9 m)
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e: alles in Ordnung
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b: alles in Ordnung
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist: alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Mars (alte Größe 7): 1 Befunde
+  - Gebäude geo und u1 kommen sich nahe (Abstand 9.1 m, Ausdehnung 3.3 + 5.9 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Europa (alte Größe 9): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Titan (alte Größe 10): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Io (alte Größe 13): 1 Befunde
+  - Bänder b_sp und b_prs überschneiden sich (bei 9.8 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Io (alte Größe 11): 1 Befunde
+  - b_u1: Eingang-Rahmen an roh schneidet in die Wand
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus (alte Größe 14): 1 Befunde
+  - Bänder b_rap und b_rs überschneiden sich (bei 13.2 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus (alte Größe 12): 1 Befunde
+  - Bänder b_rap und b_rs überschneiden sich (bei 13.2 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed (alte Größe 15): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed (alte Größe 13): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus (alte Größe 16): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus (alte Größe 14): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton (alte Größe 17): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton (alte Größe 15): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Pluto (alte Größe 18): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Pluto (alte Größe 16): alles in Ordnung
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris (alte Größe 15): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris (alte Größe 17): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna (alte Größe 14): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna (alte Größe 18): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Proxima b (alte Größe 17): alles in Ordnung
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+
+== Proxima b (alte Größe 19): alles in Ordnung
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+
+== Trappist-1e (alte Größe 16): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Trappist-1e (alte Größe 20): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b (alte Größe 19): 1 Befunde
+  - Gebäude rtg und u1 kommen sich nahe (Abstand 7.7 m, Ausdehnung 2.1 + 5.9 m)
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b (alte Größe 21): 1 Befunde
+  - Gebäude rtg und u1 kommen sich nahe (Abstand 7.7 m, Ausdehnung 2.1 + 5.9 m)
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e (alte Größe 15): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e (alte Größe 22): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b (alte Größe 18): 1 Befunde
+  - Gebäude geo und u1 kommen sich nahe (Abstand 8.5 m, Ausdehnung 3.0 + 5.9 m)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b (alte Größe 23): alles in Ordnung
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist (alte Größe 16): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist (alte Größe 24): alles in Ordnung
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rs (roh→sell): Ende über überdachten Zulauf mit sell verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+Gesamt: 12 Befunde

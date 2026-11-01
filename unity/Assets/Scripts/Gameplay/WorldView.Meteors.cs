@@ -9,7 +9,7 @@ namespace LunarCleanup.Gameplay
     public partial class WorldView
     {
         /// <summary>Kamera-Ruckeln (0..1), klingt von selbst ab. GameRoot.ApplyCam wackelt damit.</summary>
-        public static float Shake;
+        public static float Shake; static float lastBuzz = -99;
         class Met { public Vector3 from, to; public float t, delay, dur; public GameObject go; public Transform ball; public int cell; public bool done; }
         class MetRock { public int cell; public GameObject go; public Light glow; public float t; }
         readonly List<Met> mets = new List<Met>();
@@ -63,7 +63,7 @@ namespace LunarCleanup.Gameplay
                 var d = m.to.normalized; Destroy(m.go); mets.RemoveAt(i);
                 EmitDust(d, new Color(1, .54f, .23f), 45); EmitDust(d, new Color(.33f, .33f, .33f), 35);
                 Flash(m.to, new Color(1f, .7f, .4f));
-                Sfx.Play("pop", .5f + Random.value * .2f, .6f); Sfx.Buzz();
+                Sfx.Play("pop", .5f + Random.value * .2f, .6f); if (Time.time - lastBuzz > 4) { Sfx.Buzz(); lastBuzz = Time.time; } /* einmal pro Schauer vibrieren */
                 if (cam) { float dist = (cam.transform.position - m.to).magnitude; Shake = Mathf.Max(Shake, Mathf.Clamp01(1.2f - dist / 250f)); }
                 SpawnMetRock(m.cell, m.to);
             }

@@ -29,7 +29,7 @@ namespace LunarCleanup.Gameplay
         {
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
-            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
+            blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); flashes.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
             baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); int dseed = ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff; if (!LcKit.Decorate(deco, pd, dseed, Mathf.Clamp(pd.N / 3, 40, 400))) Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
@@ -51,7 +51,7 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
-            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); beltInfo.Clear(); pipeMiss = 0;
+            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             foreach (var id in GameData.BOrder)
             {
@@ -75,12 +75,24 @@ namespace LunarCleanup.Gameplay
                     var s = Models.Site(B.fp); s.transform.SetParent(baseRoot, false); Place(s.transform, ps.lay.pos[id], yaw);
                 }
             }
-            // Laternen: warmes Licht an den wichtigsten Gebäuden, leuchtet nur nachts
+            RouteBelts(); PlanBridges(); ChooseRotations(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); BuildLamps(acc); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
+            BuildOutposts(); BuildRigs();
+            builtVersion = ps.baseVersion;
+        }
+
+        readonly List<(Models.BuildingParts bp, RigSave r)> rigViews = new List<(Models.BuildingParts, RigSave)>();
+        readonly List<Vector2> lampSpots = new List<Vector2>();
+        /// <summary>Laternen: warmes Licht an den wichtigsten Gebäuden, leuchtet nur nachts (nach den Bändern gebaut, damit sie nie im Band stehen).</summary>
+        void BuildLamps(Color acc)
+        {
+            lampSpots.Clear();
             lamps.Clear(); if (!lampHead) lampHead = MeshKit.Mat(new Color(.2f, .18f, .12f), 0, .3f, new Color(1f, .78f, .45f));
             foreach (var id in new[] { "hq", "roh", "u1", "prod", "presse", "sell", "werkstatt", "schmelze", "raff", "energy", "research", "hangar" })
             {
                 if (!ps.bld.Contains(id) || !ps.lay.pos.ContainsKey(id) || lamps.Count >= 10) continue;
-                var off = ps.lay.pos[id] + new Vector2(GameData.Bld[id].fp * .7f + .8f, GameData.Bld[id].fp * .7f + .8f);
+                float lo = GameData.Bld[id].fp * .7f + .8f; Vector2? offQ = null; /* Fabian 01.11.: freie Ecke ohne Band, Gebäude oder Ampel */
+                foreach (float push in new[] { 1f, 1.35f, 1.75f }) { foreach (var dv in new[] { new Vector2(1, 1), new Vector2(-1, 1), new Vector2(1, -1), new Vector2(-1, -1) }) { var q = ps.lay.pos[id] + dv * lo * push; if (SpotFree(pd.PlanDir(q) * pd.R, null)) { offQ = q; break; } } if (offQ.HasValue) break; }
+                if (!offQ.HasValue) continue; var off = offQ.Value; lampSpots.Add(off);
                 var post = new GameObject("Laterne"); post.transform.SetParent(baseRoot, false); Place(post.transform, off, 0);
                 bool lcLamp = LcKit.Spawn("Welt/laterne", post.transform, Vector3.zero, -45 + lamps.Count * 90, acc, null, 1.3f) != null; /* eigenes Modell, etwas größer als 1:1 (Basis wirkt sonst zu dunkel) */
                 if (!lcLamp) { MeshKit.Cyl(post.transform, MeshKit.Mat(new Color(.25f, .27f, .3f), .6f, .4f), new Vector3(0, 2.2f, 0), .07f, .09f, 4.4f, 8); MeshKit.Ball(post.transform, lampHead, new Vector3(0, 4.5f, 0), .38f); }
@@ -88,12 +100,66 @@ namespace LunarCleanup.Gameplay
                 var L = lg.AddComponent<Light>(); L.type = LightType.Point; L.range = 26; L.color = new Color(.93f, .96f, 1f); /* kaltweißes LED-Licht statt gelblich */ L.intensity = 0; L.shadows = LightShadows.None; lamps.Add(L);
                 var pool = MeshKit.Part(post.transform, MeshKit.Quad, PoolMat(), new Vector3(0, .07f, 0), new Vector3(19, 19, 1), new Vector3(90, 0, 0)); pool.name = "Lichtkegel"; NoShadow(pool); glowRends.Add(pool.GetComponent<MeshRenderer>());
             }
-            RouteBelts(); PlanBridges(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
-            BuildOutposts(); BuildRigs();
-            builtVersion = ps.baseVersion;
         }
-
-        readonly List<(Models.BuildingParts bp, RigSave r)> rigViews = new List<(Models.BuildingParts, RigSave)>();
+        /// <summary>Fabian 01.11.: Gebäude so drehen (0/90/180/270°), dass möglichst viele Bänder auf eine gerade, breite Wandfläche treffen.
+        /// Schnell: jedes Modell wird einmal auf Bandhöhe in 2D-Linien geschnitten, gedreht wird nur der Prüfstrahl.</summary>
+        void ChooseRotations()
+        {
+            var swR = System.Diagnostics.Stopwatch.StartNew(); slices.Clear(); rotK.Clear();
+            foreach (var kv in blds.ToList())
+            {
+                string id = kv.Key; var bp = kv.Value; if (!bp.root || Game.IsUnit(id) || id == "sell" || id == "port" || !ps.lay.pos.ContainsKey(id)) continue;
+                var ends = new List<(BeltDef b, bool atEnd)>();
+                foreach (var b in ps.lay.belts) { if (!Game.BeltLive(ps, b) || Game.HiddenBelt(b) || b.rp.Length < 2) continue; if (b.to == id) ends.Add((b, true)); if (b.from == id) ends.Add((b, false)); }
+                if (ends.Count == 0) continue;
+                int bestK = 0; float bestS = -1;
+                for (int k = 0; k < 4; k++) { float sc = 0; foreach (var (b, atEnd) in ends) sc += FaceScore(id, b, atEnd, k); if (sc > bestS + .01f) { bestS = sc; bestK = k; } }
+                if (bestK != 0) { var tr = bp.root.transform; tr.rotation = Quaternion.AngleAxis(90 * bestK, tr.position.normalized) * tr.rotation; bTris.Remove(id); tGrid.Remove(id); }
+                rotK[id] = bestK;
+            }
+            if (swR.ElapsedMilliseconds > 40) Debug.Log("Lunar Cleanup: Drehungen gewählt in " + swR.ElapsedMilliseconds + " ms (" + ps.pid + ")");
+        }
+        readonly Dictionary<string, (Matrix4x4 L, List<Vector4> seg)> slices = new Dictionary<string, (Matrix4x4, List<Vector4>)>();
+        readonly Dictionary<string, int> rotK = new Dictionary<string, int>();
+        const float SliceH = .65f; // Bandhöhe über dem Boden
+        /// <summary>Schnitt des Gebäudemodells auf Bandhöhe: 2D-Liniensegmente im Gebäuderaum (Meter, ungedreht).</summary>
+        (Matrix4x4 L, List<Vector4> seg) Slice(string id)
+        {
+            if (slices.TryGetValue(id, out var c)) return c; var tr = blds[id].root.transform; var L = Matrix4x4.TRS(tr.position, tr.rotation, Vector3.one).inverse; var seg = new List<Vector4>();
+            foreach (var mf in blds[id].root.GetComponentsInChildren<MeshFilter>())
+            {
+                var m = mf.sharedMesh; if (!m || mf.name == "Sockel" || mf.name == "Lampe" || !m.isReadable) continue; Vector3[] v; int[] t;
+                try { v = m.vertices; t = m.triangles; } catch (System.Exception) { continue; }
+                var M = L * mf.transform.localToWorldMatrix; var w = new Vector3[v.Length]; float ymin = 1e9f, ymax = -1e9f;
+                for (int i = 0; i < v.Length; i++) { w[i] = M.MultiplyPoint3x4(v[i]); ymin = Mathf.Min(ymin, w[i].y); ymax = Mathf.Max(ymax, w[i].y); }
+                if (ymin > SliceH || ymax < SliceH) continue;
+                for (int i = 0; i + 2 < t.Length; i += 3)
+                {
+                    Vector3 a = w[t[i]], b = w[t[i + 1]], cc = w[t[i + 2]]; int n = 0; Vector2 p0 = default, p1 = default;
+                    void Edge(Vector3 x, Vector3 y) { if ((x.y - SliceH) * (y.y - SliceH) > 0 || Mathf.Abs(x.y - y.y) < 1e-6f) return; float u = (SliceH - x.y) / (y.y - x.y); var q = new Vector2(x.x + (y.x - x.x) * u, x.z + (y.z - x.z) * u); if (n == 0) p0 = q; else p1 = q; n++; }
+                    Edge(a, b); Edge(b, cc); if (n < 2) Edge(cc, a); if (n >= 2) seg.Add(new Vector4(p0.x, p0.y, p1.x, p1.y));
+                }
+            }
+            c = (L, seg); slices[id] = c; return c;
+        }
+        /// <summary>Wie gut trifft ein Bandende die Wand (Gebäude um k·90° gedreht gedacht): 3 = gerade Fläche so breit wie der Anschlussrahmen, 1–1,5 = nur teilweise, 0 = keine Wand.</summary>
+        float FaceScore(string id, BeltDef b, bool atEnd, int k = -1)
+        {
+            if (k < 0) k = 0; // nach der Wahl ist das Modell schon gedreht – Schnitt wurde vorher genommen, deshalb die gewählte Drehung mitrechnen
+            int kk = k + (rotK.TryGetValue(id, out var rk) && k == 0 && slices.ContainsKey(id) ? rk : 0);
+            var V = Vis(b); var rp = V.rp; var cum = V.cum; if (rp.Length < 2) return 0; float L = cum[cum.Length - 1]; var c = ps.lay.pos[id]; float fp = GameData.Bld[id].fp; float sOut = atEnd ? L : 0;
+            for (float q = 0; q < L * .5f; q += .2f) { float ss = atEnd ? L - q : q; if ((PointAt(rp, cum, ss, out _) - c).magnitude >= fp * 1.35f) { sOut = ss; break; } }
+            var p = PointAt(rp, cum, sOut, out var tan); if (!atEnd) tan = -tan; var nrm = new Vector2(-tan.y, tan.x); var (Lm, seg) = Slice(id); var rot = Quaternion.AngleAxis(-90 * kk, Vector3.up);
+            float D(float side)
+            {
+                var A = rot * Lm.MultiplyPoint3x4(pd.PlanDir(p + nrm * side) * (pd.R + SliceH)); var B = rot * Lm.MultiplyPoint3x4(pd.PlanDir(p + nrm * side + tan * fp * 1.4f) * (pd.R + SliceH));
+                Vector2 o = new Vector2(A.x, A.z), d = new Vector2(B.x - A.x, B.z - A.z); float best = 1e9f;
+                foreach (var s4 in seg) { Vector2 a = new Vector2(s4.x, s4.y), e = new Vector2(s4.z - s4.x, s4.w - s4.y); float den = d.x * e.y - d.y * e.x; if (Mathf.Abs(den) < 1e-9f) continue; var ao = a - o; float t = (ao.x * e.y - ao.y * e.x) / den, u = (ao.x * d.y - ao.y * d.x) / den; if (t >= 0 && t <= 1 && u >= 0 && u <= 1) best = Mathf.Min(best, t * d.magnitude); }
+                return best;
+            }
+            float dc = D(0); if (dc > 1e8f) return 0; float dl = D(-.62f), dr = D(.62f); if (dl > 1e8f || dr > 1e8f) return 1;
+            return Mathf.Max(dc, Mathf.Max(dl, dr)) - Mathf.Min(dc, Mathf.Min(dl, dr)) < .25f ? 3 : 1.5f;
+        }
         void BuildRigs()
         {
             rigViews.Clear();
@@ -225,6 +291,9 @@ namespace LunarCleanup.Gameplay
             bool w0 = WallHit(b.from, rp0, cum0, q => H0 + LF(q), false, out float h0), w1 = WallHit(b.to, rp0, cum0, q => H0 + LF(q), true, out float h1);
             if (w0) s0 = h0 + .02f; else for (float q = 0; q < L0 * .5f; q += .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.from]).magnitude >= Edge(b.from)) { s0 = q; break; } }
             if (w1) s1 = h1 - .02f; else for (float q = L0; q > L0 * .5f; q -= .1f) { var pq = PointAt(rp0, cum0, q, out _); if ((pq - ps.lay.pos[b.to]).magnitude >= Edge(b.to)) { s1 = q; break; } }
+            /* Fabian 01.11.: Anschlussrahmen nie in die Wand schneiden – an runden Tanks und Kuppeln rückt er so weit vor, dass er nur an der vordersten Stelle anliegt */
+            if (w0 && LcKit.HasBelt) s0 += FlushShift(b.from, rp0, cum0, s0, false, H0) + .36f;
+            if (w1 && LcKit.HasBelt) s1 -= FlushShift(b.to, rp0, cum0, s1, true, H0) + .36f;
             if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
             bool m1 = mergeEnd.TryGetValue(b.id, out float mE), m0 = mergeStart.TryGetValue(b.id, out float mS);
             if (m1) { s1 = Mathf.Min(s1, mE + .45f); w1 = true; } if (m0) { s0 = Mathf.Max(s0, mS - .45f); w0 = true; } // Weiche: mündet seitlich auf das andere Band
@@ -334,7 +403,7 @@ namespace LunarCleanup.Gameplay
                         foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { H - .3f, H - .05f, H + .18f })
                             {
                                 var A = pd.PlanDir(pa + na * side) * (pd.R + h + la); var B = pd.PlanDir(pb + na * side) * (pd.R + h + lb); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
-                                for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) hit = true;
+                                if (!hit && HitNear(id, A, D, len) <= len) hit = true;
                             }
                         if (hit) out_.Add(nm + ": läuft bei " + s.ToString("0.0") + " m durch " + id);
                     }
@@ -342,7 +411,7 @@ namespace LunarCleanup.Gameplay
                     foreach (var (p, tan, top) in spots)
                     {
                         if (hit) break; var nrm = new Vector2(-tan.y, tan.x);
-                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var A = d * (pd.R + top); var D = -d; for (int i = 0; i + 2 < T.Count && !hit; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= top - .35f) hit = true; } /* Bodenplatten zählen nicht */
+                        foreach (float sd in new[] { -1f, 1f }) { var d = pd.PlanDir(p + nrm * (BW - .1f) * sd); var A = d * (pd.R + top); var D = -d; if (!hit && HitNear(id, A, D, top - .35f) <= top - .35f) hit = true; } /* Bodenplatten zählen nicht */
                         if (hit) out_.Add(nm + ": Stütze steht in " + id);
                     }
                 }
@@ -364,9 +433,29 @@ namespace LunarCleanup.Gameplay
                         out_.Add("Gebäude " + a + " und " + b + " kommen sich nahe (Abstand " + (ps.lay.pos[a] - ps.lay.pos[b]).magnitude.ToString("0.0") + " m, Ausdehnung " + rad[a].ToString("0.0") + " + " + rad[b].ToString("0.0") + " m)");
                     }
             /* Pipelines liegen seit 01.11. unsichtbar im Boden – keine Prüfung der Wandtreffer mehr */
+            /* Fabian 01.11.: Anschlussrahmen nur an geraden Wandflächen; Ampeln und Laternen nie im Band oder in einem Gebäude */
+            foreach (var kv in beltInfo)
+            {
+                var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value;
+                if (w0 && blds.ContainsKey(b.from) && FlushShift(b.from, rp, cum, s0 - .36f, false, H) > .08f) out_.Add(kv.Key + ": Ausgang-Rahmen an " + b.from + " schneidet in die Wand");
+                if (w1 && blds.ContainsKey(b.to) && FlushShift(b.to, rp, cum, s1 + .36f, true, H) > .08f) out_.Add(kv.Key + ": Eingang-Rahmen an " + b.to + " schneidet in die Wand");
+            }
+            foreach (var id in AmpelIds) { if (!blds.TryGetValue(id, out var bp) || !bp.root) continue; if (SideSpot(bp, out var sp, out _) && !SpotFree(bp.root.transform.TransformPoint(sp), bp)) out_.Add("Ampel an " + id + " steht in einem Band oder Gebäude"); }
+            foreach (var q in lampSpots.ToList()) { lampSpots.Remove(q); bool ok = SpotFree(pd.PlanDir(q) * pd.R, null); lampSpots.Add(q); if (!ok) { out_.Add("Laterne bei " + q.ToString("0.0") + " steht in einem Band oder Gebäude"); } }
             return out_;
         }
         /// <summary>Alle Dreiecke eines Gebäudemodells in Weltkoordinaten (ohne Bodenplatte/Lampe).</summary>
+        /// <summary>Wie viel weiter vorn als in der Bandmitte die Wand über die Rahmenbreite (±0,67 m, Rahmenhöhe) liegt – um so viel muss der Rahmen vorrücken.</summary>
+        float FlushShift(string id, Vector2[] rp, float[] cum, float sHit, bool atEnd, float H)
+        {
+            var p0 = PointAt(rp, cum, sHit, out var tan); if (!atEnd) tan = -tan; var nrm = new Vector2(-tan.y, tan.x); var start = p0 - tan * 2.3f; float dc = 2.3f, ahead = 0;
+            foreach (float side in new[] { -.67f, -.33f, .33f, .67f }) foreach (float h in new[] { H - .3f, H + .1f, H + .55f })
+                {
+                    var A = pd.PlanDir(start + nrm * side) * (pd.R + h); var B = pd.PlanDir(start + nrm * side + tan * 2.5f) * (pd.R + h); var D = B - A; float len = D.magnitude; if (len < 1e-4f) continue; D /= len;
+                    float t = HitNear(id, A, D, len); if (t <= len) ahead = Mathf.Max(ahead, dc - t);
+                }
+            return Mathf.Clamp(ahead, 0, 2.2f);
+        }
         /// <summary>Wie weit das Gebäudemodell in Bodennähe (0–2 m) von seiner Mitte reicht – dort steht die Übergabesäule, wenn das Band keine Wand trifft.</summary>
         float ModelEdge(string id)
         {
@@ -386,6 +475,38 @@ namespace LunarCleanup.Gameplay
             }
             return T;
         }
+        // Räumliches Raster der Gebäudedreiecke (Plan-Koordinaten, 0,6-m-Zellen): ein Prüfstrahl testet nur die Dreiecke in seiner Nähe
+        const float GridC = .6f;
+        readonly Dictionary<string, (Dictionary<long, List<int>> cells, int[] stamp)> tGrid = new Dictionary<string, (Dictionary<long, List<int>>, int[])>();
+        int gStamp;
+        static long GKey(int x, int y) => ((long)x << 32) ^ (uint)y;
+        (Dictionary<long, List<int>> cells, int[] stamp) GridOf(string id)
+        {
+            var T = TrisOf(id); if (tGrid.TryGetValue(id, out var g) && g.stamp.Length == T.Count / 3 + 1) return g;
+            var cells = new Dictionary<long, List<int>>(); 
+            for (int i = 0; i + 2 < T.Count; i += 3)
+            {
+                Vector2 a = pd.PlanLocal(T[i].normalized), b = pd.PlanLocal(T[i + 1].normalized), c = pd.PlanLocal(T[i + 2].normalized);
+                int x0 = Mathf.FloorToInt(Mathf.Min(a.x, Mathf.Min(b.x, c.x)) / GridC), x1 = Mathf.FloorToInt(Mathf.Max(a.x, Mathf.Max(b.x, c.x)) / GridC), y0 = Mathf.FloorToInt(Mathf.Min(a.y, Mathf.Min(b.y, c.y)) / GridC), y1 = Mathf.FloorToInt(Mathf.Max(a.y, Mathf.Max(b.y, c.y)) / GridC);
+                if ((x1 - x0) * (y1 - y0) > 400) { x1 = x0 + 20; y1 = y0 + 20; }
+                for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) { long k = GKey(x, y); if (!cells.TryGetValue(k, out var l)) { l = new List<int>(); cells[k] = l; } l.Add(i); }
+            }
+            g = (cells, new int[T.Count / 3 + 1]); tGrid[id] = g; return g;
+        }
+        /// <summary>Kürzester Treffer (t ≤ len) eines Strahls von A Richtung D gegen das Gebäude, nur Dreiecke in der Nähe; 1e9 = kein Treffer.</summary>
+        float HitNear(string id, Vector3 A, Vector3 D, float len)
+        {
+            var T = TrisOf(id); if (T.Count == 0) return 1e9f; var (cells, stamp) = GridOf(id); gStamp++;
+            Vector2 a = pd.PlanLocal(A.normalized), b = pd.PlanLocal((A + D * len).normalized);
+            int x0 = Mathf.FloorToInt((Mathf.Min(a.x, b.x) - .05f) / GridC), x1 = Mathf.FloorToInt((Mathf.Max(a.x, b.x) + .05f) / GridC), y0 = Mathf.FloorToInt((Mathf.Min(a.y, b.y) - .05f) / GridC), y1 = Mathf.FloorToInt((Mathf.Max(a.y, b.y) + .05f) / GridC);
+            float best = 1e9f;
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++)
+                {
+                    if (!cells.TryGetValue(GKey(x, y), out var l)) continue;
+                    foreach (int i in l) { int ti = i / 3; if (stamp[ti] == gStamp) continue; stamp[ti] = gStamp; if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len && t < best) best = t; }
+                }
+            return best;
+        }
         static bool RayTri(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c, out float t)
         {
             t = 0; var e1 = b - a; var e2 = c - a; var p = Vector3.Cross(d, e2); float det = Vector3.Dot(e1, p); if (Mathf.Abs(det) < 1e-9f) return false;
@@ -404,7 +525,7 @@ namespace LunarCleanup.Gameplay
                 foreach (float side in new[] { 0f, -BW - .09f, BW + .09f }) foreach (float h in new[] { -.3f, -.05f, .18f })
                     {
                         var A = pd.PlanDir(pa + na * side) * (pd.R + H + h); var B = pd.PlanDir(pb + na * side) * (pd.R + Hb + h); var D = B - A; float len = D.magnitude; if (len < 1e-5f) continue; D /= len;
-                        for (int i = 0; i + 2 < T.Count; i += 3) if (RayTri(A, D, T[i], T[i + 1], T[i + 2], out float t) && t <= len) best = Mathf.Min(best, t / len);
+                        float th = HitNear(id, A, D, len); if (th <= len) best = Mathf.Min(best, th / len);
                     }
                 if (best <= 1) { sHit = sa + (sb - sa) * best; return true; }
             }

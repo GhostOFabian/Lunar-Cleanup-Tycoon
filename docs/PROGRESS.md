@@ -177,3 +177,6 @@
 - Editor-Fernsteuerung `Editor/RemoteCommands.cs` (Befehle über `Temp/claude_cmd.txt`).
 - Getestet im Editor (Mond, Mars, Meteoritenschauer, Frachter). Auf dem iPhone noch offen: Testliste 0.21.
 - iPhone-Playtest 01.11. früh (Fabian): Ringe am Boden (Kratermodell) und an der Entladeanlage (Grubenmodell) entfernt – Felsen bzw. Trichtergruben mit Rutsche; Ampelmasten suchen eine freie Ecke ohne Band/Gebäude; parallel laufende Bänder werden nicht mehr als lange Brücke angehoben („fliegende Bänder“), nur echte Kreuzungen.
+- Playtest 01.11. vormittags: Meteore ~3× seltener (mind. 150 s), eine Vibration pro Schauer; Frachter nah vor der Kamera mit Licht, Positionslichtern und Triebwerk (kein Schatten); fertig gereinigte Parzelle leuchtet 1,4 s grün auf; Gebäude wählen die Drehung (0/90/180/270°) mit den meisten geraden Wandtreffern; Anschlussrahmen rücken an runden Tanks/Kuppeln vor, statt hineinzuschneiden; Laternen und Ampeln suchen freie Plätze (sonst Ampel aufs Dach).
+- Basis-Prüfung (alle 18 Planeten + alte Größen, volle Basen, ohne Fotos): 552 → 12 Befunde (`docs/basischeck_0.21.txt`). Rest: Entladeanlage nah an Kraftwerk (Mond, Kepler, Gliese, Mars alt), zwei Bandpaare zu nah (Venus, Io 13). Wandsuche über Dreiecksraster (≈50× schneller, auch auf dem Handy beim Gebäudekauf).
+

@@ -208,3 +208,5 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026: Förderbänder bleiben frei verlegt (Router), übernehmen aber Profil, Farben, Stützen und Anschlüsse aus Fabians Bandteilen; feste Raster-Bandstücke werden nicht verwendet.
 - 01.11.2026 (Fabians Wunsch): Pipelines komplett unsichtbar im Boden, keine Trasse und keine Deckel.
 - 01.11.2026: Versionsnummer einheitlich – iPhone-App und Browser-Build heißen beide 0.21.
+- 01.11.2026 (Fabian): Meteoritenschauer etwa 3× seltener als im Browser-Prototyp (Unity weicht hier bewusst ab).
+- 01.11.2026: Runde Gebäude haben keine geraden Wände – Anschlussrahmen stehen dort davor statt hinein; Gebäude drehen sich nur in 90°-Schritten (Unterteile wie Entladeanlage und Raketenplattform nie).

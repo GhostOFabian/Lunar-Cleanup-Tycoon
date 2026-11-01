@@ -21,7 +21,7 @@ namespace LunarCleanup.Gameplay
         PlanetView planet; WorldView world; Hud hud; Camera cam;
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
         /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
-        public static float ZoomReq = -1; public static Vector3? FocusReq;
+        public static float ZoomReq = -1; public static Vector3? FocusReq; public static bool CheckReq, CheckNoPhotos;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
@@ -75,7 +75,7 @@ namespace LunarCleanup.Gameplay
             hud.OnMap = () => { mapMode = !mapMode; altGoal = mapMode ? Game.Cur.pd.R * 2.3f : 64; };
             hud.OnFocusQuest = FocusQuest; hud.OnPhoto = () => { photo = true; if (uiRoot) uiRoot.SetActive(false); }; hud.OnFocusEvent = () => { var p = Game.EventPlace(Game.Cur); if (p.HasValue) StartCoroutine(Fly(p.Value, 40)); };
             planet = new GameObject("Planet").AddComponent<PlanetView>(); world = new GameObject("Welt").AddComponent<WorldView>();
-            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket(); Game.OnMeteors += cells => world.MeteorShower(cells);
+            Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => world.LaunchRocket(); Game.OnMeteors += cells => world.MeteorShower(cells); Game.OnCellFlash += id => world.FlashCell(id);
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
             { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 4.5f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 16; brushLight.color = new Color(1f, .96f, .88f); brushLight.intensity = 0; brushLight.shadows = LightShadows.None; }
             BuildPlanet();
@@ -142,6 +142,7 @@ namespace LunarCleanup.Gameplay
             if (kb.f5Key.wasPressedThisFrame) { var ps = Game.Cur; int best = -1; float bd = -2; foreach (int id in ps.front) { float d = Vector3.Dot(ps.pd.cells[id].c, cd); if (d > bd) { bd = d; best = id; } } if (best >= 0) Game.DevClean(best); }
             if (kb.f6Key.wasPressedThisFrame) Game.Earn(10000);
             if (kb.f11Key.wasPressedThisFrame && preview == null && Application.isEditor) StartCoroutine(CheckAllBases());
+            if (CheckReq && preview == null) { CheckReq = false; StartCoroutine(CheckAllBases()); }
             if (kb.f12Key.wasPressedThisFrame) Game.DevMaxOut();
             if (kb.f4Key.wasPressedThisFrame && Application.isEditor) { if (kb.shiftKey.isPressed) StartCoroutine(AmpelShots("moon")); else StartCoroutine(BeltShots("moon")); }
             if (kb.f1Key.wasPressedThisFrame && Application.isEditor) StartCoroutine(SkyShots());
@@ -256,19 +257,19 @@ namespace LunarCleanup.Gameplay
                 var n0 = north;
                 foreach (var (a, nm, rot) in new[] { (95f, "oben", 0f), (46f, "nord", 0f), (46f, "ost", 90f), (46f, "sued", 180f), (46f, "west", 270f) }) // schräg aus allen vier Richtungen
                 {
-                    if (f > 0 && nm != "oben") continue; // alte Planetengrößen: nur Draufsicht
+                    if (f > 0 && nm != "oben" || CheckNoPhotos) continue; // alte Planetengrößen: nur Draufsicht; Fernprüfung ohne Fotos
                     north = Quaternion.AngleAxis(rot, cd) * n0;
                     alt = altGoal = a; WorldView.NightF = 0; ApplyCam(); yield return null; WorldView.NightF = 0; yield return null; yield return new WaitForEndOfFrame(); // Fotos immer bei Tag
                     ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_" + nm + ".png"), 2); yield return null; yield return null;
                 }
                 // Bohrturm und Erzbagger aus der Nähe
-                if (f == 0 && preview != null) foreach (var r in preview.sv.rigs)
+                if (f == 0 && preview != null && !CheckNoPhotos) foreach (var r in preview.sv.rigs)
                     {
                         cd = preview.pd.cells[r.cell].c; north = preview.pd.cells[r.cell].e2; alt = altGoal = 20; WorldView.NightF = 0; ApplyCam(); yield return null; yield return null; yield return new WaitForEndOfFrame();
                         ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + (r.bag ? "_bagger" : "_bohrturm") + ".png"), 2); yield return null; yield return null;
                     }
                 // Teil-Ausbauten: nach jedem gekauften Gebäude (so wie beim echten Spielen) – jede Zwischenstufe hat andere Bänder und Wege
-                if (f == 0)
+                if (f == 0 && !CheckNoPhotos)
                 {
                     var ord = Game.BuildOrder(); int partBad = 0;
                     for (int k = 1; k < ord.Count; k++)
@@ -287,7 +288,7 @@ namespace LunarCleanup.Gameplay
                         total += iss2.Count; partBad++;
                         rep.AppendLine("  == Teilausbau " + k + " (bis " + GameData.Bld[ord[k - 1]].name + "): " + iss2.Count + " Befunde");
                         foreach (var s in iss2) rep.AppendLine("    - " + s);
-                        if (partBad <= 3)
+                        if (partBad <= 3 && !CheckNoPhotos)
                         {
                             var c = preview.pd.cells[preview.pd.baseCell]; cd = c.c; north = c.e2; alt = altGoal = 70; WorldView.NightF = 0; ApplyCam(); yield return null; yield return new WaitForEndOfFrame();
                             ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, key + "_teil" + k + ".png"), 2); yield return null; yield return null;
