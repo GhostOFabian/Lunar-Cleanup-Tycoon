@@ -55,6 +55,7 @@ namespace LunarCleanup.Core
         public static string Tr(string s)
         {
             if (!inited) Init();
+            if (!string.IsNullOrEmpty(s) && s[0] == '\u2060') return s.Substring(1); /* schon übersetzt (Flaggengeschichten) */
             if (!En || string.IsNullOrEmpty(s)) return s;
             if (dict == null) Load();
             if (cache.TryGetValue(s, out var r)) return r;

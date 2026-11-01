@@ -42,6 +42,7 @@ namespace LunarCleanup.EditorTools
                     case "comet": LunarCleanup.Gameplay.WorldView.CometNow = true; LunarCleanup.Gameplay.WorldView.FreighterNow = false; Write("ok comet"); break;
                     case "freighter": LunarCleanup.Gameplay.WorldView.CometNow = true; LunarCleanup.Gameplay.WorldView.FreighterNow = true; Write("ok freighter"); break;
                     case "night": { var cs = LunarCleanup.Core.Game.Cur.sv; cs.dayT = (cs.dayT < 0 ? 0 : cs.dayT) + LunarCleanup.Core.Game.DayLen(LunarCleanup.Core.Game.Cur.pid) / 4; Write("ok night"); break; }
+                    case "flags": { var cs = LunarCleanup.Core.Game.Cur; int k = 0; foreach (var f in cs.sv.flags) { if (k >= 3) break; if (!f.got) { cs.clean[f.cell] = true; LunarCleanup.Core.Game.CollectFlag(cs, f); k++; } } Write("ok " + c); break; }
                     case "wreck": case "impact": { var cs = LunarCleanup.Core.Game.Cur; if (cs.sv.ev != null) { cs.sv.ev.key = ""; cs.sv.ev.t = 0; } Write((LunarCleanup.Core.Game.StartEvent(cs, c) ? "ok " : "kein Platz ") + c); break; }
                     default:
                         if (c.StartsWith("gameview ")) { var a2 = c.Substring(9).Split(' '); Write(SetGameView(int.Parse(a2[0]), int.Parse(a2[1]))); break; }

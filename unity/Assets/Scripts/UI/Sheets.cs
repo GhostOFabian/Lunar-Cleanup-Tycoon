@@ -18,6 +18,7 @@ namespace LunarCleanup.UI
             {
                 case "vehicles": title = "Fahrzeuge"; Vehicles(h); break;
                 case "flag": { int fi = int.TryParse(arg, out var q) ? q : -1; title = "Flagge"; FlagSheet(h, fi); break; }
+                case "story": title = "Geschichte"; StorySheet(h, arg); break;
                 case "vehicle": { var v = ps.sv.veh.FirstOrDefault(x => x.id.ToString() == arg); if (v == null) { title = "Fahrzeuge"; Vehicles(h); } else { title = Game.VehName(v); Vehicle(h, v); } break; }
                 case "production": title = "Produktion"; Production(h); break;
                 case "base": title = "Basis"; Base(h); break;
@@ -344,16 +345,43 @@ namespace LunarCleanup.UI
         static void SdRow(Hud h, SdNode n) { var nn = n; h.Row(n.name, () => nn.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
 
         static string Dur(double sec) { if (sec <= 0) return "–"; long t = (long)sec; long d = t / 86400, hh = t % 86400 / 3600, mm = t % 3600 / 60; return d > 0 ? d + " T " + hh + " h" : hh > 0 ? hh + " h " + mm + " min" : Mathf.Max(1, mm) + " min"; }
+        const string Raw = "\u2060"; /* Texte, die schon in der richtigen Sprache sind */
         static void FlagSheet(Hud h, int i)
         {
             if (i < 0 || i >= ps.sv.flags.Count) return; var f = ps.sv.flags[i];
-            h.Note("Flagge " + (i + 1) + " von " + ps.sv.flags.Count + " auf " + ps.P.name + (f.got ? " · gehört dir" : " · noch nicht eingesammelt") + ". Schreib etwas auf das Fahnentuch (höchstens 24 Zeichen).");
-            if (f.got) { h.TextInput(f.text, "Text für die Flagge", t => Game.SetFlagText(f, t)); h.Section("Ideen");
-                foreach (var idea in new[] { "Hier war ich!", "Sauber gemacht!", "Grüße an alle", "Bleib neugierig", "Danke, Team!", "Weiter so!" }) { var t = idea; h.Row(t, null, () => f.text == t ? "Steht drauf" : "Nehmen", () => f.text != t, () => { Game.SetFlagText(f, t); Game.Toast("Flagge beschriftet: „" + t + "“", "good"); }, false); } }
-            h.Row("Gefunden", () => Game.FlagsGot(ps) + " von " + ps.sv.flags.Count + " Flaggen auf " + ps.P.name);
+            if (!f.got) { h.Note("Die Schatztruhe an dieser Flagge ist noch verschlossen. Reinige die Parzelle und tippe die Truhe an."); return; }
+            /* Fabian 01.11.: jede Flagge erzählt ein Stück Geschichte, darunter eine Randnotiz – und dann kommt dein Kommentar */
+            var e = Game.FlagStory(ps, f);
+            h.Section(Raw + FlagStories.ArcTitle(ps.pid) + " · " + e.title);
+            h.Note(Raw + "<b>" + e.who + "</b>"); h.Note(Raw + e.body); h.Note(Raw + "<i><color=#9fb0c8>" + e.note + "</color></i>");
+            if (e.finale) h.Note("<color=#ffd24d>Das war das letzte Kapitel dieser Geschichte.</color>");
+            h.Section("Dein Kommentar");
+            h.Note("Schreib, was du dazu denkst – es steht danach auf der Fahne (höchstens 24 Zeichen).");
+            h.TextInput(f.text, "Dein Kommentar", t => Game.SetFlagText(f, t));
+            h.Section("Ideen");
+            foreach (var idea in new[] { "Gänsehaut!", "Ich les weiter!", "Unglaublich …", "Hier war ich!", "Wie geht's weiter?", "Gruß an alle" }) { var t = idea; h.Row(t, null, () => f.text == t ? "Steht drauf" : "Nehmen", () => f.text != t, () => { Game.SetFlagText(f, t); Game.Toast("Flagge beschriftet: „" + t + "“", "good"); }, false); }
+            h.Row("Geschichte", () => Game.FlagsGot(ps) + " von " + ps.sv.flags.Count + " Truhen auf " + ps.P.name + " geöffnet", () => "Alles lesen", null, () => h.OpenSheet("story", ps.pid), false);
+        }
+        /// <summary>Alle gefundenen Teile einer Planeten-Geschichte in der richtigen Reihenfolge.</summary>
+        static void StorySheet(Hud h, string pid)
+        {
+            if (!Game.P.TryGetValue(pid, out var q) || q.sv.flags == null) return; Game.EnsureSlots(q);
+            var got = q.sv.flags.Where(f => f.got).OrderBy(f => f.slot).ToList();
+            h.Note(Game.FlagsGot(q) + " von " + q.sv.flags.Count + " Truhen geöffnet. Das letzte Kapitel liegt immer in der letzten Truhe.");
+            if (got.Count == 0) { h.Note("Noch keine Truhe geöffnet."); return; }
+            foreach (var f in got)
+            {
+                var e = Game.FlagStory(q, f); h.Section(Raw + e.title);
+                h.Note(Raw + "<b>" + e.who + "</b> – " + e.body); h.Note(Raw + "<i><color=#9fb0c8>" + e.note + "</color></i>");
+                if (!string.IsNullOrEmpty(f.text)) h.Note(Raw + "<color=#5cf2b0>" + (Loc.En ? "You: " : "Du: ") + "„" + f.text + "“</color>");
+            }
+            if (got.Count < q.sv.flags.Count) h.Note("<i>Fortsetzung folgt – in der nächsten Truhe.</i>");
         }
         static void Codex(Hud h)
         {
+            h.Section("Geschichten");
+            foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; if (q.sv.flags == null || q.sv.flags.Count == 0) continue; string key = pid;
+                h.Row(GameData.Planets[pid].name, () => Raw + "„" + FlagStories.ArcTitle(key) + "“ · " + Game.FlagsGot(Game.P[key]) + "/" + Game.P[key].sv.flags.Count + (Loc.En ? " chests opened" : " Truhen geöffnet"), () => "Lesen", () => Game.FlagsGot(Game.P[key]) > 0, () => h.OpenSheet("story", key), false); }
             h.Section("Flaggen");
             foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; if (q.sv.flags == null) continue; h.Row(q.P.name, () => Game.FlagsGot(q) + " / " + q.sv.flags.Count + " gefunden" + (q.sv.flags.Any(f => f.got && f.text != "") ? " · " + string.Join(", ", q.sv.flags.Where(f => f.got && f.text != "").Select(f => "„" + f.text + "“").Take(4)) : "")); }
             h.Section("Entdeckungen · " + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.WonderKnown(pid)) + "/" + GameData.POrder.Count(pid => LunarCleanup.Gameplay.WorldView.TryWonder(pid, out _, out _)));

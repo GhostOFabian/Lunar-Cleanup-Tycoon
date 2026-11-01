@@ -234,3 +234,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Entdeckungen und Geysire sind Geländeformen (Höhe + Bodentextur + Emission), keine hingestellten Modelle.
 - 01.11.2026 (Fabian): Sammelwagen gestrichen; Handsammeln geht direkt ins Rohstofflager, bestehende Wagen werden erstattet.
 - 01.11.2026: Gekaufte Upgrades bleiben an ihrer Stelle, erst bei Max wandern sie in „Ausgereizt (Max)“; spontane Geysire erscheinen nur im Blickfeld, damit sie gesehen werden und nichts kosten.
+- 01.11.2026 (Fabian): Flaggen erzählen Geschichten; Kapitel nach Öffnungsreihenfolge, Finale in der letzten Truhe – so bleibt es spannend, egal welche Flagge man zuerst findet. Geschichtentexte sind zweisprachig im Code, Loc.Tr lässt sie über ein unsichtbares Zeichen (U+2060) unverändert.

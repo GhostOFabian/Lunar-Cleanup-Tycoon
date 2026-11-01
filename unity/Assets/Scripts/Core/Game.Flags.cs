@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace LunarCleanup.Core
 {
-    [Serializable] public class FlagSave { public int cell; public float x, y; public bool got; public string text = ""; }
+    [Serializable] public class FlagSave { public int cell; public float x, y; public bool got; public string text = ""; public int slot; /* Fabian 01.11.: Reihenfolge des Öffnens (1 = erste Truhe), 0 = noch nicht vergeben – bestimmt, welches Kapitel darin liegt */ }
 
     public static partial class Game
     {
@@ -16,6 +16,10 @@ namespace LunarCleanup.Core
         public static int FlagVer;
         public static int FlagCount(string pid) { int i = Array.IndexOf(GameData.POrder, pid); return 10 + 2 * Math.Max(0, i); }
         public static int FlagsGot(PState ps) => ps.sv.flags.Count(f => f.got);
+        /// <summary>Ältere Spielstände: schon geöffnete Truhen bekommen ihre Plätze in Listenreihenfolge.</summary>
+        public static void EnsureSlots(PState ps) { if (ps.sv.flags == null) return; int max = 0; foreach (var f in ps.sv.flags) max = Math.Max(max, f.slot); foreach (var f in ps.sv.flags) if (f.got && f.slot <= 0) f.slot = ++max; }
+        /// <summary>Was in dieser Truhe steht (Geschichte, Absender, Randnotiz).</summary>
+        public static FlagStories.Entry FlagStory(PState ps, FlagSave f) { EnsureSlots(ps); return FlagStories.Get(ps.pid, Math.Max(0, f.slot - 1), ps.sv.flags.Count); }
         static void InitFlags(PState ps)
         {
             var sv = ps.sv; if (sv.flags == null) sv.flags = new List<FlagSave>(); if (sv.flagsInit) return; sv.flagsInit = true;
@@ -34,9 +38,9 @@ namespace LunarCleanup.Core
         public static double FlagReward(PState ps, int nth) => Math.Round(300 * Math.Pow(ps.P.diff, .9) * (1 + nth * .5));
         public static void CollectFlag(PState ps, FlagSave f)
         {
-            if (f.got || !ps.clean[f.cell]) return; int n = FlagsGot(ps); double r = FlagReward(ps, n); f.got = true; S.stats.flags++; Earn(r); FlagVer++;
+            if (f.got || !ps.clean[f.cell]) return; EnsureSlots(ps); int n = FlagsGot(ps); double r = FlagReward(ps, n); f.got = true; f.slot = n + 1; S.stats.flags++; Earn(r); FlagVer++;
             int all = ps.sv.flags.Count, got = n + 1;
-            Toast("Schatztruhe geöffnet " + got + "/" + all + " · +" + Fmt(r) + " Cr – schreib eine Nachricht auf die Flagge", "good"); FloatTxt(FlagDir(ps, f), "+" + Fmt(r) + " Cr", "big");
+            Toast("Schatztruhe geöffnet " + got + "/" + all + " · +" + Fmt(r) + " Cr – darin liegt eine Geschichte", "good"); FloatTxt(FlagDir(ps, f), "+" + Fmt(r) + " Cr", "big");
             if (got == all) { double b = Math.Round(r * 10); Earn(b); Toast("Alle Flaggen auf " + ps.P.name + " gefunden! Bonus +" + Fmt(b) + " Cr", "good"); }
         }
         public static void SetFlagText(FlagSave f, string t) { f.text = (t ?? "").Trim(); if (f.text.Length > 24) f.text = f.text.Substring(0, 24); FlagVer++; }
