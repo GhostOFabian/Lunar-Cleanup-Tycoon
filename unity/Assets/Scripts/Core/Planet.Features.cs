@@ -80,10 +80,10 @@ namespace LunarCleanup.Core
             // Geysire überall: kleine Schlothügel abseits der Basis
             {
                 var look = VentLook(); var rnd = new System.Random(pid.GetHashCode() ^ 0x5e1); var sites = Game.OutpostSites(pid);
-                int want = Mathf.Clamp(N / 70, 6, 22); var cand = new List<int>(); foreach (var c in cells) if (!c.IsBase && c.ring >= 2 && !sites.Contains(c.id) && c.id != wc) cand.Add(c.id);
-                for (int tries = 0; tries < want * 8 && geyserSites.Count < want && cand.Count > 0; tries++)
+                int want = Mathf.Clamp(N / 30, 12, 70); var cand = new List<int>(); foreach (var c in cells) if (!c.IsBase && c.ring >= 2 && !sites.Contains(c.id) && c.id != wc) cand.Add(c.id); /* Fabian 01.11.: über den ganzen Planeten verteilt */ float minD = R * 3.2f / Mathf.Sqrt(want);
+                for (int tries = 0; tries < want * 20 && geyserSites.Count < want && cand.Count > 0; tries++)
                 {
-                    int id = cand[rnd.Next(cand.Count)]; var cl = cells[id]; bool near = false; foreach (var g in geyserSites) if (Arc(g, cl.c) < cl.H * 4) { near = true; break; } if (near) continue;
+                    int id = cand[rnd.Next(cand.Count)]; var cl = cells[id]; bool near = false; foreach (var g in geyserSites) if (Arc(g, cl.c) < (tries < want * 12 ? minD : minD * .5f)) { near = true; break; } if (near) continue;
                     float a = (float)rnd.NextDouble() * 6.283f, rr = (float)rnd.NextDouble() * cl.H * .4f; var d = ToDir(cl, Mathf.Cos(a) * rr, Mathf.Sin(a) * rr);
                     geyserSites.Add(d); AddFeature(F(1, d, cl, 2.4f, .55f, look.a, look.b, look.g, .3f, .35f));
                 }

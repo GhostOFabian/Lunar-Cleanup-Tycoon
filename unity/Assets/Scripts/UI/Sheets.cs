@@ -38,7 +38,13 @@ namespace LunarCleanup.UI
         {
             var u = GameData.Up[id];
             h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : ""); },
-                () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id), () => Game.BuyUpgrade(id));
+                () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id),
+                () => { Game.BuyUpgrade(id); if (Game.Lvl(id) >= u.max) h.Rebuild(); }, true, null, false); /* Fabian 01.11.: Zeile bleibt stehen, erst bei Max wandert sie nach unten */
+        }
+        static bool IsMax(string id) => Game.Lvl(id) >= GameData.Up[id].max;
+        static void MaxedRows(Hud h, List<string> ids)
+        {
+            if (ids.Count == 0) return; h.Section("Ausgereizt (Max)"); foreach (var x in ids) UpRow(h, x);
         }
         /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Tiefenabbau), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
         static readonly string[] NotPorted = { };
@@ -51,8 +57,6 @@ namespace LunarCleanup.UI
             int tab = h.Tab;
             if (tab == 0)
             {
-                var c = ps.sv.cart;
-                if (!c.owned) h.Card("Sammelwagen", () => "Kommt zu dir, wenn dein Behälter voll ist, und bringt die Ladung zur Entladestation. Danach leerst du den Behälter nur noch in den Wagen.", AccVeh, () => Cr(Game.CartCost(ps)), () => Game.S.credits >= Game.CartCost(ps), () => Game.BuyCart());
                 h.Section("Fahrzeuge · " + ps.sv.veh.Count + " von " + Game.VehSlots(ps) + " Plätzen (höchstens " + Game.VehMax(ps) + ")");
                 if (Game.VehMax(ps) < Game.VEH_CAP) h.Row("Flottenplatz", () => "Erhöht die Obergrenze auf allen Planeten um 1 (höchstens " + Game.VEH_CAP + ")", () => Cr(Game.FleetPlusCost()), () => Game.S.credits >= Game.FleetPlusCost(), () => Game.BuyFleetPlus(), false);
                 foreach (var t in GameData.VehOrder)
@@ -66,9 +70,6 @@ namespace LunarCleanup.UI
             }
             if (tab == 1)
             {
-                var c = ps.sv.cart;
-                if (c.owned) h.Row("Sammelwagen", () => (c.mode == "park" ? "Wartet in der Basis" : c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Ist da – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : "Entlädt") + " · Kapazität " + Game.Fmt(Game.CartCap()) + " E" + (Time.unscaledTime - cartBoomT < 4 ? " · Noch einmal tippen zum Sprengen" : ""),
-                    () => Time.unscaledTime - cartBoomT < 4 ? "Ja, sprengen" : "Sprengen", () => true, () => { if (Time.unscaledTime - cartBoomT < 4) { Game.DestroyCart(); cartBoomT = -99; } else cartBoomT = Time.unscaledTime; }, false);
                 if (ps.sv.veh.Count > 0) h.Row("Alle zurücksetzen", () => "Hängen Fahrzeuge fest? Alle fahren sofort zurück an die Werkstatt und suchen sich neue Arbeit. (Wer 25 s feststeckt, wird ohnehin zurückgesetzt.)", () => "Zurücksetzen", () => true, () => Game.ResetAllVeh(), false);
                 if (ps.sv.veh.Count == 0) { h.Note("Noch keine Fahrzeuge. Unter „Kaufen“ findest du alle, die hier fahren können."); return; }
                 /* Fabian 01.11.: übersichtliche Liste – Optionen erst nach dem Antippen eines Fahrzeugs */
@@ -263,11 +264,14 @@ namespace LunarCleanup.UI
             string[][] groups = { new[] { "Handgerät", "Basis" }, new[] { "Fahrzeuge", "Drohnen" }, new[] { "Entladestationen", "Förderbänder", "Maschinen", "Lager", "Außenlager" }, new[] { "Wirtschaft", "Verkauf", "Tiefenabbau", "Strahlenschutz" } };
             int tab = Mathf.Clamp(h.Tab, 0, groups.Length - 1);
             if (tab == 0) h.Note("Handgerät und Wirtschaft gelten überall. Fahrzeug- und Anlagen-Upgrades baust du auf jedem Planeten neu auf.");
+            var maxed = new List<string>();
             foreach (var cat in groups[tab])
             {
                 var list = GameData.Upg.Where(u => u.cat == cat && UpVisible(u)).ToList(); if (list.Count == 0) continue;
+                foreach (var u in list) if (IsMax(u.id)) maxed.Add(u.id); list.RemoveAll(u => IsMax(u.id)); if (list.Count == 0) continue;
                 h.Section(cat); foreach (var u in list) UpRow(h, u.id);
             }
+            MaxedRows(h, maxed);
         }
 
         /* Fabian 01.11.: Planetenwechsel und Sternenstaub in Reiter und Gruppen gliedern */
@@ -344,7 +348,8 @@ namespace LunarCleanup.UI
         {
             if (i < 0 || i >= ps.sv.flags.Count) return; var f = ps.sv.flags[i];
             h.Note("Flagge " + (i + 1) + " von " + ps.sv.flags.Count + " auf " + ps.P.name + (f.got ? " · gehört dir" : " · noch nicht eingesammelt") + ". Schreib etwas auf das Fahnentuch (höchstens 24 Zeichen).");
-            if (f.got) h.TextInput(f.text, "Text für die Flagge", t => Game.SetFlagText(f, t));
+            if (f.got) { h.TextInput(f.text, "Text für die Flagge", t => Game.SetFlagText(f, t)); h.Section("Ideen");
+                foreach (var idea in new[] { "Hier war ich!", "Sauber gemacht!", "Grüße an alle", "Bleib neugierig", "Danke, Team!", "Weiter so!" }) { var t = idea; h.Row(t, null, () => f.text == t ? "Steht drauf" : "Nehmen", () => f.text != t, () => { Game.SetFlagText(f, t); Game.Toast("Flagge beschriftet: „" + t + "“", "good"); }, false); } }
             h.Row("Gefunden", () => Game.FlagsGot(ps) + " von " + ps.sv.flags.Count + " Flaggen auf " + ps.P.name);
         }
         static void Codex(Hud h)
@@ -404,10 +409,37 @@ namespace LunarCleanup.UI
                     else if (Game.IsDone(key)) t += " · komplett sauber"; return t; });
             }
         }
+        /// <summary>Fabian 01.11.: Was ist auf welchem Planeten schon fertig – und was fehlt noch?</summary>
+        static void Completion(Hud h)
+        {
+            const string ok = "<color=#5cf2b0>●</color>", no = "<color=#ff9a6a>●</color>";
+            var parts = new Dictionary<string, List<(string what, bool done)>>(); int full = 0;
+            foreach (var pid in GameData.POrder)
+            {
+                if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; var l = new List<(string, bool)>();
+                int pct = Mathf.FloorToInt(Game.CleanPct(q) * 100); l.Add(("Sauber " + pct + " %", Game.IsDone(pid)));
+                if (q.sv.flags != null && q.sv.flags.Count > 0) l.Add(("Flaggen " + Game.FlagsGot(q) + "/" + q.sv.flags.Count, Game.FlagsGot(q) >= q.sv.flags.Count));
+                if (FeatureData.Finds.TryGetValue(pid, out var al)) l.Add(("Funde " + Game.FindsOn(pid) + "/" + al.Length, Game.FindsOn(pid) >= al.Length));
+                if (LunarCleanup.Gameplay.WorldView.TryWonder(pid, out _, out _)) l.Add(("Entdeckung", LunarCleanup.Gameplay.WorldView.WonderKnown(pid)));
+                int pg = Enumerable.Range(0, Game.PlanetGoals.Length).Count(k => Game.PGoalClaimed(q, k)); l.Add(("Planetenziele " + pg + "/" + Game.PlanetGoals.Length, pg >= Game.PlanetGoals.Length));
+                parts[pid] = l; if (l.All(x => x.Item2)) full++;
+            }
+            int reached = parts.Count, total = GameData.POrder.Length;
+            h.Note(full + " von " + total + " Planeten komplett abgeschlossen · " + reached + " erreicht. Grün ist fertig, Orange fehlt noch.");
+            foreach (var pid in GameData.POrder)
+            {
+                string nm = GameData.Planets[pid].name;
+                if (!parts.TryGetValue(pid, out var l)) { h.Row(nm + " · " + no, () => "Noch nicht erreicht – reise im Planetenmenü dorthin."); continue; }
+                bool all = l.All(x => x.done); var miss = l.Where(x => !x.done).Select(x => x.what).ToList();
+                string d = string.Join(" · ", l.Select(x => (x.done ? ok : no) + " " + x.what)) + (miss.Count > 0 ? "\nFehlt noch: " + string.Join(", ", miss) : "");
+                h.Row(nm + " · " + (all ? ok + " komplett" : (l.Count - miss.Count) + "/" + l.Count), () => d);
+            }
+        }
         static void Goals(Hud h)
         {
             /* Fabian 01.11.: Kodex (Entdeckungen, Funde, Erfolge) und Statistik je Planet als eigene Reiter */
-            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik"); int gtab = h.Tab;
+            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik", "Abschluss"); int gtab = h.Tab;
+            if (gtab == 4) { Completion(h); return; }
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { Codex(h); return; }
             if (gtab == 3) { Stats(h); return; }
@@ -578,6 +610,8 @@ namespace LunarCleanup.UI
         static void Settings(Hud h)
         {
             if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
+            h.Section("Darstellung");
+            h.Row("Farbe der Parzellenränder", () => "Saubere Parzellen bekommen einen leuchtenden Rand – jetzt: " + Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => true, () => Game.NextLineColor(), false);
             h.Section("Sprache · Language");
             h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);
             h.Section("Foto-Modus");
@@ -640,7 +674,7 @@ namespace LunarCleanup.UI
         {
             if (!BldUpg.TryGetValue(key, out var ids)) return;
             var list = ids.Where(x => GameData.Up.ContainsKey(x) && UpVisible(GameData.Up[x])).ToList(); if (list.Count == 0) return;
-            h.Section("Upgrades für dieses Gebäude"); foreach (var x in list) UpRow(h, x);
+            var open = list.Where(x => !IsMax(x)).ToList(); if (open.Count > 0) { h.Section("Upgrades für dieses Gebäude"); foreach (var x in open) UpRow(h, x); } MaxedRows(h, list.Where(IsMax).ToList());
         }
 
         static void Building(Hud h, string id)

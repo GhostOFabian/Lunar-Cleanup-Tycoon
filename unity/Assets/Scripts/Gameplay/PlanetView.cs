@@ -115,7 +115,7 @@ namespace LunarCleanup.Gameplay
         }
 
         /* Fugen: dezent statt knallig – helle Stahlfuge an der Basis, warmes Bernstein an putzbaren Parzellen, Rot bei Meteoritenstaub */
-        static readonly Color CleanLine = new Color(.3f, 1f, .5f) /* Fabian 01.11.: saubere Parzellen mit grünem Rand */;
+        static Color CleanLine => LunarCleanup.Core.Game.LineColor; /* Fabian 01.11.: Farbe einstellbar (Einstellungen) */
         static readonly Color BaseLine = new Color(.22f, .58f, 1f) /* Basis: kräftiges Blau, damit man das Basisgelände sofort erkennt */, FrontLine = new Color(1f, .74f, .38f), MeteorLine = new Color(1f, .42f, .3f);
         const float PAD = 1.5f / 64f; // Rand je Feld in der Textur, damit beim Verkleinern (Mipmaps) keine Nachbarfarben durchscheinen
         static float EdgeA(float ed, float w) => ed >= w ? 0 : ed <= w * .4f ? 1 : 1 - Mathf.SmoothStep(0, 1, (ed - w * .4f) / (w * .6f));
@@ -291,7 +291,7 @@ namespace LunarCleanup.Gameplay
                         float ea = EdgeA(ed, edgeW); float fa0 = 0;
                         if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { col = Color.Lerp(col, fc, fa * (1 - g * .55f)); fGlow = fg * (1 - g * .7f); fa0 = fa; } else fGlow = Color.black;
                         ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
-                        if (ea > 0) col = clean && act == null ? Color.Lerp(col, CleanLine, .75f * ea) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
+                        if (ea > 0) col = clean && act == null ? (CleanLine.a > 0 ? Color.Lerp(col, CleanLine, .75f * ea) : col * (1 - .12f * ea)) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
                         if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = clean && act == null ? ea : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;

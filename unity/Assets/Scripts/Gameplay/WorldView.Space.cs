@@ -103,7 +103,7 @@ namespace LunarCleanup.Gameplay
                     var fmid = cp + (fw + up * Random.Range(-.06f, .06f)).normalized * fd; /* Bildmitte – oben verdeckt die Anzeige den Himmel */ float side = Random.value < .5f ? 1 : -1;
                     var fal = (rt * side + up * Random.Range(-.08f, .08f)).normalized; float flen = fd * 1.9f;
                     cometA = fmid - fal * flen / 2; cometB = fmid + fal * flen / 2; cometDur = Random.Range(9f, 13f); skyComet.transform.position = cometA;
-                    float sc = fd * .03f; var fm = LcKit.Spawn("Ereignisse/frachter", skyComet.transform, Vector3.zero, 0, GameData.Hex("#ffbf4d"), null, sc);
+                    float sc = fd * .03f; var fm = LcKit.Spawn("Ereignisse/frachter", skyComet.transform, Vector3.zero, 180 /* Fabian 01.11.: Bug nach vorn, Antrieb hinten */, GameData.Hex("#ffbf4d"), null, sc);
                     skyComet.transform.rotation = Quaternion.LookRotation(fal, up);
                     if (fm) foreach (var r in fm.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
                     var eng = MeshKit.Part(skyComet.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.5f, .8f, 1f, 1)), new Vector3(0, .9f, -3.3f) * sc, Vector3.one * sc * 3.2f); NoShadow(eng); eng.AddComponent<Billboard>();

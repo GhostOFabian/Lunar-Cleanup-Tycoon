@@ -36,7 +36,7 @@ namespace LunarCleanup.Core
         {
             if (f.got || !ps.clean[f.cell]) return; int n = FlagsGot(ps); double r = FlagReward(ps, n); f.got = true; S.stats.flags++; Earn(r); FlagVer++;
             int all = ps.sv.flags.Count, got = n + 1;
-            Toast("Flagge gefunden " + got + "/" + all + " · +" + Fmt(r) + " Cr – antippen zum Beschriften", "good"); FloatTxt(FlagDir(ps, f), "+" + Fmt(r) + " Cr", "big");
+            Toast("Schatztruhe geöffnet " + got + "/" + all + " · +" + Fmt(r) + " Cr – schreib eine Nachricht auf die Flagge", "good"); FloatTxt(FlagDir(ps, f), "+" + Fmt(r) + " Cr", "big");
             if (got == all) { double b = Math.Round(r * 10); Earn(b); Toast("Alle Flaggen auf " + ps.P.name + " gefunden! Bonus +" + Fmt(b) + " Cr", "good"); }
         }
         public static void SetFlagText(FlagSave f, string t) { f.text = (t ?? "").Trim(); if (f.text.Length > 24) f.text = f.text.Substring(0, 24); FlagVer++; }

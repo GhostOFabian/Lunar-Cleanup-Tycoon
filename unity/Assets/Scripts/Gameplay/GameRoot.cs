@@ -468,7 +468,7 @@ namespace LunarCleanup.Gameplay
             {
                 FlagSave bf = null; float bpx = 44f * U; int bi = -1, k = 0;
                 foreach (var (f, wp) in world.FlagSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) { float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bf = f; bi = ps.sv.flags.IndexOf(f); } } k++; }
-                if (bf != null) { if (!bf.got) Game.CollectFlag(ps, bf); else hud.OpenSheet("flag", bi.ToString()); return; }
+                if (bf != null) { bool was = bf.got; Game.CollectFlag(ps, bf); if (was || bf.got) hud.OpenSheet("flag", bi.ToString()); return; } /* Fabian 01.11.: Truhe öffnen, dann gleich die Flagge beschriften */
             }
             /* Fabian 01.11.: Fahrzeug (oder Sammelwagen) antippen öffnet sein Fenster */
             {

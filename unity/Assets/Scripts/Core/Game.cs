@@ -117,6 +117,7 @@ namespace LunarCleanup.Core
             var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = OneStation(GameData.Layouts[sk]), line = GameData.Lines[sv.pid] };
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
+            if (sv.cart.owned) { for (int m = 0; m < NM; m++) sv.roh[m] += sv.cart.tank[m]; Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
             foreach (var b in sv.bld) ps.bld.Add(b);
             foreach (var kv in sv.upg) ps.upg[kv.k] = kv.v;
             int N = ps.pd.N; ps.clean = new bool[N]; ps.paid = new bool[N];
@@ -253,7 +254,8 @@ namespace LunarCleanup.Core
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
         /// A) Reiseprämie: Wer einen Planeten komplett reinigt, bekommt einmalig die Reisekosten zum nächsten Planeten.</summary>
         static readonly List<PState> pendingPrize = new List<PState>();
-        static void ProcessPrizes() { foreach (var q in pendingPrize) TravelPrize(q, true); pendingPrize.Clear(); }
+        static double cartRefund;
+        static void ProcessPrizes() { foreach (var q in pendingPrize) TravelPrize(q, true); pendingPrize.Clear(); if (cartRefund > 0) { S.credits += cartRefund; Toast("Den Sammelwagen gibt es nicht mehr – " + Fmt(cartRefund) + " Cr zurück. Dein Behälter kommt jetzt direkt ins Rohstofflager.", "good"); cartRefund = 0; } }
         static void TravelPrize(PState ps, bool live)
         {
             if (ps.sv.prize) return; ps.sv.prize = true; int i = Array.IndexOf(GameData.POrder, ps.pid); if (i < 0 || i + 1 >= GameData.POrder.Length) return; string nx = GameData.POrder[i + 1]; if (P.ContainsKey(nx)) return;
@@ -395,7 +397,7 @@ namespace LunarCleanup.Core
             mat = -1; var ps = Cur; var pd = ps.pd;
             if (HandCap() - HandSum() <= .05f)
             {
-                if (Time.realtimeSinceStartup - fullWarnT > 2.5f) { fullWarnT = Time.realtimeSinceStartup; Toast(ps.sv.cart.owned ? "Sammelbehälter voll – der Sammelwagen kommt" : "Sammelbehälter voll – tippe unten links auf den Behälter", "bad"); }
+                if (Time.realtimeSinceStartup - fullWarnT > 2.5f) { fullWarnT = Time.realtimeSinceStartup; Toast("Sammelbehälter voll – tippe unten links auf den Behälter", "bad"); }
                 return 0;
             }
             int c0 = pd.CellOf(d, lastCell); lastCell = c0;
@@ -421,20 +423,9 @@ namespace LunarCleanup.Core
         public static void UnloadHand()
         {
             var ps = Cur; float tot = HandSum(); if (tot < .05f) { Fail("Dein Sammelbehälter ist leer"); return; }
-            var c = ps.sv.cart;
-            if (c.owned && c.mode == "wait") { LoadCart(ps); return; }
-            if (c.owned) /* mit Sammelwagen: nur noch in den Wagen leeren – er wird gerufen */
-            {
-                if (ps.pd.Arc(c.d, CartGoal) < 8 && c.mode != "back" && c.mode != "drop") { LoadCart(ps); return; }
-                if (c.mode == "park") { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); } else Toast(c.mode == "go" ? "Der Sammelwagen ist unterwegs zu dir" : c.mode == "drop" && RohCap(ps) - RohSum(ps) < .05f ? "Der Sammelwagen wartet – das Rohstofflager ist voll" : "Der Sammelwagen bringt gerade eine Ladung weg und kommt danach", "good");
-                return;
-            }
-            string best = null; float bf = 0;
-            foreach (var s in GameData.Stations) if (ps.bld.Contains(s)) { float f = StBuf(ps, s) - Sum(ps.st[s].buf); if (f > bf) { bf = f; best = s; } }
-            float free; float[] dst; string name;
-            if (best != null && bf >= 1) { free = bf; dst = ps.st[best].buf; name = GameData.Bld[best].name; }
-            else { free = RohCap(ps) - RohSum(ps); dst = ps.sv.roh; name = GameData.Bld["roh"].name; best = "roh"; }
-            if (free < .05f) { Fail("Kein Platz – Trichter und Lager sind voll"); return; }
+            /* Fabian 01.11.: kein Sammelwagen mehr – was du selbst sammelst, kommt direkt ins Rohstofflager */
+            float free = RohCap(ps) - RohSum(ps); float[] dst = ps.sv.roh; string name = GameData.Bld["roh"].name, best = "roh";
+            if (free < .05f) { Fail("Kein Platz – das Rohstofflager ist voll"); return; }
             float amt = Mathf.Min(tot, free), k = amt / tot;
             for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; if (ps.sv.hand[m] < 1e-6f) ps.sv.hand[m] = 0; dst[m] += x; }
             S.stats.handUnloads++;
@@ -1510,7 +1501,7 @@ namespace LunarCleanup.Core
                 case 3: return S.stats.sold > 0 ? 1 : Mathf.Min(.99f, RohSum(m) / 40);
                 case 4: return m.nClean >= 2 ? 1 : Mathf.Min(.99f, m.nClean - 1 + m.act.Values.Select(Progress).DefaultIfEmpty(0).Max());
                 case 5: return Lvl("radius") + Lvl("power") > 0 ? 1 : 0;
-                case 6: return P.Values.Any(p => p.sv.cart.owned) ? 1 : Mathf.Min(.99f, (float)(S.credits / CartCost(m)));
+                case 6: return Mathf.Min(1f, S.stats.handUnloads / 3f); /* früher: Sammelwagen kaufen (abgeschafft) */
                 case 7: return m.sv.stage >= 2 ? 1 : Mathf.Min(.99f, (float)(S.credits / 200));
                 case 8: return m.bld.Contains("u1") ? 1 : 0;
                 case 9: return m.sv.veh.Any(v => v.type == "buggy") ? 1 : 0;
@@ -1575,7 +1566,7 @@ namespace LunarCleanup.Core
                 case 1: return "hand";
                 case 3: case 11: case 14: return "sheet:production";
                 case 5: return "sheet:upgrades";
-                case 6: case 9: return "sheet:vehicles";
+                case 9: return "sheet:vehicles"; case 6: return "hand";
                 case 7: case 12: return "sheet:base";
                 case 8: return "build:u1"; case 10: return "build:presse"; case 13: return "build:schmelze";
                 case 15: return "sheet:research"; case 16: return c.bld.Contains("hangar") ? "build:hangar" : Res("drones", "build:hangar");
@@ -1701,7 +1692,6 @@ namespace LunarCleanup.Core
         {
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             EnergyStep(ps, dt); float f = ps.ef;
-            CartStep(ps, dt);
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }

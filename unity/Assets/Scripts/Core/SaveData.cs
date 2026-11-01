@@ -88,6 +88,7 @@ namespace LunarCleanup.Core
         public List<PlanetSave> planets = new List<PlanetSave>();
         public long lastActive;
         public bool sound = true;
+        public int lineCol; // Fabian 01.11.: Farbe der Parzellenränder (0 = Grün … , siehe Game.LineColors)
         public ContractSave contracts = new ContractSave();
         public int fleetPlus; // Fabian 01.11.: gekaufte Flottenplätze über 15 hinaus (höchstens 5)
         public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe

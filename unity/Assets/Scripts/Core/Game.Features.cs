@@ -201,6 +201,7 @@ namespace LunarCleanup.Core
         public class AchDef { public string id, cat, name, unit; public double[] tiers; public Func<double> val; public string[] titles; }
         public static readonly string[] AchCats = { "Reinigen", "Planeten", "Fahrzeuge", "Produktion", "Entdecker", "Ereignisse", "Geheim" };
         public static readonly string[] TierName = { "Bronze", "Silber", "Gold" };
+        public static int FlagPlanetsDone() { int n = 0; foreach (var p in S.planets) if (p.flags != null && p.flags.Count > 0) { bool all = true; foreach (var f in p.flags) if (!f.got) { all = false; break; } if (all) n++; } return n; }
         static AchDef A(string cat, string id, string name, string unit, Func<double> val, double b, double s, double g, string title = null) => new AchDef { cat = cat, id = id, name = name, unit = unit, val = val, tiers = new[] { b, s, g }, titles = title != null ? new[] { null, null, title } : null };
         static int Wonders() { int n = 0; foreach (var pid in GameData.POrder) if (PlayerPrefs.GetInt("LunarCleanup.Entdeckt." + pid, 0) == 1) n++; return n; }
         static int Albums() => FeatureData.Finds.Keys.Count(p => FindsOn(p) >= FeatureData.Finds[p].Length);
@@ -228,6 +229,7 @@ namespace LunarCleanup.Core
             A("Entdecker", "albums", "Fundalben komplett", "Alben", () => Albums(), 1, 5, 18),
             A("Entdecker", "wonders", "Entdeckungen gesehen", "Orte", () => Wonders(), 1, 9, 18, "Entdecker"),
             A("Entdecker", "flags", "Flaggen gesammelt", "Flaggen", () => S.stats.flags, 10, 60, 250, "Fahnenträger"),
+            A("Entdecker", "allflags", "Alle Flaggen eines Planeten", "Planeten", () => FlagPlanetsDone(), 1, 6, 18, "Flaggenkönig"), /* Fabian 01.11. */
             A("Entdecker", "crystals", "Leuchtkristalle geerntet", "Kristalle", () => S.stats.crystals, 25, 250, 2500),
             A("Ereignisse", "wrecks", "Wracks und Trümmer geborgen", "Bergungen", () => S.stats.salvage, 1, 10, 50),
             A("Ereignisse", "storms", "Stürme überstanden", "Stürme", () => S.stats.storms, 1, 20, 200),

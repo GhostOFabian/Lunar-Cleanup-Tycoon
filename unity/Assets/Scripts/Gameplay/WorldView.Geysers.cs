@@ -48,20 +48,33 @@ namespace LunarCleanup.Gameplay
                 var em = p.emission; em.rateOverTime = 3;
                 var pr = p.GetComponent<ParticleSystemRenderer>(); pr.sharedMaterial = geyMat; pr.renderMode = ParticleSystemRenderMode.Stretch; pr.velocityScale = .06f; pr.lengthScale = 1.2f; /* gestreckte Strahlen wie echte Fontänen */
                 p.Play();
-                geysers.Add(new Geyser { ps = p, wait = 4 + Random.value * 40, dir = dir });
+                geysers.Add(new Geyser { ps = p, wait = 4 + Random.value * 60, dir = dir });
             }
+            /* spontane Ausbrüche: ein paar freie Fontänen, die irgendwo im Blickfeld einfach aus dem Boden schießen */
+            spont.Clear(); for (int i = 0; i < 3; i++) { var go = Object.Instantiate(geysers.Count > 0 ? geysers[0].ps.gameObject : new GameObject("leer"), geyRoot.transform); go.name = "Spontan"; var p = go.GetComponent<ParticleSystem>(); if (p) { var em = p.emission; em.rateOverTime = 0; p.Play(); spont.Add(new Geyser { ps = p, wait = 6 + Random.value * 14 }); } }
         }
+        readonly List<Geyser> spont = new List<Geyser>();
 
         void UpdateGeysers()
         {
             if (ps == null || pd == null) return; if (geyFor != ps.pid) BuildGeysers();
             bool show = !MapMode; if (geyRoot && geyRoot.activeSelf != show) geyRoot.SetActive(show); if (!show) return;
             float dt = Time.deltaTime;
+            var view = Game.ViewDir;
+            foreach (var g in spont)
+            {
+                if (!g.ps) continue; var em = g.ps.emission;
+                if (g.burst > 0) { g.burst -= dt; em.rateOverTime = g.burst > 0 ? 60 + 220 * Mathf.Clamp01(g.burst / 1.5f) : 0; if (g.burst <= 0) g.wait = 8 + Random.value * 25; continue; }
+                g.wait -= dt; if (g.wait > 0 || view.sqrMagnitude < .5f) continue;
+                /* zufällige Stelle im Blickfeld, nicht auf der Basis */
+                for (int t = 0; t < 8; t++) { var d = (view + Random.insideUnitSphere * .18f).normalized; int c = pd.CellOf(d); if (pd.cells[c].IsBase) continue; g.dir = d; g.ps.transform.position = pd.Surf(d, .05f, c); g.ps.transform.rotation = Quaternion.FromToRotation(Vector3.up, pd.SurfNormal(d, c)); g.burst = 2 + Random.value * 3; Sfx.PlayAt("geyser", g.ps.transform.position, .8f + Random.value * .4f, .5f, 90); if (Game.S != null) Game.S.stats.geysers++; break; }
+            }
             foreach (var g in geysers)
             {
                 if (!g.ps) continue; var em = g.ps.emission;
-                if (g.burst > 0) { g.burst -= dt; float k = Mathf.Clamp01(g.burst / 1.2f); em.rateOverTime = 40 + 260 * k; if (g.burst <= 0) { em.rateOverTime = 3; g.wait = 20 + Random.value * 40; } continue; }
-                g.wait -= dt; if (g.wait <= 0) { g.burst = 3 + Random.value * 4; if (Game.S != null) Game.S.stats.geysers++; Sfx.PlayAt("geyser", g.ps.transform.position, .85f + Random.value * .3f, .55f, 90); }
+                bool seen = Vector3.Dot(g.dir, view) > .55f; if (!seen && g.burst <= 0) { em.rateOverTime = 0; g.wait -= dt; if (g.wait <= 0) g.wait = 10 + Random.value * 60; continue; } /* außer Sicht: nichts rechnen */
+                if (g.burst > 0) { g.burst -= dt; float k = Mathf.Clamp01(g.burst / 1.2f); em.rateOverTime = 40 + 260 * k; if (g.burst <= 0) { em.rateOverTime = 3; g.wait = 10 + Random.value * Random.value * 90; } continue; } /* zufällige Abstände statt Takt */
+                em.rateOverTime = 3; g.wait -= dt; if (g.wait <= 0) { g.burst = 2 + Random.value * 6; if (Game.S != null) Game.S.stats.geysers++; Sfx.PlayAt("geyser", g.ps.transform.position, .85f + Random.value * .3f, .55f, 90); }
             }
         }
     }

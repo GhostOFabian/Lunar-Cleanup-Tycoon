@@ -1037,12 +1037,22 @@ namespace LunarCleanup.Gameplay
             if (!p.HasValue) { if (beacon) beacon.SetActive(false); return; }
             if (!beacon)
             {
-                beaconMat = MeshKit.Mat(new Color(1f, .55f, .2f), 0, .2f, new Color(1f, .5f, .15f) * 2.5f); beaconMat = new Material(beaconMat); MeshKit.MakeTransparent(beaconMat, true);
-                beacon = MeshKit.Cyl(transform, beaconMat, Vector3.zero, .18f, .45f, 26, 16); /* dezenter Lichtstrahl */ beacon.name = "Ereignis";
+                /* Fabian 01.11.: noch dezenter – ein feiner, durchsichtiger Goldschimmer mit aufsteigenden Funken statt eines grellen Strahls */
+                beaconMat = MeshKit.Mat(new Color(1f, .8f, .45f), 0, .2f, new Color(1f, .72f, .35f) * .35f); beaconMat = new Material(beaconMat); MeshKit.MakeTransparent(beaconMat, true);
+                beacon = MeshKit.Cyl(transform, beaconMat, Vector3.zero, .1f, .26f, 26, 16); beacon.name = "Ereignis";
                 var r = beacon.GetComponent<MeshRenderer>(); r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false;
+                var sp = new GameObject("Funken"); sp.transform.SetParent(beacon.transform, false); sp.transform.localPosition = new Vector3(0, -12.6f, 0);
+                var p2 = sp.AddComponent<ParticleSystem>(); p2.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                var m = p2.main; m.loop = true; m.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f); m.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.6f); m.startSize = new ParticleSystem.MinMaxCurve(.07f, .17f); m.maxParticles = 80;
+                m.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, .85f, .4f, .9f), new Color(1f, 1f, .8f, .9f)); m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                var sh = p2.shape; sh.shapeType = ParticleSystemShapeType.Cone; sh.angle = 4; sh.radius = .35f; sh.rotation = new Vector3(-90, 0, 0);
+                var em = p2.emission; em.rateOverTime = 7;
+                var co = p2.colorOverLifetime; co.enabled = true; var gr = new Gradient(); gr.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) }, new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, .15f), new GradientAlphaKey(.7f, .6f), new GradientAlphaKey(0, 1) }); co.color = gr;
+                var spm = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default")); spm.SetTexture("_BaseMap", MeshKit.GlowTex()); MeshKit.MakeTransparent(spm, true);
+                var pr = p2.GetComponent<ParticleSystemRenderer>(); pr.sharedMaterial = spm; pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; p2.Play();
             }
             beacon.SetActive(!MapMode); var d = p.Value; beacon.transform.position = pd.Surf(d, 13); beacon.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
-            beaconMat.SetColor("_BaseColor", new Color(1f, .6f, .3f, .07f + .04f * Mathf.Sin(Time.time * 3)));
+            beaconMat.SetColor("_BaseColor", new Color(1f, .82f, .5f, .035f + .015f * Mathf.Sin(Time.time * 1.6f))); /* sanftes Atmen */
         }
         public void LaunchRocket() { rocketT = 0; }
 

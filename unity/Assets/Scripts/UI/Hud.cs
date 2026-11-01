@@ -201,7 +201,7 @@ namespace LunarCleanup.UI
             var keep = sheetContent.anchoredPosition; bool same = lastKind == sheetKind && lastArg == sheetArg; lastKind = sheetKind; lastArg = sheetArg;
             binders.Clear(); foreach (Transform c in sheetContent) Destroy(c.gameObject);
             var ps = Game.Cur; sheetKick.text = ps.P.name; Sheets.Fill(this, sheetKind, sheetArg, out string title); sheetTitle.text = title;
-            Canvas.ForceUpdateCanvases(); sheetContent.anchoredPosition = same ? keep : Vector2.zero; Bind(); // nach einem Kauf bleibt das Fenster an derselben Stelle
+            Canvas.ForceUpdateCanvases(); UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(sheetContent); /* Fabian 01.11.: erst Höhe berechnen, sonst springt die Liste nach dem Kauf nach oben */ sheetContent.anchoredPosition = same ? keep : Vector2.zero; Bind(); // nach einem Kauf bleibt das Fenster an derselben Stelle
         }
 
         // ---------- Bausteine für Fenster ----------
@@ -212,7 +212,7 @@ namespace LunarCleanup.UI
             if (live != null) binders.Add(() => t.text = live());
         }
         /// <summary>Zeile wie im Browser: Titel, Beschreibung, rechts ein Knopf (Gold = kaufen, Mint = Aktion).</summary>
-        public void Row(string title, Func<string> desc, Func<string> btn = null, Func<bool> enabled = null, Action click = null, bool gold = true, Func<string> titleLive = null)
+        public void Row(string title, Func<string> desc, Func<string> btn = null, Func<bool> enabled = null, Action click = null, bool gold = true, Func<string> titleLive = null, bool rebuild = true)
         {
             var row = UiKit.Rt(sheetContent, title); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 10; hl.childControlHeight = true; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.padding = new RectOffset(0, 0, 8, 8); hl.childAlignment = TextAnchor.MiddleLeft;
             var col = UiKit.Rt(row, "Text"); var vl = col.gameObject.AddComponent<VerticalLayoutGroup>(); vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.spacing = 2; UiKit.LE(col, -1, -1, 1);
@@ -222,7 +222,7 @@ namespace LunarCleanup.UI
             if (desc != null) binders.Add(() => { var s = desc(); dd.text = s; dd.gameObject.SetActive(!string.IsNullOrEmpty(s)); });
             if (btn != null)
             {
-                var b = UiKit.Btn(row, "Knopf", () => { click?.Invoke(); Rebuild(); }, gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 14);
+                var b = UiKit.Btn(row, "Knopf", () => { click?.Invoke(); if (rebuild) Rebuild(); else Bind(); }, gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 14);
                 UiKit.LE(b, 46, 46, -1, 118).minWidth = 104;
                 var bt = UiKit.Text(b.transform, "Text", btn(), 14, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, 0, 1, 1, 8, 2, 8, 2); bt.enableAutoSizing = true; bt.fontSizeMin = 9; bt.fontSizeMax = 15; bt.textWrappingMode = TextWrappingModes.NoWrap;
                 var cg = b.gameObject.AddComponent<CanvasGroup>();
@@ -292,7 +292,7 @@ namespace LunarCleanup.UI
             var sl = bar.gameObject.AddComponent<UnityEngine.UI.Slider>(); sl.fillRect = fill.rectTransform; sl.handleRect = handle.rectTransform; sl.targetGraphic = handle; sl.minValue = 0; sl.maxValue = 1; sl.value = get(); bar.raycastTarget = true;
             sl.onValueChanged.AddListener(v => { set(v); tt.text = title + " · " + Mathf.RoundToInt(v * 100) + " %"; });
         }
-        void Bind() { foreach (var b in binders) b(); }
+        public void Bind() { foreach (var b in binders) b(); }
 
         // ---------- Meldungen und Schwebetexte ----------
         public void Toast(string text, string kind)
@@ -330,7 +330,7 @@ namespace LunarCleanup.UI
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
             foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
-            handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : ps.sv.cart.owned && ps.sv.cart.mode == "wait" ? new Color(.1f, .3f, .27f, .95f) : Pal.Glass;
+            handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             goalGo.SetActive(false); /* Zielkarte nur noch im Ziele-Fenster */
             { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellCap(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }

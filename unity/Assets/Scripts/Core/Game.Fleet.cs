@@ -10,11 +10,16 @@ namespace LunarCleanup.Core
         const float BOOM_TIME = 4f, BOOM_REFUND = .3f;
         public static int VehMax(PState ps) => Math.Min(VEH_CAP, VEH_MAX + (S != null ? S.fleetPlus + S.extraSlots : 0));
         /// <summary>Fabian 01.11.: voll ausgebaute Fahrzeuge waren zu schnell – Fahrwerk höchstens ×2, Bürsten höchstens ×4,6 (Kosten bleiben).</summary>
+        /// <summary>Farben für die Ränder sauberer Parzellen (Einstellungen).</summary>
+        public static readonly (string name, Color col)[] LineColors = { ("Grün", new Color(.3f, 1f, .5f)), ("Türkis", new Color(.3f, .95f, .9f)), ("Blau", new Color(.35f, .6f, 1f)), ("Violett", new Color(.72f, .45f, 1f)), ("Pink", new Color(1f, .4f, .75f)), ("Rot", new Color(1f, .35f, .3f)), ("Orange", new Color(1f, .62f, .25f)), ("Gold", new Color(1f, .85f, .3f)), ("Weiß", new Color(.95f, .97f, 1f)), ("Aus", new Color(0, 0, 0, 0)) };
+        public static Color LineColor => S == null ? LineColors[0].col : LineColors[Mathf.Clamp(S.lineCol, 0, LineColors.Length - 1)].col;
+        public static void NextLineColor() { S.lineCol = (S.lineCol + 1) % LineColors.Length; foreach (var p in P.Values) for (int i = 0; i < p.pd.N; i++) if (p.clean[i]) p.dirtyCells.Add(i); }
         static void DampVehicleUpgrades()
         {
             var de = new System.Globalization.CultureInfo("de-DE");
             void D(string id, double step) { if (!GameData.Up.TryGetValue(id, out var u)) return; for (int l = 0; l < u.vals.Length; l++) u.vals[l] = 1 + step * l; if (u.show != null) for (int l = 0; l < u.show.Length && l < u.vals.Length; l++) u.show[l] = "×" + u.vals[l].ToString("0.00", de); }
             D("vspeed", .05); D("vpower", .12);
+            if (GameData.Up.TryGetValue("cartspd", out var cs0)) cs0.hide = true; /* Sammelwagen abgeschafft */
             /* Fabian 01.11.: Sammelwagen darf schneller fahren – alle Stufen ×1,6 */
             if (GameData.Up.TryGetValue("cartspd", out var cu) && cu.vals.Length > 0 && cu.vals[0] < 10) { for (int l = 0; l < cu.vals.Length; l++) cu.vals[l] *= 1.6; if (cu.show != null) for (int l = 0; l < cu.show.Length && l < cu.vals.Length; l++) cu.show[l] = cu.vals[l].ToString("0.0", de) + " m/s"; }
         }
