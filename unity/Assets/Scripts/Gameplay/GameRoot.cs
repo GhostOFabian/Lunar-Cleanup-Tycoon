@@ -33,11 +33,14 @@ namespace LunarCleanup.Gameplay
         static float U => Mathf.Max(1f, Mathf.Min(Screen.width / 390f, Screen.height / 844f));
 
         UniversalRenderPipelineAsset urpA; bool dailyDone, photo;
-        void Awake()
+        public static bool GfxHigh => PlayerPrefs.GetInt("LunarCleanup.GrafikSparsam", 0) == 0;
+        /// <summary>Grafikstufe setzen: „Hoch“ = PC-Stufe (SSAO, weiche Schatten, Tiefenbild), „Sparsam“ = Handy-Stufe. Danach die URP-Feinheiten wieder anwenden.</summary>
+        public static void ApplyGraphics()
         {
-            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
 #if UNITY_WEBGL && !UNITY_EDITOR
             QualitySettings.SetQualityLevel(1, true); /* Browser: PC-Qualität statt Handy-Stufe (volle Auflösung, weiche Schatten, 4 Kaskaden) */
+#elif !UNITY_EDITOR
+            QualitySettings.SetQualityLevel(GfxHigh ? 1 : 0, true);
 #endif
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
             {
@@ -45,10 +48,16 @@ namespace LunarCleanup.Gameplay
                 urp.shadowDistance = Mathf.Max(urp.shadowDistance, 60f); urp.shadowCascadeCount = 4;
                 /* feinere, weiche Schatten (sonst nur eckige Klötze): Auflösung 2048, weiche Kanten – Felder sind nicht öffentlich setzbar */
                 void SetF(string n, object v) { try { var f = typeof(UniversalRenderPipelineAsset).GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null) f.SetValue(urp, f.FieldType.IsEnum ? System.Enum.ToObject(f.FieldType, v) : System.Convert.ChangeType(v, f.FieldType)); } catch { } }
-                urpA = urp;
+                I0urpA = urp;
                 urp.maxAdditionalLightsCount = 8;
                 try { var f = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightsRenderingMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance); if (f != null && (LightRenderingMode)f.GetValue(urp) == LightRenderingMode.Disabled) f.SetValue(urp, LightRenderingMode.PerPixel); } catch { }
             } // Laternen, Scheinwerfer, Saugkopf bei Nacht
+        }
+        static UniversalRenderPipelineAsset I0urpA;
+        void Awake()
+        {
+            Application.targetFrameRate = 60; QualitySettings.vSyncCount = 0;
+            ApplyGraphics(); /* Fabian 01.11.: auch auf dem iPhone die PC-Grafik (Umgebungsverdeckung SSAO, weiche Schatten) – in den Einstellungen abschaltbar */
             EnhancedTouchSupport.Enable();
 #if UNITY_EDITOR
             Game.TestMode = UnityEditor.EditorPrefs.GetBool("LunarCleanup.TestMode", false);

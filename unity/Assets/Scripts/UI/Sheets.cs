@@ -649,7 +649,7 @@ namespace LunarCleanup.UI
         static void Settings(Hud h)
         {
             if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
-            h.Section("Darstellung");
+            h.Section("Darstellung"); h.Row("Grafik", () => LunarCleanup.Gameplay.GameRoot.GfxHigh ? "Hoch – wie am PC: Umgebungsschatten, weiche Schatten, mehr Tiefe" : "Sparsam – schont den Akku, weniger Schatten", () => LunarCleanup.Gameplay.GameRoot.GfxHigh ? "Sparsam" : "Hoch", null, () => { PlayerPrefs.SetInt("LunarCleanup.GrafikSparsam", LunarCleanup.Gameplay.GameRoot.GfxHigh ? 1 : 0); PlayerPrefs.Save(); LunarCleanup.Gameplay.GameRoot.ApplyGraphics(); }, false);
             h.Row("Farbe der Parzellenränder", () => "Saubere Parzellen bekommen einen leuchtenden Rand – jetzt: " + Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => true, () => Game.NextLineColor(), false);
             h.Section("Sprache · Language");
             h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);

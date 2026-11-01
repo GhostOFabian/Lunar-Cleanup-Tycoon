@@ -242,3 +242,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Höchstens 24 Fahrzeuge je Planet; die Fahrzeughalle ist der Weg dorthin (+1 je Stufe). Erweiterte Upgrade-Stufen zählen nicht als Bedingung für Gebäudestufen (max0).
 - 01.11.2026 (Fabian): Riesenmeteor zerstört einen ganzen Planeten (10 min Sperre, Neustart); nur live, nie offline, nie beim einzigen Planeten. Flaggen und Geschichten bleiben erhalten.
 - 01.11.2026: Müllberg-Abtrag wird je Fahrzeug gedeckelt statt über Härte – sonst schaffen voll ausgebaute Fahrzeuge ihn allein in Sekunden.
+- 01.11.2026 (Fabian): Handy nutzt standardmäßig die PC-Grafikstufe (SSAO, weiche Schatten); „Sparsam“ in den Einstellungen als Rückfall für ältere Geräte und Akku.

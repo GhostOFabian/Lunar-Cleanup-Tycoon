@@ -62,8 +62,20 @@ namespace LunarCleanup.EditorTools
         {
             File.WriteAllText("Assets/Resources/Data/build.txt", PlayerSettings.iOS.buildNumber); AssetDatabase.ImportAsset("Assets/Resources/Data/build.txt");
         }
+        /// <summary>Die Qualitätsstufe „PC“ war für iPhone und WebGL ausgeschlossen – dann fehlt dort die Umgebungsverdeckung, der Boden wirkt flach. Ausschluss entfernen (mehrfach ausführen ist ungefährlich).</summary>
+        public static void PcQualityOnPhone()
+        {
+            var qs = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/QualitySettings.asset"); if (qs == null || qs.Length == 0) return; var so = new SerializedObject(qs[0]); var lv = so.FindProperty("m_QualitySettings"); bool ch = false;
+            for (int i = 0; i < lv.arraySize; i++)
+            {
+                var l = lv.GetArrayElementAtIndex(i); if (l.FindPropertyRelative("name").stringValue != "PC") continue; var ex = l.FindPropertyRelative("excludedTargetPlatforms");
+                for (int k = ex.arraySize - 1; k >= 0; k--) { var v = ex.GetArrayElementAtIndex(k).stringValue; if (v == "iPhone" || v == "WebGL") { ex.DeleteArrayElementAtIndex(k); ch = true; } }
+            }
+            if (ch) { so.ApplyModifiedProperties(); AssetDatabase.SaveAssets(); Debug.Log("Lunar Cleanup: PC-Grafikstufe jetzt auch für iPhone und Browser"); }
+        }
         public static void Apply()
         {
+            PcQualityOnPhone(); /* Fabian 01.11.: die PC-Grafikstufe (SSAO, weiche Schatten) gehört auch ins iPhone- und Browser-Paket */
             var ios = NamedBuildTarget.iOS;
             PlayerSettings.companyName = "Fabian";
             PlayerSettings.productName = "Lunar Cleanup Tycoon";

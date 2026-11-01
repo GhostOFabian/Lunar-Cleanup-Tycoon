@@ -1957,5 +1957,10 @@
 "Dampfschwaden": "Steam clouds",
 " Fahrzeuge dran": " vehicles on it",
 " (mind. ": " (at least ",
-" nötig)": " needed)"
+" nötig)": " needed)",
+"Grafik": "Graphics",
+"Hoch – wie am PC: Umgebungsschatten, weiche Schatten, mehr Tiefe": "High – like on PC: ambient occlusion, soft shadows, more depth",
+"Sparsam – schont den Akku, weniger Schatten": "Light – saves battery, fewer shadows",
+"Sparsam": "Light",
+"Hoch": "High"
 }
