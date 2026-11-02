@@ -9,6 +9,10 @@ pro Modell) mit PBR-Materialien.
 
 So benutzt du es
 ----------------
+Kurz (Fabian 02.11.): Blender öffnen → Reiter „Scripting“ → „Open“ → diese Datei → ▶ „Run Script“.
+Dann „Datei → Speichern unter …“ (z. B. LunarCleanup_neu.blend) – fertig. NUR_NEUE = True zeigt nur die
+37 neuen Modelle; auf False stellen, um alle zu bauen.
+
 1. Blender (4.2 oder neuer, 3.6 geht auch) öffnen → Reiter „Scripting“.
 2. „Open“ → diese Datei wählen → „Run Script“ (▶).
 3. Alle Modelle stehen nebeneinander in der Sammlung „LunarCleanup“
@@ -57,6 +61,7 @@ except ImportError:  # außerhalb von Blender (Test/Vorschau)
 EXPORT = False                    # True: jedes Modell als FBX exportieren
 EXPORT_DIR = "//LunarCleanup_FBX"  # "//" = neben der gespeicherten .blend
 ONLY = []                         # leer = alle, sonst z. B. ["presse", "buggy"]
+NUR_NEUE = True                   # Fabian 02.11.: True = nur die neuen Modelle (Build 34–38) in die Szene, False = alle
 ACCENT = "#ffbf4d"                # Akzentfarbe (Mond: Orange/Gelb wie im Spiel)
 ACCENT2 = "#58cdb4"               # zweite Akzentfarbe (Türkis)
 BEVEL = True                      # weiche Kanten (Bevel-Modifier)
@@ -112,6 +117,10 @@ MATS = {
     "rinde":   ("#6b4a2f", 0.00, 0.90, None, 0),
     "gras":    ("#7cb94c", 0.00, 0.80, None, 0),
     "bluete":  ("#f4d35e", 0.00, 0.60, None, 0),
+    "wasser":  ("#2c6fa8", 0.10, 0.05, None, 0),
+    "pilz":    ("#c9493b", 0.00, 0.55, None, 0),
+    "pilzstiel": ("#e8dcc8", 0.00, 0.70, None, 0),
+    "trockengras": ("#c2a95a", 0.00, 0.85, None, 0),
 }
 
 # Grundkreis-Radien aus gamedata.json (bld.fp)
@@ -2392,6 +2401,298 @@ def e_lieferrakete():
     return m
 
 
+# ================= Build 38: alle noch fehlenden Modelle (02.11.2026) =================
+def _rnd(seed):
+    import random
+    return random.Random(seed)
+
+
+def e_riesenmeteor():
+    """Riesenmeteor: großer, kantiger Brocken mit glühenden Rissen und Glut im Inneren. Ca. 6 m."""
+    m = Model("riesenmeteor", "Riesenmeteor", "Ereignisse"); M = m.body; r = _rnd(4100)
+    M.blob("lavastein", (0, 0, 3.0), 3.0, 4101, (1, 0.9, 0.85), 0.35, 20, 12, facet=0.16)
+    M.blob("glut", (0, 0, 3.0), 2.75, 4102, (1, 0.9, 0.85), 0.12, 16, 10, facet=0.05)
+    for i in range(14):
+        a = r.random() * 6.283; b = (r.random() - 0.5) * 2.4
+        p = (2.85 * math.cos(a) * math.cos(b * 0.5), 2.85 * math.sin(a) * math.cos(b * 0.5), 3.0 + 2.6 * math.sin(b * 0.5))
+        M.box("glut", p, (0.12, 1.1 + r.random(), 0.08), rot=(r.random() * 90, r.random() * 90, math.degrees(a)))
+    for i in range(5):
+        a = r.random() * 6.283
+        M.blob("felsdkl", (3.1 * math.cos(a), 3.1 * math.sin(a), 3.0 + (r.random() - 0.5) * 3), 0.6 + 0.4 * r.random(), 4110 + i, (1, 1, 0.8), 0.4, 10, 6)
+    return m
+
+
+def e_brocken(v):
+    """Meteor-Brocken für das Abfangen: Lavastein mit Glutadern. Ca. 1,5 m."""
+    m = Model("brocken_%d" % v, "Meteor-Brocken %d" % v, "Ereignisse"); M = m.body; r = _rnd(4200 + v)
+    M.blob("lavastein", (0, 0, 0.75), 0.75, 4200 + v, (1.1, 0.9, 0.85) if v != 2 else (0.9, 1.1, 0.8), 0.4, 14, 8, facet=0.2)
+    M.blob("glut", (0, 0, 0.75), 0.66, 4210 + v, (1.1, 0.9, 0.85), 0.15, 12, 7, facet=0.05)
+    for i in range(4 + v):
+        a = r.random() * 6.283
+        M.box("glut", (0.72 * math.cos(a), 0.72 * math.sin(a), 0.75 + (r.random() - 0.5) * 0.8), (0.06, 0.4, 0.05), rot=(0, r.random() * 60, math.degrees(a)))
+    return m
+
+
+def a_abwehrrakete():
+    """Abwehrrakete (Geschoss): schlanker Körper, rote Spitze, vier Flossen, Glut am Heck. Zeigt nach oben. Ca. 1,6 m."""
+    m = Model("abwehrrakete", "Abwehrrakete", "Abwehr"); M = m.body
+    M.lathe("weiss", (0, 0, 0.15), [(0.1, 0), (0.12, 0.1), (0.12, 1.05), (0.1, 1.15)], 12)
+    M.lathe("warn", (0, 0, 1.3), [(0.1, 0), (0.06, 0.15), (0, 0.3)], 12)
+    M.lathe("akzent", (0, 0, 0.75), [(0.125, 0), (0.125, 0.08)], 12)
+    for k in range(4):
+        M.extrude("akzent", (0, 0, 0.15), [(0.1, 0), (0.32, -0.08), (0.32, 0.12), (0.1, 0.35)], 0.025, plane="XZ", rot=(0, 0, 90 * k))
+    M.lathe("dunkel", (0, 0, 0.0), [(0.07, 0), (0.1, 0.15)], 10)
+    M.lathe("glut", (0, 0, -0.35), [(0, 0), (0.08, 0.3), (0.06, 0.35)], 10)
+    return m
+
+
+def a_schildkuppel():
+    """Schildkuppel: Gitter aus leuchtenden Streben über dem Generator. Radius 6 m (im Spiel skaliert)."""
+    m = Model("schildkuppel", "Schildkuppel", "Abwehr"); M = m.body; R = 6.0
+    for k in range(12):  # Meridiane
+        a = 2 * math.pi * k / 12
+        pts = [(R * math.cos(b) * math.cos(a), R * math.cos(b) * math.sin(a), R * math.sin(b)) for b in [i * math.pi / 2 / 8 for i in range(9)]]
+        M.pipe("schildfeld", pts, 0.05, 6, joints=False)
+    for j in range(1, 5):  # Breitenkreise
+        b = j * math.pi / 2 / 5; rr = R * math.cos(b); z = R * math.sin(b)
+        M.torus("schildfeld", (0, 0, z), rr, 0.05, 48, 5)
+    M.torus("stahl", (0, 0, 0.05), R, 0.15, 48, 6)
+    return m
+
+
+def n_moos(v):
+    """Moos- und Flechtenpolster: flach, weich gewellt, mit kleinen Trieben."""
+    m = Model("moos_%d" % v, "Moospolster %d" % v, "Natur"); M = m.body; r = _rnd(4300 + v)
+    mats = ("laub3", "laub1") if v != 3 else ("trockengras", "laub2")
+    for i in range(3 + v):
+        a = r.random() * 6.283; d = 0 if i == 0 else 0.35 + 0.35 * r.random(); s = 0.55 if i == 0 else 0.3 + 0.2 * r.random()
+        M.blob(mats[i % 2], (d * math.cos(a), d * math.sin(a), 0.02), s, 4300 + 10 * v + i, (1.3, 1.1, 0.28), 0.25, 12, 5, facet=0.08)
+    for i in range(10):
+        a = r.random() * 6.283; d = r.random() * 0.6
+        p = (d * math.cos(a), d * math.sin(a), 0.1)
+        M.cyl("laub2", p, 0.015, 0.12 + 0.08 * r.random(), 5, r2=0.005)
+        M.sphere("bluete" if v == 2 else "laub2", (p[0], p[1], p[2] + 0.18), 0.025, 6, 3)
+    return m
+
+
+def n_teich():
+    """Teich: Wasserfläche, Uferkranz aus Steinen, Schilf und Seerosen. Ca. 5 m breit."""
+    m = Model("teich", "Teich", "Natur"); M = m.body; r = _rnd(4400)
+    prof = [(2.3, -0.05), (2.25, 0.02), (0.0, 0.02)]
+    M.lathe("wasser", (0, 0, 0), prof, 32)
+    M.lathe("fels", (0, 0, -0.05), [(2.7, 0), (2.55, 0.08), (2.3, 0.06), (2.3, 0.0)], 32, closed_loop=False)
+    for i in range(18):
+        a = 2 * math.pi * i / 18 + r.random() * 0.2
+        M.blob("fels" if i % 3 else "felsdkl", (2.45 * math.cos(a), 2.45 * math.sin(a), 0.05), 0.18 + 0.14 * r.random(), 4400 + i, (1.2, 1, 0.6), 0.35, 8, 5)
+    for i in range(14):  # Schilf
+        a = r.random() * 1.8 + 0.4; d = 2.0 + 0.3 * r.random()
+        p = (d * math.cos(a), d * math.sin(a), 0)
+        M.cyl("gras", p, 0.02, 0.9 + 0.5 * r.random(), 5, r2=0.006)
+        if i % 3 == 0:
+            M.cyl("rinde", (p[0], p[1], 0.8), 0.04, 0.22, 6)
+    for i in range(5):  # Seerosen
+        a = r.random() * 6.283; d = 0.6 + 1.1 * r.random()
+        M.cyl("laub1", (d * math.cos(a), d * math.sin(a), 0.025), 0.28, 0.015, 12)
+        if i % 2 == 0:
+            M.sphere("bluete", (d * math.cos(a) + 0.05, d * math.sin(a), 0.07), 0.06, 8, 4)
+    return m
+
+
+def a_bohrsockel():
+    """Felssockel für Bohrturm und Erzbagger: flacher Hügel aus Bodengestein, oben eben. Radius 2,3 m."""
+    m = Model("bohrsockel", "Felssockel", "Anlagen"); M = m.body; r = _rnd(4500)
+    M.blob("fels", (0, 0, -0.35), 2.2, 4500, (1, 1, 0.22), 0.18, 18, 7, facet=0.06)
+    M.cyl("platte", (0, 0, 0.0), 1.7, 0.08, 24)
+    for i in range(9):
+        a = 2 * math.pi * i / 9 + r.random() * 0.3
+        M.blob("fels" if i % 2 else "felsdkl", (2.1 * math.cos(a), 2.1 * math.sin(a), -0.05), 0.35 + 0.25 * r.random(), 4510 + i, (1.2, 1.1, 0.7), 0.35, 10, 6)
+    return m
+
+
+def e_erzader_neu():
+    """Erzader: Felsgruppe mit leuchtenden Erzadern (statt der alten Achteck-Platte)."""
+    m = Model("erzader_fels", "Erzader (Felsen)", "Ereignisse"); M = m.body; r = _rnd(4600)
+    for i in range(5):
+        a = 2 * math.pi * i / 5; d = 0 if i == 0 else 0.8 + 0.3 * r.random(); s = 0.75 if i == 0 else 0.35 + 0.2 * r.random()
+        c = (d * math.cos(a), d * math.sin(a), s * 0.45)
+        M.blob("felsdkl", c, s, 4600 + i, (1.1, 1, 0.8), 0.35, 12, 7)
+        for k in range(3):
+            b = r.random() * 6.283
+            M.box("glut" if k % 2 == 0 else "kupfer", (c[0] + s * 0.85 * math.cos(b), c[1] + s * 0.85 * math.sin(b), c[2] + (r.random() - 0.3) * s * 0.6), (0.05, s * 0.9, 0.04), rot=(r.random() * 40, 0, math.degrees(b)))
+    for k in range(3):
+        M.lathe("kristall", (0.3 * k - 0.3, -0.5, 0.05), [(0, 0), (0.05, 0.04), (0.05, 0.2), (0, 0.32)], 6, rot=(15 * k - 15, 10, 0))
+    return m
+
+
+def w_putzi():
+    """Putzi-7: kleiner Begleitroboter auf Ketten, runder Kopf mit Visier, Antenne, zwei Greifarme, Bürste vorne. Ca. 1 m."""
+    m = Model("putzi", "Putzi-7", "Welt"); M = m.body
+    for sx in (-1, 1):
+        track(M, (sx * 0.28, 0, 0.0), 0.6, 0.14, 0.18)
+    M.box("dunkel", (0, 0, 0.24), (0.5, 0.5, 0.12))
+    M.lathe("weiss", (0, 0, 0.3), [(0.28, 0), (0.3, 0.15), (0.26, 0.42), (0.0, 0.46)], 18)
+    M.lathe("akzent", (0, 0, 0.42), [(0.305, 0), (0.305, 0.06)], 18)
+    M.sphere("weiss", (0, 0, 0.92), 0.22, 16, 8)
+    M.sphere("glas", (0, -0.12, 0.94), 0.16, 14, 6, zcut=-0.3)
+    for sx in (-1, 1):
+        M.sphere("mint", (sx * 0.07, -0.25, 0.97), 0.035, 8, 4)
+    M.cyl("stahl", (0.12, 0.05, 1.1), 0.012, 0.25, 6)
+    M.sphere("warn", (0.12, 0.05, 1.37), 0.035, 8, 4)
+    for sx in (-1, 1):
+        M.tube("stahl", (sx * 0.3, -0.05, 0.6), (sx * 0.42, -0.25, 0.45), 0.035, 8)
+        M.box("akzent", (sx * 0.44, -0.3, 0.42), (0.08, 0.1, 0.06))
+    tool_brush(m, (0, -0.4, 0.12), 0.5, 0.09)
+    return m
+
+
+def e_haendler():
+    """Händlerschiff: schwebender Frachter mit Containern, Flügeln, Leuchtband und Landestrahl-Öffnung unten. Ca. 12 m."""
+    m = Model("haendlerschiff", "Händlerschiff", "Ereignisse"); M = m.body
+    M.lathe("weiss", (0, 0, 0), [(0, -5.5), (0.9, -5.0), (1.5, -3.5), (1.6, 2.5), (1.2, 4.2), (0.6, 5.2), (0, 5.5)], 20, rot=(90, 0, 0))
+    M.lathe("akzent", (0, 0, 0), [(1.62, -0.6), (1.62, 0.6)], 20, rot=(90, 0, 0))
+    M.sphere("glas", (0, -4.6, 0.55), 0.55, 14, 6)
+    for sx in (-1, 1):
+        M.extrude("hell", (sx * 1.4, 0, 0), [(0, -2.5), (3.4, -1.2), (3.6, 1.0), (0, 2.0)], 0.18, plane="XY", rot=(0, 0, 0) if sx > 0 else (0, 0, 180))
+        M.cyl("dunkel", (sx * 4.6, 1.2, -0.3), 0.45, 1.6, 14, rot=(90, 0, 0))
+        M.cyl("glut", (sx * 4.6, 2.85, -0.3), 0.35, 0.05, 14, rot=(90, 0, 0))
+        M.sphere("warn" if sx < 0 else "mint", (sx * 4.9, 0, 0.05), 0.12, 8, 4)
+    for i, c in enumerate(("kiste1", "kiste2", "kiste3", "kiste1")):
+        M.box(c, (0, -1.5 + i * 1.3, 1.75), (1.6, 1.1, 0.9))
+    M.cyl("kaltlicht", (0, 0.5, -1.65), 0.6, 0.06, 16)
+    M.lathe("dunkel", (0, 0.5, -1.6), [(0.9, 0), (0.7, 0.25), (0, 0.25)], 16)
+    return m
+
+
+def e_muellberg():
+    """Müllberg: großer Haufen aus Schrott, Fässern, Kisten und Geröll. Ca. 7 m breit, 3 m hoch."""
+    m = Model("muellberg", "Müllberg", "Ereignisse"); M = m.body; r = _rnd(4700)
+    M.blob("felsdkl", (0, 0, 0.0), 3.0, 4700, (1.1, 1, 0.7), 0.25, 18, 9)
+    for i in range(40):
+        a = r.random() * 6.283; d = r.random() * 2.7; z = 2.0 * math.sqrt(max(0.0, 1 - (d / 3.2) ** 2)) + 0.05  # auf der Oberfläche des Haufens
+        p = (d * math.cos(a), d * math.sin(a), z); k = i % 5
+        if k == 0: M.box(("kiste1", "kiste2", "kiste3")[i % 3], p, (0.5, 0.5, 0.45), rot=(r.random() * 30, r.random() * 30, r.random() * 90))
+        elif k == 1: M.cyl(("rost", "akzent", "rot")[i % 3], p, 0.22, 0.6, 12, rot=(r.random() * 90, r.random() * 90, 0))
+        elif k == 2: M.box("rost", p, (1.1, 0.12, 0.08), rot=(r.random() * 40, r.random() * 60, r.random() * 180))
+        elif k == 3: M.box("stahl", p, (0.6, 0.45, 0.03), rot=(r.random() * 60, r.random() * 60, r.random() * 180))
+        else: M.blob("fels", p, 0.25 + 0.2 * r.random(), 4710 + i, (1, 1, 0.8), 0.4, 8, 5)
+    M.cyl("schleim", (1.8, -1.6, 0.02), 0.8, 0.03, 16)
+    return m
+
+
+def w_flagge():
+    """Flagge: Mast mit Stoff (Akzentfarbe = Planetenfarbe im Spiel) und Spitze. Stoff als eigener Teil zum Wehen. Ca. 3 m."""
+    m = Model("flagge", "Flagge", "Welt"); M = m.body
+    M.cyl("felsdkl", (0, 0, 0), 0.25, 0.12, 10, r2=0.18)
+    M.cyl("stahl", (0, 0, 0.1), 0.035, 2.9, 8)
+    M.sphere("akzent2", (0, 0, 3.05), 0.07, 8, 4)
+    F = m.part("Stoff", (0, 0, 2.95))
+    n = 6; verts = []; faces = []
+    for i in range(n + 1):
+        x = 1.3 * i / n; wv = 0.08 * math.sin(i * 1.2)
+        verts += [(x + 0.04, wv, 2.95), (x + 0.04, wv, 2.15)]
+    for i in range(n):
+        a = 2 * i; faces.append((a, a + 2, a + 3, a + 1)); faces.append((a + 1, a + 3, a + 2, a))
+    F.add(verts, faces, "akzent", closed=False)
+    return m
+
+
+def w_truhe():
+    """Schatztruhe: Holzkasten mit Metallbändern und Schloss, Deckel als eigener Teil (Drehpunkt hinten oben)."""
+    m = Model("truhe", "Schatztruhe", "Welt"); M = m.body
+    M.box("kiste1", (0, 0, 0.25), (0.9, 0.6, 0.5))
+    for x in (-0.35, 0.35):
+        M.box("stahl", (x, 0, 0.25), (0.06, 0.62, 0.52))
+    M.box("visier", (0, -0.31, 0.42), (0.12, 0.03, 0.14))
+    D = m.part("Deckel", (0, 0.3, 0.5))
+    D.lathe("kiste1", (-0.45, 0.0, 0.5), [(0.3, 0), (0.3, 0.9)], 12, rot=(0, 90, 0), a0=0, a1=180)
+    for x in (-0.35, 0.35):
+        D.lathe("stahl", (x - 0.03, 0.0, 0.5), [(0.31, 0), (0.31, 0.06)], 12, rot=(0, 90, 0), a0=0, a1=180)
+    M.sphere("bluete", (0, 0, 0.45), 0.12, 8, 4)  # Glitzern im Inneren
+    return m
+
+
+def w_wahrzeichen(v):
+    """Wahrzeichen: 1 Obelisk mit schwebendem Ring, 2 Steinbogen mit Kristall, 3 Antennenturm mit Schüssel. Bewegliches Teil „Dreh“."""
+    names = {1: "Obelisk", 2: "Steinbogen", 3: "Antennenturm"}
+    m = Model("wahrzeichen_%d" % v, "Wahrzeichen: " + names[v], "Welt"); M = m.body
+    if v == 1:
+        M.lathe("felsdkl", (0, 0, 0), [(1.2, 0), (1.1, 0.3), (0.55, 0.35), (0.5, 4.5), (0.0, 5.3)], 4)
+        for k in range(4):
+            M.box("mint", (0.52 * math.cos(math.radians(45 + 90 * k)), 0.52 * math.sin(math.radians(45 + 90 * k)), 2.5), (0.04, 0.04, 3.0), rot=(0, 0, 45 + 90 * k))
+        D = m.part("Dreh", (0, 0, 3.4)); D.torus("akzent", (0, 0, 3.4), 1.3, 0.08, 36, 6); D.torus("schildfeld", (0, 0, 3.4), 1.3, 0.03, 36, 4)
+    elif v == 2:
+        pts = [(2.0 * math.cos(math.radians(a)), 0, 2.6 * math.sin(math.radians(a))) for a in range(0, 181, 15)]
+        for i, (a, b) in enumerate(zip(pts, pts[1:])):
+            M.blob("fels" if i % 2 else "felsdkl", ((a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2), 0.6, 4800 + i, (1, 0.8, 1), 0.3, 10, 6)
+        D = m.part("Dreh", (0, 0, 1.3)); D.lathe("kristall", (0, 0, 0.8), [(0, 0), (0.25, 0.3), (0.25, 0.9), (0, 1.3)], 6)
+    else:
+        lattice(M, (0, 0, 0), (0, 0, 6.0), 1.2, 0.3, 6)
+        beacon(M, (0, 0, 6.0), 0.6)
+        D = m.part("Dreh", (0, 0, 4.2)); D.cyl("stahl", (0, 0, 4.0), 0.1, 0.4, 8); dish(D, (0, 0, 4.4), 0.9, 0.3, tilt=30)
+    return m
+
+
+def w_geysir():
+    """Geysir-Schlot: Kraterrand aus Gestein, Kruste mit Mineralablagerungen, Öffnung in der Mitte (dort startet die Fontäne)."""
+    m = Model("geysir_schlot", "Geysir-Schlot", "Welt"); M = m.body; r = _rnd(4900)
+    M.lathe("felsdkl", (0, 0, 0), [(1.8, 0), (1.3, 0.35), (0.6, 0.45), (0.35, 0.2), (0.3, -0.3)], 20)
+    M.lathe("schwefel", (0, 0, 0.02), [(1.15, 0.3), (0.95, 0.38), (0.75, 0.43), (0.75, 0.3)], 20, closed_loop=True)
+    for i in range(8):
+        a = 2 * math.pi * i / 8 + r.random() * 0.4
+        M.blob("fels", (1.6 * math.cos(a), 1.6 * math.sin(a), 0.1), 0.22 + 0.15 * r.random(), 4900 + i, (1.2, 1, 0.7), 0.35, 8, 5)
+    M.cyl("russ", (0, 0, -0.25), 0.3, 0.05, 14)
+    return m
+
+
+def n_baum_spezial(kind):
+    """Exotische Bäume: kristall (Kristallbaum), pilz (Riesenpilz), eis (Eisbaum)."""
+    names = {"kristall": "Kristallbaum", "pilz": "Riesenpilz", "eis": "Eisbaum"}
+    m = Model("baum_" + kind, names[kind], "Natur"); M = m.body; r = _rnd({"kristall": 51, "pilz": 52, "eis": 53}[kind])
+    if kind == "kristall":
+        M.lathe("felsdkl", (0, 0, 0), [(0.35, 0), (0.18, 0.4), (0.14, 2.2)], 6)
+        for i in range(7):
+            a = 2 * math.pi * i / 7; h = 1.6 + 0.5 * (i % 3)
+            M.lathe("kristall", (0.15 * math.cos(a), 0.15 * math.sin(a), h), [(0, 0), (0.12, 0.15), (0.12, 0.8), (0, 1.1)], 6, rot=(35 * math.cos(a), 35 * math.sin(a), 0))
+        M.lathe("kristall", (0, 0, 2.2), [(0, 0), (0.18, 0.2), (0.18, 1.0), (0, 1.5)], 6)
+    elif kind == "pilz":
+        M.lathe("pilzstiel", (0, 0, 0), [(0.45, 0), (0.3, 0.3), (0.25, 2.0), (0.35, 2.4)], 12)
+        M.lathe("pilz", (0, 0, 2.3), [(0.3, 0), (1.6, 0.1), (1.7, 0.35), (1.2, 0.9), (0, 1.15)], 18)
+        for i in range(9):
+            a = r.random() * 6.283; d = 0.4 + 0.9 * r.random()
+            M.sphere("pilzstiel", (d * math.cos(a), d * math.sin(a), 2.3 + 1.0 - 0.5 * d), 0.1, 6, 3)
+    else:
+        M.lathe("eis", (0, 0, 0), [(0.3, 0), (0.16, 0.4), (0.1, 3.4)], 8)
+        for t in range(4):
+            z = 1.1 + t * 0.7; R0 = 1.2 - 0.25 * t
+            for k in range(6):
+                a = 2 * math.pi * k / 6 + t * 0.5
+                M.tube("eis", (0, 0, z), (R0 * math.cos(a), R0 * math.sin(a), z - 0.35), 0.06, 6, r2=0.02)
+                M.lathe("kometeis", (R0 * math.cos(a), R0 * math.sin(a), z - 0.45), [(0, 0), (0.06, 0.05), (0, 0.3)], 5, rot=(180, 0, 0))
+        M.lathe("kometeis", (0, 0, 3.4), [(0.15, 0), (0, 0.6)], 6)
+    return m
+
+
+def n_gras_var(v):
+    """Grasbüschel-Varianten: 2 trocken, 3 blühend."""
+    m = Model("gras_%d" % v, "Grasbüschel %d" % v, "Natur"); M = m.body; r = _rnd(5000 + v)
+    for i in range(10):
+        a = r.random() * 6.283; tilt = 0.25 + 0.35 * r.random(); h = 0.4 + 0.35 * r.random(); w = 0.035
+        d = (math.cos(a), math.sin(a)); sd = (-d[1] * w, d[0] * w)
+        base = (d[0] * 0.05, d[1] * 0.05, 0); mid = (d[0] * tilt * 0.4 * h, d[1] * tilt * 0.4 * h, h * 0.55); tip = (d[0] * tilt * h, d[1] * tilt * h, h)
+        vs = [(base[0] - sd[0], base[1] - sd[1], 0), (base[0] + sd[0], base[1] + sd[1], 0), (mid[0] + sd[0] * 0.6, mid[1] + sd[1] * 0.6, mid[2]), (mid[0] - sd[0] * 0.6, mid[1] - sd[1] * 0.6, mid[2]), tip]
+        M.add(vs, [(0, 1, 2, 3), (3, 2, 4), (3, 2, 1, 0), (2, 3, 4)], "trockengras" if v == 2 else ("gras" if i % 3 else "laub2"), closed=False)
+        if v == 3 and i % 3 == 0:
+            M.sphere("bluete" if i % 2 else "pilz", tip, 0.05, 6, 3)
+    return m
+
+
+# Alle Modelle, die nach dem ersten Paket dazugekommen sind (Build 34–38)
+NEW_KEYS = ["schild", "flak", "lieferrakete", "baum_laub_1", "baum_laub_2", "baum_laub_3", "baum_tanne_1", "baum_tanne_2", "busch_1", "busch_2", "gras_1",
+            "riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "abwehrrakete", "schildkuppel", "moos_1", "moos_2", "moos_3", "teich", "bohrsockel", "erzader_fels",
+            "putzi", "haendlerschiff", "muellberg", "flagge", "truhe", "wahrzeichen_1", "wahrzeichen_2", "wahrzeichen_3", "geysir_schlot",
+            "baum_kristall", "baum_pilz", "baum_eis", "gras_2", "gras_3"]
+
+
 def all_models():
     """(Schlüssel, Bauer) in der Reihenfolge, in der sie in der Szene stehen."""
     return [
@@ -2433,6 +2734,16 @@ def all_models():
         ("baum_laub_1", lambda: n_laub(1)), ("baum_laub_2", lambda: n_laub(2)), ("baum_laub_3", lambda: n_laub(3)),
         ("baum_tanne_1", lambda: n_tanne(1)), ("baum_tanne_2", lambda: n_tanne(2)),
         ("busch_1", lambda: n_busch(1)), ("busch_2", lambda: n_busch(2)), ("gras_1", n_gras),
+        # Build 38 (02.11.2026): restliche Modelle
+        ("riesenmeteor", e_riesenmeteor), ("brocken_1", lambda: e_brocken(1)), ("brocken_2", lambda: e_brocken(2)), ("brocken_3", lambda: e_brocken(3)),
+        ("abwehrrakete", a_abwehrrakete), ("schildkuppel", a_schildkuppel),
+        ("moos_1", lambda: n_moos(1)), ("moos_2", lambda: n_moos(2)), ("moos_3", lambda: n_moos(3)), ("teich", n_teich),
+        ("bohrsockel", a_bohrsockel), ("erzader_fels", e_erzader_neu),
+        ("putzi", w_putzi), ("haendlerschiff", e_haendler), ("muellberg", e_muellberg), ("flagge", w_flagge), ("truhe", w_truhe),
+        ("wahrzeichen_1", lambda: w_wahrzeichen(1)), ("wahrzeichen_2", lambda: w_wahrzeichen(2)), ("wahrzeichen_3", lambda: w_wahrzeichen(3)),
+        ("geysir_schlot", w_geysir),
+        ("baum_kristall", lambda: n_baum_spezial("kristall")), ("baum_pilz", lambda: n_baum_spezial("pilz")), ("baum_eis", lambda: n_baum_spezial("eis")),
+        ("gras_2", lambda: n_gras_var(2)), ("gras_3", lambda: n_gras_var(3)),
     ]
 
 
@@ -2949,7 +3260,7 @@ def run():
     if CLEAR_OLD:
         _clear_old()
     top = _collection("LunarCleanup", bpy.context.scene.collection)
-    models = build_all(ONLY)
+    models = build_all(ONLY or (NEW_KEYS if NUR_NEUE else None))
     gi = {g: i for i, (g, _, _) in enumerate(GROUPS)}
     count = {g: 0 for g, _, _ in GROUPS}
     for mdl in models:
