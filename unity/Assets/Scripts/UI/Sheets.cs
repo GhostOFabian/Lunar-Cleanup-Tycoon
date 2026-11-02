@@ -710,6 +710,7 @@ namespace LunarCleanup.UI
             if (Game.TestMode)
             {
                 h.Section("Testmodus");
+                h.Row("Alle Planeten voll ausgebaut", () => "Schaltet alle " + GameData.POrder.Length + " Planeten frei, macht sie komplett sauber und baut alles: Gebäude, Upgrades, Fahrzeuge, Bohrtürme, Schild, Raketen, Terraforming (Wald), Spezialgüter voll. Dauert ein paar Sekunden.", () => "Alles", () => true, () => { Game.DevAll(); h.CloseSheet(); }, true);
                 h.Row("Alles maximal ausbauen", () => "Basisstufe, alle Gebäude, Upgrades, Forschungen, Außenlager und Fahrzeuge auf diesem Planeten (Editor: F12).", () => "Ausbauen", () => true, () => { Game.DevMaxOut(); h.CloseSheet(); }, true);
                 h.Row("+1 Mio Credits", () => "Geld zum Ausprobieren.", () => "+1 Mio", () => true, () => Game.Earn(1e6), false);
                 h.Row("Planet säubern", () => "Erst auf 81 %, beim zweiten Mal komplett sauber.", () => "Säubern", () => true, () => Game.DevCleanTo(Game.CleanPct(Game.Cur) >= .8f ? 1.01f : .81f), false);

@@ -182,6 +182,26 @@ namespace LunarCleanup.Core
         static readonly Dictionary<PState, int> nonBase = new Dictionary<PState, int>();
         static bool Dirty(PState ps) { if (!nonBase.TryGetValue(ps, out int nb)) { nb = ps.pd.cells.Count(c => !c.IsBase); nonBase[ps] = nb; } return ps.nClean < nb * .97f; }
 
+        /// <summary>Testmodus (Fabian 02.11.): alle Planeten freischalten, komplett sauber, alles gebaut und gekauft, Bohrtürme, Abwehr, Terraforming 5, Güter voll.</summary>
+        public static void DevAll()
+        {
+            if (!TestMode) return; string home = S.planet; bool off = Offline; Offline = true; // keine Meldungsflut
+            try
+            {
+                S.credits += 1e18; S.ruin = ""; S.ruinUntil = 0; S.doomT = -1; S.doomPid = "";
+                foreach (var pid in GameData.POrder) if (!P.ContainsKey(pid)) { var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); }
+                foreach (var pid in GameData.POrder)
+                {
+                    S.planet = pid; var ps = Cur; DevMaxOut(); { int guard = 0, lim = ps.pd.N * 2 + 10; while (ps.front.Count > 0 && guard++ < lim) { int id = ps.front.First(); ps.paid[id] = true; FinishCell(ps, id); } } /* auch große Planeten ganz (DevCleanTo hört bei 5000 auf) */
+                    for (int k = 0; k < 40 && ps.sv.rigs.Count < RigMax(ps); k++) if (!BuildRig(-1)) break;
+                    ps.sv.msLv = MS_MAX; ps.sv.flakLv = FLAK_MAX; ps.sv.msCool = 0; ps.sv.terra = TERRA_MAX; ps.sv.terraHp = 1; ps.sv.supOk = true; ps.sv.energy = EnergyCap(ps);
+                    if (!S.done.Contains(pid)) S.done.Add(pid); ps.baseVersion++;
+                }
+                foreach (var g in Goods) AddGood(g.id, GOOD_CAP);
+            }
+            finally { Offline = off; S.planet = home; }
+            Save(); OnPlanetChanged?.Invoke(); Toast("Testmodus: alle " + GameData.POrder.Length + " Planeten freigeschaltet, sauber und voll ausgebaut", "good");
+        }
         /// <summary>Nur Editor-Tests.</summary>
         public static void DevTerra(int n, float hp = 1) { var ps = Cur; int o = ps.sv.terra; ps.sv.terra = Mathf.Clamp(n, 0, TERRA_MAX); ps.sv.terraHp = hp; if (o != ps.sv.terra) OnTerra?.Invoke(ps.pid, o, ps.sv.terra); }
         /// <summary>Je Planet und Schritt (live und offline): Güter herstellen, Unterhalt liefern, Schild laden, Terraforming pflegen.</summary>

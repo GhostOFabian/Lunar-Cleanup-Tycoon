@@ -239,3 +239,6 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - Neue Modelle im Blender-Skript (`tools/blender/lunar_models.py`, auf dem Mac `Modelle_Quelle/`): schild, flak, lieferrakete, baum_laub_1–3, baum_tanne_1–2, busch_1–2, gras_1. Im Spiel als OBJ (ohne Blender erzeugt); in Blender ausführen (EXPORT = True) ersetzt sie durch FBX.
 - Abfangen leichter und klarer: Ring größer/langsamer, Zeitfenster größer, Tipp-Radius 110 pt, „Treffer!/Zu früh/Zu spät“ am Brocken, Meteor kommt von oben ins Bild, untere Knöpfe beim Abfangen ausgeblendet (sie lagen über den Brocken). Zerstört erst ab mehr als zwei Dritteln. Schwierigkeit steigt langsamer.
 - Schild: Abzüge bei Nacht/Sturm/fehlendem Unterhalt milder; Nachladen nur nach einem echten Treffer. Hinweise, was hilft (Countdown-Band „Tippen: Schild und Raketen kaufen“, Tipp nach Zerstörung).
+
+## Build 37 (02.11.2026) – Test-Knopf „Alle Planeten voll ausgebaut“
+- Einstellungen → Testmodus: schaltet alle 18 Planeten frei, macht sie ganz sauber und baut alles (Gebäude, Upgrades, Fahrzeuge, Bohrtürme, Schild 6, Raketen 6, Terraforming 5, Spezialgüter 999). Im Editor 7 s; nur im Testmodus, nicht in der Browser-Version.
