@@ -101,6 +101,7 @@ namespace LunarCleanup.Gameplay
             Game.OnIcpStart += pid => { if (!world) return; hud.CloseSheet(); world.StartIntercept(); };
             Game.OnSupply += (pid, g, n) => { if (world && pid == Game.S.planet) world.SupplyRocket(g, n); };
             Game.OnTerra += (pid, a, b) => { if (world && pid == Game.S.planet) world.TerraChanged(a, b); };
+            WorldView.OnFeedback += (wp, txt, kind) => { if (!cam || !hud) return; var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) hud.FloatText(sp, txt, kind); };
             hud.BeltOn = () => world && world.Editing; hud.BeltOk = () => world && world.EditValid;
             hud.BeltTitle = () => world && world.Editing ? "Band verlegen · " + world.BeltName(world.EditBelt) : "";
             hud.BeltInfo = () => !world || !world.Editing ? "" : (world.EditWhy != "" ? "Rot: " + world.EditWhy + ". " : "") + (world.SelPt >= 0 ? "Punkt gewählt · Höhe " + world.EditHeight.ToString("0.0") + " m – den blauen Knopf darüber hoch- oder runterziehen. " : "Ziehe die weißen Punkte. Tippe aufs Band für einen neuen Punkt. ") + "Anfang und Ende bleiben am Gebäude.";
@@ -491,7 +492,7 @@ namespace LunarCleanup.Gameplay
         void Tap(Vector2 pos)
         {
             var ps = Game.Cur;
-            if (Game.Icp != null && world.IcpTap(cam, pos)) return; /* Fabian 02.11.: Abfangen */
+            if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
             if (world.Editing) { if (Hit(pos, out var de)) world.TapEdit(ps.pd.PlanLocal(de)); return; } /* Band-Editor: Tipp aufs Band = neuer Punkt */
             if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */

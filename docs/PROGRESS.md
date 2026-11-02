@@ -233,3 +233,9 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 
 ## Build 35 (02.11.2026) – Test-Knöpfe fürs Handy
 - Einstellungen → Testmodus: Riesenmeteor hier (15 s) / anderswo (30 s), Abwehrraketen voll + Schild aus (sicher ins Abfangen), Meteorschild voll, Zerstörung aufheben, Spezialgüter +200, Terraforming +1 / komplett (Wald) / -1 (Verfall). Nur im Testmodus (Entwickler-Build).
+
+## Build 36 (02.11.2026) – Abwehr sichtbar, schönere Bäume, faireres Abfangen
+- Meteorschild-Generator und Abwehrraketen-Batterie stehen an der Basis (freier Platz ohne Gebäude/Bänder). Schildkugel: blau pulsierend = bereit, orange = lädt nach, aus = Batterie leer. Der Werfer dreht sich zum Ziel, die Abwehrraketen starten dort.
+- Neue Modelle im Blender-Skript (`tools/blender/lunar_models.py`, auf dem Mac `Modelle_Quelle/`): schild, flak, lieferrakete, baum_laub_1–3, baum_tanne_1–2, busch_1–2, gras_1. Im Spiel als OBJ (ohne Blender erzeugt); in Blender ausführen (EXPORT = True) ersetzt sie durch FBX.
+- Abfangen leichter und klarer: Ring größer/langsamer, Zeitfenster größer, Tipp-Radius 110 pt, „Treffer!/Zu früh/Zu spät“ am Brocken, Meteor kommt von oben ins Bild, untere Knöpfe beim Abfangen ausgeblendet (sie lagen über den Brocken). Zerstört erst ab mehr als zwei Dritteln. Schwierigkeit steigt langsamer.
+- Schild: Abzüge bei Nacht/Sturm/fehlendem Unterhalt milder; Nachladen nur nach einem echten Treffer. Hinweise, was hilft (Countdown-Band „Tippen: Schild und Raketen kaufen“, Tipp nach Zerstörung).

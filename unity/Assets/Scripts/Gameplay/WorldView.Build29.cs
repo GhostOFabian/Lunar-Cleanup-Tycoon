@@ -121,7 +121,7 @@ namespace LunarCleanup.Gameplay
             if (!on) { if (doomGo) Destroy(doomGo); doomGo = null; doomWhistle = false; return; }
             if (!doomGo)
             {
-                var bc = pd.cells[pd.baseCell]; doomTo = pd.Surf(bc.c.normalized, 0); doomFrom = (bc.e1 * .95f + bc.e2 * .2f + bc.c.normalized * .35f).normalized * pd.R * 7; /* kommt von der Seite – so sieht man ihn heranrasen */
+                var bc = pd.cells[pd.baseCell]; doomTo = pd.Surf(bc.c.normalized, 0); var cu = Camera.main ? Camera.main.transform.up : bc.e1; cu = (cu - bc.c.normalized * Vector3.Dot(cu, bc.c.normalized)).normalized; doomFrom = (cu * .95f + bc.c.normalized * .45f).normalized * pd.R * 7; /* Fabian 02.11.: kommt von oben ins Bild – nicht unter den Knöpfen */ /* kommt von der Seite – so sieht man ihn heranrasen */
                 doomGo = new GameObject("Riesenmeteor"); doomGo.transform.SetParent(transform, false); var t = doomGo.transform;
                 var rk = RockKit.Spawn(t, 5, new Color(.25f, .2f, .18f), 1); rk.transform.localScale = Vector3.one * 1;
                 var glow = MeshKit.Part(t, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .55f, .2f, 1)), Vector3.zero, Vector3.one * 3.2f); NoShadow(glow); glow.AddComponent<Billboard>();

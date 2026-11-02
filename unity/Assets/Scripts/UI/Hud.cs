@@ -126,7 +126,7 @@ namespace LunarCleanup.UI
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
-            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { } else if (warnTarget == "doomgo") { if (Game.DoomActive) Game.Travel(Game.S.doomPid); } else if (warnTarget == "icp") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { OpenSheet("base", "2"); } else if (warnTarget == "doomgo") { if (Game.DoomActive) Game.Travel(Game.S.doomPid); } else if (warnTarget == "icp") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
             ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -144, 12, 112); /* sitzt jetzt dort, wo früher die Zielkarte war */
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
@@ -157,9 +157,9 @@ namespace LunarCleanup.UI
         void UpdateWarn(PState ps)
         {
             string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
-            if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Tippe, wenn der Ring den Brocken umschließt · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
+            if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
             else if (Game.DoomActive && Game.S.doomPid != Game.S.planet) { var dp = Game.P[Game.S.doomPid]; t = "RIESENMETEOR auf " + dp.P.name + " in " + Mathf.CeilToInt(Game.S.doomT) + " s · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" + (dp.sv.flakLv > 0 ? " · Tippen: hinfliegen und abfangen" : " · Tippen: hinfliegen"); warnTarget = "doomgo"; }
-            else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
+            else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit – Brocken antippen, wenn der Ring GRÜN ist" : "") + (dp.sv.msLv == 0 && dp.sv.flakLv == 0 ? " · keine Abwehr! Tippen: Schild und Raketen kaufen" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
             else if (Game.EvOn(ps, "trader")) { t = "Händler kauft " + GameData.Mats[ps.sv.ev.mat].name + " ×3 · " + Game.Fmt(Game.TraderStock(ps)) + " E = " + Game.Fmt(Game.TraderValue(ps)) + " Cr · noch " + Mathf.CeilToInt(ps.sv.ev.t) + " s · antippen"; warnTarget = "trader"; }
             else if (Game.EvOn(ps, "pile")) { int crew = Game.PileCrew(ps); t = "Müllberg · " + Mathf.RoundToInt(Game.PileLeft(ps) * 100) + " % übrig · " + crew + " Fahrzeuge dran" + (crew < Game.PILE_TEAM ? " (mind. " + Game.PILE_TEAM + " nötig)" : "") + " · noch " + Mathf.CeilToInt(ps.sv.ev.t / 60f) + " min"; warnTarget = "focus"; }
             else if (tt != null) { t = tt; warnTarget = "focus"; }
@@ -172,23 +172,24 @@ namespace LunarCleanup.UI
         }
 
         // ---------- unten ----------
+        readonly List<GameObject> bottomBtns = new List<GameObject>(); /* Fabian 02.11.: beim Abfangen ausgeblendet, damit kein Brocken hinter einem Knopf liegt */
         void BuildBottom()
         {
-            var hb = UiKit.Btn(root, "Behälter", () => Game.UnloadHand(), Pal.Glass, 16); handImg = hb.GetComponent<Image>();
+            var hb = UiKit.Btn(root, "Behälter", () => Game.UnloadHand(), Pal.Glass, 16); handImg = hb.GetComponent<Image>(); bottomBtns.Add(hb.gameObject);
             ((RectTransform)hb.transform).Anchor(0, 0, 0, 0, 12, 78, -120, -130);
             UiKit.Img(hb.transform, "Icon", UiKit.Icon("bucket"), Pal.Clean).rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             handTxt = UiKit.Text(hb.transform, "Wert", "0/60", 13, Pal.Ink, true, FontStyles.Bold); handTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); handTxt.alignment = TextAlignmentOptions.MidlineLeft;
             UiKit.Bar(hb.transform, "Balken", Pal.Clean, out handFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
             /* Fabian 01.11.: Rakete nicht mehr versteckt – Frachtraum-Anzeige über dem Behälter, Tippen startet die Rakete (leer: öffnet den Verkauf) */
-            var rb = UiKit.Btn(root, "Rakete", () => { var ps = Game.Cur; if (ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0) Game.LaunchRocket(); else OpenSheet("production", "1"); }, Pal.Glass, 16); rocketImg = rb.GetComponent<Image>();
+            var rb = UiKit.Btn(root, "Rakete", () => { var ps = Game.Cur; if (ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0) Game.LaunchRocket(); else OpenSheet("production", "1"); }, Pal.Glass, 16); rocketImg = rb.GetComponent<Image>(); bottomBtns.Add(rb.gameObject);
             ((RectTransform)rb.transform).Anchor(0, 0, 0, 0, 12, 142, -120, -194);
             UiKit.Img(rb.transform, "Icon", UiKit.Icon("rocket"), Pal.Credit).rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             rocketTxt = UiKit.Text(rb.transform, "Wert", "", 12, Pal.Ink, true, FontStyles.Bold); rocketTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); rocketTxt.alignment = TextAlignmentOptions.MidlineLeft; rocketTxt.enableAutoSizing = true; rocketTxt.fontSizeMin = 8; rocketTxt.fontSizeMax = 12; rocketTxt.textWrappingMode = TextWrappingModes.NoWrap;
             UiKit.Bar(rb.transform, "Balken", Pal.Credit, out rocketFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
-            var mb = UiKit.Btn(root, "Karte", () => OnMap?.Invoke(), Pal.Glass, 16); ((RectTransform)mb.transform).Anchor(1, 0, 1, 0, -64, 78, 12, -130);
+            var mb = UiKit.Btn(root, "Karte", () => OnMap?.Invoke(), Pal.Glass, 16); bottomBtns.Add(mb.gameObject); ((RectTransform)mb.transform).Anchor(1, 0, 1, 0, -64, 78, 12, -130);
             UiKit.Img(mb.transform, "Icon", UiKit.Icon("globe"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
             /* Fabian 01.11.: ein Tipp zurück zur Basis-Ansicht */
-            var hm = UiKit.Btn(root, "Zur Basis", () => OnHome?.Invoke(), Pal.Glass, 16); ((RectTransform)hm.transform).Anchor(1, 0, 1, 0, -64, 142, 12, -194);
+            var hm = UiKit.Btn(root, "Zur Basis", () => OnHome?.Invoke(), Pal.Glass, 16); bottomBtns.Add(hm.gameObject); ((RectTransform)hm.transform).Anchor(1, 0, 1, 0, -64, 142, 12, -194);
             UiKit.Img(hm.transform, "Icon", UiKit.Icon("home"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
             var nav = UiKit.Glass(root, "Leiste", Pal.GlassHi, 2); nav.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -66);
             var hl = nav.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true; hl.padding = new RectOffset(4, 4, 6, 6); hl.spacing = 2;
@@ -379,7 +380,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean, tot = ps.pd.cells.Count(x => !x.IsBase); pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit();
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */

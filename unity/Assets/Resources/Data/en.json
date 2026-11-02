@@ -2138,5 +2138,19 @@
 "Terraforming komplett (Wald)": "Terraforming complete (forest)",
 "Springt direkt auf Stufe 5 – so sieht der Planet voll wiederhergestellt aus.": "Jumps straight to stage 5 – how the fully restored planet looks.",
 "Terraforming -1 (Verfall)": "Terraforming -1 (decay)",
-"Eine Stufe zurück – so sterben die Bäume.": "One stage back – watch the trees die."
+"Eine Stufe zurück – so sterben die Bäume.": "One stage back – watch the trees die.",
+"Der Schild hält nicht (": "The shield fails (",
+" %) – der Meteor bricht durch!": "%) – the meteor breaks through!",
+" Brocken – tippe jeden an, wenn sein Ring GRÜN ist!": " chunks – tap each one when its ring turns GREEN!",
+"Keine Abwehr – Tipp für nächstes Mal: Basis → Schutz (Meteorschild und Abwehrraketen)": "No defense – tip for next time: Base → Defense (meteor shield and defense rockets)",
+" Brocken eingeschlagen – das hält die Basis nicht aus! Tipp: mehr Raketen und einen stärkeren Schild (Basis → Schutz)": " chunks hit – the base cannot take that! Tip: more rockets and a stronger shield (Base → Defense)",
+" Raketen bereit – Brocken antippen, wenn der Ring GRÜN ist": " rockets ready – tap chunks when the ring is GREEN",
+" · keine Abwehr! Tippen: Schild und Raketen kaufen": " · no defense! Tap: buy shield and rockets",
+"Treffer!": "Hit!",
+"Zu früh – warte auf GRÜN": "Too early – wait for GREEN",
+"Zu spät": "Too late",
+"Kommen mehr als zwei Drittel durch, ist die Basis verloren – sonst gibt es Schmutz, kaputte Fahrzeuge und gestörte Anlagen.": "If more than two thirds get through, the base is lost – otherwise you get dirt, broken vehicles and disrupted machines.",
+" ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet ": ". Weaker in storms, low energy and missing supplies, off with empty batteries. 30 min recharge after each deflected meteor. Costs ",
+"Jeder Riesenmeteor wird schwerer: mehr, schnellere Brocken, die später auch in Kurven fliegen. Terraforming macht ihn ebenfalls schwerer. Kommen mehr als zwei Drittel durch, ist die Basis verloren – sonst gibt es Schmutz, kaputte Fahrzeuge und gestörte Anlagen.": "Every giant meteor gets harder: more and faster chunks, later ones fly in curves. Terraforming makes it harder too. If more than two thirds get through, the base is lost – otherwise you get dirt, broken vehicles and disrupted machines.",
+"ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen ": "INTERCEPT · tap chunks when their ring is GREEN · rockets "
 }

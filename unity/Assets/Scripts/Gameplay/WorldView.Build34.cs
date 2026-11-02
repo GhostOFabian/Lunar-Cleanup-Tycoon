@@ -10,7 +10,7 @@ namespace LunarCleanup.Gameplay
 {
     public partial class WorldView
     {
-        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdateTerra(); UpdateEdit(); }
+        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdateTerra(); UpdateEdit(); UpdateDefense(); }
 
         // =====================================================================
         // Riesenmeteor: Schild lenkt ab / letzter Sturz / Abfangen
@@ -26,7 +26,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Der Meteor wird vom Schild abgelenkt: Schildkuppel leuchtet auf, der Meteor prallt ab und fliegt davon.</summary>
         public void ShieldBlock()
         {
-            var bc = pd.cells[pd.baseCell]; var at = pd.Surf(bc.c, 0); var go = doomGo; doomGo = null; doomTo = Vector3.zero; StartCoroutine(Deflect(go, at));
+            var bc = pd.cells[pd.baseCell]; var at = shieldGo ? shieldGo.transform.position : pd.Surf(bc.c, 0); var go = doomGo; doomGo = null; doomTo = Vector3.zero; StartCoroutine(Deflect(go, at));
         }
         IEnumerator Deflect(GameObject go, Vector3 baseAt)
         {
@@ -54,6 +54,7 @@ namespace LunarCleanup.Gameplay
         class Chunk { public GameObject go; public Transform ring; public Material ringMat; public Vector3 p0, p1, side; public float t, T, size, ringT, ringP, amp, delay, win; public bool dead, aimed, auto; public int idx; }
         readonly List<Chunk> chunks = new List<Chunk>(); bool icpOn; float icpEnd = -1;
         public bool InterceptActive => icpOn;
+        public static event System.Action<Vector3, string, string> OnFeedback; // Weltpunkt, Text, Art – GameRoot zeigt ihn als schwebenden Text
         /// <summary>Test: 1 = jeder Brocken getroffen, 2 = jeder Schuss daneben, 3 = jeder zweite getroffen, Rest durch.</summary>
         public static int AutoPlay;
         float RingK(Chunk c) { float f = (c.ringT / c.ringP) % 1f; return 3.2f - 2.8f * f; } // Ring: 3,2× → 0,4× Brockengröße, dann von vorn
@@ -69,11 +70,11 @@ namespace LunarCleanup.Gameplay
                 float u = (float)i / Mathf.Max(1, I.total - 1);
                 var dir = (bc.c * pd.R + bc.e1 * Random.Range(-22f, 22f) + bc.e2 * Random.Range(-22f, 22f)).normalized;
                 var c = new Chunk { idx = i, p0 = at + Random.insideUnitSphere * 4, p1 = pd.Surf(dir, .4f), size = pd.R * Random.Range(.07f, .1f) };
-                c.T = Mathf.Max(3f, 7.5f - .35f * d) * Random.Range(.92f, 1.1f) * (1 - .3f * u);         // spätere Brocken schneller
-                c.delay = i * Mathf.Max(.65f, 1.5f - .06f * d);
-                c.amp = (u >= .5f ? 1 : 0) * pd.R * Mathf.Min(.6f, .18f + .03f * d) * Random.Range(.7f, 1f); // spätere fliegen Kurven
+                c.T = Mathf.Max(4f, 9f - .3f * d) * Random.Range(.92f, 1.1f) * (1 - .25f * u);         // spätere Brocken schneller
+                c.delay = 1.2f + i * Mathf.Max(.8f, 1.7f - .06f * d); /* kurze Pause nach dem Zerbrechen */
+                c.amp = (u >= .5f && d >= 1.5f ? 1 : 0) * pd.R * Mathf.Min(.6f, .18f + .03f * d) * Random.Range(.7f, 1f); // spätere fliegen Kurven
                 var fwd = (c.p1 - c.p0).normalized; c.side = Vector3.Cross(fwd, Random.onUnitSphere).normalized;
-                c.ringP = Mathf.Max(.75f, 1.6f - .05f * d); c.win = Mathf.Max(.12f, .3f - .015f * d); c.ringT = Random.value * c.ringP;
+                c.ringP = Mathf.Max(1f, 2f - .06f * d); c.win = Mathf.Max(.16f, .36f - .015f * d); /* Fabian 02.11.: großzügigeres Zeitfenster */ c.ringT = Random.value * c.ringP;
                 c.go = new GameObject("Brocken " + i); c.go.transform.SetParent(transform, false); c.go.transform.position = c.p0; c.go.SetActive(false);
                 var rk = new GameObject("Fels"); rk.transform.SetParent(c.go.transform, false); rk.transform.localScale = Vector3.one * c.size; rk.AddComponent<MeshFilter>().sharedMesh = RockKit.Mesh(i, false); rk.AddComponent<MeshRenderer>().sharedMaterial = rm;
                 var gl = MeshKit.Part(c.go.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .5f, .2f, .9f)), Vector3.zero, Vector3.one * c.size * 3.2f); NoShadow(gl); gl.AddComponent<Billboard>();
@@ -113,25 +114,26 @@ namespace LunarCleanup.Gameplay
         }
         void EndIcpVisuals() { foreach (var c in chunks) if (c.go) Destroy(c.go); chunks.Clear(); icpOn = false; icpEnd = -1; }
         /// <summary>Tipp während des Abfangens: nächster Brocken am Finger. Treffer, wenn der Ring gerade den Brocken umschließt.</summary>
-        public bool IcpTap(Camera cam, Vector2 pos)
+        public bool IcpTap(Camera cam, Vector2 pos, float minPx = 110)
         {
             if (!icpOn || Game.Icp == null) return false; Chunk best = null; float bd = 1e9f;
             foreach (var c in chunks)
             {
                 if (c.dead || c.aimed || c.delay > 0) continue; var sp = cam.WorldToScreenPoint(c.go.transform.position); if (sp.z <= 0) continue;
-                var ep = cam.WorldToScreenPoint(c.go.transform.position + cam.transform.right * c.size * 2.2f * RingK(c)); float rad = Mathf.Max(70, ((Vector2)ep - (Vector2)sp).magnitude * 1.1f);
+                var ep = cam.WorldToScreenPoint(c.go.transform.position + cam.transform.right * c.size * 2.2f * RingK(c)); float rad = Mathf.Max(minPx, ((Vector2)ep - (Vector2)sp).magnitude * 1.1f);
                 float d = ((Vector2)sp - pos).magnitude; if (d < rad && d < bd) { bd = d; best = c; }
             }
             if (best == null) return true; // Tippen ins Leere kostet nichts
             if (Game.Icp.rockets <= 0) { Game.Toast("Keine Abwehrraketen mehr!", "bad"); return true; }
-            Shoot(best, Mathf.Abs(RingK(best) - 1) <= best.win); return true;
+            float k = RingK(best); bool hit = Mathf.Abs(k - 1) <= best.win; Shoot(best, hit);
+            OnFeedback?.Invoke(best.go.transform.position, hit ? "Treffer!" : k > 1 ? "Zu früh – warte auf GRÜN" : "Zu spät", hit ? "good" : "bad"); return true;
         }
         class Shot { public Vector3 a; public Chunk c; public float t; public bool hit; public GameObject go; public Vector3 miss; }
         readonly List<Shot> shots = new List<Shot>();
         void Shoot(Chunk c, bool hit)
         {
             if (!Game.IcpShot(hit)) return; if (hit) c.aimed = true;
-            var bc = pd.cells[pd.baseCell]; var a = pd.Surf(bc.c, 3);
+            var bc = pd.cells[pd.baseCell]; var a = FlakMuzzle(out _) ?? pd.Surf(bc.c, 3); flakAim = c;
             var g = new GameObject("Abwehrrakete"); g.transform.SetParent(transform, false); g.transform.position = a;
             var gl = MeshKit.Part(g.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.7f, .9f, 1f, 1)), Vector3.zero, Vector3.one * pd.R * .08f); NoShadow(gl); gl.AddComponent<Billboard>();
             var tr = g.AddComponent<TrailRenderer>(); tr.time = .5f; tr.widthMultiplier = pd.R * .025f; tr.widthCurve = new AnimationCurve(new Keyframe(0, 1), new Keyframe(1, 0)); tr.material = GlowMat(MeshKit.GlowTex(), new Color(.75f, .9f, 1f, 1)); tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -162,7 +164,7 @@ namespace LunarCleanup.Gameplay
             var b = pd.Surf(land, 1.2f); var a = b + (b.normalized * .8f + bc.e1 * .6f).normalized * pd.R * 1.5f;
             var go = new GameObject("Lieferrakete"); go.transform.SetParent(transform, false);
             var body = MeshKit.Mat(new Color(.92f, .93f, .95f), .3f, .5f); var acc = MeshKit.Mat(g0.col, .2f, .5f, g0.col * .6f);
-            MeshKit.Cyl(go.transform, body, new Vector3(0, 1.1f, 0), .5f, .55f, 2.2f, 12); MeshKit.Cyl(go.transform, acc, new Vector3(0, 2.6f, 0), 0, .5f, .9f, 12); MeshKit.Cyl(go.transform, acc, new Vector3(0, .5f, 0), .62f, .62f, .4f, 12);
+            if (!LcKit.Has("Ereignisse/lieferrakete") || !LcKit.Spawn("Ereignisse/lieferrakete", go.transform, Vector3.zero, 0, g0.col)) { MeshKit.Cyl(go.transform, body, new Vector3(0, 1.1f, 0), .5f, .55f, 2.2f, 12); MeshKit.Cyl(go.transform, acc, new Vector3(0, 2.6f, 0), 0, .5f, .9f, 12); MeshKit.Cyl(go.transform, acc, new Vector3(0, .5f, 0), .62f, .62f, .4f, 12); } /* Modell aus dem Blender-Skript, Akzent = Farbe des Guts */
             var fl = MeshKit.Part(go.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .7f, .35f, 1)), new Vector3(0, -.4f, 0), Vector3.one * 2f); NoShadow(fl); fl.AddComponent<Billboard>();
             foreach (var r in go.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             supply.Add((go, a, b, 0)); Sfx.Play("rocket", .8f, .4f);
@@ -183,7 +185,7 @@ namespace LunarCleanup.Gameplay
         // Terraforming: Grünflächen, Moos, Gras und Sträucher, Teiche, Bäume, die sich im Wind wiegen
         // =====================================================================
         Transform terraRoot; int terraBuilt = -1; string terraFor; Material greenMat;
-        class Tree { public Transform t; public Quaternion r0; public float ph, s, grow, die = -1; public MeshRenderer crown; public bool young; }
+        class Tree { public Transform t; public Quaternion r0; public float ph, s, full = 1, grow, die = -1; public MeshRenderer crown; public bool young; }
         readonly List<Tree> trees = new List<Tree>();
         public static readonly Color TerraSky = new Color(.45f, .72f, 1f);
         /// <summary>Stufe hat sich geändert (Kauf oder Verfall).</summary>
@@ -239,7 +241,11 @@ namespace LunarCleanup.Gameplay
                     for (int q = 0; q < 2; q++) if (rng.NextDouble() < .6) { float s = R(.7f, 1.3f); var ci = new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .6f), s * .5f, R(0, 360), new Vector3(s, s * .8f, s)) }; if (rng.NextDouble() < .5) bush.Add(ci); else bush2.Add(ci); }
                 }
                 var lawn = new List<CombineInstance>(); foreach (var c in cells) for (int q = 0; q < 2; q++) { float s = R(1.8f, 2.8f); lawn.Add(new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .6f), -.03f, R(0, 360), new Vector3(s * 1.2f, .09f, s)) }); }
-                Combine("Rasen", lawn, MeshKit.Mat(new Color(.3f, .52f, .2f), 0, .2f)); /* beleuchtete grüne Fläche am Boden */
+                lawn.Clear(); Combine("Rasen", lawn, MeshKit.Mat(new Color(.3f, .52f, .2f), 0, .2f)); /* beleuchtete grüne Fläche am Boden */
+                /* Fabian 02.11.: Grasbüschel und Büsche aus dem Blender-Skript, sonst die einfachen Halme/Ballen */
+                var gx = new List<Matrix4x4>(); var bx1 = new List<Matrix4x4>(); var bx2 = new List<Matrix4x4>();
+                foreach (var c in cells) { for (int q = 0; q < 7; q++) { float hs = R(.9f, 1.5f); gx.Add(At(Spot(c, .85f), -.02f, R(0, 360), Vector3.one * hs)); } for (int q = 0; q < 2; q++) if (rng.NextDouble() < .55) { float bs = R(.8f, 1.4f); (q == 0 ? bx1 : bx2).Add(At(Spot(c, .7f), -.05f, R(0, 360), Vector3.one * bs)); } }
+                if (CombineLc("Gras", "Natur/gras_1", gx) && CombineLc("Busch", "Natur/busch_1", bx1) && CombineLc("Busch", "Natur/busch_2", bx2)) { grass.Clear(); bush.Clear(); bush2.Clear(); }
                 Combine("Gras", grass, MeshKit.Mat(new Color(.42f, .68f, .24f), 0, .25f)); Combine("Sträucher", bush, MeshKit.Mat(new Color(.2f, .48f, .2f), 0, .2f)); Combine("Sträucher hell", bush2, MeshKit.Mat(new Color(.36f, .58f, .18f), 0, .2f));
             }
             if (st >= 4)
@@ -257,7 +263,7 @@ namespace LunarCleanup.Gameplay
                     pond.transform.localScale = new Vector3(1, 1, R(.7f, 1));
                 }
                 // Bäume: Stufe 4 junge Bäume, Stufe 5 Wald
-                int want = st >= 5 ? 220 : 60; int have = trees.Count(t => t.die < 0);
+                int want = st >= 5 ? 170 : 55; int have = trees.Count(t => t.die < 0);
                 foreach (var tr in trees) if (tr.die < 0 && st >= 5 && tr.young) { tr.young = false; }
                 /* Haine: Bäume stehen in Gruppen, nicht gleichmäßig verstreut */
                 var groves = cells.Where(c => c.ring >= 2).OrderBy(c => (c.id * 7919) % 1009).Take(Mathf.Max(4, want / 6)).ToList(); if (groves.Count == 0) groves = cells;
@@ -288,12 +294,35 @@ namespace LunarCleanup.Gameplay
         {
             var g = new GameObject("Baum"); g.transform.SetParent(root, false); var up = pd.SurfNormal(dir) * .3f + dir.normalized * .7f;
             g.transform.position = pd.Surf(dir, -.05f); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, up.normalized) * Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0);
-            bool fir = rng.NextDouble() < .35; int v = fir ? 3 + rng.Next(2) : rng.Next(3); var bark = MeshKit.Mat(new Color(.36f, .25f, .16f), 0, .2f);
-            var leaf = fir ? MeshKit.Mat(new Color(.12f, .34f, .2f), 0, .25f) : MeshKit.Mat(new[] { new Color(.2f, .5f, .18f), new Color(.3f, .56f, .2f), new Color(.38f, .62f, .2f) }[rng.Next(3)], 0, .25f);
-            g.AddComponent<MeshFilter>().sharedMesh = TreeMesh(v); var mr = g.AddComponent<MeshRenderer>(); mr.sharedMaterials = new[] { bark, leaf }; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            float s = young ? (float)(.75 + rng.NextDouble() * .3) : (float)(1.4 + rng.NextDouble() * .8);
-            var tr = new Tree { t = g.transform, r0 = g.transform.rotation, ph = (float)rng.NextDouble() * 6.283f, s = s, grow = grow ? 0 : 1, crown = mr, young = young };
+            bool fir = rng.NextDouble() < .4; MeshRenderer mr; float full;
+            /* Fabian 02.11.: Bäume aus dem Blender-Skript (Natur/baum_laub_1–3, baum_tanne_1–2); ohne Modelle der einfache Ersatz */
+            var bk = LcKit.Bake(fir ? "Natur/baum_tanne_" + (1 + rng.Next(2)) : "Natur/baum_laub_" + (1 + rng.Next(3)));
+            if (bk != null && bk.mesh)
+            {
+                g.AddComponent<MeshFilter>().sharedMesh = bk.mesh; mr = g.AddComponent<MeshRenderer>(); mr.sharedMaterials = bk.mats; full = (float)(.85 + rng.NextDouble() * .35);
+            }
+            else
+            {
+                int v = fir ? 3 + rng.Next(2) : rng.Next(3); var bark = MeshKit.Mat(new Color(.36f, .25f, .16f), 0, .2f);
+                var leaf = fir ? MeshKit.Mat(new Color(.12f, .34f, .2f), 0, .25f) : MeshKit.Mat(new[] { new Color(.2f, .5f, .18f), new Color(.3f, .56f, .2f), new Color(.38f, .62f, .2f) }[rng.Next(3)], 0, .25f);
+                g.AddComponent<MeshFilter>().sharedMesh = TreeMesh(v); mr = g.AddComponent<MeshRenderer>(); mr.sharedMaterials = new[] { bark, leaf }; full = (float)(1.4 + rng.NextDouble() * .8);
+            }
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            float s = young ? full * .55f : full;
+            var tr = new Tree { t = g.transform, r0 = g.transform.rotation, ph = (float)rng.NextDouble() * 6.283f, s = s, full = full, grow = grow ? 0 : 1, crown = mr, young = young };
             g.transform.localScale = Vector3.one * s * (grow ? .01f : 1); trees.Add(tr);
+        }
+        /// <summary>Viele kleine Teile aus einem Blender-Modell (je Material eine Mesh).</summary>
+        bool CombineLc(string name, string path, List<Matrix4x4> xs)
+        {
+            var bk = LcKit.Bake(path); if (bk == null || !bk.mesh || xs.Count == 0) return false;
+            for (int sm = 0; sm < bk.mesh.subMeshCount && sm < bk.mats.Length; sm++)
+            {
+                var parts = new List<CombineInstance>(xs.Count); foreach (var x in xs) parts.Add(new CombineInstance { mesh = bk.mesh, subMeshIndex = sm, transform = x });
+                var m = new Mesh { name = name + " " + sm, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 }; m.CombineMeshes(parts.ToArray(), true, true);
+                var g = new GameObject(name); g.transform.SetParent(terraRoot, false); g.AddComponent<MeshFilter>().sharedMesh = m; g.AddComponent<MeshRenderer>().sharedMaterial = bk.mats[sm]; NoShadow(g);
+            }
+            return true;
         }
         void UpdateTerra()
         {
@@ -307,13 +336,13 @@ namespace LunarCleanup.Gameplay
                 if (tr.die >= 0)
                 {
                     tr.die += Time.deltaTime / 4f; // Baum stirbt: Krone wird braun, kippt und versinkt
-                    if (tr.crown) { var ms = tr.crown.sharedMaterials; if (ms.Length > 1) { ms[1] = MeshKit.Mat(new Color(.45f, .32f, .18f), 0, .2f); tr.crown.sharedMaterials = ms; } tr.crown = null; } /* Krone wird braun */
+                    if (tr.crown) { var ms = tr.crown.sharedMaterials; var brown = MeshKit.Mat(new Color(.45f, .32f, .18f), 0, .2f); for (int q = 0; q < ms.Length; q++) if (ms.Length == 2 ? q == 1 : ms[q] && (ms[q].name.Contains("laub") || ms[q].name.Contains("tanne"))) ms[q] = brown; tr.crown.sharedMaterials = ms; tr.crown = null; } /* Krone wird braun */
                     tr.t.rotation = tr.r0 * Quaternion.Euler(tr.die * 70, 0, 0); tr.t.localScale = Vector3.one * tr.s * Mathf.Clamp01(1.4f - tr.die);
                     if (tr.die >= 1.4f) { Destroy(tr.t.gameObject); trees.RemoveAt(i); }
                     continue;
                 }
                 if (tr.grow < 1) { tr.grow = Mathf.Min(1, tr.grow + Time.deltaTime / 3f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow); }
-                if (tr.young && ps.sv.terra >= 5) tr.young = false; float target = tr.young ? tr.s : Mathf.Max(tr.s, 1.4f); if (tr.s < target) { tr.s = Mathf.MoveTowards(tr.s, target, Time.deltaTime * .1f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow); }
+                if (tr.young && ps.sv.terra >= 5) tr.young = false; float target = tr.young ? tr.full * .55f : tr.full; if (tr.s < target) { tr.s = Mathf.MoveTowards(tr.s, target, Time.deltaTime * .1f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow); }
                 float a = wind * (2.2f + Mathf.Sin(tm * .7f + tr.ph * 2) * .8f);
                 tr.t.rotation = tr.r0 * Quaternion.Euler(Mathf.Sin(tm * 1.3f + tr.ph) * a, 0, Mathf.Cos(tm * 1.05f + tr.ph * 1.7f) * a * .6f);
             }

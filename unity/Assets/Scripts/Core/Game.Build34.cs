@@ -90,7 +90,7 @@ namespace LunarCleanup.Core
         public static float ShieldChance(PState ps)
         {
             var sv = ps.sv; if (sv.msLv <= 0 || sv.msCool > 0 || sv.energy < 2) return 0;
-            float c = ShieldMax(ps); if (StormOn(ps) && !ps.shOn) c *= .6f; if (ps.ef < 1) c *= Mathf.Max(0, ps.ef); if (!sv.supOk) c *= .6f;
+            float c = ShieldMax(ps); if (StormOn(ps) && !ps.shOn) c *= .8f; if (ps.ef < 1) c *= .7f + .3f * Mathf.Max(0, ps.ef); if (!sv.supOk) c *= .85f; /* Fabian 02.11.: Abzüge milder – vorher fiel der Schild nachts fast ganz aus */
             return Mathf.Clamp(c, 0, .85f);
         }
         public static string ShieldState(PState ps)
@@ -108,19 +108,20 @@ namespace LunarCleanup.Core
         public static Intercept Icp;
         public static event Action<string> OnDoomBlocked, OnIcpStart;
         public static event Action<string, int, int> OnIcpEnd; // Planet, durchgekommen, gesamt
-        public static float DoomDiff(PState ps) => S.doomN + ps.sv.terra * 1.5f;
+        public static float DoomDiff(PState ps) => S.doomN * .6f + ps.sv.terra; /* Fabian 02.11.: langsamer schwerer */
         /// <summary>Wird beim Ablauf des Countdowns aufgerufen.</summary>
         static void DoomOutcome(string pid)
         {
             if (!P.ContainsKey(pid)) return; var ps = P[pid]; S.doomN++;
             float ch = ShieldChance(ps);
-            if (ch > 0) { ps.sv.msCool = MS_COOL; if (Rng.NextDouble() < ch) { Toast("Der Meteorschild hat den Riesenmeteor abgelenkt! Er lädt jetzt 30 min nach.", "good"); OnDoomBlocked?.Invoke(pid); Save(); return; } Toast("Der Schild hält nicht – der Meteor bricht durch!", "bad"); }
+            if (ch > 0) { if (Rng.NextDouble() < ch) { ps.sv.msCool = MS_COOL; Toast("Der Meteorschild hat den Riesenmeteor abgelenkt! Er lädt jetzt 30 min nach.", "good"); OnDoomBlocked?.Invoke(pid); Save(); return; } Toast("Der Schild hält nicht (" + Mathf.RoundToInt(ch * 100) + " %) – der Meteor bricht durch!", "bad"); } /* Nachladen nur nach einem echten Treffer */
             if (pid == S.planet && !Offline && FlakRockets(ps) > 0)
             {
-                float d = DoomDiff(ps); int n = Mathf.Clamp(4 + Mathf.FloorToInt(d / 2) + Rng.Next(2), 4, 8);
+                float d = DoomDiff(ps); int n = Mathf.Clamp(4 + Mathf.FloorToInt(d / 3) + (d >= 2 ? Rng.Next(2) : 0), 4, 8);
                 Icp = new Intercept { pid = pid, total = n, rockets = FlakRockets(ps), diff = d };
-                Toast("Der Meteor zerbricht in " + n + " Brocken – fang sie ab! Tippe, wenn der Ring den Brocken umschließt.", "bad"); OnIcpStart?.Invoke(pid); return;
+                Toast("Der Meteor zerbricht in " + n + " Brocken – tippe jeden an, wenn sein Ring GRÜN ist!", "bad"); OnIcpStart?.Invoke(pid); return;
             }
+            if (pid == S.planet) Toast("Keine Abwehr – Tipp für nächstes Mal: Basis → Schutz (Meteorschild und Abwehrraketen)", "bad");
             OnDoomImpact?.Invoke(pid); // Explosion, danach Ruin()
         }
         /// <summary>Ein Tipp auf einen Brocken (verbraucht eine Rakete).</summary>
@@ -136,7 +137,7 @@ namespace LunarCleanup.Core
         {
             var I = Icp; if (I == null) return; Icp = null; string pid = I.pid; if (!P.ContainsKey(pid)) return; var ps = P[pid];
             OnIcpEnd?.Invoke(pid, I.through, I.total);
-            if (I.through * 2 > I.total) { Toast(I.through + " von " + I.total + " Brocken eingeschlagen – das hält die Basis nicht aus!", "bad"); OnDoomImpact?.Invoke(pid); return; }
+            if (I.through * 3 > I.total * 2) { Toast(I.through + " von " + I.total + " Brocken eingeschlagen – das hält die Basis nicht aus! Tipp: mehr Raketen und einen stärkeren Schild (Basis → Schutz)", "bad"); OnDoomImpact?.Invoke(pid); return; } /* Fabian 02.11.: erst ab mehr als zwei Dritteln zerstört */
             if (I.through == 0) { Toast("Alle " + I.total + " Brocken abgefangen! +" + I.hits + " Sternenstaub", "good"); Save(); return; }
             DoomDamage(ps, I.through);
             Toast(I.hits + " abgefangen (+" + I.hits + " Sternenstaub), " + I.through + " eingeschlagen: Schmutz, Fahrzeugschäden, gestörte Anlagen", "bad"); Save();

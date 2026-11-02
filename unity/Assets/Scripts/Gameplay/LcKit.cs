@@ -117,6 +117,15 @@ namespace LunarCleanup.Gameplay
             { "LC_visier", new P(1f, 0.702f, 0.2784f, 0, 0, 0, 0.1f, 0.9f) },
             { "LC_warn", new P(1f, 0.3529f, 0.2902f, 1f, 0.3529f, 0.2902f, 0.3f, 0) },
             { "LC_weiss", new P(0.8745f, 0.898f, 0.9333f, 0, 0, 0, 0.55f, 0.1f) },
+            /* Build 34 (02.11.): Abwehr und Natur */
+            { "LC_schildfeld", new P(0.4980f, 0.9098f, 1.0000f, 0.4980f, 0.9098f, 1.0000f, 0.20f, 0.00f) },
+            { "LC_laub1", new P(0.2980f, 0.6039f, 0.2275f, 0, 0, 0, 0.75f, 0) },
+            { "LC_laub2", new P(0.4353f, 0.6980f, 0.2902f, 0, 0, 0, 0.75f, 0) },
+            { "LC_laub3", new P(0.1843f, 0.4784f, 0.2000f, 0, 0, 0, 0.80f, 0) },
+            { "LC_tanne", new P(0.1412f, 0.3490f, 0.2275f, 0, 0, 0, 0.80f, 0) },
+            { "LC_rinde", new P(0.4196f, 0.2902f, 0.1843f, 0, 0, 0, 0.90f, 0) },
+            { "LC_gras", new P(0.4863f, 0.7255f, 0.2980f, 0, 0, 0, 0.80f, 0) },
+            { "LC_bluete", new P(0.9569f, 0.8275f, 0.3686f, 0, 0, 0, 0.60f, 0) },
         };
         /// <summary>Material zum Blender-Namen. LC_akzent = Planeten-/Fahrzeugfarbe, LC_akzent2 = zweite Akzentfarbe; Leuchtmaterialien bekommen HDR-Leuchten fürs Bloom.</summary>
         /// <summary>Ein Material aus Fabians Palette (LC_stahl, LC_dunkel …) für selbst gebaute Teile, damit sie zu den Modellen passen.</summary>

@@ -1,0 +1,186 @@
+# Lunar Cleanup Tycoon – Materialien (PBR-Werte in Pr/Pm)
+
+newmtl LC_akzent
+Kd 1.0000 0.7490 0.3020
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 505
+Pr 0.45
+Pm 0.30
+d 1
+illum 2
+
+newmtl LC_bluete
+Kd 0.9569 0.8275 0.3686
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 370
+Pr 0.60
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_dunkel
+Kd 0.2275 0.2549 0.3137
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 505
+Pr 0.45
+Pm 0.50
+d 1
+illum 2
+
+newmtl LC_glas
+Kd 0.4980 0.8471 1.0000
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 865
+Pr 0.05
+Pm 0.10
+d 1
+illum 2
+Ke 0.0747 0.1271 0.1500
+
+newmtl LC_glut
+Kd 1.0000 0.4784 0.1020
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 550
+Pr 0.40
+Pm 0.00
+d 1
+illum 2
+Ke 1.0000 0.4784 0.1020
+
+newmtl LC_gras
+Kd 0.4863 0.7255 0.2980
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 189
+Pr 0.80
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_hell
+Kd 0.7686 0.8000 0.8471
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 460
+Pr 0.50
+Pm 0.20
+d 1
+illum 2
+
+newmtl LC_laub1
+Kd 0.2980 0.6039 0.2275
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 235
+Pr 0.75
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_laub2
+Kd 0.4353 0.6980 0.2902
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 235
+Pr 0.75
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_laub3
+Kd 0.1843 0.4784 0.2000
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 189
+Pr 0.80
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_mint
+Kd 0.4353 0.9490 0.8235
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 640
+Pr 0.30
+Pm 0.00
+d 1
+illum 2
+Ke 0.4353 0.9490 0.8235
+
+newmtl LC_platte
+Kd 0.2902 0.3137 0.3765
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 280
+Pr 0.70
+Pm 0.20
+d 1
+illum 2
+
+newmtl LC_rinde
+Kd 0.4196 0.2902 0.1843
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 99
+Pr 0.90
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_schildfeld
+Kd 0.4980 0.9098 1.0000
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 730
+Pr 0.20
+Pm 0.00
+d 1
+illum 2
+Ke 0.4980 0.9098 1.0000
+
+newmtl LC_stahl
+Kd 0.5412 0.5765 0.6392
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 595
+Pr 0.35
+Pm 0.85
+d 1
+illum 2
+
+newmtl LC_tanne
+Kd 0.1412 0.3490 0.2275
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 189
+Pr 0.80
+Pm 0.00
+d 1
+illum 2
+
+newmtl LC_warn
+Kd 1.0000 0.3529 0.2902
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 640
+Pr 0.30
+Pm 0.00
+d 1
+illum 2
+Ke 1.0000 0.3529 0.2902
+
+newmtl LC_weiss
+Kd 0.8745 0.8980 0.9333
+Ka 0 0 0
+Ks 0.5 0.5 0.5
+Ns 414
+Pr 0.55
+Pm 0.10
+d 1
+illum 2
