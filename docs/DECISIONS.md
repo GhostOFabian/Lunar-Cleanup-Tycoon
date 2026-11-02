@@ -252,3 +252,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 02.11.2026: Terraforming-Pflanzen werden zu wenigen Meshes zusammengefasst; Bäume sind je eine Mesh mit zwei Teilen (Stamm, Krone), damit sie einzeln im Wind schwingen, ohne neue Shader-Varianten (kein GPU-Instancing).
 - 02.11.2026: Neue Modelle kommen als OBJ aus dem Blender-Skript (läuft auch ohne Blender); FBX erst, wenn Fabian das Skript in Blender exportiert. Materialnamen LC_* bleiben gleich.
 - 02.11.2026 (Fabian): Beim Abfangen gehen die unteren Knöpfe weg – Brocken hinter Knöpfen ließen sich nicht antippen.
+- 02.11.2026 (Fabian): Alles, was verkauft wird, läuft durchs Produktlager; nur ein Band ins Schiff. Bänder zum selben Gebäude werden zusammengeführt (nur Merger am Ende, nie Verteiler).

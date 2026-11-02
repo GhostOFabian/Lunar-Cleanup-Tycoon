@@ -245,7 +245,7 @@ namespace LunarCleanup.Core
         public static float HandCap() => Uv("handcap");
         public static float Sum(float[] a) { float s = 0; for (int i = 0; i < a.Length; i++) s += a[i]; return s; }
         public static float RohSum(PState ps) { float s = 0; foreach (int m in GameData.Raw) s += ps.sv.roh[m]; return s; }
-        public static float ProdSum(PState ps) { float s = 0; foreach (int m in GameData.Prods) s += ps.sv.prod[m]; return s; }
+        public static float ProdSum(PState ps) { float s = 0; for (int m = 0; m < ps.sv.prod.Length; m++) s += ps.sv.prod[m]; return s; } /* zählt auch Rohstoffe, die auf dem Weg zur Rakete im Produktlager liegen */
         public static int DoneCount() => S.done.Count;
         public static bool IsDone(string pid) => S.done.Contains(pid);
         public static double MatValue(int m, PState ps)
@@ -594,8 +594,8 @@ namespace LunarCleanup.Core
                 if (Pick(buf, keys, Mathf.Min(1, P0), P0, false, out m, out a)) return true;
                 float tot = 0; foreach (int x in keys) tot += buf[x]; return tot > 0 && tot < 1 && Pick(buf, keys, 1e-6f, P0, false, out m, out a);
             }
-            if (b.from == "roh" && b.to == "sell") { bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, out m, out a); /* nur freigegebene Rohstoffe */ }
-            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, GameData.Prods.Where(x => SellOn(ps, x)), 1, PB, true, out m, out a); } /* nur freigegebene Produkte */
+            if (b.from == "roh" && (b.to == "sell" || b.to == "prod")) { /* Fabian 02.11.: Verkaufs-Rohstoffe gehen erst ins Produktlager */ bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, out m, out a); /* nur freigegebene Rohstoffe */ }
+            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0 && (GameData.Mats[x].raw || SellOn(ps, x))), 1, PB, true, out m, out a); } /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
             if (b.from == "roh")
             {
                 List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine")) return false;

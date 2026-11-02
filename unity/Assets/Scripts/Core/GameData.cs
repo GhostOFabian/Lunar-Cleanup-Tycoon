@@ -138,7 +138,7 @@ namespace LunarCleanup.Core
                 foreach (var b in J.A(J.G(o, "belts")))
                 {
                     var rp = J.A(J.G(b, "rp")); var pts = new Vector2[rp.Count]; for (int i = 0; i < rp.Count; i++) pts[i] = V2(rp[i]);
-                    L.belts.Add(new BeltDef { id = J.S(b, "id"), from = J.S(b, "from"), to = J.S(b, "to"), h = J.F(b, "h", .5f), stage = J.I(b, "stage"), L = J.F(b, "L"), rp = pts, port0 = V2(J.G(b, "port0")), port1 = V2(J.G(b, "port1")) });
+                    L.belts.Add(new BeltDef { id = J.S(b, "id"), from = J.S(b, "from"), to = J.S(b, "from") == "roh" && J.S(b, "to") == "sell" ? "prod" : J.S(b, "to"), /* Fabian 02.11.: alles für die Rakete läuft durchs Produktlager – nur noch ein Band ins Schiff */ h = J.F(b, "h", .5f), stage = J.I(b, "stage"), L = J.F(b, "L"), rp = pts, port0 = V2(J.G(b, "port0")), port1 = V2(J.G(b, "port1")) });
                 }
                 Uncrowd(L);
                 Layouts[kv.Key] = L;

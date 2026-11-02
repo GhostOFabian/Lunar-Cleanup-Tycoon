@@ -21,7 +21,7 @@ namespace LunarCleanup.Gameplay
         void RouteBelts()
         {
             var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
-            string key = ps.pid + "|" + ps.sv.freq + "|" + string.Join(",", ps.bld.OrderBy(x => x)) + "|" + string.Join(",", live.Select(x => x.id));
+            string key = "m2|" + ps.pid + "|" + ps.sv.freq + "|" /* m2 = mit Zusammenführungen (02.11.) */ + string.Join(",", ps.bld.OrderBy(x => x)) + "|" + string.Join(",", live.Select(x => x.id));
             if (key == routedKey) return; routedKey = key; routed.Clear(); sharedEnd.Clear();
             /* Fabian 01.11.: Reisen schneller – fertige Wege je Basis-Stand auf dem Gerät merken (Wegsuche kostete auf großen Basen mehrere Sekunden) */
             if (RouteCache.TryGet(key, routed, sharedEnd)) return;
@@ -74,6 +74,17 @@ namespace LunarCleanup.Gameplay
                 foreach (var pa in Ports(FA, FB.c, b.from, used, 3)) foreach (var pb in Ports(FB, FA.c, b.to, used, 3)) cands.Add((pa, pb, false, false));
                 if (cands.Count == 0) foreach (var pa in Ports(FA, FB.c, b.from, used, 4)) foreach (var pb in Ports(FB, FA.c, b.to, used, 4)) cands.Add((pa, pb, false, false)); /* alle Flächen, wenn die drei vorderen voll sind */
                 List<int> best = null; float bc = 1e9f; (BPort a, BPort b, bool, bool) bestC = default; string shareWith = null;
+                /* Fabian 02.11.: Bänder zum selben Gebäude laufen über eine Zusammenführung (Merger) in einen gemeinsamen Eingang – keine Weichen am Anfang, keine beweglichen Schranken */
+                foreach (var kv in portOf)
+                {
+                    var o = live.First(x => x.id == kv.Key); if (o.to != b.to || sharedEnd.ContainsKey(kv.Key)) continue;
+                    foreach (var pa in Ports(FA, FB.c, b.from, used, 3))
+                    {
+                        var path = AStar(pa.p + pa.n * Stub, pa.n, kv.Value.b.p + kv.Value.b.n * Stub, -kv.Value.b.n, block, occ, null, b.to, out float cost);
+                        if (path != null && cost < bc) { bc = cost; best = path; bestC = (pa, kv.Value.b, false, true); shareWith = kv.Key; }
+                    }
+                }
+                if (best == null)
                 foreach (var cnd in cands)
                 {
                     var path = AStar(cnd.a.p + cnd.a.n * Stub, cnd.a.n, cnd.b.p + cnd.b.n * Stub, -cnd.b.n, block, occ, null, null, out float cost);
