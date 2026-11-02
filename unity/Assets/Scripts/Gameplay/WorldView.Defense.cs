@@ -14,7 +14,7 @@ namespace LunarCleanup.Gameplay
         const float DEF_FP = 2.4f;
         public Vector3? DefPos(int i) { var g = i == 0 ? shieldGo : flakGo; return g ? g.transform.position : (Vector3?)null; }
         /// <summary>Freier Platz an der Basis: nicht auf Gebäudeflächen (auch noch nicht gebauten), nicht auf Bändern, Laternen oder dem anderen Abwehrbau.</summary>
-        Vector2? FreeSpot(Vector2 prefer, Vector2? avoid)
+        Vector2? FreeSpot(Vector2 prefer, params Vector2[] avoid)
         {
             Vector2? best = null; float bs = 1e9f;
             for (float r = 8; r <= 34; r += 2)
@@ -27,7 +27,7 @@ namespace LunarCleanup.Gameplay
                     foreach (var kv in routed) { if (SegDist(kv.Value, p) < DEF_FP + 1.4f) { ok = false; break; } }
                     if (!ok) continue;
                     foreach (var l in lampSpots) if ((l - p).magnitude < DEF_FP + 1) { ok = false; break; }
-                    if (!ok || (avoid.HasValue && (avoid.Value - p).magnitude < DEF_FP * 2 + 2)) continue;
+                    if (!ok) continue; if (avoid != null) foreach (var av in avoid) if ((av - p).magnitude < DEF_FP * 2 + 2) { ok = false; break; } if (!ok) continue;
                     var dir = pd.PlanDir(p); int cell = pd.CellOf(dir); if (cell < 0 || pd.cells[cell].Wet) continue;
                     float sc = (p - prefer).magnitude; if (sc < bs) { bs = sc; best = p; }
                 }
@@ -39,8 +39,8 @@ namespace LunarCleanup.Gameplay
             if (defRoot) Destroy(defRoot.gameObject); defRoot = New("Abwehr"); shieldGo = flakGo = null; shieldSpin = flakTurret = null; shieldField = null;
             Color acc = ps.P.col0; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero, sell = ps.lay.pos.ContainsKey("sell") ? ps.lay.pos["sell"] : Vector2.one * 10;
-            if (ps.sv.msLv > 0) { var sp = FreeSpot(hq + (hq - sell).normalized * 10, null); if (sp.HasValue) { shieldAt = sp.Value; shieldGo = PlaceDef("Abwehr/schild", shieldAt, acc, .85f + .05f * ps.sv.msLv); } }
-            if (ps.sv.flakLv > 0) { var sp = FreeSpot(sell + (sell - hq).normalized * 8, shieldGo ? shieldAt : (Vector2?)null); if (sp.HasValue) { flakAt = sp.Value; flakGo = PlaceDef("Abwehr/flak", flakAt, acc, .9f + .03f * ps.sv.flakLv); } }
+            if (ps.sv.msLv > 0) { var sp = FreeSpot(hq + (hq - sell).normalized * 10); if (sp.HasValue) { shieldAt = sp.Value; shieldGo = PlaceDef("Abwehr/schild", shieldAt, acc, .85f + .05f * ps.sv.msLv); } }
+            if (ps.sv.flakLv > 0) { var sp = shieldGo ? FreeSpot(sell + (sell - hq).normalized * 8, shieldAt) : FreeSpot(sell + (sell - hq).normalized * 8); if (sp.HasValue) { flakAt = sp.Value; flakGo = PlaceDef("Abwehr/flak", flakAt, acc, .9f + .03f * ps.sv.flakLv); } }
             if (shieldGo)
             {
                 shieldSpin = shieldGo.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name.EndsWith("_Dreh"));

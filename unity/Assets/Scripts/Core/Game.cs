@@ -1703,7 +1703,7 @@ namespace LunarCleanup.Core
         public static void Step(float dt)
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
-            ResearchStep(dt); DoomStep(dt); ChalStep(dt);
+            ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt);
             AchievementStep(dt); if (!Offline) { StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt)

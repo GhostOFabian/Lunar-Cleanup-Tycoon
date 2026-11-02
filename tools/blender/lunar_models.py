@@ -2783,13 +2783,37 @@ def n_gras_var(v):
     return m
 
 
+def w_bestelllager():
+    """Bestelllager: offene Halle mit Regalen und Kisten, Landefeld für Besucher-Shuttles davor, Leuchtschild. Grundkreis 2,4 m."""
+    m = Model("bestelllager", "Bestelllager", "Welt", 2.4); M = m.body
+    h0 = pad(M, 2.4)
+    for sx in (-1, 1):
+        M.box("hell", (sx * 1.85, 0.5, h0 + 1.15), (0.22, 2.4, 2.3))
+        for k in range(4):
+            M.box("akzent", (sx * 1.85, 0.5 - 1.1 + k * 0.73, h0 + 2.32), (0.26, 0.08, 0.08))
+    M.box("hell", (0, 1.62, h0 + 1.15), (3.9, 0.22, 2.3))
+    M.box("akzent", (0, 0.5, h0 + 2.42), (4.1, 2.7, 0.18))
+    M.box("dunkel", (0, 0.5, h0 + 2.56), (3.6, 2.2, 0.1))
+    for z in (0.05, 0.85, 1.6):  # Regalböden
+        M.box("stahl", (0, 1.15, h0 + z + 0.04), (3.4, 0.7, 0.06))
+    for i in range(9):
+        x = -1.2 + (i % 3) * 1.2; z = [0.1, 0.9, 1.65][i // 3]
+        M.box(("kiste1", "kiste2", "kiste3")[i % 3], (x + 0.05 * (i % 2), 1.15, h0 + z + 0.3), (0.6, 0.55, 0.5))
+    M.box("mint", (0, -0.78, h0 + 2.2), (1.6, 0.04, 0.3))  # Leuchtschild „Bestellungen“
+    # Landefeld für Shuttles
+    M.cyl("platte", (0, -2.0, h0), 1.0, 0.04, 24)
+    M.lathe("warn", (0, -2.0, h0 + 0.04), [(0.95, 0), (0.95, 0.02), (0.8, 0.02), (0.8, 0)], 24, closed_loop=True)
+    beacon(M, (1.9, -1.9, h0), 0.9, "mint")
+    return m
+
+
 SOFT_MODELS = {"riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "bohrsockel", "erzader_fels", "moos_1", "moos_2", "moos_3", "muellberg", "busch_1", "busch_2"}
 
 # Alle Modelle, die nach dem ersten Paket dazugekommen sind (Build 34–38)
 NEW_KEYS = ["schild", "flak", "lieferrakete", "baum_laub_1", "baum_laub_2", "baum_laub_3", "baum_tanne_1", "baum_tanne_2", "busch_1", "busch_2", "gras_1",
             "riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "abwehrrakete", "schildkuppel", "moos_1", "moos_2", "moos_3", "teich", "bohrsockel", "erzader_fels",
             "putzi", "haendlerschiff", "muellberg", "flagge", "truhe", "wahrzeichen_1", "wahrzeichen_2", "wahrzeichen_3", "geysir_schlot",
-            "baum_kristall", "baum_pilz", "baum_eis", "gras_2", "gras_3"]
+            "baum_kristall", "baum_pilz", "baum_eis", "gras_2", "gras_3", "bestelllager"]
 
 
 def all_models():
@@ -2842,7 +2866,7 @@ def all_models():
         ("wahrzeichen_1", lambda: w_wahrzeichen(1)), ("wahrzeichen_2", lambda: w_wahrzeichen(2)), ("wahrzeichen_3", lambda: w_wahrzeichen(3)),
         ("geysir_schlot", w_geysir),
         ("baum_kristall", lambda: n_baum_spezial("kristall")), ("baum_pilz", lambda: n_baum_spezial("pilz")), ("baum_eis", lambda: n_baum_spezial("eis")),
-        ("gras_2", lambda: n_gras_var(2)), ("gras_3", lambda: n_gras_var(3)),
+        ("gras_2", lambda: n_gras_var(2)), ("gras_3", lambda: n_gras_var(3)), ("bestelllager", w_bestelllager),
     ]
 
 

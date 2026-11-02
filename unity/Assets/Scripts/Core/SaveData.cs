@@ -133,5 +133,6 @@ namespace LunarCleanup.Core
         /* Fabian 02.11. (Build 34) */
         public List<FKV> goods = new List<FKV>();                 // Spezialgüter aller Planeten
         public int doomN, doomHits;                               // Riesenmeteore bisher, abgefangene Brocken
+        public List<VisitOrder> vorders = new List<VisitOrder>(); public float voT = 300; public int voLv, voNext; // Bestellungen von Besuchern (02.11.)
     }
 }

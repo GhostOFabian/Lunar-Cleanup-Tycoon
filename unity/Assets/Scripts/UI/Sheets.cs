@@ -440,6 +440,27 @@ namespace LunarCleanup.UI
         }
         static string Medal(int t) => t >= 3 ? "<color=#ffd24d>●●●</color>" : t == 2 ? "<color=#ffd24d>●●</color><color=#4a5266>●</color>" : t == 1 ? "<color=#ffd24d>●</color><color=#4a5266>●●</color>" : "<color=#4a5266>●●●</color>";
         /// <summary>Fabian 01.11.: Erfolge mit Bronze/Silber/Gold, Belohnung zum Abholen, nach Kategorien.</summary>
+        /// <summary>Fabian 02.11.: Bestellungen von Besuchern – wer was möchte, was schon zurückgelegt ist, wie lange noch.</summary>
+        static void OrdersSheet(Hud h)
+        {
+            if (!Game.OrdersOpen) { h.Note("Sobald ein Planet Basisstufe 2 hat, kommen Besucher und bestellen Waren."); return; }
+            h.Note("Besucher landen auf deinen Planeten und bestellen Waren – auch von anderen Planeten. Sobald die Ware in einem Lager liegt, wird sie automatisch im Bestelllager zurückgelegt (die Rakete verkauft sie dann nicht). Ist alles da, holt der Besucher sie ab und zahlt deutlich mehr als die Rakete. Läuft auch offline. Ist die Zeit um, reist er ab – Zurückgelegtes wird normal verkauft.");
+            h.Section("Bestelllager");
+            h.Row("Stufe " + Game.S.voLv + "/" + Game.ORDER_MAXLV, () => Game.Orders.Count + " von " + Game.OrderMax() + " Bestellungen gleichzeitig" + (Game.S.voLv < Game.ORDER_MAXLV ? " · nächste Stufe: +1 Platz" : ""),
+                () => Game.S.voLv >= Game.ORDER_MAXLV ? "Max" : Cr(Game.OrderLvCost()), () => Game.OrderLvWhy() == "", () => Game.BuyOrderLv(), why: () => Game.Steps("", Game.OrderLvCost()));
+            h.Section("Offene Bestellungen");
+            if (Game.Orders.Count == 0) { h.Note("Gerade keine Bestellungen. Neue Besucher kommen alle 10–25 Minuten."); return; }
+            foreach (var o in Game.Orders.ToList())
+            {
+                var oo = o;
+                h.Row(o.who + " · " + GameData.Planets[o.pid].name, () =>
+                {
+                    var parts = oo.items.Select(it => Game.ItemName(it) + " " + Game.Fmt(Mathf.Min(it.got, it.n)) + "/" + Game.Fmt(it.n) + (it.src != oo.pid || it.g != "" ? " (von " + Game.ItemFrom(it) + ")" : ""));
+                    return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % zurückgelegt";
+                }, () => "Absagen", () => true, () => Game.CancelOrder(oo.id), false);
+            }
+            h.Note("Tipp: Fehlt eine Ware, schau, ob der Planet sie herstellt (Produktion → Plan) und ob genug ins Lager kommt. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
+        }
         static void Achievements(Hud h)
         {
             int got = Game.Achievements.Sum(a => Game.AchTier(a)), all = Game.Achievements.Count * 3;
@@ -509,7 +530,8 @@ namespace LunarCleanup.UI
         static void Goals(Hud h)
         {
             /* Fabian 01.11.: Kodex (Entdeckungen, Funde, Erfolge) und Statistik je Planet als eigene Reiter */
-            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik", "Abschluss"); int gtab = h.Tab;
+            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik", "Abschluss", "Bestellungen" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : "")); int gtab = h.Tab;
+            if (gtab == 5) { OrdersSheet(h); return; }
             if (gtab == 4) { Completion(h); return; }
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { Codex(h); return; }

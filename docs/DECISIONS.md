@@ -253,3 +253,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 02.11.2026: Neue Modelle kommen als OBJ aus dem Blender-Skript (läuft auch ohne Blender); FBX erst, wenn Fabian das Skript in Blender exportiert. Materialnamen LC_* bleiben gleich.
 - 02.11.2026 (Fabian): Beim Abfangen gehen die unteren Knöpfe weg – Brocken hinter Knöpfen ließen sich nicht antippen.
 - 02.11.2026 (Fabian): Alles, was verkauft wird, läuft durchs Produktlager; nur ein Band ins Schiff. Bänder zum selben Gebäude werden zusammengeführt (nur Merger am Ende, nie Verteiler).
+- 02.11.2026 (Fabian): Bestellungen gelten für alle Waren aller Planeten, 5–10 gleichzeitig, eigenes Menü wie Herausforderungen. Fracht zwischen Planeten wird direkt aus dem Lager des Herkunftsplaneten zurückgelegt (keine eigene Frachtsimulation).
