@@ -21,7 +21,7 @@ namespace LunarCleanup.Core
     [Serializable] public class EventSave { public string key = ""; public float t; public int cell = -1; public bool done; public int mat = -1; public float amt0; /* Händler: Ware; Müllberg: Anfangsmenge */ }
     [Serializable] public class ChalSave { public List<string> offer = new List<string>(); public string act = ""; public double v0; public float left; public long refresh; public int done; } // Fabian 01.11.: Herausforderungen
     [Serializable] public class FKV { public string k = ""; public float v; } // Fabian 02.11.: Spezialgüter im Galaxie-Lager
-    [Serializable] public class BeltRouteSave { public string id = ""; public List<Vector2> p = new List<Vector2>(); public List<float> h = new List<float>(); } // eigener Bandverlauf (Band-Editor)
+    [Serializable] public class BeltRouteSave { public string id = ""; public List<Vector2> p = new List<Vector2>(); public List<float> h = new List<float>(); public float a0 = -999, a1 = -999; /* eigener Aus-/Eingang: Winkel um das Gebäude (−999 = automatisch) */ } // eigener Bandverlauf (Band-Editor)
     [Serializable] public class DailySave { public int lastDay, streak; }
     [Serializable] public class RuleSave { public string ifK = "", thenK = "", arg = ""; public float val; public bool on = true; }
     [Serializable] public class SeasonSave { public string key = ""; public float clean; public bool claimed; }

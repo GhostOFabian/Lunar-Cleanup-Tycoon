@@ -2186,5 +2186,13 @@
 "Ein Riesenmeteor fliegt auf ": "A giant meteor is heading for ",
 " zu. In 60 Sekunden schlägt er ein.": ". It hits in 60 seconds.",
 "\n\nDu bist gerade nicht dort. Tippe auf das Warnband oben, um hinzufliegen – nur vor Ort kannst du Brocken abfangen.": "\n\nYou are not there right now. Tap the warning banner at the top to fly there – you can only intercept chunks on site.",
-"\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis zerstört und nach 10 Minuten neu aufgebaut. Flaggen und Geschichten bleiben.": "\n\nHow to protect yourself (Base → Defense):\n1. Meteor shield: deflects the meteor with some luck.\n2. Defense rockets: the meteor breaks into chunks. Tap each chunk while its ring glows GREEN.\n\nIf too many chunks get through, the base is destroyed and rebuilt after 10 minutes. Flags and stories remain."
+"\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis zerstört und nach 10 Minuten neu aufgebaut. Flaggen und Geschichten bleiben.": "\n\nHow to protect yourself (Base → Defense):\n1. Meteor shield: deflects the meteor with some luck.\n2. Defense rockets: the meteor breaks into chunks. Tap each chunk while its ring glows GREEN.\n\nIf too many chunks get through, the base is destroyed and rebuilt after 10 minutes. Flags and stories remain.",
+"Höher": "Higher",
+"Tiefer": "Lower",
+"Orange Griff: um das Gebäude ziehen, um den ": "Orange handle: drag it around the building to move the ",
+"Ausgang": "exit",
+"Eingang": "entrance",
+" zu verlegen. ": ". ",
+" m – blauen Knopf ziehen oder „Höher“/„Tiefer“. ": " m – drag the blue knob or use “Higher”/“Lower”. ",
+"Weiße Punkte ziehen = Weg, aufs Band tippen = neuer Punkt, orange Griffe = Aus- und Eingang verlegen. „Höher“/„Tiefer“ ohne Auswahl hebt das ganze Band.": "Drag white points = route, tap the belt = new point, orange handles = move exit and entrance. “Higher”/“Lower” without a selection raises the whole belt."
 }

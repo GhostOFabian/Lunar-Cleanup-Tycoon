@@ -137,16 +137,22 @@ namespace LunarCleanup.UI
         GameObject beGo; TextMeshProUGUI beTitle, beInfo; Button beOk; CanvasGroup beOkCg;
         void BuildBeltEdit()
         {
-            var bg = UiKit.Glass(root, "Band-Editor", new Color(.04f, .07f, .11f, 1f), 16); beGo = bg.gameObject; bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 0, 8, 72, 8, -262);
+            var bg = UiKit.Glass(root, "Band-Editor", new Color(.04f, .07f, .11f, 1f), 16); beGo = bg.gameObject; bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 0, 8, 72, 8, -318);
             beTitle = UiKit.Text(bg.transform, "Titel", "", 14, Pal.Ink, true, FontStyles.Bold); beTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -30, 14, 10);
-            beInfo = UiKit.Text(bg.transform, "Info", "", 12, Pal.Ink2); beInfo.rectTransform.Anchor(0, 1, 1, 1, 14, -96, 14, 34);
-            var row = UiKit.Rt(bg.transform, "Knöpfe").Anchor(0, 0, 1, 0, 10, 10, 10, -62); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
-            foreach (var (k, lbl, gold) in new[] { ("add", "Punkt +", false), ("del", "Punkt –", false), ("reset", "Zurücksetzen", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) })
+            beInfo = UiKit.Text(bg.transform, "Info", "", 12, Pal.Ink2); beInfo.rectTransform.Anchor(0, 1, 1, 1, 14, -110, 14, 34); beInfo.enableAutoSizing = true; beInfo.fontSizeMin = 9; beInfo.fontSizeMax = 12;
+            /* Fabian 02.11.: zwei Reihen – oben Punkte und Höhe, unten Zurücksetzen/Abbrechen/Fertig */
+            void BtnRow(float y0, float y1, (string k, string lbl, bool gold)[] items)
             {
-                string key = k; var b = UiKit.Btn(row, lbl, () => BeltBtn?.Invoke(key), gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 12);
-                var t = UiKit.Text(b.transform, "Text", lbl, 12, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 2, 4, 2); t.enableAutoSizing = true; t.fontSizeMin = 8; t.fontSizeMax = 12;
-                if (key == "ok") { beOk = b; beOkCg = b.gameObject.AddComponent<CanvasGroup>(); }
+                var row = UiKit.Rt(bg.transform, "Knöpfe").Anchor(0, 0, 1, 0, 10, y0, 10, -y1); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+                foreach (var (k, lbl, gold) in items)
+                {
+                    string key = k; var b = UiKit.Btn(row, lbl, () => BeltBtn?.Invoke(key), gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 12);
+                    var t = UiKit.Text(b.transform, "Text", lbl, 12, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 2, 4, 2); t.enableAutoSizing = true; t.fontSizeMin = 8; t.fontSizeMax = 12;
+                    if (key == "ok") { beOk = b; beOkCg = b.gameObject.AddComponent<CanvasGroup>(); }
+                }
             }
+            BtnRow(66, 114, new[] { ("add", "Punkt +", false), ("del", "Punkt –", false), ("up", "Höher", false), ("down", "Tiefer", false) });
+            BtnRow(10, 58, new[] { ("reset", "Zurücksetzen", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) });
         }
         void UpdateBeltEdit()
         {

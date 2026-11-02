@@ -19,12 +19,15 @@ namespace LunarCleanup.Gameplay
             if (autoKey != routedKey) { autoRouted.Clear(); foreach (var kv in routed) autoRouted[kv.Key] = kv.Value; autoKey = routedKey; }
             routed.Clear(); foreach (var kv in autoRouted) routed[kv.Key] = kv.Value;
             if (ps.sv.bRoutes == null) return;
-            foreach (var cr in ps.sv.bRoutes) if (autoRouted.TryGetValue(cr.id, out var a) && a.Length >= 3 && cr.p.Count > 0) routed[cr.id] = CustomShape(a, cr.p);
+            foreach (var cr in ps.sv.bRoutes) { var bd = ps.lay.belts.FirstOrDefault(x => x.id == cr.id); if (bd != null && autoRouted.TryGetValue(cr.id, out var a) && a.Length >= 3 && cr.p.Count > 0) routed[cr.id] = CustomShape(bd, a, cr.p, cr.a0, cr.a1); }
         }
         /// <summary>Anschlüsse aus dem automatischen Weg (erste/letzte 1,6 m im Gebäude), dazwischen die eigenen Punkte.</summary>
-        static Vector2[] CustomShape(Vector2[] auto, List<Vector2> mid)
+        /// <summary>a0/a1: eigener Aus-/Eingang als Winkel um das Gebäude (Fabian 02.11.: Ausgang ziehen), −999 = Anschluss des automatischen Wegs.</summary>
+        Vector2[] CustomShape(BeltDef b, Vector2[] auto, List<Vector2> mid, float a0, float a1)
         {
             Vector2 p0 = auto[0], q0 = auto[auto.Length - 1]; var da = (auto[1] - p0).normalized; var db = (auto[auto.Length - 2] - q0).normalized;
+            if (a0 > -900 && ps.lay.pos.ContainsKey(b.from)) { var d = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)); float fp = GameData.Bld[b.from].fp; p0 = ps.lay.pos[b.from] + d * (fp * .95f - 1.6f); da = d; }
+            if (a1 > -900 && ps.lay.pos.ContainsKey(b.to)) { var d = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)); float fp = GameData.Bld[b.to].fp; q0 = ps.lay.pos[b.to] + d * (fp * .95f - 1.6f); db = d; }
             var pts = new List<Vector2> { p0, p0 + da * 1.6f, p0 + da * 3.4f }; pts.AddRange(mid); pts.Add(q0 + db * 3.4f); pts.Add(q0 + db * 1.6f); pts.Add(q0);
             return Round(Dedupe(pts), CUSTOM_R);
         }
@@ -63,7 +66,8 @@ namespace LunarCleanup.Gameplay
         public string EditBelt { get; private set; }
         public bool Editing => EditBelt != null;
         int selPt = -1; public int SelPt { get => selPt; set { if (selPt != value) { selPt = value; eDirty = true; } } }
-        readonly List<Vector2> ePts = new List<Vector2>(); readonly List<float> eH = new List<float>();
+        readonly List<Vector2> ePts = new List<Vector2>(); readonly List<float> eH = new List<float>(); float eA0 = -999, eA1 = -999; readonly Transform[] eEnds = new Transform[2]; Material eEndMat;
+        public const int END0 = 1000, END1 = 1001; /* Griff-Nummern für Anfang und Ende */
         Vector2[] eShape; float[] eCum; string eWhy = ""; bool eDirty;
         Transform eRoot; readonly List<Transform> eHandles = new List<Transform>(); readonly List<Transform> eKnobs = new List<Transform>(); GameObject ePrev; Mesh ePrevMesh; Material eOk, eBad, eHandle, eHandleSel, eKnob;
         /// <summary>Band unter diesem Planpunkt (für das Antippen).</summary>
@@ -78,7 +82,7 @@ namespace LunarCleanup.Gameplay
         {
             EndEdit(); if (!autoRouted.TryGetValue(id, out var auto)) return; EditBelt = id; SelPt = -1; ePts.Clear(); eH.Clear();
             var cr = ps.sv.bRoutes.FirstOrDefault(x => x.id == id);
-            if (cr != null && cr.p.Count > 0) { ePts.AddRange(cr.p); eH.AddRange(cr.h); while (eH.Count < ePts.Count) eH.Add(0); }
+            eA0 = eA1 = -999; if (cr != null && cr.p.Count > 0) { ePts.AddRange(cr.p); eH.AddRange(cr.h); while (eH.Count < ePts.Count) eH.Add(0); eA0 = cr.a0; eA1 = cr.a1; }
             else
             {
                 // Startpunkte: Ecken des automatischen Wegs (vereinfacht), ohne die Anschlussstücke
@@ -108,18 +112,27 @@ namespace LunarCleanup.Gameplay
         public bool CommitEdit()
         {
             if (!EditValid) return false; var id = EditBelt; ps.sv.bRoutes.RemoveAll(x => x.id == id);
-            ps.sv.bRoutes.Add(new BeltRouteSave { id = id, p = new List<Vector2>(ePts), h = new List<float>(eH) });
+            ps.sv.bRoutes.Add(new BeltRouteSave { id = id, p = new List<Vector2>(ePts), h = new List<float>(eH), a0 = eA0, a1 = eA1 });
             EndEdit(); ps.baseVersion++; Game.Save(); Game.Toast("Band verlegt", "good"); return true;
         }
         public void ResetEdit() { var id = EditBelt; if (id == null) return; ps.sv.bRoutes.RemoveAll(x => x.id == id); EndEdit(); ps.baseVersion++; Game.Save(); Game.Toast("Band wieder automatisch verlegt"); }
         public void AddPoint()
         {
-            if (!Editing || ePts.Count >= 12) return; int i = SelPt >= 0 ? SelPt : ePts.Count / 2; // neuer Punkt hinter dem gewählten (Mitte bis zum nächsten)
+            if (!Editing || ePts.Count >= 12) return; int i = SelPt >= 0 && SelPt < ePts.Count ? SelPt : ePts.Count / 2; // neuer Punkt hinter dem gewählten (Mitte bis zum nächsten)
             var a = i < ePts.Count ? ePts[i] : ePts.Last(); var b = i + 1 < ePts.Count ? ePts[i + 1] : (eShape != null ? eShape[eShape.Length - 3] : a + Vector2.one * 3);
             ePts.Insert(Mathf.Min(i + 1, ePts.Count), (a + b) / 2); eH.Insert(Mathf.Min(i + 1, eH.Count), 0); SelPt = Mathf.Min(i + 1, ePts.Count - 1); eDirty = true;
         }
-        public void DeletePoint() { if (!Editing || SelPt < 0 || ePts.Count <= 1) return; ePts.RemoveAt(SelPt); eH.RemoveAt(SelPt); SelPt = -1; eDirty = true; }
-        public void MovePoint(int i, Vector2 pl) { if (i < 0 || i >= ePts.Count) return; pl.x = Mathf.Clamp(pl.x, -GOFF + 2, GOFF - 2); pl.y = Mathf.Clamp(pl.y, -GOFF + 2, GOFF - 2); ePts[i] = pl; eDirty = true; }
+        public void DeletePoint() { if (!Editing || SelPt < 0 || SelPt >= ePts.Count || ePts.Count <= 1) return; ePts.RemoveAt(SelPt); eH.RemoveAt(SelPt); SelPt = -1; eDirty = true; }
+        public void MovePoint(int i, Vector2 pl)
+        {
+            if (i == END0 || i == END1) /* Anfang/Ende um das Gebäude ziehen */
+            {
+                var b0 = ps.lay.belts.FirstOrDefault(x => x.id == EditBelt); if (b0 == null) return; string bid = i == END0 ? b0.from : b0.to; if (!ps.lay.pos.ContainsKey(bid)) return;
+                var d = pl - ps.lay.pos[bid]; if (d.sqrMagnitude < .01f) return; float a = Mathf.Atan2(d.y, d.x); if (i == END0) eA0 = a; else eA1 = a; eDirty = true; return;
+            }
+            if (i < 0 || i >= ePts.Count) return; pl.x = Mathf.Clamp(pl.x, -GOFF + 2, GOFF - 2); pl.y = Mathf.Clamp(pl.y, -GOFF + 2, GOFF - 2); ePts[i] = pl; eDirty = true; }
+        /// <summary>Höher/Tiefer-Knöpfe: gewählter Punkt, ohne Auswahl das ganze Band.</summary>
+        public void NudgeHeight(float dh) { if (!Editing) return; if (SelPt >= 0 && SelPt < eH.Count) SetHeight(SelPt, eH[SelPt] + dh); else for (int i = 0; i < eH.Count; i++) SetHeight(i, eH[i] + dh); }
         public void SetHeight(int i, float h) { if (i < 0 || i >= eH.Count) return; eH[i] = Mathf.Clamp(h, 0, MAX_H); eDirty = true; }
         /// <summary>Griff unter dem Finger: Punkt (knob = false) oder Höhenknopf über dem gewählten Punkt (knob = true).</summary>
         public int HandleAt(Camera cam, Vector2 pos, out bool knob)
@@ -127,6 +140,7 @@ namespace LunarCleanup.Gameplay
             knob = false; int best = -1; float bd = 60;
             for (int i = 0; i < eKnobs.Count; i++) { if (!eKnobs[i] || !eKnobs[i].gameObject.activeSelf) continue; var sp = cam.WorldToScreenPoint(eKnobs[i].position); if (sp.z <= 0) continue; float d = ((Vector2)sp - pos).magnitude; if (d < bd) { bd = d; best = i; knob = true; } }
             for (int i = 0; i < eHandles.Count; i++) { if (!eHandles[i]) continue; var sp = cam.WorldToScreenPoint(eHandles[i].position); if (sp.z <= 0) continue; float d = ((Vector2)sp - pos).magnitude; if (d < bd) { bd = d; best = i; knob = false; } }
+            for (int i = 0; i < 2; i++) { if (!eEnds[i]) continue; var sp = cam.WorldToScreenPoint(eEnds[i].position); if (sp.z <= 0) continue; float d = ((Vector2)sp - pos).magnitude; if (d < bd) { bd = d; best = END0 + i; knob = false; } }
             return best;
         }
         /// <summary>Tipp auf die Vorschau: neuen Punkt an dieser Stelle einfügen.</summary>
@@ -143,7 +157,7 @@ namespace LunarCleanup.Gameplay
             var b = ps.lay.belts.FirstOrDefault(x => x.id == EditBelt); if (b == null || !autoRouted.TryGetValue(EditBelt, out var auto)) { EndEdit(); return; }
             if (eDirty)
             {
-                eDirty = false; eShape = CustomShape(auto, ePts); eCum = new float[eShape.Length]; for (int i = 1; i < eShape.Length; i++) eCum[i] = eCum[i - 1] + (eShape[i] - eShape[i - 1]).magnitude;
+                eDirty = false; eShape = CustomShape(b, auto, ePts, eA0, eA1); eCum = new float[eShape.Length]; for (int i = 1; i < eShape.Length; i++) eCum[i] = eCum[i - 1] + (eShape[i] - eShape[i - 1]).magnitude;
                 var lifts = AddLifts(eShape, eCum, ePts, eH); float Lf(float s) { float best = 0; foreach (var w in lifts) { float k = s < w.x ? Mathf.SmoothStep(0, 1, 1 - (w.x - s) / 3f) : s > w.y ? Mathf.SmoothStep(0, 1, 1 - (s - w.y) / 3f) : 1; best = Mathf.Max(best, w.z * Mathf.Clamp01(k)); } return best; }
                 eWhy = Validate(b, Lf);
                 // Vorschau: flaches Band über dem Boden, grün oder rot
@@ -160,6 +174,9 @@ namespace LunarCleanup.Gameplay
                 // Griffe: Kugel am Punkt (in Bandhöhe), Höhenknopf darüber für den gewählten Punkt
                 while (eHandles.Count < ePts.Count) { var g = MeshKit.Ball(eRoot, eHandle, Vector3.zero, 1.1f); NoShadow(g); eHandles.Add(g.transform); var k = MeshKit.Ball(eRoot, eKnob, Vector3.zero, .8f); NoShadow(k); var stem = MeshKit.Cyl(k.transform, eKnob, new Vector3(0, -1.6f, 0), .06f, .06f, 3.2f, 6); NoShadow(stem); eKnobs.Add(k.transform); }
                 while (eHandles.Count > ePts.Count) { Destroy(eHandles[eHandles.Count - 1].gameObject); eHandles.RemoveAt(eHandles.Count - 1); Destroy(eKnobs[eKnobs.Count - 1].gameObject); eKnobs.RemoveAt(eKnobs.Count - 1); }
+                /* orange Griffe an Anfang und Ende: um das Gebäude ziehen = Ausgang/Eingang verlegen */
+                if (!eEndMat) eEndMat = MeshKit.Mat(new Color(1f, .6f, .2f), 0, .5f, new Color(1f, .5f, .1f) * 1.4f);
+                for (int e = 0; e < 2; e++) { if (!eEnds[e]) { var g = MeshKit.Ball(eRoot, eEndMat, Vector3.zero, 1.3f); NoShadow(g); eEnds[e] = g.transform; } var ep = e == 0 ? eShape[Mathf.Min(2, eShape.Length - 1)] : eShape[Mathf.Max(0, eShape.Length - 3)]; var dd = pd.PlanDir(ep); eEnds[e].position = dd * (pd.R + Mathf.Max(PlanH(ep), 0) + BeltDeck(b) + .7f); eEnds[e].localScale = Vector3.one * (SelPt == END0 + e ? 1.6f : 1.3f); }
                 for (int i = 0; i < ePts.Count; i++)
                 {
                     var d = pd.PlanDir(ePts[i]); float top = pd.R + Mathf.Max(PlanH(ePts[i]), 0) + BeltDeck(b) + (i < eH.Count ? eH[i] : 0) + .5f;
