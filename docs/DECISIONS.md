@@ -259,3 +259,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 02.11. (Build 38): Y-Zusammenführungen enden auf der Mitte des Hauptbandes, Brücken nie über das Y-Ende; Hauptband wird vor dem einmündenden Band geplant. Basisprüfung: 847 → ~60 Befunde. Ketten-Y (Merger in Merger) ausprobiert und verworfen – machte es schlechter.
 - 02.11. (Build 38): Band-Editor hebt den vorgeschlagenen Weg selbst an, wenn er ein Band kreuzt – der Startzustand ist immer gültig.
 - 02.11. (Build 38): Saubere, leere Parzellen werden nicht mehr gespeichert. Der große Spielstand (11 MB) ist echter Meteoritenstaub auf sauberen Parzellen – kompakteres Format später.
+- 02.11. (Build 39): Band-Editor „Zeichnen“: Weg mit dem Finger nachziehen; der Strich wird geglättet (max. 12 Punkte, ≥ 2,4 m Abstand), Ein- und Ausgang zeigen in Strichrichtung, Kreuzungen werden automatisch angehoben.

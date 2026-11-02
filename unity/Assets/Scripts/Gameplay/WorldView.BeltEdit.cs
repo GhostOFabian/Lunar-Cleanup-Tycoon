@@ -150,6 +150,31 @@ namespace LunarCleanup.Gameplay
             float s = SAt(eShape, eCum, pl); int at = 0; for (int i = 0; i < ePts.Count; i++) if (SAt(eShape, eCum, ePts[i]) < s) at = i + 1;
             if (ePts.Count >= 12) return true; ePts.Insert(at, pl); eH.Insert(at, at > 0 && at - 1 < eH.Count ? eH[at - 1] : 0); SelPt = at; eDirty = true; return true;
         }
+        // ---------- Fabian 02.11.: Weg frei mit dem Finger nachzeichnen ----------
+        public bool DrawMode; readonly List<Vector2> dTrace = new List<Vector2>();
+        Vector2 ClampPl(Vector2 pl) { pl.x = Mathf.Clamp(pl.x, -GOFF + 2, GOFF - 2); pl.y = Mathf.Clamp(pl.y, -GOFF + 2, GOFF - 2); return pl; }
+        public void DrawBegin(Vector2 pl) { if (!Editing) return; dTrace.Clear(); dTrace.Add(ClampPl(pl)); SelPt = -1; }
+        public void DrawAdd(Vector2 pl) { if (!Editing || dTrace.Count == 0) return; pl = ClampPl(pl); if ((pl - dTrace[dTrace.Count - 1]).magnitude < .7f) return; dTrace.Add(pl); ApplyTrace(false); }
+        public void DrawEnd() { if (!Editing) return; ApplyTrace(true); DrawMode = false; dTrace.Clear(); }
+        /// <summary>Strich → Wegpunkte: Stücke an den beiden Gebäuden weglassen, glätten (höchstens 12 Punkte, mindestens 2,4 m Abstand), Ein- und Ausgang zeigen in Strichrichtung.</summary>
+        void ApplyTrace(bool final)
+        {
+            var b = ps.lay.belts.FirstOrDefault(x => x.id == EditBelt); if (b == null || !ps.lay.pos.ContainsKey(b.from) || !ps.lay.pos.ContainsKey(b.to)) return;
+            Vector2 c0 = ps.lay.pos[b.from], c1 = ps.lay.pos[b.to]; float r0 = GameData.Bld[b.from].fp + 1.8f, r1 = GameData.Bld[b.to].fp + 1.8f;
+            var pts = dTrace.Where(p => (p - c0).magnitude > r0 && (p - c1).magnitude > r1).ToList(); if (pts.Count == 0) return;
+            if ((pts[0] - c0).magnitude + (pts[pts.Count - 1] - c1).magnitude > (pts[0] - c1).magnitude + (pts[pts.Count - 1] - c0).magnitude) pts.Reverse(); /* egal, in welche Richtung gezeichnet wurde */
+            List<Vector2> simp = null; for (float eps = .6f; eps < 8; eps *= 1.5f) { simp = Rdp(pts, eps); var sp = new List<Vector2>(); foreach (var p in simp) if (sp.Count == 0 || (p - sp[sp.Count - 1]).magnitude >= 2.4f) sp.Add(p); simp = sp; if (simp.Count <= 12) break; }
+            ePts.Clear(); ePts.AddRange(simp); eH.Clear(); foreach (var _ in simp) eH.Add(0);
+            var f = simp[0] - c0; var l = simp[simp.Count - 1] - c1; if (f.sqrMagnitude > .01f) eA0 = Mathf.Atan2(f.y, f.x); if (l.sqrMagnitude > .01f) eA1 = Mathf.Atan2(l.y, l.x);
+            eAuto = final ? 5 : 0; eDirty = true;
+        }
+        static List<Vector2> Rdp(List<Vector2> p, float eps)
+        {
+            if (p.Count < 3) return new List<Vector2>(p); int idx = -1; float dm = 0;
+            for (int i = 1; i < p.Count - 1; i++) { float d = SegDist(p[i], p[0], p[p.Count - 1]); if (d > dm) { dm = d; idx = i; } }
+            if (dm <= eps) return new List<Vector2> { p[0], p[p.Count - 1] };
+            var a = Rdp(p.GetRange(0, idx + 1), eps); var c = Rdp(p.GetRange(idx, p.Count - idx), eps); a.RemoveAt(a.Count - 1); a.AddRange(c); return a;
+        }
         float PlanH(Vector2 p) => pd.Height(pd.PlanDir(p));
         void UpdateEdit()
         {

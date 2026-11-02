@@ -133,7 +133,7 @@ namespace LunarCleanup.UI
         }
         GameObject warnGo; Image warnImg; TextMeshProUGUI warnTxt; string warnTarget = "hazard";
         // ---------- Band-Editor (Fabian 02.11.) ----------
-        public Func<bool> BeltOn, BeltOk; public Func<string> BeltTitle, BeltInfo; public Action<string> BeltBtn;
+        public Func<bool> BeltOn, BeltOk, BeltDrawOn; Image beDraw; public Func<string> BeltTitle, BeltInfo; public Action<string> BeltBtn;
         GameObject beGo; TextMeshProUGUI beTitle, beInfo; Button beOk; CanvasGroup beOkCg;
         void BuildBeltEdit()
         {
@@ -149,16 +149,17 @@ namespace LunarCleanup.UI
                     string key = k; var b = UiKit.Btn(row, lbl, () => BeltBtn?.Invoke(key), gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 12);
                     var t = UiKit.Text(b.transform, "Text", lbl, 12, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 2, 4, 2); t.enableAutoSizing = true; t.fontSizeMin = 8; t.fontSizeMax = 12;
                     if (key == "ok") { beOk = b; beOkCg = b.gameObject.AddComponent<CanvasGroup>(); }
+                    if (key == "draw") beDraw = b.GetComponent<Image>();
                 }
             }
-            BtnRow(66, 114, new[] { ("add", "Punkt +", false), ("del", "Punkt –", false), ("up", "Höher", false), ("down", "Tiefer", false) });
+            BtnRow(66, 114, new[] { ("draw", "Zeichnen", false), ("add", "Punkt +", false), ("del", "Punkt –", false), ("up", "Höher", false), ("down", "Tiefer", false) });
             BtnRow(10, 58, new[] { ("reset", "Zurücksetzen", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) });
         }
         void UpdateBeltEdit()
         {
             bool on = BeltOn != null && BeltOn(); if (on && !beGo) BuildBeltEdit(); if (!beGo) return;
             if (beGo.activeSelf != on) beGo.SetActive(on); if (!on) return;
-            beTitle.text = BeltTitle?.Invoke() ?? ""; beInfo.text = BeltInfo?.Invoke() ?? ""; bool ok = BeltOk == null || BeltOk(); beOk.interactable = ok; beOkCg.alpha = ok ? 1 : .38f;
+            beTitle.text = BeltTitle?.Invoke() ?? ""; beInfo.text = BeltInfo?.Invoke() ?? ""; bool ok = BeltOk == null || BeltOk(); beOk.interactable = ok; beOkCg.alpha = ok ? 1 : .38f; if (beDraw) beDraw.color = BeltDrawOn != null && BeltDrawOn() ? new Color(1f, .78f, .3f, .55f) : new Color(.43f, .95f, .82f, .16f);
         }
         void UpdateWarn(PState ps)
         {
