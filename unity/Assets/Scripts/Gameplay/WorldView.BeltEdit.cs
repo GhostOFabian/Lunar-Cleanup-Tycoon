@@ -68,7 +68,7 @@ namespace LunarCleanup.Gameplay
         int selPt = -1; public int SelPt { get => selPt; set { if (selPt != value) { selPt = value; eDirty = true; } } }
         readonly List<Vector2> ePts = new List<Vector2>(); readonly List<float> eH = new List<float>(); float eA0 = -999, eA1 = -999; readonly Transform[] eEnds = new Transform[2]; Material eEndMat;
         public const int END0 = 1000, END1 = 1001; /* Griff-Nummern für Anfang und Ende */
-        Vector2[] eShape; float[] eCum; string eWhy = ""; bool eDirty;
+        Vector2[] eShape; float[] eCum; string eWhy = ""; bool eDirty; int eAuto;
         Transform eRoot; readonly List<Transform> eHandles = new List<Transform>(); readonly List<Transform> eKnobs = new List<Transform>(); GameObject ePrev; Mesh ePrevMesh; Material eOk, eBad, eHandle, eHandleSel, eKnob;
         /// <summary>Band unter diesem Planpunkt (für das Antippen).</summary>
         public bool BeltAt(Vector2 pl, out string id)
@@ -80,7 +80,7 @@ namespace LunarCleanup.Gameplay
         public string BeltName(string id) { var b = ps.lay.belts.FirstOrDefault(x => x.id == id); if (b == null) return "Band"; string N(string bid) => GameData.Bld.ContainsKey(bid) ? (bid == "presse" || bid == "schmelze" || bid == "raff" ? GameData.MachName(ps.pid, bid) : GameData.Bld[bid].name) : bid; return N(b.from) + " → " + N(b.to); }
         public void BeginEdit(string id)
         {
-            EndEdit(); if (!autoRouted.TryGetValue(id, out var auto)) return; EditBelt = id; SelPt = -1; ePts.Clear(); eH.Clear();
+            EndEdit(); if (!autoRouted.TryGetValue(id, out var auto)) return; EditBelt = id; SelPt = -1; eAuto = 0; ePts.Clear(); eH.Clear();
             var cr = ps.sv.bRoutes.FirstOrDefault(x => x.id == id);
             eA0 = eA1 = -999; if (cr != null && cr.p.Count > 0) { ePts.AddRange(cr.p); eH.AddRange(cr.h); while (eH.Count < ePts.Count) eH.Add(0); eA0 = cr.a0; eA1 = cr.a1; }
             else
@@ -89,7 +89,7 @@ namespace LunarCleanup.Gameplay
                 var cur = routed.TryGetValue(id, out var r0) ? r0 : auto; var mid = new List<Vector2>(); float acc = 0;
                 for (int i = 2; i < cur.Length - 2; i++) { acc += (cur[i] - cur[i - 1]).magnitude; var d1 = (cur[i] - cur[i - 1]).normalized; var d2 = (cur[i + 1] - cur[i]).normalized; if (Vector2.Dot(d1, d2) < .97f && acc > 2.5f) { mid.Add(cur[i]); acc = 0; } }
                 if (mid.Count == 0 || mid.Count > 8) { mid.Clear(); int n = Mathf.Clamp(Mathf.RoundToInt(Cum(cur) / 8f), 1, 5); for (int k = 1; k <= n; k++) mid.Add(PointAtArr(cur, Cum(cur) * k / (n + 1))); }
-                ePts.AddRange(mid); foreach (var _ in mid) eH.Add(0);
+                ePts.AddRange(mid); foreach (var _ in mid) eH.Add(0); eAuto = 5;
             }
             eOk = MeshKit.Mat(new Color(.3f, 1f, .6f), 0, .4f, new Color(.2f, .9f, .5f) * 1.2f); eBad = MeshKit.Mat(new Color(1f, .3f, .25f), 0, .4f, new Color(1f, .2f, .15f) * 1.4f);
             eHandle = MeshKit.Mat(new Color(1f, 1f, 1f), 0, .5f, new Color(.6f, .8f, 1f)); eHandleSel = MeshKit.Mat(new Color(1f, .85f, .3f), 0, .5f, new Color(1f, .75f, .2f) * 1.5f); eKnob = MeshKit.Mat(new Color(.5f, .8f, 1f), 0, .5f, new Color(.4f, .7f, 1f) * 1.4f);
@@ -160,6 +160,9 @@ namespace LunarCleanup.Gameplay
                 eDirty = false; eShape = CustomShape(b, auto, ePts, eA0, eA1); eCum = new float[eShape.Length]; for (int i = 1; i < eShape.Length; i++) eCum[i] = eCum[i - 1] + (eShape[i] - eShape[i - 1]).magnitude;
                 var lifts = AddLifts(eShape, eCum, ePts, eH); float Lf(float s) { float best = 0; foreach (var w in lifts) { float k = s < w.x ? Mathf.SmoothStep(0, 1, 1 - (w.x - s) / 3f) : s > w.y ? Mathf.SmoothStep(0, 1, 1 - (s - w.y) / 3f) : 1; best = Mathf.Max(best, w.z * Mathf.Clamp01(k)); } return best; }
                 eWhy = Validate(b, Lf);
+                /* Fabian 02.11.: der vorgeschlagene Weg soll gleich gültig sein – kreuzt er ein Band, die Punkte selbst etwas anheben (wie die Brücken des automatischen Wegs) */
+                if (eAuto > 0 && eWhy.Contains("gleicher Höhe")) { eAuto--; for (int i = 0; i < eH.Count; i++) eH[i] = Mathf.Clamp(eH[i] + .5f, 0, MAX_H); eDirty = true; return; }
+                eAuto = 0;
                 // Vorschau: flaches Band über dem Boden, grün oder rot
                 if (!ePrev) { ePrev = new GameObject("Vorschau"); ePrev.transform.SetParent(eRoot, false); ePrev.AddComponent<MeshFilter>(); ePrev.AddComponent<MeshRenderer>(); NoShadow(ePrev); ePrevMesh = new Mesh { name = "Bandvorschau" }; ePrev.GetComponent<MeshFilter>().sharedMesh = ePrevMesh; }
                 var v = new List<Vector3>(); var t = new List<int>(); float Lt = eCum[eCum.Length - 1];

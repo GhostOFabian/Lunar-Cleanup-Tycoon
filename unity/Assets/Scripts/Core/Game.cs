@@ -161,7 +161,7 @@ namespace LunarCleanup.Core
             sv.clean = new string(cb); sv.paid = new string(pb);
             sv.bld = ps.bld.ToList(); sv.upg = ps.upg.Select(k => new KV { k = k.Key, v = k.Value }).ToList();
             sv.act = new List<ActSave>();
-            foreach (var kv in ps.act) { var A = kv.Value; var by = new byte[A.grid.Length]; for (int k = 0; k < by.Length; k++) by[k] = (byte)Mathf.Clamp(Mathf.RoundToInt(A.grid[k] * 255), 0, 255); sv.act.Add(new ActSave { id = kv.Key, sum = A.sum, grid = Convert.ToBase64String(by) }); }
+            foreach (var kv in ps.act) { var A = kv.Value; if (kv.Key >= 0 && kv.Key < ps.clean.Length && ps.clean[kv.Key] && A.sum < 1e-3f) continue; /* Fabian 02.11.: leere, saubere Parzellen nicht speichern (Spielstand war 11 MB → Laden/Speichern langsam) */ var by = new byte[A.grid.Length]; for (int k = 0; k < by.Length; k++) by[k] = (byte)Mathf.Clamp(Mathf.RoundToInt(A.grid[k] * 255), 0, 255); sv.act.Add(new ActSave { id = kv.Key, sum = A.sum, grid = Convert.ToBase64String(by) }); }
             sv.belts = new List<BeltSave>();
             foreach (var kv in ps.belts) { var b = new BeltSave { id = kv.Key }; foreach (var it in kv.Value) { b.s.Add(it.s); b.m.Add(it.m); b.a.Add(it.a); } sv.belts.Add(b); }
         }

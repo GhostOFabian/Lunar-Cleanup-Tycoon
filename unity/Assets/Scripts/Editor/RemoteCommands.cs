@@ -7,12 +7,22 @@ using UnityEngine;
 
 namespace LunarCleanup.EditorTools
 {
+    [System.Serializable] public class Wrap { public string o; }
     [InitializeOnLoad]
     public static class RemoteCommands
     {
         const string Cmd = "Temp/claude_cmd.txt", Out = "Temp/claude_out.txt";
         static double next;
-        static RemoteCommands() { EditorApplication.update += Poll; }
+        static RemoteCommands()
+        {
+            EditorApplication.update += Poll;
+            /* Fehler/Exceptions aus dem Spiel für Claude in Temp/errlog.txt */
+            Application.logMessageReceived += (msg, st, type) => { if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) try { File.AppendAllText("Temp/errlog.txt", System.DateTime.Now.ToString("HH:mm:ss ") + type + ": " + msg + "\n" + st + "\n"); } catch { } };
+            /* Kompilierfehler für Claude in Temp/compile_err.txt (leer = ok) */
+            UnityEditor.Compilation.CompilationPipeline.compilationStarted += _ => { try { File.WriteAllText("Temp/compile_err.txt", "compiling\n"); } catch { } };
+            UnityEditor.Compilation.CompilationPipeline.assemblyCompilationFinished += (asm, msgs) => { try { foreach (var m in msgs) if (m.type == UnityEditor.Compilation.CompilerMessageType.Error) File.AppendAllText("Temp/compile_err.txt", m.message + "\n"); } catch { } };
+            UnityEditor.Compilation.CompilationPipeline.compilationFinished += _ => { try { File.AppendAllText("Temp/compile_err.txt", "done\n"); } catch { } };
+        }
 
         static void Poll()
         {
@@ -65,7 +75,7 @@ namespace LunarCleanup.EditorTools
                         {
                             string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); string j = PlayerPrefs.GetString(k, "");
                             if (!PlayerPrefs.HasKey(k + "-claudebak")) PlayerPrefs.SetString(k + "-claudebak", j);
-                            int n0 = j.Length; foreach (var key in new[] { "flags", "flagsInit", "tFirst", "tDoneAt", "tPlay", "tDone", "prize", "debt", "lineCol", "comboMax", "meteors", "salvage", "storms", "geysers", "nightMin", "achievements", /* Build 29 */ "putzi", "ruin", "ruinUntil", "doomNext", "doomT", "doomPid", "incH", "incHour", "chal", "cellD", "cellDay", "sellRate", "amt0", /* Build 34 */ "msLv", "flakLv", "msCool", "terra", "terraHp", "gAcc", "upAcc", "hitT", "supOk", "bRoutes", "goods", "doomN", "doomHits" }) j = StripKey(j, key);
+                            int n0 = j.Length; foreach (var key in new[] { "flags", "flagsInit", "tFirst", "tDoneAt", "tPlay", "tDone", "prize", "debt", "lineCol", "comboMax", "meteors", "salvage", "storms", "geysers", "nightMin", "achievements", /* Build 29 */ "putzi", "ruin", "ruinUntil", "doomNext", "doomT", "doomPid", "incH", "incHour", "chal", "cellD", "cellDay", "sellRate", "amt0", /* Build 34 */ "msLv", "flakLv", "msCool", "terra", "terraHp", "gAcc", "upAcc", "hitT", "supOk", "bRoutes", "goods", "doomN", "doomHits", /* Build 38 */ "vorders", "voT", "voLv", "voNext", "offPend" }) j = StripKey(j, key);
                             j = j.Replace("\"cart\":{\"owned\":false", "\"cart\":{\"owned\":true");
                             PlayerPrefs.SetString(k, j); PlayerPrefs.Save(); LunarCleanup.Core.Game.S = null; EditorApplication.isPlaying = false; Write("ok oldsave " + n0 + " -> " + j.Length); break;
                         }
@@ -76,6 +86,12 @@ namespace LunarCleanup.EditorTools
                         if (c.StartsWith("flak ")) { var ps = LunarCleanup.Core.Game.Cur; ps.sv.flakLv = int.Parse(c.Substring(5)); Write("ok " + c + " rockets=" + LunarCleanup.Core.Game.FlakRockets(ps)); break; }
                         if (c.StartsWith("auto ")) { LunarCleanup.Gameplay.WorldView.AutoPlay = int.Parse(c.Substring(5)); Write("ok " + c); break; }
                         if (c.StartsWith("terra ")) { var a = c.Substring(6).Split(' '); LunarCleanup.Core.Game.DevTerra(int.Parse(a[0]), a.Length > 1 ? float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture) : 1); Write("ok " + c); break; }
+                        if (c.StartsWith("savebak ")) { string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); PlayerPrefs.SetString(k + "-cb-" + c.Substring(8), PlayerPrefs.GetString(k, "")); PlayerPrefs.Save(); Write("ok " + c + " " + PlayerPrefs.GetString(k, "").Length); break; }
+                        if (c.StartsWith("loadbak ")) { string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); string b = PlayerPrefs.GetString(k + "-cb-" + c.Substring(8), ""); if (b == "") { Write("fehlt " + c); break; } PlayerPrefs.SetString(k, b); PlayerPrefs.Save(); LunarCleanup.Core.Game.S = null; EditorApplication.isPlaying = false; Write("ok " + c + " (gestoppt, neu starten)"); break; }
+                        if (c == "savesize") { var sb = new System.Text.StringBuilder("ok savesize total=" + JsonUtility.ToJson(LunarCleanup.Core.Game.S).Length); var tot = new System.Collections.Generic.Dictionary<string, long>(); foreach (var pl in LunarCleanup.Core.Game.S.planets) foreach (var f in typeof(LunarCleanup.Core.PlanetSave).GetFields()) { var v = f.GetValue(pl); if (v == null) continue; long n = v is string sv ? sv.Length : (v.GetType().IsPrimitive ? 4 : JsonUtility.ToJson(new LunarCleanup.EditorTools.Wrap { o = v.ToString() }).Length); if (v is System.Collections.IList li) { n = 0; foreach (var e in li) n += e == null ? 4 : (e.GetType().IsPrimitive ? 6 : JsonUtility.ToJson(e).Length); } else if (v is System.Array ar) n = ar.Length * 8; tot[f.Name] = (tot.TryGetValue(f.Name, out var t0) ? t0 : 0) + n; } foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(tot, x => x.Value), 10)) sb.Append(" " + kv.Key + "=" + kv.Value); Write(sb.ToString()); break; }
+                        if (c == "actinfo") { var sb = new System.Text.StringBuilder("ok actinfo"); foreach (var q in LunarCleanup.Core.Game.P.Values) { int n = 0, nc = 0, z = 0, sm = 0; int gl = 0; foreach (var kv in q.act) { n++; gl = kv.Value.grid.Length; if (q.clean[kv.Key]) { nc++; if (kv.Value.sum < 1e-3f) z++; else if (kv.Value.sum < gl * .02f) sm++; } } sb.Append(" " + q.pid + ":" + n + "/c" + nc + "/z" + z + "/s" + sm + "/g" + gl); } Write(sb.ToString()); break; }
+                        if (c == "pend") { Write("ok pend n=" + LunarCleanup.Core.Game.PendingPlanets + " " + LunarCleanup.Core.Game.DevPend() + " cr=" + LunarCleanup.Core.Game.S.credits.ToString("0")); break; }
+                        if (c.StartsWith("orders")) { if (c.Length > 7) LunarCleanup.Core.Game.DevOrders(int.Parse(c.Substring(7))); Write("ok orders max=" + LunarCleanup.Core.Game.OrderMax() + " " + LunarCleanup.Core.Game.DevOrderInfo()); break; }
                         if (c == "doomhere") { var G = LunarCleanup.Core.Game.S; G.doomT = -1; G.doomPid = ""; LunarCleanup.Core.Game.StartDoom(LunarCleanup.Core.Game.Cur.pid); G.doomT = 13; Write("ok doomhere " + G.doomPid); break; }
                         if (c == "doomother") { var G = LunarCleanup.Core.Game.S; G.doomT = -1; G.doomPid = ""; var o = System.Linq.Enumerable.FirstOrDefault(LunarCleanup.Core.Game.P.Keys, k => k != G.planet); if (o != null) { LunarCleanup.Core.Game.StartDoom(o); G.doomT = 25; } Write("ok doomother " + o); break; }
                         if (c == "icpinfo") { var I = LunarCleanup.Core.Game.Icp; var cs = LunarCleanup.Core.Game.Cur; Write("ok icpinfo " + (I == null ? "keins" : "total=" + I.total + " rockets=" + I.rockets + " hits=" + I.hits + " through=" + I.through) + " doomN=" + LunarCleanup.Core.Game.S.doomN + " doomT=" + LunarCleanup.Core.Game.S.doomT.ToString("0.0") + " pid=" + LunarCleanup.Core.Game.S.doomPid + " ruin=" + LunarCleanup.Core.Game.S.ruin + " planet=" + LunarCleanup.Core.Game.S.planet + " hitT=" + cs.sv.hitT.ToString("0") + " broken=" + System.Linq.Enumerable.Count(cs.sv.veh, v => v.wear >= 1 || v.mode == "broken") + " cool=" + cs.sv.msCool.ToString("0") + " sd=" + LunarCleanup.Core.Game.S.stardust.ToString("0.0")); break; }

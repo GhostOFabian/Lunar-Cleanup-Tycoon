@@ -615,6 +615,8 @@ namespace LunarCleanup.Gameplay
         void PlanBridges()
         {
             bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear(); var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
+            /* Fabian 02.11. (Merger): das Hauptband immer vor dem Band, das als Y hineinmündet – sonst wird der Y-Anschluss nicht erkannt */
+            { int Depth(string id, int g = 0) => g < 8 && sharedEnd.TryGetValue(id, out var t) ? 1 + Depth(t, g + 1) : 0; var order = live.Select((b, i) => (b, i)).OrderBy(x => Depth(x.b.id)).ThenBy(x => x.i).Select(x => x.b).ToList(); live = order; }
             var smp = new Dictionary<string, List<(float s, Vector2 p)>>(); var len = new Dictionary<string, float>();
             foreach (var b in live)
             {
@@ -656,11 +658,18 @@ namespace LunarCleanup.Gameplay
                         }
                     }
                     // gleiches Ziel und Berührung erst kurz davor → Weiche
-                    if (sharedEnd.TryGetValue(B.id, out var shw) && shw == A.id) /* Y nur, wo der Router bewusst den Eingang teilt */ { mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uMin); marks.RemoveAll(m => m.u >= uMin - .01f); }
+                    if (sharedEnd.TryGetValue(B.id, out var shw) && shw == A.id) /* Y nur, wo der Router bewusst den Eingang teilt */
+                    {
+                        /* Fabian 02.11.: das Y-Band bis auf die Mitte des Hauptbandes führen (vorher endete es schon bei der ersten Berührung, 0,5–0,7 m daneben) */
+                        float uJ = -1, uBest = uMin, dBest = 1e9f;
+                        foreach (var (u2, q2) in LB) { if (u2 < uMin - .01f) continue; float dm = 1e9f; foreach (var (_, p2) in LA) dm = Mathf.Min(dm, (p2 - q2).magnitude); if (dm < dBest) { dBest = dm; uBest = u2; } if (dm <= BW * .5f) { uJ = u2; break; } }
+                        if (uJ < 0) uJ = uBest;
+                        mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uJ); marks.RemoveAll(m => m.u >= uMin - .01f);
+                    }
                     else if (false) /* keine Abzweige mehr – sie hingen in der Luft */ { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
                 }
                 if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
-                void Flush() { float x = Mathf.Max(EndGuard, a0 - .5f), y = Mathf.Min(len[B.id] - EndGuard, a1 + .5f); if (y < x) return; /* zu nah am Ende: lieber nicht anheben als in der Luft hängen */ res.Add(new Vector3(x, y, am)); } // Bandenden bleiben immer unten
+                void Flush() { float x = Mathf.Max(EndGuard, a0 - .5f), y = Mathf.Min((mergeEnd.TryGetValue(B.id, out var mE) ? Mathf.Min(mE, len[B.id]) : len[B.id]) - EndGuard, a1 + .5f); /* Y-Ende bleibt unten */ if (y < x) return; /* zu nah am Ende: lieber nicht anheben als in der Luft hängen */ res.Add(new Vector3(x, y, am)); } // Bandenden bleiben immer unten
                 for (int k = 1; k < marks.Count; k++) { if (marks[k].u - a1 > 1.5f) { Flush(); a0 = marks[k].u; am = 0; } a1 = marks[k].u; am = Mathf.Max(am, marks[k].amt); }
                 Flush(); bridges[B.id] = res;
                 // Nachprüfen: liegt das angehobene Stück jetzt auf Höhe eines anderen (höheren) Bandes? Dann noch einmal darüber.
