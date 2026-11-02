@@ -51,6 +51,7 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             var swB = System.Diagnostics.Stopwatch.StartNew(); long tm0 = 0; string Tm(string n) { long e = swB.ElapsedMilliseconds; string r = n + " " + (e - tm0) + " · "; tm0 = e; return r; }
+            if (Editing) EndEdit(); /* Band-Editor: Basis wird neu gebaut */
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
             blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
@@ -77,7 +78,7 @@ namespace LunarCleanup.Gameplay
                 }
             }
             string tmLog = Tm("Gebäude");
-            RouteBelts(); tmLog += Tm("Wege"); PlanBridges(); tmLog += Tm("Brücken"); ChooseRotations(); tmLog += Tm("Drehen"); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); tmLog += Tm("Bänder"); BuildLamps(acc); tmLog += Tm("Laternen"); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
+            RouteBelts(); ApplyCustomRoutes(); tmLog += Tm("Wege"); PlanBridges(); AddCustomLifts(); tmLog += Tm("Brücken"); ChooseRotations(); tmLog += Tm("Drehen"); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); tmLog += Tm("Bänder"); BuildLamps(acc); tmLog += Tm("Laternen"); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
             BuildOutposts(); BuildRigs(); tmLog += Tm("Außenlager"); Debug.Log("Lunar Cleanup: Basis-Zeiten (ms) " + tmLog);
             builtVersion = ps.baseVersion;
         }
@@ -172,7 +173,9 @@ namespace LunarCleanup.Gameplay
                 float hmax = pd.Height(cl.c), hmin = hmax; for (int k = 0; k < 16; k++) foreach (float rr in new[] { 1.8f, 3.5f }) { float a = k * Mathf.PI / 8; float h = pd.Height(pd.ToDir(cl, Mathf.Cos(a) * rr, Mathf.Sin(a) * rr)); hmax = Mathf.Max(hmax, h); hmin = Mathf.Min(hmin, h); }
                 bp.root.transform.position = cl.c * (pd.R + hmax);
                 /* Fabian 01.11.: kein großer grauer Teller mehr – nur ein schmaler, schräger Sockel aus Gestein in der Bodenfarbe, gerade so groß wie das Modell */
-                if (hmax - hmin > .02f) { float dep = hmax - hmin + .3f; var fm = RockKit.Mat(RockKit.Tint(GameData.Dirt[ps.P.start].lightC * .8f)); var fd = MeshKit.Cyl(bp.root.transform, fm, new Vector3(0, -dep / 2 + .02f, 0), 2.1f, 2.1f + dep * .9f, dep, 24); var fr = fd.GetComponent<MeshRenderer>(); if (fr) fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
+                if (hmax - hmin > .02f) { /* Fabian 02.11.: Sockel als flacher Felshügel statt glatter Scheibe */ float dep = hmax - hmin + .3f; var fm = RockKit.Mat(RockKit.Tint(GameData.Dirt[ps.P.start].lightC)); var frn = new System.Random(r.cell * 31 + 7); float sy = dep * .5f + .15f;
+                    var mg = new GameObject("Sockel"); mg.transform.SetParent(bp.root.transform, false); mg.transform.localPosition = new Vector3(0, .02f - sy, 0); mg.transform.localScale = new Vector3(2.3f, sy, 2.3f); mg.transform.localRotation = Quaternion.Euler(0, (float)frn.NextDouble() * 360, 0); mg.AddComponent<MeshFilter>().sharedMesh = RockKit.Mesh(frn.Next(RockKit.Variants), true); var mr = mg.AddComponent<MeshRenderer>(); mr.sharedMaterial = fm; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    for (int q = 0; q < 7; q++) { float qa = q * 6.283f / 7 + (float)frn.NextDouble() * .5f, qs = .45f + (float)frn.NextDouble() * .35f; var sg = RockKit.Spawn(bp.root.transform, frn.Next(RockKit.Variants), RockKit.Tint(GameData.Dirt[ps.P.start].lightC), qs); sg.transform.localPosition = new Vector3(Mathf.Cos(qa) * 2.1f, -dep * .7f, Mathf.Sin(qa) * 2.1f); sg.transform.localScale = new Vector3(qs * 1.3f, qs * .8f + dep * .4f, qs * 1.3f); sg.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; } } bp.root.transform.rotation = Quaternion.LookRotation(cl.e1, cl.c);
                 { /* Fabian 01.11.: Erzader als kleine Gruppe Felsbrocken mit leuchtenden Adern statt der braunen Achteck-Platte */
                   var ore = RockKit.OreMat(ps.P.col0); var orng = new System.Random(r.cell); float ox = r.bag ? 3.4f : -3.6f;
                   for (int q = 0; q < 4; q++) { float qs = q == 0 ? .9f : .35f + (float)orng.NextDouble() * .35f; float qa = (float)orng.NextDouble() * 6.283f, qd = q == 0 ? 0 : .7f + (float)orng.NextDouble() * .6f;
@@ -866,7 +869,7 @@ namespace LunarCleanup.Gameplay
             if (ps.baseVersion != builtVersion) BuildBase();
             foreach (var m in beltMats) { var off = m.GetTextureOffset("_BaseMap"); off.y -= Time.deltaTime * 2.4f * Game.Uv("bspeed", ps) * Mathf.Max(.25f, ps.ef) / 1.2f; m.SetTextureOffset("_BaseMap", off); }
             foreach (var (m, o) in pipeLamps) if (m) m.SetColor("_EmissionColor", GameData.Hex("#6ff2d2") * (o.busy ? 1.2f + 1.2f * Mathf.Sin(Time.time * 6) : .25f));
-            UpdateSun(); UpdateStorm(); UpdateWonder(); UpdateFlags(); UpdateBuild29(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
+            UpdateSun(); UpdateStorm(); UpdateWonder(); UpdateFlags(); UpdateBuild29(); UpdateBuild34(); DrawItems(); DrawDebris(); UpdateBeacon(); UpdateWeather(); UpdateCrew(); UpdateFx(); SyncLifters(); SyncVehicles(); SyncDrones(); SyncCrystals(); SyncCart(); AnimateBuildings(); AnimateRigs();
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>

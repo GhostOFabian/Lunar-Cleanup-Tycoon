@@ -155,19 +155,22 @@ namespace LunarCleanup.Core
                 S.doomT -= dt; if (S.doomT > 0) return;
                 Impact(S.doomPid); S.doomT = -1; S.doomPid = ""; return;
             }
-            if (S.ruin != "" || P.Count < 2) return; var ps = Cur; if (ps.nClean < 20 || ps.sv.veh.Count < 2) return;
+            if (S.ruin != "" || P.Count < 2 || Icp != null) return;
             if (S.doomNext < 0) S.doomNext = UnityEngine.Random.Range(2700f, 7200f); // 45–120 min Spielzeit
             S.doomNext -= dt; if (S.doomNext > 0) return;
-            S.doomNext = UnityEngine.Random.Range(2700f, 7200f); StartDoom(ps.pid);
+            /* Fabian 02.11.: trifft zufällig einen freigeschalteten Planeten – fertig oder noch in Arbeit, nicht nur den aktuellen */
+            var cand = P.Values.Where(q => !Ruined(q.pid) && q.nClean >= 20 && q.sv.veh.Count >= 2).ToList(); if (cand.Count == 0) { S.doomNext = 600; return; }
+            S.doomNext = UnityEngine.Random.Range(2700f, 7200f); StartDoom(cand[UnityEngine.Random.Range(0, cand.Count)].pid);
         }
         public static void StartDoom(string pid)
         {
             if (S.ruin != "" || DoomActive || !P.ContainsKey(pid) || P.Count < 2) return; S.doomPid = pid; S.doomT = DOOM_COUNT;
-            Toast("RIESENMETEOR im Anflug auf " + P[pid].P.name + "! Einschlag in " + Mathf.RoundToInt(DOOM_COUNT) + " Sekunden – die Basis wird zerstört", "bad"); OnDoomStart?.Invoke(pid);
+            var tp = P[pid]; string def = tp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(ShieldChance(tp) * 100) + " %" : ""; if (tp.sv.flakLv > 0) def += " · " + FlakRockets(tp) + " Abwehrraketen" + (pid == S.planet ? "" : " (nur vor Ort)");
+            Toast("RIESENMETEOR im Anflug auf " + tp.P.name + "! Einschlag in " + Mathf.RoundToInt(DOOM_COUNT) + " Sekunden" + (def == "" ? " – ohne Abwehr wird die Basis zerstört" : def), "bad"); OnDoomStart?.Invoke(pid);
         }
         static void Impact(string pid)
         {
-            if (!P.ContainsKey(pid)) return; OnDoomImpact?.Invoke(pid); // Explosion zeigt WorldView, danach Ruin()
+            if (!P.ContainsKey(pid)) return; DoomOutcome(pid); // Fabian 02.11.: erst Schild, dann Abfangen – sonst Explosion (WorldView) und Ruin()
         }
         /// <summary>Planet zurücksetzen: alles auf Anfang, 10 Minuten gesperrt. Flaggen, Geschichten und Spielzeit bleiben.</summary>
         public static void Ruin(string pid)

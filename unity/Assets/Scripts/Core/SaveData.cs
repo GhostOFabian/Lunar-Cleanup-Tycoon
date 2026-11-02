@@ -20,6 +20,8 @@ namespace LunarCleanup.Core
     // ---- Vorbereitet für geplante Erweiterungen (docs/IDEEN_SPEC.md) – alle mit Standardwert, noch nicht benutzt ----
     [Serializable] public class EventSave { public string key = ""; public float t; public int cell = -1; public bool done; public int mat = -1; public float amt0; /* Händler: Ware; Müllberg: Anfangsmenge */ }
     [Serializable] public class ChalSave { public List<string> offer = new List<string>(); public string act = ""; public double v0; public float left; public long refresh; public int done; } // Fabian 01.11.: Herausforderungen
+    [Serializable] public class FKV { public string k = ""; public float v; } // Fabian 02.11.: Spezialgüter im Galaxie-Lager
+    [Serializable] public class BeltRouteSave { public string id = ""; public List<Vector2> p = new List<Vector2>(); public List<float> h = new List<float>(); } // eigener Bandverlauf (Band-Editor)
     [Serializable] public class DailySave { public int lastDay, streak; }
     [Serializable] public class RuleSave { public string ifK = "", thenK = "", arg = ""; public float val; public bool on = true; }
     [Serializable] public class SeasonSave { public string key = ""; public float clean; public bool claimed; }
@@ -77,6 +79,13 @@ namespace LunarCleanup.Core
         public int order = -1; public bool autoOrder = true, autoDump;
         public float flowB, fbT; public int flowLv;
         public List<KV> blvl = new List<KV>();
+        /* Fabian 02.11. (Build 34): Abwehr, Lieferketten, Terraforming, Band-Editor – alle mit Default */
+        public int msLv, flakLv;                 // Meteorschild, Abwehrraketen
+        public float msCool;                     // Schild lädt nach (s)
+        public int terra; public float terraHp = 1; // Terraforming-Stufe 0–5 und Zustand 0–1
+        public float gAcc, upAcc, hitT;          // Güter-Produktion, Unterhalt, Einschlagschaden (Anlagen gestört, s)
+        public bool supOk = true;                // letzter Unterhalt geliefert
+        public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
     }
 
     [Serializable]
@@ -121,5 +130,8 @@ namespace LunarCleanup.Core
         public float doomNext = -1, doomT = -1; public string doomPid = ""; // Riesenmeteor: Zeit bis zum nächsten, Countdown, Ziel
         public List<double> incH = new List<double>(); public long incHour; // Einnahmen je Stunde (letzte 48)
         public ChalSave chal = new ChalSave();
+        /* Fabian 02.11. (Build 34) */
+        public List<FKV> goods = new List<FKV>();                 // Spezialgüter aller Planeten
+        public int doomN, doomHits;                               // Riesenmeteore bisher, abgefangene Brocken
     }
 }

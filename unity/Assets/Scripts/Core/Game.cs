@@ -142,6 +142,7 @@ namespace LunarCleanup.Core
             }
             foreach (var v in sv.veh) { v.tank = Arr(v.tank); if (v.d.sqrMagnitude < .5f) v.d = ps.pd.PlanDir(ps.lay.start); }
             if (sv.outposts == null) sv.outposts = new List<StSave>(); foreach (var o in sv.outposts) { o.buf = Arr(o.buf); if (o.docks == null) o.docks = new int[0]; ps.st[o.id] = o; }
+            if (sv.bRoutes == null) sv.bRoutes = new List<BeltRouteSave>(); foreach (var br in sv.bRoutes) { if (br.p == null) br.p = new List<Vector2>(); if (br.h == null) br.h = new List<float>(); while (br.h.Count < br.p.Count) br.h.Add(0); } sv.terra = Mathf.Clamp(sv.terra, 0, 5); /* Build 34 */
             if (sv.rigs == null) sv.rigs = new List<RigSave>(); foreach (var r in sv.rigs) r.buf = Arr(r.buf);
             if (sv.lifters == null) sv.lifters = new List<LifterSave>(); foreach (var L in sv.lifters) if (L.d.sqrMagnitude < .5f) L.d = ps.pd.PlanDir(ps.lay.start);
             if (sv.drones == null) sv.drones = new List<DroneSave>(); foreach (var dr in sv.drones) { dr.tank = Arr(dr.tank); if (dr.d.sqrMagnitude < .5f) dr.d = ps.lay.pos.ContainsKey("hangar") ? ps.pd.PlanDir(ps.lay.pos["hangar"]) : ps.pd.PlanDir(ps.lay.start); }
@@ -180,6 +181,7 @@ namespace LunarCleanup.Core
 
         static SaveData Load()
         {
+            Icp = null; /* Abfang-Minispiel überlebt keinen Neustart */
             foreach (var k in new[] { Key, Key + "-bak" })
             {
                 string j = PlayerPrefs.GetString(k, ""); if (string.IsNullOrEmpty(j)) continue;
@@ -232,7 +234,8 @@ namespace LunarCleanup.Core
             if (l >= u.max) return Fail("Höchste Stufe erreicht");
             if (u.stage > 0 && Gs(ps) < u.stage) return Fail("Erst Basisstufe " + u.stage);
             double c = UCost(id, ps); if (S.credits < c) return Fail(Lacks(c));
-            S.credits -= c; if (u.loc) ps.upg[id] = l + 1; else GUpg[id] = l + 1;
+            var ug = UGoods(id, ps); if (!HasGoods(ug)) return Fail("Für diese Stufe fehlen " + GoodsTxt(ug) + " – sie kommen per Rakete von " + GameData.Planets[Needs(ps.pid)[0]].name);
+            S.credits -= c; PayGoods(ps, ug); if (u.loc) ps.upg[id] = l + 1; else GUpg[id] = l + 1;
             Toast(u.name + " Stufe " + (l + 1), "good"); return true;
         }
         public static int Gs(PState ps) => Math.Max(ps.sv.stage, ps.sv.techF);
@@ -716,7 +719,7 @@ namespace LunarCleanup.Core
             bool stale = tot >= 1 && (sv.sellIdle >= (Offline ? 45 : 300) || sv.sellAge >= (Offline ? 600 : 1800));
             if (tot < SellTarget(ps) && !sv.rkGo && !stale && !(jamS && tot >= SellCap(ps) * .6f) && !(EarlyLaunch(ps) && tot >= SellCap(ps) * .5f)) return;
             sv.sellIdle = 0; sv.sellLast = 0; sv.sellAge = 0;
-            bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } int om0 = sv.order; bool hadOrder = om0 >= 0 && om0 < NM && sv.sellBuf[om0] > 1e-6f; CountSold(ps, sv.sellBuf); Array.Clear(sv.sellBuf, 0, NM); NewOrder(ps);
+            bool man = sv.rkGo; sv.rkGo = false; double val = CargoValue(ps) * TerraSellF(ps); if (EvOn(ps, "freighter")) { val *= FeatureData.FREIGHTER_MULT; EvEnd(ps, "Der Frachter zahlt +50 %"); } int om0 = sv.order; bool hadOrder = om0 >= 0 && om0 < NM && sv.sellBuf[om0] > 1e-6f; CountSold(ps, sv.sellBuf); Array.Clear(sv.sellBuf, 0, NM); NewOrder(ps);
             Earn(val); sv.soldP += val; S.stats.sold += val; sv.nRockets++; sv.rk = RocketTime(ps);
             if (!Offline && ps.pid == S.planet) { OnRocket?.Invoke(ps.pid, val); if (man) Toast("Rakete gestartet · +" + Fmt(val) + " Cr" + (hadOrder ? " · Auftrag " + GameData.Mats[om0].name + " erfüllt" : ""), "good"); }
         }
@@ -1093,7 +1096,7 @@ namespace LunarCleanup.Core
             var ps = Cur; var r = ps.sv.rigs.Find(x => x.cell == cell); if (r == null || r.faultK == "") return false; double c = FaultFixCost(ps, r); if (S.credits < c) return Fail(Lacks(c));
             S.credits -= c; r.faultK = ""; r.fixedN++; Toast("Störung behoben", "good"); return true;
         }
-        static readonly Dictionary<string, string> Faults = new Dictionary<string, string> { { "heat", "Überhitzung" }, { "jam", "Mechanik blockiert" }, { "error", "Steuerung gestört" }, { "storm", "Sturmschaden" }, { "rad", "Strahlenschaden an der Elektronik" } };
+        static readonly Dictionary<string, string> Faults = new Dictionary<string, string> { { "heat", "Überhitzung" }, { "jam", "Mechanik blockiert" }, { "error", "Steuerung gestört" }, { "storm", "Sturmschaden" }, { "rad", "Strahlenschaden an der Elektronik" }, { "impact", "Einschlagschaden" } };
         static readonly HashSet<string> Hot = new HashSet<string> { "venus", "io", "cancri" };
         public static string FaultName(RigSave r) => Faults.TryGetValue(r.faultK, out var n) ? n : r.faultK;
         static bool RigFault(PState ps, RigSave r, float dt)
@@ -1496,7 +1499,7 @@ namespace LunarCleanup.Core
             S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); Travel(pid);
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }
-        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
+        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Icp != null) { Fail("Erst die Meteorbrocken abwehren!"); return; } if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
 
         // ================= Ziele =================
         static PState Moon => P["moon"];
@@ -1690,7 +1693,7 @@ namespace LunarCleanup.Core
             foreach (var dr in sv.drones) if (dr.busy) demand += .4f * vE; if (ps.shOn) demand += 4; foreach (var L in sv.lifters) if (L.mode != "idle") demand += 2 * vE; foreach (var o in sv.outposts) if (o.busy) demand += .2f; foreach (var r in sv.rigs) if (r.busy) demand += GameData.RigEnergy * Uv("meff", ps);
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach[m].cur >= 0) demand += GameData.Mach[m].x * Uv("meff", ps);
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && ps.belts[b.id].Count > 0) demand += .1f * Uv("beff", ps);
-            ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps);
+            if (sv.msLv > 0 && sv.msCool <= 0) demand += .5f * sv.msLv; /* Meteorschild hält sich bereit */ ps.demand = demand * ps.P.energy; ps.prodNow = EnergyProd(ps) * TerraEnergyF(ps);
             demand *= ps.P.energy * dt;
             float avail = sv.energy + ps.prodNow * dt, f = demand > 0 ? Mathf.Min(1, avail / demand) : 1;
             sv.energy = Mathf.Max(0, Mathf.Min(EnergyCap(ps), avail - demand * f)); ps.ef = f;
@@ -1706,7 +1709,7 @@ namespace LunarCleanup.Core
         static void StepPlanet(PState ps, float dt)
         {
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
-            EnergyStep(ps, dt); PutziStep(ps, dt); float f = ps.ef;
+            EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }

@@ -129,7 +129,7 @@ namespace LunarCleanup.Gameplay
                 var L = new GameObject("Glut").AddComponent<Light>(); L.transform.SetParent(t, false); L.type = LightType.Point; L.color = new Color(1f, .5f, .2f); L.range = 200; L.intensity = 2; L.shadows = LightShadows.None;
             }
             float k = Mathf.Clamp01(1 - Game.S.doomT / Game.DOOM_COUNT), e = k * k * k; float size = Mathf.Lerp(4, 22, k);
-            doomGo.transform.position = Vector3.Lerp(doomFrom, doomTo + (doomFrom - doomTo).normalized * size * .5f, e); doomGo.transform.localScale = Vector3.one * size;
+            doomGo.transform.position = Vector3.Lerp(doomFrom, doomTo + (doomFrom - doomTo).normalized * (size * .5f + pd.R * .9f), e); /* Fabian 02.11.: endet über der Basis – dort entscheidet Schild/Abfangen, sonst stürzt er (DoomDive) */ doomGo.transform.localScale = Vector3.one * size;
             doomGo.transform.Rotate(new Vector3(.3f, 1, .2f), 40 * Time.deltaTime);
             var tr2 = doomGo.GetComponent<TrailRenderer>(); if (tr2) tr2.widthMultiplier = size * .8f;
             Shake = Mathf.Max(Shake, k * .35f);

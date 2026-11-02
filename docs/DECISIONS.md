@@ -245,3 +245,8 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 01.11.2026 (Fabian): Handy nutzt standardmäßig die PC-Grafikstufe (SSAO, weiche Schatten); „Sparsam“ in den Einstellungen als Rückfall für ältere Geräte und Akku.
 - 01.11.2026: Grafikstufe „Hoch“ auf dem iPhone nur auf Probe mit automatischem Zurückschalten (wie beim Ändern der Bildschirmauflösung), weil sie den Bildschirm schwarz lassen kann.
 - 01.11.2026: Nötige Shader-Varianten stehen in einer festen Variantenliste (vorgeladene Shader), nicht nur in Platzhalter-Materialien – die prüft Unity beim Neustart nach und streicht Schlüsselwörter.
+- 02.11.2026: Eigene Bandwege sind nur Optik – die Simulation rechnet weiter mit der Bandlänge aus dem Layout, damit Umlegen nicht Balance oder Offline-Ertrag verändert.
+- 02.11.2026: Planetenbedarf an Spezialgütern = die zwei Nachbarn in der Planetenreihe (Mond: Mars + Europa) – einfach zu merken, immer erreichbar.
+- 02.11.2026: Nicht auf dem Planeten = nur der Schild zählt (kein Abfangen aus der Ferne); dafür Warnband mit „hinfliegen“.
+- 02.11.2026: Mehr als die Hälfte der Brocken durch = Planet zerstört; weniger = Teilschaden.
+- 02.11.2026: Terraforming-Pflanzen werden zu wenigen Meshes zusammengefasst; Bäume sind je eine Mesh mit zwei Teilen (Stamm, Krone), damit sie einzeln im Wind schwingen, ohne neue Shader-Varianten (kein GPU-Instancing).

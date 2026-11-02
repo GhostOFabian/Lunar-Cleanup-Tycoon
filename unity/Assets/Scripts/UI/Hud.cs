@@ -126,16 +126,40 @@ namespace LunarCleanup.UI
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
-            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { } else if (warnTarget == "doomgo") { if (Game.DoomActive) Game.Travel(Game.S.doomPid); } else if (warnTarget == "icp") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
             ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -144, 12, 112); /* sitzt jetzt dort, wo früher die Zielkarte war */
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
         }
         GameObject warnGo; Image warnImg; TextMeshProUGUI warnTxt; string warnTarget = "hazard";
+        // ---------- Band-Editor (Fabian 02.11.) ----------
+        public Func<bool> BeltOn, BeltOk; public Func<string> BeltTitle, BeltInfo; public Action<string> BeltBtn;
+        GameObject beGo; TextMeshProUGUI beTitle, beInfo; Button beOk; CanvasGroup beOkCg;
+        void BuildBeltEdit()
+        {
+            var bg = UiKit.Glass(root, "Band-Editor", new Color(.04f, .07f, .11f, 1f), 16); beGo = bg.gameObject; bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 0, 8, 72, 8, -262);
+            beTitle = UiKit.Text(bg.transform, "Titel", "", 14, Pal.Ink, true, FontStyles.Bold); beTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -30, 14, 10);
+            beInfo = UiKit.Text(bg.transform, "Info", "", 12, Pal.Ink2); beInfo.rectTransform.Anchor(0, 1, 1, 1, 14, -96, 14, 34);
+            var row = UiKit.Rt(bg.transform, "Knöpfe").Anchor(0, 0, 1, 0, 10, 10, 10, -62); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+            foreach (var (k, lbl, gold) in new[] { ("add", "Punkt +", false), ("del", "Punkt –", false), ("reset", "Zurücksetzen", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) })
+            {
+                string key = k; var b = UiKit.Btn(row, lbl, () => BeltBtn?.Invoke(key), gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 12);
+                var t = UiKit.Text(b.transform, "Text", lbl, 12, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 2, 4, 2); t.enableAutoSizing = true; t.fontSizeMin = 8; t.fontSizeMax = 12;
+                if (key == "ok") { beOk = b; beOkCg = b.gameObject.AddComponent<CanvasGroup>(); }
+            }
+        }
+        void UpdateBeltEdit()
+        {
+            bool on = BeltOn != null && BeltOn(); if (on && !beGo) BuildBeltEdit(); if (!beGo) return;
+            if (beGo.activeSelf != on) beGo.SetActive(on); if (!on) return;
+            beTitle.text = BeltTitle?.Invoke() ?? ""; beInfo.text = BeltInfo?.Invoke() ?? ""; bool ok = BeltOk == null || BeltOk(); beOk.interactable = ok; beOkCg.alpha = ok ? 1 : .38f;
+        }
         void UpdateWarn(PState ps)
         {
             string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
-            if (Game.DoomActive) { t = "RIESENMETEOR auf " + Game.P[Game.S.doomPid].P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s"; warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
+            if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Tippe, wenn der Ring den Brocken umschließt · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
+            else if (Game.DoomActive && Game.S.doomPid != Game.S.planet) { var dp = Game.P[Game.S.doomPid]; t = "RIESENMETEOR auf " + dp.P.name + " in " + Mathf.CeilToInt(Game.S.doomT) + " s · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" + (dp.sv.flakLv > 0 ? " · Tippen: hinfliegen und abfangen" : " · Tippen: hinfliegen"); warnTarget = "doomgo"; }
+            else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
             else if (Game.EvOn(ps, "trader")) { t = "Händler kauft " + GameData.Mats[ps.sv.ev.mat].name + " ×3 · " + Game.Fmt(Game.TraderStock(ps)) + " E = " + Game.Fmt(Game.TraderValue(ps)) + " Cr · noch " + Mathf.CeilToInt(ps.sv.ev.t) + " s · antippen"; warnTarget = "trader"; }
             else if (Game.EvOn(ps, "pile")) { int crew = Game.PileCrew(ps); t = "Müllberg · " + Mathf.RoundToInt(Game.PileLeft(ps) * 100) + " % übrig · " + crew + " Fahrzeuge dran" + (crew < Game.PILE_TEAM ? " (mind. " + Game.PILE_TEAM + " nötig)" : "") + " · noch " + Mathf.CeilToInt(ps.sv.ev.t / 60f) + " min"; warnTarget = "focus"; }
             else if (tt != null) { t = tt; warnTarget = "focus"; }
@@ -355,7 +379,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean, tot = ps.pd.cells.Count(x => !x.IsBase); pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps);
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit();
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */

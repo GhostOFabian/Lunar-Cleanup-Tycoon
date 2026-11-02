@@ -51,7 +51,8 @@ namespace LunarCleanup.Gameplay
             float app = R * D / Mathf.Sqrt(D * D - R * R); // sichtbarer Planetenradius in der Ebene durch den Mittelpunkt
             atmo.position = Vector3.zero; atmo.rotation = Quaternion.LookRotation(-cp, cam.transform.up); atmo.localScale = Vector3.one * (2 * app * 1.02f / LIMB);
             float k = Mathf.Lerp(.55f, 1f, Mathf.InverseLerp(R * 1.3f, R * 3f, D)); // aus der Ferne kräftiger
-            atmoMat.SetColor("_BaseColor", new Color(atmoCol.r, atmoCol.g, atmoCol.b, atmoA * k));
+            float tf = ps != null && ps.sv.terra > 0 ? Mathf.Min(1, .45f + .11f * ps.sv.terra) : 0; var ac = Color.Lerp(atmoCol, TerraSky, tf); float aa = Mathf.Lerp(atmoA, Mathf.Max(atmoA, .75f), tf); /* Terraforming: blaue Lufthülle */
+            atmoMat.SetColor("_BaseColor", new Color(ac.r, ac.g, ac.b, aa * k));
         }
 
         // ---------- Lichter aus der Ferne: Gebäude, Fahrzeuge, Ereignisort ----------

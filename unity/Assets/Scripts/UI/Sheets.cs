@@ -38,8 +38,8 @@ namespace LunarCleanup.UI
         static void UpRow(Hud h, string id)
         {
             var u = GameData.Up[id];
-            h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : ""); },
-                () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id),
+            h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : "") + (Game.UGoods(id).Length > 0 ? " · Top-Stufe braucht " + Game.GoodsTxt(Game.UGoods(id)) + " (Lager: " + Mathf.FloorToInt(Game.GoodAmt(Game.UGoods(id)[0].g)) + ")" : ""); },
+                () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id) && Game.HasGoods(Game.UGoods(id)),
                 () => { Game.BuyUpgrade(id); if (Game.Lvl(id) >= u.max) h.Rebuild(); }, true, null, false); /* Fabian 01.11.: Zeile bleibt stehen, erst bei Max wandert sie nach unten */
         }
         static bool IsMax(string id) => Game.Lvl(id) >= GameData.Up[id].max;
@@ -205,8 +205,9 @@ namespace LunarCleanup.UI
 
         static void Base(Hud h)
         {
-            h.Tabs("Bauen", "Ausbau");
+            h.Tabs("Bauen", "Ausbau", "Schutz"); /* Fabian 02.11.: Abwehr und Terraforming */
             int tab = h.Tab; var st = GameData.Stages; int s = ps.sv.stage;
+            if (tab == 2) { Protect(h); return; }
             if (tab == 0)
             {
                 h.Section("Basisstufe " + s + " · " + st[s - 1].name);
@@ -231,6 +232,42 @@ namespace LunarCleanup.UI
                 h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
                 return;
             }
+        }
+        static string Pc(float f) => Mathf.RoundToInt(f * 100) + " %";
+        /// <summary>Fabian 02.11.: Meteorschild, Abwehrraketen, Terraforming und Lieferungen dieses Planeten.</summary>
+        static void Protect(Hud h)
+        {
+            var sv = ps.sv; string pn = ps.P.name;
+            h.Section("Riesenmeteor");
+            h.Note("Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer.", () => Game.DoomActive ? "RIESENMETEOR im Anflug auf " + GameData.Planets[Game.S.doomPid].name + " – Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" : "Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer. Bisher: " + Game.S.doomN + " Riesenmeteore, " + Game.S.doomHits + " Brocken abgefangen.");
+            h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Meteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem Einsatz 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + Game.GoodsTxt(Game.MsGoods(ps)) : ""),
+                () => sv.msLv >= Game.MS_MAX ? "Max" : Cr(Game.MsCost(ps)), () => Game.MsWhy(ps) == "", () => Game.BuyShield());
+            h.Row("Abwehrraketen", () => "Stufe " + sv.flakLv + "/" + Game.FLAK_MAX + " · " + Game.FlakRockets(ps) + " Raketen je Riesenmeteor. Hält der Schild nicht, zerbricht der Meteor in 4–8 Brocken: Tippe auf jeden Brocken, wenn sein Ring ihn genau umschließt. Daneben kostet eine Rakete. Nur wenn du vor Ort bist – sonst zählt nur der Schild." + (sv.flakLv < Game.FLAK_MAX && Game.FlakGoods(ps).Length > 0 ? " · nächste Stufe: " + Game.GoodsTxt(Game.FlakGoods(ps)) : ""),
+                () => sv.flakLv >= Game.FLAK_MAX ? "Max" : Cr(Game.FlakCost(ps)), () => Game.FlakWhy(ps) == "", () => Game.BuyFlak());
+            h.Note("Jeder Riesenmeteor wird schwerer: mehr, schnellere Brocken, die später auch in Kurven fliegen. Terraforming macht ihn ebenfalls schwerer. Kommt mehr als die Hälfte durch, ist die Basis verloren – sonst gibt es Schmutz, kaputte Fahrzeuge und gestörte Anlagen.");
+            h.Section("Terraforming");
+            if (!Game.IsDone(ps.pid)) h.Note("Sobald " + pn + " zu 100 % sauber ist, kannst du den Planeten in 5 Stufen begrünen – bis zum Wald. Jede Stufe gibt einen dauerhaften Bonus.");
+            else
+            {
+                h.Row("Stufe " + sv.terra + "/" + Game.TERRA_MAX + " · " + Game.TerraName[sv.terra], () => sv.terra == 0 ? "Noch kahl." : "Zustand " + Pc(Mathf.Clamp01(sv.terraHp)) + " · " + (Game.TerraTrouble(ps) is var tr && tr != "" ? "sinkt: " + tr : "stabil") + " · Unterhalt " + Dec(Game.UpkeepH(ps), 1) + " je Gut pro Stunde. Bei 0 % fällt eine Stufe weg.");
+                for (int k = 1; k <= Game.TERRA_MAX; k++) { int kk = k; h.Row(k + ". " + Game.TerraName[k], () => (sv.terra >= kk ? "Erreicht · " : "") + Game.TerraBonus[kk]); }
+                if (sv.terra < Game.TERRA_MAX) h.Row("Nächste Stufe: " + Game.TerraName[sv.terra + 1], () => { string w = Game.TerraWhy(ps); return Game.GoodsTxt(Game.TerraGoods(ps)) + (w != "" ? " · " + w : ""); }, () => Cr(Game.TerraCost(ps)), () => Game.TerraWhy(ps) == "", () => Game.BuyTerra());
+                h.Note("Ohne Lieferungen, bei Stürmen und wenn Schmutz liegen bleibt, verfällt das Terraforming. Wird der Planet zerstört, ist alles weg.");
+            }
+            h.Section("Lieferungen für " + pn);
+            foreach (var q in Game.Needs(ps.pid)) { var g = Game.GoodOf(q); string qq = q; h.Row(g.name, () => "von " + GameData.Planets[qq].name + " · im Lager: " + Mathf.FloorToInt(Game.GoodAmt(g.id)) + (Game.P.ContainsKey(qq) && Game.IsDone(qq) ? " · wird hergestellt" : " · erst wenn " + GameData.Planets[qq].name + " 100 % sauber ist")); }
+            h.Note("Raketen bringen die Güter automatisch. Übersicht aller Planeten: Planeten → Lieferketten.");
+        }
+        /// <summary>Fabian 02.11.: wer stellt was her, wer braucht was.</summary>
+        static void Supply(Hud h)
+        {
+            h.Note("Jeder komplett saubere Planet stellt ein Spezialgut her (40 pro Stunde, auch offline). Raketen bringen es automatisch dorthin, wo es gebraucht wird: Top-Stufen der Upgrades, Meteorschild, Abwehrraketen und Terraforming.");
+            h.Section("Galaxie-Lager");
+            foreach (var pid in GameData.POrder) { var g = Game.GoodOf(pid); if (!Game.P.ContainsKey(pid) && Game.GoodAmt(g.id) <= 0) continue; string pp = pid;
+                h.Row(g.name, () => Mathf.FloorToInt(Game.GoodAmt(g.id)) + " / " + Game.GOOD_CAP + " · von " + GameData.Planets[pp].name + (Game.P.ContainsKey(pp) && Game.GoodRate(Game.P[pp]) > 0 ? " · +" + Game.GoodRate(Game.P[pp]) + " pro Stunde" : " · noch keine Herstellung")); }
+            h.Section("Planeten");
+            foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid];
+                h.Row(GameData.Planets[pid].name, () => "liefert " + Game.GoodOf(pid).name + (Game.GoodRate(q) > 0 ? "" : " (erst bei 100 % sauber)") + " · braucht " + string.Join(" und ", Game.Needs(pid).Select(x => Game.GoodOf(x).name)) + (Game.UpkeepH(q) > 0 ? (q.sv.supOk ? " · versorgt" : " · UNVERSORGT") : "") + (q.sv.terra > 0 ? " · Terraforming " + q.sv.terra : "") + (q.sv.msLv > 0 ? " · Schild " + q.sv.msLv : "")); }
         }
         static void Specialize(Hud h)
         {
@@ -293,9 +330,10 @@ namespace LunarCleanup.UI
         {
             bool sd = Game.S.done.Count > 0 || Game.S.stardust > 0;
             int owned = GameData.POrder.Count(x => Game.P.ContainsKey(x));
-            if (sd) h.Tabs("Reisen " + owned, "Neue Planeten", "Sternenstaub " + Game.StardustFree()); else h.Tabs("Reisen " + owned, "Neue Planeten");
+            if (sd) h.Tabs("Reisen " + owned, "Neue Planeten", "Sternenstaub " + Game.StardustFree(), "Lieferketten"); else h.Tabs("Reisen " + owned, "Neue Planeten", "Lieferketten");
             int tab = h.Tab;
-            if (sd && tab >= 2) { Stardust(h); return; }
+            if (tab == (sd ? 3 : 2)) { Supply(h); return; }
+            if (sd && tab == 2) { Stardust(h); return; }
             bool travel = tab == 0; int shown = 0;
             foreach (var (rname, ids) in Regions)
             {
