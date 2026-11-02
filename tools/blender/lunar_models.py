@@ -62,6 +62,8 @@ EXPORT = False                    # True: jedes Modell als FBX exportieren
 EXPORT_DIR = "//LunarCleanup_FBX"  # "//" = neben der gespeicherten .blend
 ONLY = []                         # leer = alle, sonst z. B. ["presse", "buggy"]
 NUR_NEUE = True                   # Fabian 02.11.: True = nur die neuen Modelle (Build 34–38) in die Szene, False = alle
+HQ = True                         # Blender-Qualität: doppelt so viele Rundungen, mehr Details, weiche Felsen, schönere Materialien.
+                                  # Für den Export ins Spiel (EXPORT = True) auf False stellen – sonst wird es fürs Handy zu schwer.
 ACCENT = "#ffbf4d"                # Akzentfarbe (Mond: Orange/Gelb wie im Spiel)
 ACCENT2 = "#58cdb4"               # zweite Akzentfarbe (Türkis)
 BEVEL = True                      # weiche Kanten (Bevel-Modifier)
@@ -71,6 +73,18 @@ SPACING = 13.0                    # Abstand der Modelle in der Szene
 SETUP_SCENE = True                # Licht, Boden, Kamera für schöne Vorschau
 FRONT_FLIP = False                # Modelle beim Export um 180° drehen
 CLEAR_OLD = True                  # vorherige LunarCleanup-Modelle löschen
+
+def _hq():
+    return HAVE_BPY and HQ
+
+
+SEGQ = 2 if (HAVE_BPY and HQ) else 1   # Rundungen ×2 in Blender (nur runde Teile ab 10 Segmenten; Kanten wie Obelisk/Kristall bleiben)
+DETAIL = HAVE_BPY and HQ               # zusätzliche Kleinteile nur in Blender
+
+
+def _sq(seg):
+    return seg * SEGQ if seg >= 10 else seg
+
 
 # ============================== Materialien =================================
 # name: (Farbe, Metallic, Rauheit, Leuchtfarbe oder None, Leuchtstärke)
@@ -223,6 +237,7 @@ class Mesh:
     def lathe(self, mat, pos, prof, seg=24, rot=None, R=None, cap0=True, cap1=True, closed_loop=False, a0=0.0, a1=360.0):
         """Drehkörper um die lokale Z-Achse. prof = [(Radius, Höhe), …] von unten nach oben (außen).
         closed_loop: Profil ist eine geschlossene Schleife (z. B. Wand mit Innenseite) – keine Deckel."""
+        seg = _sq(seg)
         full = abs(a1 - a0) >= 359.999
         n = seg if full else seg + 1
         rings, v, f = [], [], []
@@ -264,6 +279,7 @@ class Mesh:
 
     def sphere(self, mat, pos, r, seg=16, rings=8, zcut=-1.0):
         """Kugel; zcut = -1 ganz, 0 = Halbkugel (Kuppel)."""
+        rings = rings * SEGQ if seg >= 10 else rings
         prof = []
         a_start = math.asin(max(-1.0, min(1.0, zcut))) if zcut > -1 else -math.pi / 2
         for i in range(rings + 1):
@@ -274,6 +290,7 @@ class Mesh:
         return self.lathe(mat, pos, prof, seg)
 
     def torus(self, mat, pos, R0, r, seg=24, seg2=8, rot=None):
+        seg = _sq(seg)
         v, f = [], []
         for i in range(seg):
             a = 2 * math.pi * i / seg
@@ -2266,6 +2283,16 @@ def a_schild():
         a = math.radians(120 * k)
         D.sphere("schildfeld", (1.0 * math.cos(a), 1.0 * math.sin(a), h0 + 3.55), 0.12, 10, 5)
     beacon(M, (1.6, -1.2, h0), 0.9)
+    if DETAIL:  # Kabel, Steuerkästen, Leiter, Warnstreifen
+        for k in range(4):
+            a = math.radians(90 * k)
+            M.pipe("dunkel", [(1.4 * math.cos(a), 1.4 * math.sin(a), h0 + 0.05), (0.9 * math.cos(a), 0.9 * math.sin(a), h0 + 0.5), (0.47 * math.cos(a), 0.47 * math.sin(a), h0 + 0.9)], 0.035, 8)
+            M.box("hell", (1.75 * math.cos(a + 0.4), 1.75 * math.sin(a + 0.4), h0 + 0.3), (0.35, 0.35, 0.6), rot=(0, 0, math.degrees(a + 0.4)))
+            M.box("mint", (1.75 * math.cos(a + 0.4) * 0.9, 1.75 * math.sin(a + 0.4) * 0.9, h0 + 0.45), (0.12, 0.02, 0.06), rot=(0, 0, math.degrees(a + 0.4) + 90))
+        ladder(M, (0, -0.42, h0 + 0.42), 2.3)
+        for k in range(24):
+            a = 2 * math.pi * k / 24
+            M.box("warn" if k % 2 else "dunkel", (1.48 * math.cos(a), 1.48 * math.sin(a), h0 + 0.02), (0.18, 0.12, 0.02), rot=(0, 0, math.degrees(a)))
     return m
 
 
@@ -2296,6 +2323,14 @@ def a_flak():
             tip = _add((0, 0, z + 1.0), _mv(R, (x, -1.0, zz)))
             D.lathe("warn", tip, [(0.085, 0), (0.07, 0.12), (0, 0.24)], 10, R=_mv_mat(R, _rot(90, 0, 0)))
     D.box("akzent", (0, 0.05, z + 1.0), (0.97, 0.3, 0.64), R=R)
+    if DETAIL:  # Hydraulik, Munitionskisten, Kabel
+        for sx in (-1, 1):
+            D.tube("stahl", (sx * 0.5, 0.3, z + 0.3), (sx * 0.4, -0.2, z + 1.05), 0.05, 8)
+            D.tube("dunkel", (sx * 0.5, 0.3, z + 0.3), (sx * 0.45, 0.05, z + 0.65), 0.07, 8)
+        for i in range(3):
+            M.box("kiste3", (1.3, -0.9 + i * 0.45, h0 + 0.2), (0.5, 0.4, 0.38))
+            M.box("warn", (1.3, -0.9 + i * 0.45, h0 + 0.4), (0.3, 0.02, 0.06))
+        M.pipe("dunkel", [(-1.3, -1.1, h0 + 0.05), (-0.6, -0.6, h0 + 0.05), (-0.45, -0.3, h0 + 0.5)], 0.04, 8)
     return m
 
 
@@ -2334,6 +2369,15 @@ def n_laub(v):
     _leaf_crown(M, mats, 500 + v, 0, 0, H + 0.9, 1.25, 4, 0.6)
     for i, e in enumerate(ends):
         M.blob(mats[(i + 1) % len(mats)], e, 0.75 + 0.15 * rnd.random(), 600 + v * 10 + i, (1, 1, 0.8), 0.3, 10, 6, facet=0.18)
+    if DETAIL:  # feinere Krone: kleine Blattbüschel auf der Oberfläche, Zweige
+        for k in range(16):
+            a = rnd.random() * 6.283; b = rnd.random() * 1.2 - 0.2
+            c = (1.35 * math.cos(a) * math.cos(b), 1.35 * math.sin(a) * math.cos(b), H + 0.9 + 1.0 * math.sin(b))
+            M.blob(mats[k % len(mats)], c, 0.32 + 0.12 * rnd.random(), 650 + v * 40 + k, (1, 1, 0.85), 0.35, 8, 5, facet=0.22)
+        for e in ends:
+            for k in range(2):
+                a = rnd.random() * 6.283
+                M.tube("rinde", e, (e[0] + 0.4 * math.cos(a), e[1] + 0.4 * math.sin(a), e[2] + 0.25), 0.03, 5, r2=0.012)
     return m
 
 
@@ -2359,6 +2403,18 @@ def n_tanne(v):
             faces.append((i, j, n + i)); faces.append((j, n + j, n + i)); faces.append((n + i, n + j, top)); faces.append((j, i, bot))
         M.add(verts, faces, "tanne" if t % 2 == 0 else "laub3")
     M.lathe("tanne", (0, 0, 4.6), [(0.18, 0), (0, 0.7)], 8)
+    if DETAIL:  # zweite, versetzte Zweiglage je Kranz – dichter und buschiger
+        for t in range(tiers):
+            k = t / max(1, tiers - 1); z = 1.1 + t * (3.9 / tiers); R0 = (1.55 - 1.15 * k) * 0.82
+            n = 18; verts = []; faces = []
+            for i in range(n):
+                a = 6.283 * (i + 0.5) / n
+                rr = R0 * (1.0 if i % 2 == 0 else 0.7)
+                verts.append((rr * math.cos(a), rr * math.sin(a), z - (0.22 if i % 2 == 0 else 0.02)))
+            top = len(verts); verts.append((0, 0, z + 0.7 - 0.2 * k))
+            for i in range(n):
+                j = (i + 1) % n; faces.append((i, j, top)); faces.append((j, i, top))
+            M.add(verts, faces, "laub3" if t % 2 == 0 else "tanne", closed=False)
     return m
 
 
@@ -2370,7 +2426,13 @@ def n_busch(v):
         rnd = random.Random(77)
         for i in range(6):
             a = rnd.random() * 6.283
-            M.sphere("bluete", (0.55 * math.cos(a), 0.55 * math.sin(a), 0.4 + 0.4 * rnd.random()), 0.07, 6, 3)
+            M.sphere("bluete", (0.55 * math.cos(a), 0.55 * math.sin(a), 0.4 + 0.4 * rnd.random()), 0.07, 10, 5)
+    if DETAIL:
+        import random
+        rr = random.Random(780 + v)
+        for i in range(8):
+            a = rr.random() * 6.283
+            M.blob("laub1" if i % 2 else "laub2", (0.6 * math.cos(a), 0.6 * math.sin(a), 0.3 + 0.35 * rr.random()), 0.18 + 0.1 * rr.random(), 790 + v * 20 + i, (1, 1, 0.85), 0.35, 8, 5, facet=0.2)
     return m
 
 
@@ -2379,7 +2441,7 @@ def n_gras():
     import random
     rnd = random.Random(9)
     m = Model("gras_1", "Grasbüschel", "Natur"); M = m.body
-    for i in range(9):
+    for i in range(16 if DETAIL else 9):
         a = rnd.random() * 6.283; tilt = 0.25 + 0.35 * rnd.random(); h = 0.45 + 0.35 * rnd.random(); w = 0.035
         d = (math.cos(a), math.sin(a)); sd = (-d[1] * w, d[0] * w)
         base = (d[0] * 0.05, d[1] * 0.05, 0); mid = (d[0] * tilt * 0.4 * h, d[1] * tilt * 0.4 * h, h * 0.55); tip = (d[0] * tilt * h, d[1] * tilt * h, h)
@@ -2419,6 +2481,14 @@ def e_riesenmeteor():
     for i in range(5):
         a = r.random() * 6.283
         M.blob("felsdkl", (3.1 * math.cos(a), 3.1 * math.sin(a), 3.0 + (r.random() - 0.5) * 3), 0.6 + 0.4 * r.random(), 4110 + i, (1, 1, 0.8), 0.4, 10, 6)
+    if DETAIL:  # mehr Risse und kleine Begleitbrocken
+        for i in range(18):
+            a = r.random() * 6.283; b = (r.random() - 0.5) * 2.8
+            p = (2.95 * math.cos(a) * math.cos(b * 0.5), 2.95 * math.sin(a) * math.cos(b * 0.5), 3.0 + 2.7 * math.sin(b * 0.5))
+            M.box("glut", p, (0.06, 0.5 + 0.6 * r.random(), 0.05), rot=(r.random() * 90, r.random() * 90, math.degrees(a)))
+        for i in range(6):
+            a = r.random() * 6.283
+            M.blob("lavastein", (4.2 * math.cos(a), 4.2 * math.sin(a), 3.0 + (r.random() - 0.5) * 2), 0.25 + 0.2 * r.random(), 4130 + i, (1, 1, 0.9), 0.4, 8, 5)
     return m
 
 
@@ -2495,6 +2565,16 @@ def n_teich():
         M.cyl("laub1", (d * math.cos(a), d * math.sin(a), 0.025), 0.28, 0.015, 12)
         if i % 2 == 0:
             M.sphere("bluete", (d * math.cos(a) + 0.05, d * math.sin(a), 0.07), 0.06, 8, 4)
+    if DETAIL:  # mehr Schilf, Kiesel und Seerosen
+        for i in range(12):
+            a = r.random() * 1.6 + 3.6; d = 2.05 + 0.25 * r.random()
+            M.cyl("gras", (d * math.cos(a), d * math.sin(a), 0), 0.018, 0.7 + 0.5 * r.random(), 5, r2=0.005)
+        for i in range(24):
+            a = r.random() * 6.283; d = 2.2 + 0.6 * r.random()
+            M.blob("fels", (d * math.cos(a), d * math.sin(a), 0.02), 0.06 + 0.05 * r.random(), 4460 + i, (1.2, 1, 0.6), 0.3, 6, 4)
+        for i in range(4):
+            a = r.random() * 6.283; d = 0.8 + 1.0 * r.random()
+            M.cyl("laub2", (d * math.cos(a), d * math.sin(a), 0.025), 0.2, 0.012, 12)
     return m
 
 
@@ -2542,6 +2622,13 @@ def w_putzi():
         M.tube("stahl", (sx * 0.3, -0.05, 0.6), (sx * 0.42, -0.25, 0.45), 0.035, 8)
         M.box("akzent", (sx * 0.44, -0.3, 0.42), (0.08, 0.1, 0.06))
     tool_brush(m, (0, -0.4, 0.12), 0.5, 0.09)
+    if DETAIL:  # Nieten, Seitenlichter, kleines Solarpaneel auf dem Rücken
+        for k in range(12):
+            a = 2 * math.pi * k / 12
+            M.sphere("stahl", (0.305 * math.cos(a), 0.305 * math.sin(a), 0.48), 0.018, 6, 3)
+        for sx in (-1, 1):
+            M.sphere("lampe", (sx * 0.27, -0.12, 0.62), 0.04, 8, 4)
+        M.box("solar", (0, 0.27, 0.68), (0.32, 0.03, 0.22), rot=(-20, 0, 0))
     return m
 
 
@@ -2560,6 +2647,16 @@ def e_haendler():
         M.box(c, (0, -1.5 + i * 1.3, 1.75), (1.6, 1.1, 0.9))
     M.cyl("kaltlicht", (0, 0.5, -1.65), 0.6, 0.06, 16)
     M.lathe("dunkel", (0, 0.5, -1.6), [(0.9, 0), (0.7, 0.25), (0, 0.25)], 16)
+    if DETAIL:  # Fensterband, Antennen, Positionslichter, zweite Containerlage
+        for i in range(8):
+            for sx in (-1, 1):
+                M.box("glas", (sx * 1.58, -3.0 + i * 0.7, 0.35), (0.03, 0.35, 0.18))
+        for i in range(3):
+            M.box(("kiste2", "kiste3", "kiste1")[i], (0, -0.85 + i * 1.3, 2.6), (1.4, 1.0, 0.75))
+        for x in (-0.6, 0.6):
+            M.cyl("stahl", (x, 3.5, 1.2), 0.03, 1.2, 6); M.sphere("warn", (x, 3.5, 2.45), 0.06, 6, 3)
+        for k in range(6):
+            M.sphere("lampe", (0, -4.0 + k * 1.6, -1.45), 0.07, 6, 3)
     return m
 
 
@@ -2675,16 +2772,18 @@ def n_baum_spezial(kind):
 def n_gras_var(v):
     """Grasbüschel-Varianten: 2 trocken, 3 blühend."""
     m = Model("gras_%d" % v, "Grasbüschel %d" % v, "Natur"); M = m.body; r = _rnd(5000 + v)
-    for i in range(10):
+    for i in range(18 if DETAIL else 10):
         a = r.random() * 6.283; tilt = 0.25 + 0.35 * r.random(); h = 0.4 + 0.35 * r.random(); w = 0.035
         d = (math.cos(a), math.sin(a)); sd = (-d[1] * w, d[0] * w)
         base = (d[0] * 0.05, d[1] * 0.05, 0); mid = (d[0] * tilt * 0.4 * h, d[1] * tilt * 0.4 * h, h * 0.55); tip = (d[0] * tilt * h, d[1] * tilt * h, h)
         vs = [(base[0] - sd[0], base[1] - sd[1], 0), (base[0] + sd[0], base[1] + sd[1], 0), (mid[0] + sd[0] * 0.6, mid[1] + sd[1] * 0.6, mid[2]), (mid[0] - sd[0] * 0.6, mid[1] - sd[1] * 0.6, mid[2]), tip]
         M.add(vs, [(0, 1, 2, 3), (3, 2, 4), (3, 2, 1, 0), (2, 3, 4)], "trockengras" if v == 2 else ("gras" if i % 3 else "laub2"), closed=False)
         if v == 3 and i % 3 == 0:
-            M.sphere("bluete" if i % 2 else "pilz", tip, 0.05, 6, 3)
+            M.sphere("bluete" if i % 2 else "pilz", tip, 0.05, 10, 5)
     return m
 
+
+SOFT_MODELS = {"riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "bohrsockel", "erzader_fels", "moos_1", "moos_2", "moos_3", "muellberg", "busch_1", "busch_2"}
 
 # Alle Modelle, die nach dem ersten Paket dazugekommen sind (Build 34–38)
 NEW_KEYS = ["schild", "flak", "lieferrakete", "baum_laub_1", "baum_laub_2", "baum_laub_3", "baum_tanne_1", "baum_tanne_2", "busch_1", "busch_2", "gras_1",
@@ -2828,8 +2927,56 @@ def _material(name):
         bump.inputs["Strength"].default_value = 0.04
         nt.links.new(tex.outputs["Fac"], bump.inputs["Height"])
         nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    if _hq():
+        _material_hq(nt, bsdf, name, col)
     mat.diffuse_color = _hex(col)  # Farbe in der Viewport-Ansicht „Solid“
     return mat
+
+
+ORGANIC = {"laub1", "laub2", "laub3", "tanne", "gras", "trockengras", "rinde", "fels", "felsdkl", "lavastein", "pilz", "pilzstiel", "schwefel", "russ"}
+
+
+def _set_in(bsdf, names, val):
+    for nm in names:
+        if nm in bsdf.inputs:
+            bsdf.inputs[nm].default_value = val
+            return True
+    return False
+
+
+def _material_hq(nt, bsdf, name, col):
+    """Fabian 02.11.: schönere Materialien nur in Blender – Farbschwankung und Relief bei Natur/Fels,
+    Durchscheinen bei Blättern, Wasser und Eis mit Lichtbrechung."""
+    if name in ORGANIC:
+        n = nt.nodes.new("ShaderNodeTexNoise"); n.inputs["Scale"].default_value = 14.0 if name != "rinde" else 4.0
+        if "Detail" in n.inputs:
+            n.inputs["Detail"].default_value = 8.0
+        mix = nt.nodes.new("ShaderNodeMixRGB"); c = _hex(col)
+        mix.inputs["Color1"].default_value = (c[0] * 0.62, c[1] * 0.62, c[2] * 0.62, 1)
+        mix.inputs["Color2"].default_value = (min(1, c[0] * 1.15), min(1, c[1] * 1.15), min(1, c[2] * 1.15), 1)
+        nt.links.new(n.outputs["Fac"], mix.inputs["Fac"]); nt.links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
+        if name == "rinde":  # Borke: senkrechte Rillen
+            w = nt.nodes.new("ShaderNodeTexWave"); w.inputs["Scale"].default_value = 9.0
+            if hasattr(w, "bands_direction"):
+                w.bands_direction = "Z"
+            src = w.outputs["Fac"]
+        else:
+            v = nt.nodes.new("ShaderNodeTexVoronoi"); v.inputs["Scale"].default_value = 9.0 if name in ("fels", "felsdkl", "lavastein") else 30.0; src = v.outputs["Distance"]
+        b = nt.nodes.new("ShaderNodeBump"); b.inputs["Strength"].default_value = 0.35 if name in ("rinde", "fels", "felsdkl", "lavastein") else 0.18
+        nt.links.new(src, b.inputs["Height"]); nt.links.new(b.outputs["Normal"], bsdf.inputs["Normal"])
+        if name in ("laub1", "laub2", "laub3", "tanne", "gras", "trockengras"):
+            _set_in(bsdf, ("Subsurface Weight", "Subsurface"), 0.12)
+            _set_in(bsdf, ("Sheen Weight", "Sheen"), 0.2)
+    elif name == "wasser":
+        _set_in(bsdf, ("Transmission Weight", "Transmission"), 0.55); _set_in(bsdf, ("IOR",), 1.33); _set_in(bsdf, ("Roughness",), 0.02)
+        w = nt.nodes.new("ShaderNodeTexNoise"); w.inputs["Scale"].default_value = 3.0
+        b = nt.nodes.new("ShaderNodeBump"); b.inputs["Strength"].default_value = 0.08
+        nt.links.new(w.outputs["Fac"], b.inputs["Height"]); nt.links.new(b.outputs["Normal"], bsdf.inputs["Normal"])
+    elif name in ("eis", "kometeis", "kristall", "glas"):
+        _set_in(bsdf, ("Transmission Weight", "Transmission"), 0.45); _set_in(bsdf, ("IOR",), 1.31 if name != "kristall" else 1.55)
+        _set_in(bsdf, ("Coat Weight", "Clearcoat"), 0.5)
+    elif name in ("weiss", "hell", "akzent", "akzent2", "rot", "orange"):
+        _set_in(bsdf, ("Coat Weight", "Clearcoat"), 0.25)  # lackierte Teile
 
 
 def _to_object(mesh, coll):
@@ -3284,6 +3431,8 @@ def run():
         g.objects.link(root)
         for mesh in mdl.meshes:
             ob = _to_object(mesh, g)
+            if _hq() and mdl.key in SOFT_MODELS:  # Felsen und Moos weich gerundet
+                sub = ob.modifiers.new("Weich", "SUBSURF"); sub.levels = 1; sub.render_levels = 2
             ob.name = mdl.key + "_" + mesh.name
             ob.parent = root
             ob.location = mesh.pivot
