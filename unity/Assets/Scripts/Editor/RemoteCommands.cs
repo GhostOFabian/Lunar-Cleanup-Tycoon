@@ -24,7 +24,8 @@ namespace LunarCleanup.EditorTools
             UnityEditor.Compilation.CompilationPipeline.compilationFinished += _ => { try { File.AppendAllText("Temp/compile_err.txt", "done\n"); } catch { } };
         }
 
-        static System.Collections.IEnumerator ImplodeTest(LunarCleanup.Gameplay.WorldView w, Transform pt) { yield return w.Implode(pt); yield return new WaitForSeconds(1.5f); w.RestoreImploded(); }
+        static System.Collections.IEnumerator ImplodeTest(LunarCleanup.Gameplay.WorldView w, Transform pt) { w.StartCoroutine(ImplodeShots()); yield return w.Implode(pt); yield return new WaitForSeconds(1.5f); w.RestoreImploded(); }
+        static System.Collections.IEnumerator ImplodeShots() { for (int i = 0; i < 18; i++) { yield return new WaitForSeconds(.45f); ScreenCapture.CaptureScreenshot("Temp/imp_" + i.ToString("00") + ".png", 1); } }
         static void Poll()
         {
             if (EditorApplication.timeSinceStartup < next) return; next = EditorApplication.timeSinceStartup + 1;
@@ -40,6 +41,7 @@ namespace LunarCleanup.EditorTools
                     case "stop": EditorApplication.isPlaying = false; Write("ok stop"); break;
                     case "check": EditorApplication.ExecuteMenuItem("Lunar Cleanup/Eigene Modelle prüfen"); Write("ok check"); break;
                     case "build-sim": EditorApplication.ExecuteMenuItem("Lunar Cleanup/iPhone-Version für den Simulator bauen (Mac)"); Write("ok build-sim"); break;
+                    case "build-web": EditorApplication.ExecuteMenuItem("Lunar Cleanup/Browser-Version für GitHub bauen"); Write("ok build-web"); break;
                     case "build-device": EditorApplication.ExecuteMenuItem("Lunar Cleanup/iPhone-Version nur bauen (Xcode-Projekt)"); Write("ok build-device"); break;
                     /* Spielbefehle (nur im Play-Modus) */
                     case "flash": { var ps = LunarCleanup.Core.Game.Cur; var w = Object.FindFirstObjectByType<LunarCleanup.Gameplay.WorldView>(); int best = 0; float bd = -2; for (int i = 0; i < ps.pd.N; i++) { if (ps.pd.cells[i].IsBase) continue; float d = Vector3.Dot(ps.pd.cells[i].c.normalized, LunarCleanup.Core.Game.ViewDir); if (d > bd) { bd = d; best = i; } } w.FlashCell(best); Write("ok flash " + best); break; }
