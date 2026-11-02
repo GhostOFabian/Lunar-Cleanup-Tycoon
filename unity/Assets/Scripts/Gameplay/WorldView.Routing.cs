@@ -259,7 +259,7 @@ namespace LunarCleanup.Gameplay
     /// <summary>Gemerkte Bandwege: im Speicher und als Datei (persistentDataPath/bandwege.txt). Neue Version → Cache leer.</summary>
     public static class RouteCache
     {
-        const string Ver = "lc-2026-11-01c"; // bei Änderungen an Wegsuche oder Gebäudemodellen erhöhen
+        const string Ver = "lc-2026-11-02"; // 02.11.: Merger-Wege, alte Einträge verwerfen – bei Änderungen an Wegsuche oder Gebäudemodellen erhöhen
         static Dictionary<string, (Dictionary<string, Vector2[]> r, Dictionary<string, string> s)> mem;
         public static int Count { get { Load(); return mem.Count; } }
         static string FilePath => System.IO.Path.Combine(Application.persistentDataPath, "bandwege.txt");
