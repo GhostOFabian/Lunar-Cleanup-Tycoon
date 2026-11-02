@@ -198,6 +198,25 @@ namespace LunarCleanup.Gameplay
         readonly List<(Transform t, Vector3 p, Vector3 s, Quaternion r)> imploded = new List<(Transform, Vector3, Vector3, Quaternion)>();
         /// <summary>Nach dem Neuaufbau: was nicht neu gebaut wurde (bleibende Objekte), wieder an seinen Platz, in seine Größe und Drehung.</summary>
         public void RestoreImploded() { foreach (var (t, p, sc, r) in imploded) if (t) { t.position = p; t.localScale = sc; t.rotation = r; } imploded.Clear(); }
+        /// <summary>Fabian 02.11.: nach der Explosion setzt sich der Planet aus den Trümmern wieder zusammen (umgekehrter Strudel) – verwüstet, aber nicht weg.</summary>
+        public IEnumerator Reform()
+        {
+            var list = new List<(Transform t, Vector3 p, Vector3 s, Quaternion r)>(imploded); imploded.Clear(); if (list.Count == 0) yield break;
+            var axis = doomTo.sqrMagnitude > .01f ? doomTo.normalized : Vector3.up; float T = 0; const float D = 2.6f; float R = pd.R;
+            var gm = GlowMat(MeshKit.GlowTex(), new Color(.9f, .75f, 1f, 1)); var glow = MeshKit.Part(transform, MeshKit.Quad, gm, Vector3.zero, Vector3.one * R); NoShadow(glow); var cam0 = Camera.main;
+            Sfx.Play("boom", .25f, .6f);
+            while (T < D)
+            {
+                T += Time.deltaTime; float k = Mathf.Clamp01(T / D); k = 1 - (1 - k) * (1 - k) * (1 - k); /* schnell heran, sanft einrasten */
+                var sw = Quaternion.AngleAxis(-(1 - k) * (1 - k) * 360f, axis);
+                foreach (var (t, p0, s0, r0) in list) { if (!t) continue; t.position = sw * Vector3.Lerp(Vector3.zero, p0, k); t.rotation = sw * r0; t.localScale = s0 * k; }
+                if (cam0) { glow.transform.rotation = Quaternion.LookRotation(glow.transform.position - cam0.transform.position, cam0.transform.up); glow.transform.localScale = Vector3.one * R * 2.2f * (1 - k); }
+                if (dust && T < D * .7f) for (int q = 0; q < 6; q++) { var d = Random.onUnitSphere; dust.Emit(new ParticleSystem.EmitParams { position = d * R * k, velocity = d * R * .3f, startColor = new Color(.6f, .5f, .45f, .8f), startSize = Random.Range(.8f, 2f), startLifetime = 1.2f }, 1); }
+                Shake = Mathf.Max(Shake, .6f * (1 - k)); yield return null;
+            }
+            foreach (var (t, p0, s0, r0) in list) if (t) { t.position = p0; t.rotation = r0; t.localScale = s0; }
+            Destroy(glow); Destroy(gm); Flash(doomTo != Vector3.zero ? doomTo : Vector3.zero, new Color(1f, .8f, .6f)); Sfx.Play("boom", .6f, .8f);
+        }
         public IEnumerator Explode(Transform planetT)
         {
             var at = doomTo != Vector3.zero ? doomTo : pd.Surf(pd.cells[pd.baseCell].c, 0);

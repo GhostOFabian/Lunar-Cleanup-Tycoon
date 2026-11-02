@@ -181,7 +181,7 @@ namespace LunarCleanup.Core
 
         static SaveData Load()
         {
-            Icp = null; /* Abfang-Minispiel überlebt keinen Neustart */
+            Icp = null; /* Abfang-Minispiel überlebt keinen Neustart */ restN = -1;
             foreach (var k in new[] { Key, Key + "-bak" })
             {
                 string j = PlayerPrefs.GetString(k, ""); if (string.IsNullOrEmpty(j)) continue;
@@ -251,7 +251,7 @@ namespace LunarCleanup.Core
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
-            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1);
+            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1) * RestSellF; /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 % */
         }
         public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
@@ -279,8 +279,31 @@ namespace LunarCleanup.Core
         }
         public static bool Fail(string t) { Toast(t, "bad"); return false; }
         public static string Lacks(double c) => "Dir fehlen noch " + Fmt(c - S.credits) + " Cr";
-        public static void Toast(string t, string k = "") { if (!Offline) OnToast?.Invoke(t, k); }
+        /* Fabian 02.11.: ruhigerer Bildschirm. Alles landet im Protokoll (Ziele → Statistik); Kleinkram erscheint nur, wenn gerade wenig los ist. */
+        public static readonly List<(string t, string k, long at)> Log = new List<(string, string, long)>();
+        static readonly List<float> toastT = new List<float>();
+        public static void Toast(string t, string k = "") => Toast(t, k, false);
+        public static void Toast(string t, string k, bool minor)
+        {
+            if (Offline) return; Log.Add((t, k, Now())); if (Log.Count > 80) Log.RemoveAt(0);
+            float now = Time.realtimeSinceStartup; toastT.RemoveAll(x => now - x > 4f);
+            if ((minor || k == "") && toastT.Count >= 2) return; /* schon zwei Meldungen sichtbar: Nebensächliches nur ins Protokoll */
+            toastT.Add(now); OnToast?.Invoke(t, k);
+        }
         static void FloatTxt(Vector3 d, string t, string k) { if (!Offline) OnFloat?.Invoke(d, t, k); }
+        /* Schwebende Mengen gleicher Art am selben Ort bündeln: höchstens alle 2 s eine Zahl */
+        static readonly Dictionary<string, (Vector3 d, double n, float t0)> floatSum = new Dictionary<string, (Vector3, double, float)>();
+        static void FloatAmt(Vector3 d, double n, string label)
+        {
+            if (Offline || n <= 0) return; string key = label + Mathf.RoundToInt(d.x * 50) + "," + Mathf.RoundToInt(d.y * 50) + "," + Mathf.RoundToInt(d.z * 50);
+            if (floatSum.TryGetValue(key, out var e)) floatSum[key] = (e.d, e.n + n, e.t0); else floatSum[key] = (d, n, Time.realtimeSinceStartup);
+        }
+        static void FloatFlush()
+        {
+            if (floatSum.Count == 0) return; float now = Time.realtimeSinceStartup; List<string> done = null;
+            foreach (var kv in floatSum) if (now - kv.Value.t0 >= 2f) { (done ??= new List<string>()).Add(kv.Key); int i = kv.Key.IndexOfAny("-0123456789".ToCharArray()); OnFloat?.Invoke(kv.Value.d, "+" + Fmt(kv.Value.n) + " " + kv.Key.Substring(0, i), "mat"); }
+            if (done != null) foreach (var k in done) floatSum.Remove(k);
+        }
 
         static readonly string[] UnitsDe = { " k", " Mio", " Mrd", " Bio", " Brd" }, UnitsEn = { "k", "M", "B", "T", "Qa" };
         public static string Num(double v) => Math.Floor(v).ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
@@ -440,7 +463,7 @@ namespace LunarCleanup.Core
             float amt = Mathf.Min(tot, free), k = amt / tot;
             for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; if (ps.sv.hand[m] < 1e-6f) ps.sv.hand[m] = 0; dst[m] += x; }
             S.stats.handUnloads++;
-            FloatTxt(ps.pd.PlanDir(ps.lay.pos[best]), "+" + Fmt(amt) + " entladen", "mat");
+            FloatAmt(ps.pd.PlanDir(ps.lay.pos[best]), amt, "entladen");
             Toast(Fmt(amt) + " E in " + name + (amt < tot - .05f ? " · Rest bleibt im Behälter" : ""), "good");
         }
 
@@ -911,7 +934,7 @@ namespace LunarCleanup.Core
                         v.fullT = 0; float amt = Mathf.Min(StRate(s) * Uv("urate", ps) * (IsOut(s) ? 1 : BlF(ps, s)) * dt, Mathf.Min(free, tank)), f0 = tank > 0 ? amt / tank : 0;
                         for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; st.buf[m] += x; }
                         if (Sum(v.tank) < .01f && !charged) { Array.Clear(v.tank, 0, NM); break; }
-                        if (Sum(v.tank) < .01f) { Array.Clear(v.tank, 0, NM); FreeDock(st, v); v.mode = "seek"; v.sid = null; if (v.coll >= 1) FloatTxt(StDir(ps, s, 'c'), "+" + Fmt(v.coll) + " entladen", "mat"); v.coll = 0; }
+                        if (Sum(v.tank) < .01f) { Array.Clear(v.tank, 0, NM); FreeDock(st, v); v.mode = "seek"; v.sid = null; if (v.coll >= 1) FloatAmt(StDir(ps, s, 'c'), v.coll, "entladen"); v.coll = 0; }
                         break;
                     }
                 case "wait":
@@ -947,7 +970,7 @@ namespace LunarCleanup.Core
                 case "unloadRoh":
                     {
                         float free = RohCap(ps) - RohSum(ps); if (T.batt > 0) { float bc = BattCap(ps, v), b0 = Bat(ps, v); if (b0 < bc) { v.bat = Mathf.Min(bc, b0 + bc / 30 * Mathf.Max(.25f, f) * dt); v.charging = true; } }
-                        if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { if (v.coll >= 1) FloatTxt(pd.PlanDir(ps.lay.pos["roh"]), "+" + Fmt(v.coll) + " entladen", "mat"); v.coll = 0; v.mode = "seek"; } break; }
+                        if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { if (v.coll >= 1) FloatAmt(pd.PlanDir(ps.lay.pos["roh"]), v.coll, "entladen"); v.coll = 0; v.mode = "seek"; } break; }
                         if (free <= .01f) { v.fullT += dt; break; } v.fullT = 0;
                         float amt = Mathf.Min(10 * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = amt / tank; for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; ps.sv.roh[m] += x; }
                         break;
@@ -960,7 +983,7 @@ namespace LunarCleanup.Core
                     }
                 case "broken": v.busy = false; if (!ps.bld.Contains("werkstatt")) { v.mode = "fieldRepair"; v.repT = 90; } break;
                 case "toShop": v.busy = true; if (NavMove(ps, v, pd.PlanDir(ps.lay.shop), T.speed * Uv("vspeed", ps) * .5f * dt, v.id)) { v.mode = "repair"; v.repT = VM_TIME * (1 + .5f * v.rep) * (v.repSlow ? 4 : 1); v.repSlow = false; } break;
-                case "repair": v.repT -= dt; if (v.repT <= 0) { v.wear = 0; v.rep++; v.mode = "seek"; v.doom = 0; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " repariert (" + v.rep + "/" + VM_REPS + ")", "good"); } break;
+                case "repair": v.repT -= dt; if (v.repT <= 0) { v.wear = 0; v.rep++; v.mode = "seek"; v.doom = 0; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " repariert (" + v.rep + "/" + VM_REPS + ")", "good", true); /* Nebensache */ } break;
                 case "liftwait":
                 case "lifted":
                     if (v.lift < 0 || !ps.sv.lifters.Any(l => l.id == v.lift && l.veh == v.id)) { v.lift = -1; v.mode = "drive"; } break;
@@ -1703,12 +1726,14 @@ namespace LunarCleanup.Core
         public static void Step(float dt)
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
-            ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt);
-            AchievementStep(dt); if (!Offline) { StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
+            ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
+            AchievementStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt)
         {
+            if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
+            RateTrack(ps, dt);
             EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

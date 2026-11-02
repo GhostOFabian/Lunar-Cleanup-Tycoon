@@ -157,21 +157,28 @@ namespace LunarCleanup.UI
         // Produktions-Ampel: Engpässe mit Ursache und den passenden Upgrades
         static string Lamp(int lvl) => lvl >= 2 ? "<color=#ff6a5c>●</color> Rot" : lvl == 1 ? "<color=#ffd24d>●</color> Gelb" : lvl == 0 ? "<color=#6ff2a0>●</color> Grün" : "<color=#8a93a6>●</color> Pause";
         /// <summary>Fabian 01.11.: Ampel zeigt den Zustand jeder Station; bei Gelb/Rot steht das Problem dabei und direkt darunter die Upgrades, die es beheben.</summary>
+        static bool xportShown;
+        /// <summary>Fabian 02.11.: Ausweg aus dem Stau im späten Spiel.</summary>
+        static void XportRow(Hud h) => h.Row("Export-Frachter", () => ps.sv.xport ? "Nimmt alles über 90 % Lagerfüllung ab und zahlt 40 % des Werts · bisher " + Game.Fmt(ps.sv.xEarn) + " Cr" : "Volle Lager laufen nicht mehr über: Überschuss ab 90 % wird für 40 % des Werts verkauft. Die Basis steht nie mehr still.",
+            () => ps.sv.xport ? "Aktiv" : Game.Fmt(Game.XportCost(ps)) + " Cr", () => !ps.sv.xport && Game.XportWhy(ps) == "", () => Game.BuyXport(ps), true, null, true, () => ps.sv.xport ? "" : Game.XportWhy(ps));
         static void Ampel(Hud h)
         {
+            xportShown = false;
             var r = Game.FlowReport(ps); int lv = Game.FlowLevel(r); var bad = r.Where(n => n.lvl > 0).OrderByDescending(n => n.lvl).ToList();
             h.Section("Ampel · " + (lv >= 2 ? "Rot" : lv == 1 ? "Gelb" : "Grün"));
             h.Note(lv == 0 ? "Alles im Fluss – der Betriebsbonus wächst bis +30 %." : lv == 1 ? "Ein Engpass bremst die Produktion. Der Betriebsbonus hält." : "Stau – der Betriebsbonus sinkt. Behebe das Problem mit einem der Upgrades darunter.");
             foreach (var n in bad) FlowRows(h, n);
             h.Section("Alle Stationen");
             foreach (var n in r.Where(n => n.lvl <= 0)) h.Row(n.name, () => Lamp(n.lvl) + " · " + n.why);
+            if (Game.XportOpen(ps) && (ps.sv.xport || !xportShown)) { h.Section("Überschuss"); XportRow(h); }
         }
         static void FlowRows(Hud h, Game.FlowItem n)
         {
             h.Row(n.name, () => Lamp(n.lvl) + " · " + n.why);
             var fixes = (n.fix ?? new string[0]).Where(id => GameData.Up.ContainsKey(id) && UpVisible(GameData.Up[id]) && Game.Lvl(id) < GameData.Up[id].max).Take(3).ToList();
-            if (fixes.Count == 0 && n.fix != null && n.fix.Length > 0) h.Note("   Die passenden Upgrades sind schon ausgereizt – baue die Basis weiter aus oder verkaufe mehr.");
+            if (fixes.Count == 0 && n.fix != null && n.fix.Length > 0) h.Note(n.name == "Bohrtürme" ? "   Die passenden Upgrades sind schon ausgereizt – mehr Fahrzeuge holen mehr ab. Volle Bohrtürme bremsen nur den Abbau, sonst nichts." : ps.sv.xport ? "   Die passenden Upgrades sind schon ausgereizt – der Export-Frachter nimmt den Überschuss ab." : "   Die passenden Upgrades sind schon ausgereizt – baue die Basis weiter aus oder kauf den Export-Frachter.");
             foreach (var f in fixes) UpRow(h, f);
+            if (!ps.sv.xport && n.lvl >= 2 && Game.XportOpen(ps) && (n.id == "roh" || Game.IsUnit(n.id)) && n.name != "Bohrtürme" && !xportShown) { xportShown = true; XportRow(h); }
         }
         /// <summary>Ampel eines Gebäudes oben im Gebäudefenster.</summary>
         static void BuildingAmpel(Hud h, string id)
@@ -239,7 +246,7 @@ namespace LunarCleanup.UI
         {
             var sv = ps.sv; string pn = ps.P.name;
             h.Section("Riesenmeteor");
-            h.Note("Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer.", () => Game.DoomActive ? "RIESENMETEOR im Anflug auf " + GameData.Planets[Game.S.doomPid].name + " – Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" : "Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer. Bisher: " + Game.S.doomN + " Riesenmeteore, " + Game.S.doomHits + " Brocken abgefangen.");
+            h.Note("Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis schwer verwüstet (Krater, kaputte Fahrzeuge, gedrosselte Produktion) – gebaut bleibt alles. Keine Abwehr hält immer.", () => Game.DoomActive ? "RIESENMETEOR im Anflug auf " + GameData.Planets[Game.S.doomPid].name + " – Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" : "Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis schwer verwüstet (Krater, kaputte Fahrzeuge, gedrosselte Produktion) – gebaut bleibt alles. Keine Abwehr hält immer. Bisher: " + Game.S.doomN + " Riesenmeteore, " + Game.S.doomHits + " Brocken abgefangen.");
             h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Meteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + (Game.MsGoods(ps).Length > 0 ? Game.GoodsTxt(Game.MsGoods(ps)) : "nur Credits") : ""),
                 () => sv.msLv >= Game.MS_MAX ? "Max" : Cr(Game.MsCost(ps)), () => Game.MsWhy(ps) == "", () => Game.BuyShield(), why: () => Game.Steps(Game.MsWhy(ps).StartsWith("Dir fehlen") ? "" : Game.MsWhy(ps), Game.MsCost(ps)));
             h.Row("Abwehrraketen", () => "Stufe " + sv.flakLv + "/" + Game.FLAK_MAX + " · " + Game.FlakRockets(ps) + " Raketen je Riesenmeteor. Hält der Schild nicht, zerbricht der Meteor in 4–8 Brocken: Tippe auf jeden Brocken, wenn sein Ring ihn genau umschließt. Daneben kostet eine Rakete. Nur wenn du vor Ort bist – sonst zählt nur der Schild." + (sv.flakLv < Game.FLAK_MAX && Game.FlakGoods(ps).Length > 0 ? " · nächste Stufe: " + Game.GoodsTxt(Game.FlakGoods(ps)) : ""),
@@ -252,8 +259,13 @@ namespace LunarCleanup.UI
                 h.Row("Stufe " + sv.terra + "/" + Game.TERRA_MAX + " · " + Game.TerraName[sv.terra], () => sv.terra == 0 ? "Noch kahl." : "Zustand " + Pc(Mathf.Clamp01(sv.terraHp)) + " · " + (Game.TerraTrouble(ps) is var tr && tr != "" ? "sinkt: " + tr : "stabil") + " · Unterhalt " + Dec(Game.UpkeepH(ps), 1) + " je Gut pro Stunde. Bei 0 % fällt eine Stufe weg.");
                 for (int k = 1; k <= Game.TERRA_MAX; k++) { int kk = k; h.Row(k + ". " + Game.TerraName[k], () => (sv.terra >= kk ? "Erreicht · " : "") + Game.TerraBonus[kk]); }
                 if (sv.terra < Game.TERRA_MAX) h.Row("Nächste Stufe: " + Game.TerraName[sv.terra + 1], () => { string w = Game.TerraWhy(ps); return Game.GoodsTxt(Game.TerraGoods(ps)) + (w != "" ? " · " + w : ""); }, () => Cr(Game.TerraCost(ps)), () => Game.TerraWhy(ps) == "", () => Game.BuyTerra(), why: () => Game.Steps(Game.TerraWhy(ps).StartsWith("Dir fehlen") ? "" : Game.TerraWhy(ps), Game.TerraCost(ps)));
-                h.Note("Ohne Lieferungen, bei Stürmen und wenn Schmutz liegen bleibt, verfällt das Terraforming. Wird der Planet zerstört, ist alles weg.");
+                h.Note("Ohne Lieferungen, bei Stürmen und wenn Schmutz liegen bleibt, verfällt das Terraforming. Ein Riesenmeteor wirft das Terraforming ein bis zwei Stufen zurück.");
             }
+            /* Fabian 02.11.: gerettete Welt ruhen lassen */
+            h.Section("Gerettete Welt");
+            h.Row(sv.rest ? pn + " ruht" : "Planet ruhen lassen", () => sv.rest ? "Liefert dauerhaft " + Game.Fmt(sv.restRate * 3600) + " Cr/h (bisher " + Game.Fmt(sv.restEarn) + " Cr), braucht keine Pflege, kein Meteor trifft ihn. Alle Preise +" + Mathf.RoundToInt(Game.REST_PRICE * 100 * Game.RestCount) + " %. Wenn du hier bist, läuft er ganz normal."
+                    : "Ein geretteter Planet (Stufe " + Game.TERRA_MAX + ", Wald) kann ruhen: Er liefert dauerhaft sein jetziges Einkommen (≈ " + Game.Fmt(sv.rateEma * 3600) + " Cr/h), jeder ruhende Planet hebt alle Preise um " + Mathf.RoundToInt(Game.REST_PRICE * 100) + " %, und du musst dich nicht mehr kümmern.",
+                () => sv.rest ? "Aufwecken" : "Ruhen lassen", () => sv.rest || Game.RestWhy(ps) == "", () => Game.SetRest(ps, !sv.rest), !sv.rest, null, true, () => Game.RestWhy(ps));
             h.Section("Lieferungen für " + pn);
             foreach (var q in Game.Needs(ps.pid)) { var g = Game.GoodOf(q); string qq = q; h.Row(g.name, () => "von " + GameData.Planets[qq].name + " · im Lager: " + Mathf.FloorToInt(Game.GoodAmt(g.id)) + (Game.P.ContainsKey(qq) && Game.IsDone(qq) ? " · wird hergestellt" : " · erst wenn " + GameData.Planets[qq].name + " 100 % sauber ist")); }
             h.Note("Raketen bringen die Güter automatisch. Übersicht aller Planeten: Planeten → Lieferketten.");
@@ -353,7 +365,7 @@ namespace LunarCleanup.UI
             if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand"; }
             int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = Game.Num(nP) + " Parzellen";
             if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
-            else if (have) h.Row(P.name, () => Game.Ruined(key) ? "Zerstört vom Riesenmeteor – wird neu aufgebaut, noch " + Mathf.CeilToInt(Game.RuinLeft(key) / 60f) + " min" : Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => Game.Ruined(key) ? "Gesperrt" : "Reisen", () => !Game.Ruined(key), () => { Game.Travel(key); h.CloseSheet(); }, false);
+            else if (have) h.Row(P.name, () => Game.Ruined(key) ? "Zerstört vom Riesenmeteor – wird neu aufgebaut, noch " + Mathf.CeilToInt(Game.RuinLeft(key) / 60f) + " min" : Game.P[key].sv.rest ? "Gerettet · ruht · " + Game.Fmt(Game.P[key].sv.restRate * 3600) + " Cr/h" : Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => Game.Ruined(key) ? "Gesperrt" : "Reisen", () => !Game.Ruined(key), () => { Game.Travel(key); h.CloseSheet(); }, false);
             else
             {
                 int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
@@ -485,6 +497,10 @@ namespace LunarCleanup.UI
         }
         static void Stats(Hud h)
         {
+            /* Fabian 02.11.: alle Meldungen zum Nachlesen – auf dem Bildschirm erscheint nur noch das Wichtige */
+            h.Section("Protokoll · letzte Meldungen");
+            if (Game.Log.Count == 0) h.Note("Noch keine Meldungen.");
+            foreach (var e in Enumerable.Reverse(Game.Log).Take(12)) { var ee = e; long ago = System.Math.Max(0, Game.Now() - ee.at); h.Note((ee.k == "bad" ? "<color=#ff8a7a>●</color> " : ee.k == "good" ? "<color=#6ff2a0>●</color> " : "<color=#8a93a6>●</color> ") + (ago < 60 ? "gerade eben" : ago < 3600 ? "vor " + (ago / 60) + " min" : "vor " + (ago / 3600) + " h") + " · " + ee.t); }
             h.Section("Statistik");
             h.Row("Einnahmen", () => Cr(Game.IncomePerMin()) + " pro Minute (letzte 5 min) · insgesamt " + Cr(Game.S.stats.earned));
             h.Row(ps.P.name, () => { float cpm = Game.CellsPerMin(); int tot = ps.pd.cells.Count(x => !x.IsBase); int left80 = Mathf.Max(0, Mathf.CeilToInt(tot * .8f) - ps.nClean); return Mathf.RoundToInt(Game.CleanPct(ps) * 100) + " % sauber · " + Dec(cpm, 1) + " Parzellen pro Minute" + (left80 > 0 && cpm > .05f ? " · 80 % in etwa " + Mathf.CeilToInt(left80 / cpm) + " min" : ""); });
@@ -750,6 +766,8 @@ namespace LunarCleanup.UI
                 h.Row("Abwehrraketen voll, Schild aus", () => "Raketen Stufe 6 (14 Raketen), Schild Stufe 0 – so kommst du sicher ins Abfang-Minispiel.", () => "Setzen", () => true, () => { var cs = Game.Cur.sv; cs.flakLv = Game.FLAK_MAX; cs.msLv = 0; Game.Toast("14 Abwehrraketen, kein Schild", "good"); }, false);
                 h.Row("Meteorschild voll", () => "Schild Stufe 6 (85 %), Batterie voll, Nachladen fertig.", () => "Setzen", () => true, () => { var cs = Game.Cur; cs.sv.msLv = Game.MS_MAX; cs.sv.msCool = 0; cs.sv.energy = Game.EnergyCap(cs); cs.sv.supOk = true; Game.Toast("Schild bereit", "good"); }, false);
                 h.Row("Zerstörung aufheben", () => Game.S.ruin != "" ? GameData.Planets[Game.S.ruin].name + " ist zerstört – sofort wieder aufbauen." : "Kein Planet zerstört.", () => "Aufheben", () => Game.S.ruin != "", () => { Game.S.ruinUntil = 0; }, false);
+                h.Row("Seltener Fund", () => "Lässt sofort einen Fund zum Freiwischen erscheinen (in der Nähe der Kamera).", () => "Fund", () => true, () => { Game.DevFind(); h.CloseSheet(); }, false);
+                h.Row("Export-Frachter geschenkt", () => ps.sv.xport ? "Hat dieser Planet schon." : "Schaltet den Überschuss-Export auf diesem Planeten frei.", () => "Schenken", () => !ps.sv.xport, () => { ps.sv.xport = true; Game.Toast("Export-Frachter aktiv", "good"); }, false);
                 h.Row("Spezialgüter +200", () => "200 von jedem der 18 Güter ins Galaxie-Lager.", () => "+200", () => true, () => { foreach (var g in Game.Goods) Game.AddGood(g.id, 200); Game.Toast("+200 von jedem Gut", "good"); }, false);
                 h.Row("Terraforming +1", () => "Stufe jetzt " + Game.Cur.sv.terra + " (" + Game.TerraName[Game.Cur.sv.terra] + ") – zum Anschauen, auch wenn der Planet noch nicht sauber ist.", () => "+1", () => Game.Cur.sv.terra < Game.TERRA_MAX, () => Game.DevTerra(Game.Cur.sv.terra + 1), false);
                 h.Row("Terraforming komplett (Wald)", () => "Springt direkt auf Stufe 5 – so sieht der Planet voll wiederhergestellt aus.", () => "Wald", () => Game.Cur.sv.terra < Game.TERRA_MAX, () => { Game.DevTerra(Game.TERRA_MAX); h.CloseSheet(); }, false);

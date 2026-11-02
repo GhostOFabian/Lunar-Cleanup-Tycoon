@@ -122,7 +122,10 @@ namespace LunarCleanup.Core
                 Toast("Der Meteor zerbricht in " + n + " Brocken – tippe jeden an, wenn sein Ring GRÜN ist!", "bad"); OnIcpStart?.Invoke(pid); return;
             }
             if (pid == S.planet) Toast("Keine Abwehr – Tipp für nächstes Mal: Basis → Schutz (Meteorschild und Abwehrraketen)", "bad");
-            OnDoomImpact?.Invoke(pid); // Explosion, danach Ruin()
+            /* Fabian 02.11.: kein Totalverlust mehr – schwere Verwüstung, Stärke je nach Abwehr. Nicht vor Ort (kein Abfangen möglich) = milder */
+            DoomSev = pid != S.planet ? .6f : ch > 0 ? .85f : 1f;
+            if (pid == S.planet && !Offline && OnDoomImpact != null) OnDoomImpact(pid); /* Implosion, Explosion, Planet setzt sich wieder zusammen → Devastate */
+            else Devastate(pid, DoomSev);
         }
         /// <summary>Ein Tipp auf einen Brocken (verbraucht eine Rakete).</summary>
         public static bool IcpShot(bool hit)
@@ -137,10 +140,38 @@ namespace LunarCleanup.Core
         {
             var I = Icp; if (I == null) return; Icp = null; string pid = I.pid; if (!P.ContainsKey(pid)) return; var ps = P[pid];
             OnIcpEnd?.Invoke(pid, I.through, I.total);
-            if (I.through * 3 > I.total * 2) { Toast(I.through + " von " + I.total + " Brocken eingeschlagen – das hält die Basis nicht aus! Tipp: mehr Raketen und einen stärkeren Schild (Basis → Schutz)", "bad"); OnDoomImpact?.Invoke(pid); return; } /* Fabian 02.11.: erst ab mehr als zwei Dritteln zerstört */
+            if (I.through * 3 > I.total * 2) { Toast(I.through + " von " + I.total + " Brocken eingeschlagen – die Basis wird schwer getroffen! Tipp: mehr Raketen und einen stärkeren Schild (Basis → Schutz)", "bad"); DoomSev = .55f + .45f * I.through / Mathf.Max(1f, I.total); if (OnDoomImpact != null) OnDoomImpact(pid); else Devastate(pid, DoomSev); return; } /* Fabian 02.11.: erst ab mehr als zwei Dritteln zerstört */
             if (I.through == 0) { Toast("Alle " + I.total + " Brocken abgefangen! +" + I.hits + " Sternenstaub", "good"); Save(); return; }
             DoomDamage(ps, I.through);
             Toast(I.hits + " abgefangen (+" + I.hits + " Sternenstaub), " + I.through + " eingeschlagen: Schmutz, Fahrzeugschäden, gestörte Anlagen", "bad"); Save();
+        }
+        /// <summary>Stärke der nächsten Verwüstung (0–1), von DoomOutcome/IcpResolve gesetzt.</summary>
+        public static float DoomSev = 1;
+        /// <summary>Fabian 02.11.: Schwere Verwüstung statt Planet-Reset. Nichts geht verloren, was man gebaut hat – aber ein großer Krater voller Schmutz,
+        /// kaputte Fahrzeuge, gestörte Bohrtürme, halbe Lager, 10 min gedrosselte Produktion und Terraforming-Rückschlag. Aufräumen bringt alles zurück.</summary>
+        public static void Devastate(string pid, float sev)
+        {
+            if (!P.ContainsKey(pid)) return; var ps = P[pid]; var pd = ps.pd; sev = Mathf.Clamp01(sev); int G = GameData.GRID; bool done = IsDone(pid);
+            var c0 = pd.cells[pd.baseCell].c.normalized;
+            var cand = new List<int>(); for (int i = 0; i < pd.N; i++) if (!pd.cells[i].IsBase && !pd.cells[i].Wet) cand.Add(i);
+            int want = Mathf.Min(2500, Mathf.RoundToInt(cand.Count * (.12f + .22f * sev)));
+            var hit = cand.OrderByDescending(i => Vector3.Dot(pd.cells[i].c.normalized, c0) + (float)Rng.NextDouble() * .05f).Take(want).ToList();
+            int dt0 = MeteorType(ps); var D = GameData.Dirt[dt0];
+            foreach (int cid in hit)
+            {
+                var cl = pd.cells[cid];
+                if (!ps.act.TryGetValue(cid, out var a)) { a = new Act { cl = cl, grid = new float[G * G], sum = 0, amt = D.amt * GameData.Kinds[cl.kind].amt * (done ? DoneMeteorAmt : 1), D = D, K = GameData.Kinds[cl.kind] }; ps.act[cid] = a; }
+                float sum = 0; for (int k = 0; k < a.grid.Length; k++) { if (!cl.inside[k]) continue; a.grid[k] = Mathf.Max(a.grid[k], .75f + (float)Rng.NextDouble() * .25f); sum += a.grid[k]; }
+                a.sum = sum; ps.dirtyCells.Add(cid);
+            }
+            foreach (var v in ps.sv.veh.Where(v => v.mode != "broken" && v.mode != "repair" && v.mode != "toShop").OrderBy(_ => Rng.Next()).Take(Mathf.CeilToInt(ps.sv.veh.Count * .7f * sev)).ToList()) v.wear = 1f;
+            foreach (var r in ps.sv.rigs) if (r.faultK == "") { r.faultK = "impact"; r.faultT = 300; }
+            for (int m = 0; m < ps.sv.roh.Length; m++) ps.sv.roh[m] *= 1 - .5f * sev; for (int m = 0; m < ps.sv.prod.Length; m++) ps.sv.prod[m] *= 1 - .5f * sev;
+            ps.sv.hitT = Mathf.Max(ps.sv.hitT, 600f * sev); ps.sv.energy = 0;
+            int tl = 0; if (ps.sv.terra > 0) { tl = sev >= .95f ? Mathf.Min(2, ps.sv.terra) : 1; ps.sv.terra -= tl; ps.sv.terraHp = 1; }
+            S.stats.meteors += hit.Count;
+            Toast("Riesenmeteor auf " + ps.P.name + ": " + hit.Count + " Parzellen verwüstet, " + Mathf.CeilToInt(ps.sv.veh.Count * .7f * sev) + " Fahrzeuge kaputt, Produktion 10 min gedrosselt" + (tl > 0 ? ", Terraforming −" + tl : "") + ". Gebaut bleibt alles – räum auf, dann läuft es wieder.", "bad");
+            Save();
         }
         /// <summary>Teilschaden je durchgekommenem Brocken: Schmutzfelder, kaputte Fahrzeuge, gestörte Bohrtürme, Anlagen 2 min auf halber Kraft je Brocken.</summary>
         public static void DoomDamage(PState ps, int through)
@@ -209,6 +240,7 @@ namespace LunarCleanup.Core
         {
             var sv = ps.sv; if (sv.msCool > 0) sv.msCool -= dt; if (sv.hitT > 0) sv.hitT -= dt;
             if (Ruined(ps.pid)) return;
+            XportStep(ps, dt); /* Fabian 02.11.: Überschuss-Export */
             float gr = GoodRate(ps); if (gr > 0) { sv.gAcc += dt * gr / 3600f; if (sv.gAcc >= 1) { int n = (int)sv.gAcc; sv.gAcc -= n; AddGood(GoodOf(ps.pid).id, n); } }
             float up = UpkeepH(ps);
             if (up <= 0) { sv.supOk = true; sv.upAcc = 0; }

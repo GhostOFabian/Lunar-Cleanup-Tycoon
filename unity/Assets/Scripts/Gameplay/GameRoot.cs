@@ -102,11 +102,20 @@ namespace LunarCleanup.Gameplay
             Game.OnDoomBlocked += pid => { if (pid == Game.S.planet && world) world.ShieldBlock(); };
             Game.OnIcpStart += pid => { if (!world) return; hud.CloseSheet(); world.StartIntercept(); };
             Game.OnSupply += (pid, g, n) => { if (world && pid == Game.S.planet) world.SupplyRocket(g, n); };
-            Game.OnTerra += (pid, a, b) => { if (world && pid == Game.S.planet) world.TerraChanged(a, b); };
+            Game.OnTerra += (pid, a, b) =>
+            {
+                if (world && pid == Game.S.planet) world.TerraChanged(a, b);
+                /* Fabian 02.11.: der große Moment am Ende jedes Planeten */
+                if (b >= Game.TERRA_MAX && a < Game.TERRA_MAX && !Game.Offline && Game.P.ContainsKey(pid))
+                {
+                    var q = Game.P[pid]; Game.S.stardust += 25; Sfx.Play("medal", 1, 1);
+                    hud.Explain("Planet gerettet: " + q.P.name + "!", "Aus einer verdreckten Welt ist ein lebendiger Wald geworden. Danke, Putzkolonne!\n\n+25 Sternenstaub.\n\nDu kannst " + q.P.name + " jetzt ruhen lassen (Basis → Schutz → „Gerettete Welt“): Der Planet liefert dann dauerhaft sein Einkommen, hebt alle Preise um 5 % und braucht keine Pflege mehr – kein Verfall, kein Riesenmeteor. Besuchen kannst du ihn jederzeit.");
+                }
+            };
             /* Fabian 02.11.: der erste Riesenmeteor wird erklärt – was passiert und was hilft */
             Game.OnDoomStart += pid => { if (!hud || Game.S == null || Game.S.doomN > 0 || PlayerPrefs.GetInt("LunarCleanup.DoomHelp", 0) == 1) return; PlayerPrefs.SetInt("LunarCleanup.DoomHelp", 1);
                 bool here = pid == Game.S.planet; hud.Explain("Riesenmeteor im Anflug!", "Ein Riesenmeteor fliegt auf " + GameData.Planets[pid].name + " zu. In 60 Sekunden schlägt er ein." + (here ? "" : "\n\nDu bist gerade nicht dort. Tippe auf das Warnband oben, um hinzufliegen – nur vor Ort kannst du Brocken abfangen.") +
-                    "\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis zerstört und nach 10 Minuten neu aufgebaut. Flaggen und Geschichten bleiben."); };
+                    "\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis schwer verwüstet: ein großer Krater voller Schmutz, kaputte Fahrzeuge, 10 Minuten gedrosselte Produktion. Gebaut bleibt alles – räum auf, dann läuft es wieder."); };
             WorldView.OnFeedback += (wp, txt, kind) => { if (!cam || !hud) return; var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) hud.FloatText(sp, txt, kind); };
             hud.BeltOn = () => world && world.Editing; hud.BeltOk = () => world && world.EditValid; hud.BeltDrawOn = () => world && world.Editing && world.DrawMode;
             hud.BeltTitle = () => world && world.Editing ? "Band verlegen · " + world.BeltName(world.EditBelt) : "";
@@ -450,7 +459,7 @@ namespace LunarCleanup.Gameplay
                 if (Hud.PointerOverUi(pid) || offlineRunning) { mode = Mode.Ui; return; }
                 editDrag = -1; drawing = false; if (world.Editing && world.DrawMode) { if (Hit(pos, out var dd0)) { drawing = true; world.DrawBegin(Game.Cur.pd.PlanLocal(dd0)); } mode = Mode.Pan; } /* Fabian 02.11.: Weg frei nachzeichnen */
                 else if (world.Editing) { editDrag = world.HandleAt(cam, pos, out editKnob); if (editDrag >= 0) world.SelPt = editDrag; mode = Mode.Pan; } /* Band-Editor: Griff ziehen */
-                else if (!mapMode && Hit(pos, out var dir) && Game.CanClean(dir) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; wipeS = pos; }
+                else if (!mapMode && Hit(pos, out var dir) && (Game.CanClean(dir) || Game.FindAt(dir)) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; wipeS = pos; }
                 else mode = Mode.Pan;
             }
             if (pressed)
@@ -470,7 +479,7 @@ namespace LunarCleanup.Gameplay
                         float R0 = Game.Cur.pd.R, rr = Game.Uv("radius"); int steps = hasLastWipe ? Mathf.Clamp(Mathf.CeilToInt(Game.Cur.pd.Arc(lastWipe, dir) / (rr * .5f)), 1, 12) : 1; float amt = 0; int mat = -1;
                         /* Fabian 01.11.: Wischen fühlte sich klebrig an – zügige Striche reinigen bis zu 3× mehr je Bild, damit man nicht hängen bleibt */
                         float spd = hasLastWipe ? Game.Cur.pd.Arc(lastWipe, dir) / Mathf.Max(.001f, dt) : 0, boost = 1 + 2 * Mathf.Clamp01((spd / Mathf.Max(.5f, rr) - 2f) / 10f);
-                        for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; }
+                        for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; Game.FindWipe(dd, dt / steps); }
                         lastWipe = dir; hasLastWipe = true;
                         brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
                         Sfx.Wipe(true, spd / Mathf.Max(.5f, rr), amt > 0);
@@ -527,9 +536,9 @@ namespace LunarCleanup.Gameplay
         }
         IEnumerator DoomImpact(string pid)
         {
-            if (pid != Game.S.planet || exploding) { Game.Ruin(pid); yield break; }
-            exploding = true; hud.CloseSheet(); altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.6f); yield return world.DoomDive(); yield return world.Implode(planet.transform); yield return new WaitForSeconds(.4f); /* Fabian 02.11.: Implosion, ganzer Planet im Bild */
-            Game.Ruin(pid); yield return null; world.RestoreImploded(); exploding = false; /* baut den nächsten Planeten auf (Travel → BuildPlanet) */
+            if (pid != Game.S.planet || exploding) { Game.Devastate(pid, Game.DoomSev); yield break; }
+            exploding = true; hud.CloseSheet(); altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.6f); yield return world.DoomDive(); yield return world.Implode(planet.transform); /* Fabian 02.11.: Implosion mit Explosion, ganzer Planet im Bild */
+            Game.Devastate(pid, Game.DoomSev); yield return new WaitForSeconds(.5f); yield return world.Reform(); exploding = false; /* … dann setzt er sich verwüstet wieder zusammen – nichts Gebautes geht verloren */
         }
         void Tap(Vector2 pos)
         {

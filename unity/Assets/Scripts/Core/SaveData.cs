@@ -59,6 +59,7 @@ namespace LunarCleanup.Core
         public bool hzWarned, shield, autoMaint = true;
         public bool rkGo;
         public double soldP;
+        public bool rest; public double restRate, restEarn, rateEma; [NonSerialized] public double lastSoldP; // Ruhemodus geretteter Planeten (02.11.)
         public CartSave cart = new CartSave();
         public List<DroneSave> drones = new List<DroneSave>();
         public List<StSave> outposts = new List<StSave>();
@@ -85,6 +86,7 @@ namespace LunarCleanup.Core
         public int terra; public float terraHp = 1; // Terraforming-Stufe 0–5 und Zustand 0–1
         public float gAcc, upAcc, hitT;          // Güter-Produktion, Unterhalt, Einschlagschaden (Anlagen gestört, s)
         public bool supOk = true;                // letzter Unterhalt geliefert
+        public bool xport; public double xEarn;    // Export-Frachter gekauft, Einnahmen daraus (02.11.)
         public float offPend;                    // Offline-Zeit, die dieser Planet noch nachrechnen muss (s)
         public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
     }

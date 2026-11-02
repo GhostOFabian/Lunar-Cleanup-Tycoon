@@ -114,7 +114,7 @@ namespace LunarCleanup.Core
 
         // ---------- Fahrzeug-Erfahrung ----------
         public static int VehLvl(VehSave v) { int l = 0; foreach (float x in FeatureData.VehXp) if (v.xp >= x) l++; return l; }
-        static void VehXp(VehSave v, float m2) { int l0 = VehLvl(v); v.xp += m2; int l1 = VehLvl(v); if (l1 > l0 && !Offline) Toast(VehName(v) + " erreicht Stufe " + l1 + (l1 == 2 ? " – wähle eine Spezialisierung im Fahrzeugfenster" : ""), "good"); }
+        static void VehXp(VehSave v, float m2) { int l0 = VehLvl(v); v.xp += m2; int l1 = VehLvl(v); if (l1 > l0 && !Offline) Toast(VehName(v) + " erreicht Stufe " + l1 + (l1 == 2 ? " – wähle eine Spezialisierung im Fahrzeugfenster" : ""), "good", l1 != 2); } /* Fabian 02.11.: Stufen-Meldungen sind Nebensache (außer Spezialisierung) */
         public static string VehName(VehSave v) => !string.IsNullOrEmpty(v.vname) ? v.vname : GameData.Veh[v.type].name + " " + v.id;
         /// <summary>Bonus aus Stufe und Spezialisierung: "speed", "power", "tank", "wear", "energy".</summary>
         public static float VehBonus(VehSave v, string what)

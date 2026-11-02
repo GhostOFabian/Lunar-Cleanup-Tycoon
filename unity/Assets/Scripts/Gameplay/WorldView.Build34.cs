@@ -10,7 +10,7 @@ namespace LunarCleanup.Gameplay
 {
     public partial class WorldView
     {
-        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdateTerra(); UpdateEdit(); UpdateDefense(); UpdateOrders(); }
+        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdateTerra(); UpdateEdit(); UpdateDefense(); UpdateOrders(); UpdateFind(); }
 
         // =====================================================================
         // Riesenmeteor: Schild lenkt ab / letzter Sturz / Abfangen

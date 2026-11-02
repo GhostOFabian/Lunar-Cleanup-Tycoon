@@ -61,7 +61,7 @@ namespace LunarCleanup.Core
             if (ps.ef < .99f && (sv.veh.Count > 0 || ps.bld.Contains("presse") || sv.rigs.Count > 0)) Add(ps.bld.Contains("energy") ? "energy" : "hq", "Energie", 2, "Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.", "energy", "ecap");
             { int fl = sv.rigs.Count(r => r.faultK != ""); if (fl > 0) Add("roh", "Störung", 2, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – Techniker sind unterwegs, oder sofort beheben (antippen).", "rcare"); }
             { int br = sv.veh.Count(v => v.mode == "broken"), due = sv.veh.Count(v => v.wear >= .75f && v.mode != "broken"); if (br > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 2, br + (br > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen – " + (ps.bld.Contains("werkstatt") ? "Werkstatt öffnen" : "baue eine Roboterwerkstatt") + ".", "vdur"); else if (due > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 1, due + (due > 1 ? " Fahrzeuge brauchen" : " Fahrzeug braucht") + " bald Wartung.", "vdur"); }
-            { int full = sv.rigs.Count(r => Sum(r.buf) >= RigBufCap(r) - .5f); if (full > 0) Add("roh", "Bohrtürme", 2, full + (full > 1 ? " Bohrtürme sind" : " Bohrturm ist") + " voll – " + (sv.veh.Count > 0 ? "die Fahrzeuge holen nicht schnell genug ab." : "kauf Fahrzeuge, die abholen."), "vtank", "vspeed", "urate"); }
+            { int full = sv.rigs.Count(r => Sum(r.buf) >= RigBufCap(r) - .5f); if (full > 0) Add("roh", "Bohrtürme", 1, full + (full > 1 ? " Bohrtürme sind" : " Bohrturm ist") + " voll – " + (sv.veh.Count > 0 ? "die Fahrzeuge holen nicht schnell genug ab." : "kauf Fahrzeuge, die abholen."), "vtank", "vspeed", "urate"); } /* Fabian 02.11.: volle Bohrtürme bremsen nur den Abbau – Gelb statt Rot */
             { string s = null; float f = -1; foreach (var s0 in GameData.Stations) if (ps.bld.Contains(s0) && ps.st.ContainsKey(s0)) { float f0 = Sum(ps.st[s0].buf) / Mathf.Max(1, StBuf(ps, s0)); if (f0 > f) { f = f0; s = s0; } } /* eine Entladeanlage: der vollste Teil zählt */
                 if (s != null)
                 {
@@ -71,7 +71,9 @@ namespace LunarCleanup.Core
                     else Add(s, nm, 0, "Läuft – Puffer " + Mathf.RoundToInt(f * 100) + " %");
                 }
             }
-            if (rf > .97f) Add("roh", "Rohstofflager", 2, "Voll – Maschinen verarbeiten zu wenig. (Ab 97 % geht der Überschuss zur Rakete.)", "rohcap", "mspeed", "sellcap");
+            if (rf > .97f && sv.xport) Add("roh", "Rohstofflager", 0, "Voll – der Export-Frachter nimmt den Überschuss ab (40 % des Werts, bisher " + Fmt(sv.xEarn) + " Cr).");
+            else if (rf > .97f) Add("roh", "Rohstofflager", 2, "Voll – Maschinen verarbeiten zu wenig. (Ab 97 % geht der Überschuss zur Rakete.)", "rohcap", "mspeed", "sellcap");
+            else if (rf > .85f && sv.xport) Add("roh", "Rohstofflager", 0, "Läuft – der Export-Frachter hält Platz frei (bisher " + Fmt(sv.xEarn) + " Cr).");
             else if (rf > .85f) Add("roh", "Rohstofflager", 1, "Fast voll.", "rohcap", "sellcap", "bspeed"); else Add("roh", "Rohstofflager", 0, "Läuft – " + Mathf.RoundToInt(rf * 100) + " % belegt");
             foreach (var m in new[] { "presse", "schmelze", "raff" }) if (ps.bld.Contains(m) && ps.mach.ContainsKey(m))
                 {

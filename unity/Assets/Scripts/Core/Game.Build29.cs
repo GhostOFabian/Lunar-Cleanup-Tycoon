@@ -159,14 +159,14 @@ namespace LunarCleanup.Core
             if (S.doomNext < 0) S.doomNext = UnityEngine.Random.Range(2700f, 7200f); // 45–120 min Spielzeit
             S.doomNext -= dt; if (S.doomNext > 0) return;
             /* Fabian 02.11.: trifft zufällig einen freigeschalteten Planeten – fertig oder noch in Arbeit, nicht nur den aktuellen */
-            var cand = P.Values.Where(q => !Ruined(q.pid) && q.nClean >= 20 && q.sv.veh.Count >= 2).ToList(); if (cand.Count == 0) { S.doomNext = 600; return; }
+            var cand = P.Values.Where(q => !Ruined(q.pid) && !(q.sv.rest && q.pid != S.planet) && q.nClean >= 20 && q.sv.veh.Count >= 2).ToList(); /* ruhende Planeten sind sicher */ if (cand.Count == 0) { S.doomNext = 600; return; }
             S.doomNext = UnityEngine.Random.Range(2700f, 7200f); StartDoom(cand[UnityEngine.Random.Range(0, cand.Count)].pid);
         }
         public static void StartDoom(string pid)
         {
             if (S.ruin != "" || DoomActive || !P.ContainsKey(pid) || P.Count < 2) return; S.doomPid = pid; S.doomT = DOOM_COUNT;
             var tp = P[pid]; string def = tp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(ShieldChance(tp) * 100) + " %" : ""; if (tp.sv.flakLv > 0) def += " · " + FlakRockets(tp) + " Abwehrraketen" + (pid == S.planet ? "" : " (nur vor Ort)");
-            Toast("RIESENMETEOR im Anflug auf " + tp.P.name + "! Einschlag in " + Mathf.RoundToInt(DOOM_COUNT) + " Sekunden" + (def == "" ? " – ohne Abwehr wird die Basis zerstört" : def), "bad"); OnDoomStart?.Invoke(pid);
+            Toast("RIESENMETEOR im Anflug auf " + tp.P.name + "! Einschlag in " + Mathf.RoundToInt(DOOM_COUNT) + " Sekunden" + (def == "" ? " – ohne Abwehr wird die Basis schwer verwüstet" : def), "bad"); OnDoomStart?.Invoke(pid);
         }
         static void Impact(string pid)
         {
