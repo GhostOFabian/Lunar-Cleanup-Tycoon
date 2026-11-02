@@ -73,6 +73,8 @@ namespace LunarCleanup.Gameplay
             Game.TestMode = UnityEditor.EditorPrefs.GetBool("LunarCleanup.TestMode", false);
 #elif DEVELOPMENT_BUILD
             Game.TestMode = PlayerPrefs.GetInt("LunarCleanup.TestMode", 1) == 1; // Browser-Testversion: standardmäßig Testmodus (eigener Spielstand)
+#elif UNITY_WEBGL
+            Game.TestMode = Game.AdminWeb = AdminCheck(); /* Fabian 02.11.: Admin-Zugang nur für Fabian – Seite einmal mit ?admin=CODE öffnen */
 #endif
             Game.Init(); MeshKit.Init(); gameObject.AddComponent<Sfx>();
             cam = Camera.main; if (!cam) { var cg = new GameObject("Main Camera"); cg.tag = "MainCamera"; cam = cg.AddComponent<Camera>(); }
@@ -507,11 +509,26 @@ namespace LunarCleanup.Gameplay
         bool Hit(Vector2 screen, out Vector3 dir) => PlanetView.RayHit(cam.ScreenPointToRay(screen), Game.Cur.pd, out dir);
 
         bool exploding;
+        /// <summary>Browser: Admin-Modus (Test-Knöpfe + eigener Test-Spielstand). Einmal die Seite mit ?admin=CODE öffnen, danach merkt sich der Browser das.</summary>
+        static bool AdminCheck()
+        {
+            const string H = "7f6681ab5da2901c3eaa9d35786a0e9db36fb19a79bc9e58202ae41562eea7fc";
+            string Hash(string t) { using (var sha = System.Security.Cryptography.SHA256.Create()) { var b = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(t)); var sb = new System.Text.StringBuilder(); foreach (var x in b) sb.Append(x.ToString("x2")); return sb.ToString(); } }
+            try
+            {
+                string url = Application.absoluteURL ?? ""; int i = url.IndexOf("admin=", System.StringComparison.Ordinal);
+                if (i >= 0) { string code = url.Substring(i + 6); int e = code.IndexOfAny(new[] { '&', '#' }); if (e >= 0) code = code.Substring(0, e); code = System.Uri.UnescapeDataString(code).Trim();
+                    if (code == "aus") { PlayerPrefs.DeleteKey("LunarCleanup.Admin"); PlayerPrefs.Save(); return false; }
+                    if (Hash(code) == H) { PlayerPrefs.SetString("LunarCleanup.Admin", H); PlayerPrefs.Save(); return true; } }
+                return PlayerPrefs.GetString("LunarCleanup.Admin", "") == H;
+            }
+            catch { return false; }
+        }
         IEnumerator DoomImpact(string pid)
         {
             if (pid != Game.S.planet || exploding) { Game.Ruin(pid); yield break; }
-            exploding = true; hud.CloseSheet(); yield return world.DoomDive(); yield return world.Explode(planet.transform); yield return new WaitForSeconds(.3f);
-            Game.Ruin(pid); exploding = false; /* baut den nächsten Planeten auf (Travel → BuildPlanet) */
+            exploding = true; hud.CloseSheet(); altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.6f); yield return world.DoomDive(); yield return world.Implode(planet.transform); yield return new WaitForSeconds(.4f); /* Fabian 02.11.: Implosion, ganzer Planet im Bild */
+            Game.Ruin(pid); yield return null; world.RestoreImploded(); exploding = false; /* baut den nächsten Planeten auf (Travel → BuildPlanet) */
         }
         void Tap(Vector2 pos)
         {

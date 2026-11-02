@@ -24,6 +24,7 @@ namespace LunarCleanup.EditorTools
             UnityEditor.Compilation.CompilationPipeline.compilationFinished += _ => { try { File.AppendAllText("Temp/compile_err.txt", "done\n"); } catch { } };
         }
 
+        static System.Collections.IEnumerator ImplodeTest(LunarCleanup.Gameplay.WorldView w, Transform pt) { yield return w.Implode(pt); yield return new WaitForSeconds(1.5f); w.RestoreImploded(); }
         static void Poll()
         {
             if (EditorApplication.timeSinceStartup < next) return; next = EditorApplication.timeSinceStartup + 1;
@@ -92,6 +93,7 @@ namespace LunarCleanup.EditorTools
                         if (c == "actinfo") { var sb = new System.Text.StringBuilder("ok actinfo"); foreach (var q in LunarCleanup.Core.Game.P.Values) { int n = 0, nc = 0, z = 0, sm = 0; int gl = 0; foreach (var kv in q.act) { n++; gl = kv.Value.grid.Length; if (q.clean[kv.Key]) { nc++; if (kv.Value.sum < 1e-3f) z++; else if (kv.Value.sum < gl * .02f) sm++; } } sb.Append(" " + q.pid + ":" + n + "/c" + nc + "/z" + z + "/s" + sm + "/g" + gl); } Write(sb.ToString()); break; }
                         if (c.StartsWith("beltdraw ")) { var w = Object.FindFirstObjectByType<LunarCleanup.Gameplay.WorldView>(); var a = c.Substring(9).Split(' '); var inv = System.Globalization.CultureInfo.InvariantCulture; var pts = new System.Collections.Generic.List<Vector2>(); for (int i = 0; i + 1 < a.Length; i += 2) pts.Add(new Vector2(float.Parse(a[i], inv), float.Parse(a[i + 1], inv))); w.DrawMode = true; w.DrawBegin(pts[0]); for (int i = 1; i < pts.Count; i++) { var p0 = pts[i - 1]; var p1 = pts[i]; int n = Mathf.CeilToInt((p1 - p0).magnitude / .5f); for (int k = 1; k <= n; k++) w.DrawAdd(Vector2.Lerp(p0, p1, k / (float)n)); } w.DrawEnd(); Write("ok beltdraw n=" + w.EditCount); break; }
                         if (c.StartsWith("bpos ")) { var ps = LunarCleanup.Core.Game.Cur; var sb = new System.Text.StringBuilder("ok bpos"); foreach (var id in c.Substring(5).Split(' ')) if (ps.lay.pos.ContainsKey(id)) sb.Append(" " + id + "=" + ps.lay.pos[id].x.ToString("0.0") + "/" + ps.lay.pos[id].y.ToString("0.0")); Write(sb.ToString()); break; }
+                        if (c == "implode") { var w = Object.FindFirstObjectByType<LunarCleanup.Gameplay.WorldView>(); var pv = Object.FindFirstObjectByType<LunarCleanup.Gameplay.PlanetView>(); w.StartCoroutine(ImplodeTest(w, pv.transform)); Write("ok implode"); break; }
                         if (c == "pend") { Write("ok pend n=" + LunarCleanup.Core.Game.PendingPlanets + " " + LunarCleanup.Core.Game.DevPend() + " cr=" + LunarCleanup.Core.Game.S.credits.ToString("0")); break; }
                         if (c.StartsWith("orders")) { if (c.Length > 7) LunarCleanup.Core.Game.DevOrders(int.Parse(c.Substring(7))); Write("ok orders max=" + LunarCleanup.Core.Game.OrderMax() + " " + LunarCleanup.Core.Game.DevOrderInfo()); break; }
                         if (c == "doomhere") { var G = LunarCleanup.Core.Game.S; G.doomT = -1; G.doomPid = ""; LunarCleanup.Core.Game.StartDoom(LunarCleanup.Core.Game.Cur.pid); G.doomT = 13; Write("ok doomhere " + G.doomPid); break; }

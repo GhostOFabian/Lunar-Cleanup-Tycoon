@@ -137,6 +137,41 @@ namespace LunarCleanup.Gameplay
             if (!doomWhistle && Game.S.doomT < 5) { doomWhistle = true; Sfx.Play("whistle", .5f, .9f); }
         }
         /// <summary>Der Planet zerbricht: Bodenabschnitte, Gebäude und alles andere fliegen auseinander. Danach baut GameRoot ihn neu auf.</summary>
+        /// <summary>Fabian 02.11.: statt Explosion eine Implosion, die man komplett sieht – der ganze Planet samt Basis wird in einen glühenden Kern gesogen, der zum Punkt schrumpft und mit einem Lichtblitz verlischt.</summary>
+        public IEnumerator Implode(Transform planetT)
+        {
+            var at = doomTo != Vector3.zero ? doomTo : pd.Surf(pd.cells[pd.baseCell].c, 0);
+            if (doomGo) { Destroy(doomGo); doomGo = null; }
+            Sfx.Play("boom", .5f, 1); Flash(at, new Color(1f, .85f, .6f)); Shake = 1.6f;
+            /* Kern: dunkel-violett glühende Kugel in der Planetenmitte, wird erst größer, dann zum Punkt */
+            var cm = new Material(MeshKit.Mat(new Color(.55f, .3f, 1f), 0, .3f, new Color(.7f, .4f, 1f) * 3)); var core = MeshKit.Part(transform, MeshKit.Sphere, cm, Vector3.zero, Vector3.one * .01f); NoShadow(core); var glow = MeshKit.Part(transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(.8f, .55f, 1f, 1)), Vector3.zero, Vector3.one * .01f); NoShadow(glow); /* Leuchten um den Kern, immer zur Kamera */
+            var parts = new List<(Transform t, Vector3 p0, Vector3 s0, Vector3 w, float lag)>();
+            void Collect(Transform root) { foreach (Transform c in root) { if (c == core.transform || c == glow.transform || c.GetComponent<ParticleSystem>() || c.GetComponent<Light>()) continue; float lag = c.position.sqrMagnitude > 1 ? Mathf.Clamp01(1 - Vector3.Dot(c.position.normalized, at.normalized)) * .5f : .2f; parts.Add((c, c.position, c.localScale, Random.insideUnitSphere * 120, lag + Random.value * .15f)); } }
+            if (planetT) Collect(planetT); Collect(transform); imploded.Clear(); foreach (var q in parts) imploded.Add((q.t, q.p0, q.s0));
+            float R = pd.R, T = 0; const float PULL = 4.2f;
+            while (T < PULL + .9f)
+            {
+                float dt = Time.deltaTime; T += dt;
+                /* 1. vom Einschlag aus nach innen: was nah am Einschlag liegt, fällt zuerst */
+                foreach (var q in parts)
+                {
+                    if (!q.t) continue; float k = Mathf.Clamp01((T - .3f - q.lag) / (PULL - .9f)); k = k * k * (3 - 2 * k); /* sanft anfangen, in der Mitte am schnellsten */
+                    q.t.position = Vector3.Lerp(q.p0, Vector3.zero, k); q.t.localScale = q.s0 * Mathf.Max(0, 1 - k * 1.02f); if (k > .05f) q.t.Rotate(q.w * dt * k, Space.World);
+                }
+                float cs = T < PULL ? Mathf.Lerp(.01f, R * .45f, Mathf.Sqrt(Mathf.Clamp01(T / PULL))) : Mathf.Lerp(R * .45f, 0, Mathf.Clamp01((T - PULL) / .35f));
+                core.transform.localScale = Vector3.one * cs;
+                var cam0 = Camera.main; if (cam0) { glow.transform.rotation = Quaternion.LookRotation(glow.transform.position - cam0.transform.position, cam0.transform.up); float gs = T < PULL ? R * (.6f + 1.4f * Mathf.Clamp01(T / PULL)) : Mathf.Lerp(R * 2f, 0, Mathf.Clamp01((T - PULL) / .45f)); glow.transform.localScale = Vector3.one * gs; }
+                /* Staub strömt aus allen Richtungen in den Kern */
+                if (dust && T < PULL) for (int q = 0; q < 14; q++) { var d = Random.onUnitSphere; float r0 = R * Random.Range(1.1f, 1.8f); dust.Emit(new ParticleSystem.EmitParams { position = d * r0, velocity = -d * r0 / Random.Range(.6f, 1.1f), startColor = new Color(.75f, .6f, 1f, .9f), startSize = Random.Range(.6f, 1.6f), startLifetime = .9f }, 1); }
+                if (T >= PULL && T - dt < PULL) { Flash(Vector3.zero, new Color(.85f, .7f, 1f)); Sfx.Play("boom", .35f, 1); Shake = 2.2f; }
+                Shake = Mathf.Max(Shake, T < PULL ? .5f + T * .25f : 0);
+                yield return null;
+            }
+            Destroy(core); Destroy(glow);
+        }
+        readonly List<(Transform t, Vector3 p, Vector3 s)> imploded = new List<(Transform, Vector3, Vector3)>();
+        /// <summary>Nach dem Neuaufbau: was nicht neu gebaut wurde (bleibende Objekte), wieder an seinen Platz und in seine Größe.</summary>
+        public void RestoreImploded() { foreach (var (t, p, sc) in imploded) if (t) { t.position = p; t.localScale = sc; } imploded.Clear(); }
         public IEnumerator Explode(Transform planetT)
         {
             var at = doomTo != Vector3.zero ? doomTo : pd.Surf(pd.cells[pd.baseCell].c, 0);

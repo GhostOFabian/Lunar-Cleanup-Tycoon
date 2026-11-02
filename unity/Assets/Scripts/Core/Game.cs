@@ -59,7 +59,7 @@ namespace LunarCleanup.Core
         static readonly Dictionary<string, int> GUpg = new Dictionary<string, int>();
         const float VEH_BUFF = 2.6f, BSP = 1.25f;
         /// <summary>Im Editor kann ein getrennter Test-Spielstand benutzt werden (Menü Lunar Cleanup → Testmodus), damit Test-Tasten nie deinen echten Stand verändern.</summary>
-        public static bool TestMode;
+        public static bool TestMode, AdminWeb; /* AdminWeb: Browser-Admin für Fabian (02.11.) */
         static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "");
 
         public static PState Cur => P[S.planet];
