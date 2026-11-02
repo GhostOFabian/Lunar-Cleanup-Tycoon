@@ -57,7 +57,14 @@ namespace LunarCleanup.Gameplay
         public static event System.Action<Vector3, string, string> OnFeedback; // Weltpunkt, Text, Art – GameRoot zeigt ihn als schwebenden Text
         /// <summary>Test: 1 = jeder Brocken getroffen, 2 = jeder Schuss daneben, 3 = jeder zweite getroffen, Rest durch.</summary>
         public static int AutoPlay;
-        float RingK(Chunk c) { float f = (c.ringT / c.ringP) % 1f; return 3.2f - 2.8f * f; } // Ring: 3,2× → 0,4× Brockengröße, dann von vorn
+        /* Ring: 3,2× → 0,4× Brockengröße, dann von vorn. Fabian 02.11.: im grünen Bereich (um 1×) schrumpft er langsam – 40 % der Zeit ist er grün */
+        float RingK(Chunk c)
+        {
+            float f = (c.ringT / c.ringP) % 1f, hi = 1 + c.win, lo = 1 - c.win;
+            if (f < .45f) return Mathf.Lerp(3.2f, hi, f / .45f);
+            if (f < .85f) return Mathf.Lerp(hi, lo, (f - .45f) / .4f);
+            return Mathf.Lerp(lo, .4f, (f - .85f) / .15f);
+        }
         public void StartIntercept()
         {
             var I = Game.Icp; if (I == null) return; chunks.Clear(); icpOn = true; icpEnd = -1;
@@ -74,7 +81,7 @@ namespace LunarCleanup.Gameplay
                 c.delay = 1.2f + i * Mathf.Max(.8f, 1.7f - .06f * d); /* kurze Pause nach dem Zerbrechen */
                 c.amp = (u >= .5f && d >= 1.5f ? 1 : 0) * pd.R * Mathf.Min(.6f, .18f + .03f * d) * Random.Range(.7f, 1f); // spätere fliegen Kurven
                 var fwd = (c.p1 - c.p0).normalized; c.side = Vector3.Cross(fwd, Random.onUnitSphere).normalized;
-                c.ringP = Mathf.Max(1f, 2f - .06f * d); c.win = Mathf.Max(.16f, .36f - .015f * d); /* Fabian 02.11.: großzügigeres Zeitfenster */ c.ringT = Random.value * c.ringP;
+                c.ringP = Mathf.Max(1.6f, 2.6f - .06f * d); c.win = Mathf.Max(.18f, .3f - .01f * d); /* grün etwa 0,6–1 s lang */ /* Fabian 02.11.: großzügigeres Zeitfenster */ c.ringT = Random.value * c.ringP;
                 c.go = new GameObject("Brocken " + i); c.go.transform.SetParent(transform, false); c.go.transform.position = c.p0; c.go.SetActive(false);
                 var rk = new GameObject("Fels"); rk.transform.SetParent(c.go.transform, false); rk.transform.localScale = Vector3.one * c.size; rk.AddComponent<MeshFilter>().sharedMesh = RockKit.Mesh(i, false); rk.AddComponent<MeshRenderer>().sharedMaterial = rm;
                 var gl = MeshKit.Part(c.go.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .5f, .2f, .9f)), Vector3.zero, Vector3.one * c.size * 3.2f); NoShadow(gl); gl.AddComponent<Billboard>();

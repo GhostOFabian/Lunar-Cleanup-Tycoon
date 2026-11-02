@@ -1635,7 +1635,7 @@ namespace LunarCleanup.Core
         {
             if (ResDone(d.id)) return "Erforscht"; if (!HasLab()) return "Erst eine Forschungsstation bauen";
             if (ResActive != null) return "Es läuft schon ein Projekt";
-            if (!string.IsNullOrEmpty(d.req) && !ResDone(d.req)) return "Erst " + GameData.Res.Find(r => r.id == d.req).name;
+            if (!string.IsNullOrEmpty(d.req) && !ResDone(d.req)) return "Erst „" + GameData.Res.Find(r => r.id == d.req).name + "“ erforschen";
             return "";
         }
         public static bool StartResearch(string id)

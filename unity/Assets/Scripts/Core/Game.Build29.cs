@@ -155,7 +155,7 @@ namespace LunarCleanup.Core
                 S.doomT -= dt; if (S.doomT > 0) return;
                 Impact(S.doomPid); S.doomT = -1; S.doomPid = ""; return;
             }
-            if (S.ruin != "" || P.Count < 2 || Icp != null) return;
+            if (S.ruin != "" || P.Count < 2 || Icp != null || S.done.Count < 1) return; /* Fabian 02.11.: erst wenn ein Planet ganz sauber ist – dann gibt es Lieferketten und Abwehr */
             if (S.doomNext < 0) S.doomNext = UnityEngine.Random.Range(2700f, 7200f); // 45–120 min Spielzeit
             S.doomNext -= dt; if (S.doomNext > 0) return;
             /* Fabian 02.11.: trifft zufällig einen freigeschalteten Planeten – fertig oder noch in Arbeit, nicht nur den aktuellen */

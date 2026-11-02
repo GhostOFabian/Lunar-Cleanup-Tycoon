@@ -40,7 +40,7 @@ namespace LunarCleanup.UI
             var u = GameData.Up[id];
             h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : "") + (Game.UGoods(id).Length > 0 ? " · Top-Stufe braucht " + Game.GoodsTxt(Game.UGoods(id)) + " (Lager: " + Mathf.FloorToInt(Game.GoodAmt(Game.UGoods(id)[0].g)) + ")" : ""); },
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id) && Game.HasGoods(Game.UGoods(id)),
-                () => { Game.BuyUpgrade(id); if (Game.Lvl(id) >= u.max) h.Rebuild(); }, true, null, false); /* Fabian 01.11.: Zeile bleibt stehen, erst bei Max wandert sie nach unten */
+                () => { Game.BuyUpgrade(id); if (Game.Lvl(id) >= u.max) h.Rebuild(); }, true, null, false, () => { var ps0 = Game.Cur; string w = u.stage > 0 && Game.Gs(ps0) < u.stage ? "Erst Basisstufe " + u.stage : !Game.HasGoods(Game.UGoods(id)) ? "Es fehlen " + Game.GoodsTxt(Game.UGoods(id)) + " (von " + GameData.Planets[Game.Needs(ps0.pid)[0]].name + ")" : ""; return Game.Steps(w, Game.UCost(id)); }); /* Fabian 01.11.: Zeile bleibt stehen, erst bei Max wandert sie nach unten */
         }
         static bool IsMax(string id) => Game.Lvl(id) >= GameData.Up[id].max;
         static void MaxedRows(Hud h, List<string> ids)
@@ -65,7 +65,7 @@ namespace LunarCleanup.UI
                     var T = GameData.Veh[t]; if (!string.IsNullOrEmpty(T.planet) && T.planet != ps.pid && !(T.home ?? new string[0]).Contains(ps.pid) && !Game.P.ContainsKey(T.planet)) continue;
                     string key = t; int have = ps.sv.veh.Count(v => v.type == key);
                     h.Card(T.name, () => { string w = Game.VehWhy(ps, key); return (w != "" ? w + " · " : "") + T.desc + " Tank " + Game.Fmt(T.tank) + " E."; }, AccVeh,
-                        () => Cr(Game.VehCost(ps, key)), () => Game.VehWhy(ps, key) == "" && Game.S.credits >= Game.VehCost(ps, key), () => Game.BuyVehicle(key), have > 0 ? have + "× im Einsatz" : null);
+                        () => Cr(Game.VehCost(ps, key)), () => Game.VehWhy(ps, key) == "" && Game.S.credits >= Game.VehCost(ps, key), () => Game.BuyVehicle(key), have > 0 ? have + "× im Einsatz" : null, () => Game.Steps(Game.VehWhy(ps, key), Game.VehCost(ps, key)));
                 }
                 return;
             }
@@ -199,7 +199,7 @@ namespace LunarCleanup.UI
             if (!Game.BLV_REQ.ContainsKey(id) || !ps.bld.Contains(id)) return;
             h.Section("Gebäudestufe");
             h.Row("Stufe " + Game.Blvl(ps, id) + " von " + Game.BlMax(ps), () => { string w = Game.BlWhy(ps, id); return "Sind alle Upgrades dieses Gebäudes ausgereizt, wächst es eine Stufe: sichtbar größer und +" + Game.BlPct(id) + " % " + Game.BlEffect(id) + " je Stufe." + (Game.Blvl(ps, id) > 0 ? " Jetzt ×" + Dec(Game.BlF(ps, id), 1) + "." : "") + (w != "" ? " " + w + "." : ""); },
-                () => Game.BlWhy(ps, id) == "" ? "Ausbauen · " + Cr(Game.BlCost(ps, id)) : "Gesperrt", () => Game.BlWhy(ps, id) == "" && Game.S.credits >= Game.BlCost(ps, id), () => Game.BuyBl(id), true, () => "Stufe " + Game.Blvl(ps, id) + " von " + Game.BlMax(ps));
+                () => Game.BlWhy(ps, id) == "" ? "Ausbauen · " + Cr(Game.BlCost(ps, id)) : "Gesperrt", () => Game.BlWhy(ps, id) == "" && Game.S.credits >= Game.BlCost(ps, id), () => Game.BuyBl(id), true, () => "Stufe " + Game.Blvl(ps, id) + " von " + Game.BlMax(ps), true, () => Game.Steps(Game.BlWhy(ps, id), Game.BlCost(ps, id)));
         }
         static string Mats(float[] a) { var l = Enumerable.Range(0, a.Length).Where(i => a[i] >= .5f).Select(i => GameData.Mats[i].name + " " + Game.Fmt(a[i])).ToList(); return l.Count == 0 ? "leer" : string.Join(", ", l); }
 
@@ -211,15 +211,15 @@ namespace LunarCleanup.UI
             if (tab == 0)
             {
                 h.Section("Basisstufe " + s + " · " + st[s - 1].name);
-                if (s < st.Count) { var nx = st[s]; h.Card("Stufe " + nx.n + ": " + nx.name, () => nx.txt, AccBld, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage(), "Basis ausbauen"); }
+                if (s < st.Count) { var nx = st[s]; h.Card("Stufe " + nx.n + ": " + nx.name, () => nx.txt, AccBld, () => Cr(Game.StageCost(ps)), () => Game.S.credits >= Game.StageCost(ps), () => Game.BuyStage(), "Basis ausbauen", () => Game.Steps("", Game.StageCost(ps))); }
                 else h.Card("Ausbaustufe " + (ps.sv.exp + 1), () => { string w = Game.ExpWhy(ps); return "+25 % Bohrleistung, +30 % Lager, +1 Fahrzeugplatz, +1 Gebäudestufe. Es gibt kein Ende – jede Stufe kostet mehr." + (w != "" ? " " + w + "." : " Tiefe: " + Game.Fmt(Mathf.Min(ps.sv.deep, Game.ExpNeed(ps))) + " / " + Game.Fmt(Game.ExpNeed(ps)) + " E."); }, AccBld,
-                    () => Cr(Game.ExpCost(ps)), () => Game.ExpWhy(ps) == "" && Game.S.credits >= Game.ExpCost(ps), () => Game.BuyExp(), ps.sv.exp > 0 ? "Ausbaustufe " + ps.sv.exp : null);
+                    () => Cr(Game.ExpCost(ps)), () => Game.ExpWhy(ps) == "" && Game.S.credits >= Game.ExpCost(ps), () => Game.BuyExp(), ps.sv.exp > 0 ? "Ausbaustufe " + ps.sv.exp : null, () => Game.Steps(Game.ExpWhy(ps), Game.ExpCost(ps)));
                 h.Section("Gebäude");
                 int n = 0;
                 foreach (var id in GameData.BOrder)
                 {
                     var B = GameData.Bld[id]; if (ps.bld.Contains(id) || B.stage > s + 1) continue; string key = id; n++;
-                    h.Card(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, AccBld, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key));
+                    h.Card(B.name, () => { string w = Game.BuildWhy(ps, key); return (w != "" ? w + " · " : "") + B.desc; }, AccBld, () => Cr(Game.BuildCost(ps, key)), () => Game.BuildWhy(ps, key) == "" && Game.S.credits >= Game.BuildCost(ps, key), () => Game.Build(key), null, () => Game.Steps(Game.BuildWhy(ps, key), Game.BuildCost(ps, key)));
                 }
                 if (n == 0) h.Note("Alles gebaut, was diese Basisstufe erlaubt.");
                 return;
@@ -240,10 +240,10 @@ namespace LunarCleanup.UI
             var sv = ps.sv; string pn = ps.P.name;
             h.Section("Riesenmeteor");
             h.Note("Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer.", () => Game.DoomActive ? "RIESENMETEOR im Anflug auf " + GameData.Planets[Game.S.doomPid].name + " – Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" : "Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis zerstört. Keine Abwehr hält immer. Bisher: " + Game.S.doomN + " Riesenmeteore, " + Game.S.doomHits + " Brocken abgefangen.");
-            h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Meteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + Game.GoodsTxt(Game.MsGoods(ps)) : ""),
-                () => sv.msLv >= Game.MS_MAX ? "Max" : Cr(Game.MsCost(ps)), () => Game.MsWhy(ps) == "", () => Game.BuyShield());
+            h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Meteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + (Game.MsGoods(ps).Length > 0 ? Game.GoodsTxt(Game.MsGoods(ps)) : "nur Credits") : ""),
+                () => sv.msLv >= Game.MS_MAX ? "Max" : Cr(Game.MsCost(ps)), () => Game.MsWhy(ps) == "", () => Game.BuyShield(), why: () => Game.Steps(Game.MsWhy(ps).StartsWith("Dir fehlen") ? "" : Game.MsWhy(ps), Game.MsCost(ps)));
             h.Row("Abwehrraketen", () => "Stufe " + sv.flakLv + "/" + Game.FLAK_MAX + " · " + Game.FlakRockets(ps) + " Raketen je Riesenmeteor. Hält der Schild nicht, zerbricht der Meteor in 4–8 Brocken: Tippe auf jeden Brocken, wenn sein Ring ihn genau umschließt. Daneben kostet eine Rakete. Nur wenn du vor Ort bist – sonst zählt nur der Schild." + (sv.flakLv < Game.FLAK_MAX && Game.FlakGoods(ps).Length > 0 ? " · nächste Stufe: " + Game.GoodsTxt(Game.FlakGoods(ps)) : ""),
-                () => sv.flakLv >= Game.FLAK_MAX ? "Max" : Cr(Game.FlakCost(ps)), () => Game.FlakWhy(ps) == "", () => Game.BuyFlak());
+                () => sv.flakLv >= Game.FLAK_MAX ? "Max" : Cr(Game.FlakCost(ps)), () => Game.FlakWhy(ps) == "", () => Game.BuyFlak(), why: () => Game.Steps(Game.FlakWhy(ps).StartsWith("Dir fehlen") ? "" : Game.FlakWhy(ps), Game.FlakCost(ps)));
             h.Note("Jeder Riesenmeteor wird schwerer: mehr, schnellere Brocken, die später auch in Kurven fliegen. Terraforming macht ihn ebenfalls schwerer. Kommen mehr als zwei Drittel durch, ist die Basis verloren – sonst gibt es Schmutz, kaputte Fahrzeuge und gestörte Anlagen.");
             h.Section("Terraforming");
             if (!Game.IsDone(ps.pid)) h.Note("Sobald " + pn + " zu 100 % sauber ist, kannst du den Planeten in 5 Stufen begrünen – bis zum Wald. Jede Stufe gibt einen dauerhaften Bonus.");
@@ -251,7 +251,7 @@ namespace LunarCleanup.UI
             {
                 h.Row("Stufe " + sv.terra + "/" + Game.TERRA_MAX + " · " + Game.TerraName[sv.terra], () => sv.terra == 0 ? "Noch kahl." : "Zustand " + Pc(Mathf.Clamp01(sv.terraHp)) + " · " + (Game.TerraTrouble(ps) is var tr && tr != "" ? "sinkt: " + tr : "stabil") + " · Unterhalt " + Dec(Game.UpkeepH(ps), 1) + " je Gut pro Stunde. Bei 0 % fällt eine Stufe weg.");
                 for (int k = 1; k <= Game.TERRA_MAX; k++) { int kk = k; h.Row(k + ". " + Game.TerraName[k], () => (sv.terra >= kk ? "Erreicht · " : "") + Game.TerraBonus[kk]); }
-                if (sv.terra < Game.TERRA_MAX) h.Row("Nächste Stufe: " + Game.TerraName[sv.terra + 1], () => { string w = Game.TerraWhy(ps); return Game.GoodsTxt(Game.TerraGoods(ps)) + (w != "" ? " · " + w : ""); }, () => Cr(Game.TerraCost(ps)), () => Game.TerraWhy(ps) == "", () => Game.BuyTerra());
+                if (sv.terra < Game.TERRA_MAX) h.Row("Nächste Stufe: " + Game.TerraName[sv.terra + 1], () => { string w = Game.TerraWhy(ps); return Game.GoodsTxt(Game.TerraGoods(ps)) + (w != "" ? " · " + w : ""); }, () => Cr(Game.TerraCost(ps)), () => Game.TerraWhy(ps) == "", () => Game.BuyTerra(), why: () => Game.Steps(Game.TerraWhy(ps).StartsWith("Dir fehlen") ? "" : Game.TerraWhy(ps), Game.TerraCost(ps)));
                 h.Note("Ohne Lieferungen, bei Stürmen und wenn Schmutz liegen bleibt, verfällt das Terraforming. Wird der Planet zerstört, ist alles weg.");
             }
             h.Section("Lieferungen für " + pn);
@@ -290,7 +290,7 @@ namespace LunarCleanup.UI
                 h.Section("Tiefenabbau");
                 h.Note(ps.P.name + " ist komplett sauber – jetzt geht es in die Tiefe. Bohrtürme auf sauberen Parzellen fördern dauerhaft Rohstoffe in ihr eigenes Lager, deine Fahrzeuge holen sie dort ab. Jede Basisstufe erlaubt 2 Bohrtürme mehr. Tippe eine saubere Parzelle an, um gezielt zu bauen.");
                 h.Row("Bohrtürme", () => ps.sv.rigs.Count + " / " + Game.RigMax(ps) + " · Förderung " + Dec(ps.sv.rigs.Sum(r => Game.RigRate(ps, r)) * 60, 0) + " E pro Minute",
-                    () => ps.sv.rigs.Count >= Game.RigMax(ps) ? "Voll" : "Bauen " + Cr(Game.RigCost(ps)), () => ps.sv.rigs.Count < Game.RigMax(ps) && Game.S.credits >= Game.RigCost(ps), () => Game.BuildRig(-1));
+                    () => ps.sv.rigs.Count >= Game.RigMax(ps) ? "Voll" : "Bauen " + Cr(Game.RigCost(ps)), () => ps.sv.rigs.Count < Game.RigMax(ps) && Game.S.credits >= Game.RigCost(ps), () => Game.BuildRig(-1), why: () => Game.Steps("", Game.RigCost(ps)));
                 foreach (var r in ps.sv.rigs) { var rr = r; h.Row((r.bag ? "Erzbagger" : "Bohrturm Stufe " + r.lv) + " · " + GameData.Mats[Game.RigMat(ps, r.cell)].name, () => Game.RigStatus(ps, rr), () => "Öffnen", () => true, () => h.OpenSheet("rig", rr.cell.ToString()), false); }
             }
             if (Game.HasLab()) h.Row("Forschung", () => Game.ResActive != null ? "Läuft: " + Game.ResActive.name + " · " + Mathf.FloorToInt(Game.S.resT / Game.ResActive.time * 100) + " %" : "Kein Projekt aktiv", () => "Öffnen", () => true, () => h.OpenSheet("research"), false);
@@ -357,7 +357,7 @@ namespace LunarCleanup.UI
             else
             {
                 int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
-                if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); });
+                if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); }, why: () => Game.Steps(Game.UnlockWhy(key), P.unlockCost) + (Game.UnlockWhy(key) == "" && Game.CanCredit(key) ? "\n\nOder: „Auf Kredit reisen“ direkt darunter." : ""));
                 if (Game.CanCredit(key)) h.Row("   Auf Kredit reisen", () => "Dir fehlen " + Cr(P.unlockCost - Game.S.credits) + ". Der Rest wird geliehen (+10 %) und mit der Hälfte deiner Einnahmen abbezahlt.", () => "Kredit", () => Game.CanCredit(key), () => { if (Game.UnlockOnCredit(key)) h.CloseSheet(); }, false);
                 else h.Row(P.name, () => size + " · " + P.sub + " · noch nicht erreichbar");
             }
@@ -605,7 +605,7 @@ namespace LunarCleanup.UI
             if (!Game.ResDone("outpost")) { h.Note("Mit Außenlager-Logistik (Forschung) kannst du hier später ein Außenlager mit Pipeline zur Basis bauen."); return; }
             h.Note("Einer von vier festen Plätzen rund um die Basis. Fahrzeuge, die hier draußen reinigen, entladen dann direkt hier – eine Pipeline pumpt alles zur Basis.");
             h.Row("Außenlager bauen", () => { string w = Game.OutpostWhy(ps, cell); return (w != "" ? w + " · " : "") + ps.sv.outposts.Count + " von " + GameData.OutMax + " gebaut"; },
-                () => Cr(Game.OutpostCost(ps)), () => Game.OutpostWhy(ps, cell) == "" && Game.S.credits >= Game.OutpostCost(ps), () => Game.BuildOutpost(cell));
+                () => Cr(Game.OutpostCost(ps)), () => Game.OutpostWhy(ps, cell) == "" && Game.S.credits >= Game.OutpostCost(ps), () => Game.BuildOutpost(cell), why: () => Game.Steps(Game.OutpostWhy(ps, cell), Game.OutpostCost(ps)));
         }
 
         static void Hazard(Hud h)
@@ -678,7 +678,7 @@ namespace LunarCleanup.UI
                     return st + dd.desc + " · " + FmtTime(dd.time);
                 },
                 () => Game.ResDone(dd.id) ? "Erforscht" : Game.S.resAct == dd.id ? "Läuft" : !string.IsNullOrEmpty(dd.req) && !Game.ResDone(dd.req) ? "Später" : Cr(dd.cost),
-                () => Game.ResWhy(dd) == "" && Game.S.credits >= dd.cost, () => Game.StartResearch(dd.id));
+                () => Game.ResWhy(dd) == "" && Game.S.credits >= dd.cost, () => Game.StartResearch(dd.id), why: () => Game.Steps(Game.ResWhy(dd), dd.cost));
             }
             if (UpVisible(GameData.Up["research"])) UpRow(h, "research");
         }

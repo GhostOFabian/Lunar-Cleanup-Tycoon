@@ -101,6 +101,10 @@ namespace LunarCleanup.Gameplay
             Game.OnIcpStart += pid => { if (!world) return; hud.CloseSheet(); world.StartIntercept(); };
             Game.OnSupply += (pid, g, n) => { if (world && pid == Game.S.planet) world.SupplyRocket(g, n); };
             Game.OnTerra += (pid, a, b) => { if (world && pid == Game.S.planet) world.TerraChanged(a, b); };
+            /* Fabian 02.11.: der erste Riesenmeteor wird erklärt – was passiert und was hilft */
+            Game.OnDoomStart += pid => { if (!hud || Game.S == null || Game.S.doomN > 0 || PlayerPrefs.GetInt("LunarCleanup.DoomHelp", 0) == 1) return; PlayerPrefs.SetInt("LunarCleanup.DoomHelp", 1);
+                bool here = pid == Game.S.planet; hud.Explain("Riesenmeteor im Anflug!", "Ein Riesenmeteor fliegt auf " + GameData.Planets[pid].name + " zu. In 60 Sekunden schlägt er ein." + (here ? "" : "\n\nDu bist gerade nicht dort. Tippe auf das Warnband oben, um hinzufliegen – nur vor Ort kannst du Brocken abfangen.") +
+                    "\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis zerstört und nach 10 Minuten neu aufgebaut. Flaggen und Geschichten bleiben."); };
             WorldView.OnFeedback += (wp, txt, kind) => { if (!cam || !hud) return; var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) hud.FloatText(sp, txt, kind); };
             hud.BeltOn = () => world && world.Editing; hud.BeltOk = () => world && world.EditValid;
             hud.BeltTitle = () => world && world.Editing ? "Band verlegen · " + world.BeltName(world.EditBelt) : "";

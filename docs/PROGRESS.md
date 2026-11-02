@@ -242,3 +242,10 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 
 ## Build 37 (02.11.2026) – Test-Knopf „Alle Planeten voll ausgebaut“
 - Einstellungen → Testmodus: schaltet alle 18 Planeten frei, macht sie ganz sauber und baut alles (Gebäude, Upgrades, Fahrzeuge, Bohrtürme, Schild 6, Raketen 6, Terraforming 5, Spezialgüter 999). Im Editor 7 s; nur im Testmodus, nicht in der Browser-Version.
+
+## Build 38 (vorbereitet 02.11.2026, NOCH NICHT KOMPILIERT – Mac war nicht da)
+- Gesperrte Knöpfe bleiben antippbar: Tipp öffnet ein Fenster „Warum gesperrt + Schritte“ (Hud.Explain, Game.Steps). Mit Gründen: Gebäude, Basisstufe, Ausbaustufe, Gebäudestufen, Fahrzeuge, Upgrades (auch Güter für Top-Stufen), Planeten (inkl. Kredit-Hinweis), Forschung, Außenlager, Bohrtürme, Schild, Raketen, Terraforming. Fehlt Geld: wie man Geld verdient. Ohne eigenen Grund: Beschreibung der Zeile.
+- Grüner Ring beim Abfangen länger: Ring schrumpft im grünen Bereich langsam (40 % der Zeit grün, ca. 0,6–1 s), längerer Zyklus.
+- Plausibilität: Riesenmeteor erst, wenn ein Planet komplett sauber ist; Meteorschild Stufe 1 nur für Credits (vorher brauchte er Mars-Güter → am Anfang keine Abwehr möglich); Schild braucht keinen Güter-Unterhalt mehr (nur Energie). Forschungs-Hinweis „Erst „X“ erforschen“.
+- Erster Riesenmeteor wird in einem Fenster erklärt (was passiert, wie man sich schützt, was bei Zerstörung bleibt).
+- Geprüft (ohne Mac): Spielstart der Browser-Version per Playwright (Startmenü, „Erste Schritte 1/10“), Fortschritts-Kette im Code (Gebäudestufen brauchen nur alte Höchststufen → keine Sperre durch Güter, Fahrzeug-Kraft PowReq ≤ 2).

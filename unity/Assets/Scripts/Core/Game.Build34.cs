@@ -42,7 +42,7 @@ namespace LunarCleanup.Core
         /// <summary>Herstellung je Stunde (nur komplett saubere Planeten; Terraforming Stufe 4 verdoppelt).</summary>
         public static float GoodRate(PState ps) => !IsDone(ps.pid) || Ruined(ps.pid) ? 0 : 40f * (ps.sv.terra >= 4 ? 2 : 1);
         /// <summary>Unterhalt je Stunde und je benötigtem Gut (Schild und Terraforming).</summary>
-        public static float UpkeepH(PState ps) => ps.sv.terra * 2f + ps.sv.msLv * .5f;
+        public static float UpkeepH(PState ps) => ps.sv.terra * 2f; /* Fabian 02.11.: der Schild braucht nur Energie, keine Güter – sonst wäre er am Anfang immer „unversorgt“ */
         public static event Action<string, string, int> OnSupply; // Planet, Gut, Menge – Rakete landet (nur live, aktueller Planet)
         static void Delivered(PState ps, string gid, int n) { if (!Offline && ps.pid == S.planet && n > 0) OnSupply?.Invoke(ps.pid, gid, n); }
         /// <summary>Güter für einen Kauf auf diesem Planeten: true, wenn alles da ist (und dann abgebucht).</summary>
@@ -69,7 +69,7 @@ namespace LunarCleanup.Core
         // =====================================================================
         public const int MS_MAX = 6, FLAK_MAX = 6; public const float MS_COOL = 1800;
         public static double MsCost(PState ps) => Math.Round(PV(ps) * .5 * Math.Pow(2, ps.sv.msLv));
-        public static (string g, int n)[] MsGoods(PState ps) => new[] { (GoodOf(Needs(ps.pid)[0]).id, 10 * (ps.sv.msLv + 1)) };
+        public static (string g, int n)[] MsGoods(PState ps) => ps.sv.msLv == 0 ? new (string, int)[0] : new[] { (GoodOf(Needs(ps.pid)[0]).id, 10 * ps.sv.msLv) }; /* Stufe 1 nur Credits – sonst gäbe es am Anfang keine Abwehr */
         public static double FlakCost(PState ps) => Math.Round(PV(ps) * .4 * Math.Pow(2, ps.sv.flakLv));
         public static (string g, int n)[] FlakGoods(PState ps) => ps.sv.flakLv == 0 ? new (string, int)[0] : new[] { (GoodOf(Needs(ps.pid)[1]).id, 8 * ps.sv.flakLv) };
         public static int FlakRockets(PState ps) => ps.sv.flakLv <= 0 ? 0 : 2 + 2 * ps.sv.flakLv;

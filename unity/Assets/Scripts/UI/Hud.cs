@@ -248,7 +248,7 @@ namespace LunarCleanup.UI
             if (live != null) binders.Add(() => t.text = live());
         }
         /// <summary>Zeile wie im Browser: Titel, Beschreibung, rechts ein Knopf (Gold = kaufen, Mint = Aktion).</summary>
-        public void Row(string title, Func<string> desc, Func<string> btn = null, Func<bool> enabled = null, Action click = null, bool gold = true, Func<string> titleLive = null, bool rebuild = true)
+        public void Row(string title, Func<string> desc, Func<string> btn = null, Func<bool> enabled = null, Action click = null, bool gold = true, Func<string> titleLive = null, bool rebuild = true, Func<string> why = null)
         {
             var row = UiKit.Rt(sheetContent, title); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 10; hl.childControlHeight = true; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.padding = new RectOffset(0, 0, 8, 8); hl.childAlignment = TextAnchor.MiddleLeft;
             var col = UiKit.Rt(row, "Text"); var vl = col.gameObject.AddComponent<VerticalLayoutGroup>(); vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.spacing = 2; UiKit.LE(col, -1, -1, 1);
@@ -258,11 +258,11 @@ namespace LunarCleanup.UI
             if (desc != null) binders.Add(() => { var s = desc(); dd.text = s; dd.gameObject.SetActive(!string.IsNullOrEmpty(s)); });
             if (btn != null)
             {
-                var b = UiKit.Btn(row, "Knopf", () => { click?.Invoke(); if (rebuild) Rebuild(); else Bind(); }, gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 14);
+                var b = UiKit.Btn(row, "Knopf", () => { if (enabled != null && !enabled()) { Locked(titleLive != null ? titleLive() : title, btn, why, desc); return; } click?.Invoke(); if (rebuild) Rebuild(); else Bind(); }, gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 14);
                 UiKit.LE(b, 46, 46, -1, 118).minWidth = 104;
                 var bt = UiKit.Text(b.transform, "Text", btn(), 14, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, 0, 1, 1, 8, 2, 8, 2); bt.enableAutoSizing = true; bt.fontSizeMin = 9; bt.fontSizeMax = 15; bt.textWrappingMode = TextWrappingModes.NoWrap;
                 var cg = b.gameObject.AddComponent<CanvasGroup>();
-                binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); b.interactable = on; cg.alpha = on ? 1 : .38f; });
+                binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); cg.alpha = on ? 1 : .38f; }); /* bleibt antippbar: gesperrt = Erklärung */
             }
             var line = UiKit.Glass(sheetContent, "Linie", new Color(1, 1, 1, .07f), 1); UiKit.LE(line, 1, 1);
         }
@@ -303,7 +303,7 @@ namespace LunarCleanup.UI
             }
         }
         /// <summary>Karte für Kaufbares (Gebäude, Fahrzeuge, Drohnen): eigener Kasten mit Farbstreifen – deutlich anders als Upgrade-Zeilen.</summary>
-        public void Card(string title, Func<string> desc, Color accent, Func<string> btn, Func<bool> enabled, Action click, string badge = null)
+        public void Card(string title, Func<string> desc, Color accent, Func<string> btn, Func<bool> enabled, Action click, string badge = null, Func<string> why = null)
         {
             var card = UiKit.Glass(sheetContent, "Karte " + title, new Color(.07f, .11f, .2f, .95f), 14);
             var hl = card.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 12; hl.childControlHeight = true; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.padding = new RectOffset(0, 12, 0, 0); hl.childAlignment = TextAnchor.MiddleLeft;
@@ -314,10 +314,10 @@ namespace LunarCleanup.UI
             if (desc != null) binders.Add(() => dd.text = desc());
             if (btn != null)
             {
-                var b = UiKit.Btn(card.transform, "Knopf", () => { click?.Invoke(); Rebuild(); }, Pal.Credit, 14); UiKit.LE(b, 50, 50, -1, 122).minWidth = 108;
+                var b = UiKit.Btn(card.transform, "Knopf", () => { if (enabled != null && !enabled()) { Locked(title, btn, why, desc); return; } click?.Invoke(); Rebuild(); }, Pal.Credit, 14); UiKit.LE(b, 50, 50, -1, 122).minWidth = 108;
                 var bt = UiKit.Text(b.transform, "Text", btn(), 14, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, 0, 1, 1, 8, 2, 8, 2); bt.enableAutoSizing = true; bt.fontSizeMin = 9; bt.fontSizeMax = 15; bt.textWrappingMode = TextWrappingModes.NoWrap;
                 var cg = b.gameObject.AddComponent<CanvasGroup>();
-                binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); b.interactable = on; cg.alpha = on ? 1 : .38f; });
+                binders.Add(() => { bt.text = btn(); bool on = enabled == null || enabled(); cg.alpha = on ? 1 : .38f; }); /* bleibt antippbar: gesperrt = Erklärung */
             }
             var gap = UiKit.Rt(sheetContent, "Abstand"); UiKit.LE(gap, 8, 8);
         }
@@ -345,6 +345,31 @@ namespace LunarCleanup.UI
             sl.onValueChanged.AddListener(v => { set(v); tt.text = title + " · " + Mathf.RoundToInt(v * 100) + " %"; });
         }
         public void Bind() { foreach (var b in binders) b(); }
+
+        // ---------- Erklärfenster (Fabian 02.11.): warum etwas gesperrt ist und wie man es freischaltet ----------
+        GameObject exGo; TextMeshProUGUI exTitle, exBody;
+        public void Explain(string title, string body)
+        {
+            if (string.IsNullOrEmpty(body)) return;
+            if (!exGo)
+            {
+                var dim = UiKit.Glass(root, "Erklärung", new Color(0, 0, 0, .55f), 0); exGo = dim.gameObject; dim.raycastTarget = true; dim.rectTransform.Anchor(0, 0, 1, 1);
+                var box = UiKit.Glass(dim.transform, "Kasten", new Color(.06f, .1f, .18f, 1), 18); box.raycastTarget = true; box.rectTransform.anchorMin = new Vector2(0, .5f); box.rectTransform.anchorMax = new Vector2(1, .5f); box.rectTransform.offsetMin = new Vector2(20, -230); box.rectTransform.offsetMax = new Vector2(-20, 230);
+                exTitle = UiKit.Text(box.transform, "Titel", "", 17, Pal.Ink, true, FontStyles.Bold); exTitle.rectTransform.Anchor(0, 1, 1, 1, 20, -54, 20, 18);
+                exBody = UiKit.Text(box.transform, "Text", "", 14.5f, Pal.Ink2); exBody.rectTransform.Anchor(0, 0, 1, 1, 20, 76, 20, 60); exBody.overflowMode = TextOverflowModes.Ellipsis; exBody.enableAutoSizing = true; exBody.fontSizeMin = 11; exBody.fontSizeMax = 14.5f;
+                var ok = UiKit.Btn(box.transform, "Verstanden", () => exGo.SetActive(false), Pal.Credit, 12); ((RectTransform)ok.transform).Anchor(.5f, 0, .5f, 0, -90, 16, -90, -64);
+                var ot = UiKit.Text(ok.transform, "Text", "Verstanden", 15, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); ot.rectTransform.Anchor(0, 0, 1, 1);
+            }
+            exGo.transform.SetAsLastSibling(); exTitle.text = title; exBody.text = body; exGo.SetActive(true);
+        }
+        /// <summary>Tipp auf einen grauen Knopf: Grund und Schritte erklären statt nichts zu tun.</summary>
+        void Locked(string title, Func<string> btn, Func<string> why, Func<string> desc)
+        {
+            string label = btn != null ? btn() : "";
+            if (label == "Max" || label == "Aktiv" || label == "Gekauft" || label == "Erforscht" || label == "Steht" || label == "Voll" || label == "Verbunden") { Game.Toast(label == "Max" ? "Schon auf der höchsten Stufe" : label == "Voll" ? "Alle Plätze sind belegt" : "Schon erledigt"); return; }
+            string w = why?.Invoke(); if (string.IsNullOrEmpty(w)) w = "Das geht gerade noch nicht." + (desc != null && !string.IsNullOrEmpty(desc()) ? "\n\n" + desc() : "");
+            Explain(title, w);
+        }
 
         // ---------- Meldungen und Schwebetexte ----------
         public void Toast(string text, string kind)
