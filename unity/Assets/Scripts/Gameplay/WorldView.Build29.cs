@@ -193,7 +193,7 @@ namespace LunarCleanup.Gameplay
                 else Shake = Mathf.Max(Shake, .5f + T * .3f);
                 yield return null;
             }
-            if (core) Destroy(core.gameObject); Destroy(glow); Destroy(ringGo); Destroy(ring2.gameObject); foreach (var d in debris) if (d.t) Destroy(d.t.gameObject);
+            if (core) Destroy(core.gameObject); Destroy(glow); Destroy(lr.material); Destroy(ring2.material); Destroy(ringGo); Destroy(ring2.gameObject); foreach (var d in debris) if (d.t) Destroy(d.t.gameObject); Destroy(cm); Destroy(gm); /* Materialien nicht liegen lassen */
         }
         readonly List<(Transform t, Vector3 p, Vector3 s, Quaternion r)> imploded = new List<(Transform, Vector3, Vector3, Quaternion)>();
         /// <summary>Nach dem Neuaufbau: was nicht neu gebaut wurde (bleibende Objekte), wieder an seinen Platz, in seine Größe und Drehung.</summary>

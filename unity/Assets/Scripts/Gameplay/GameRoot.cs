@@ -123,8 +123,9 @@ namespace LunarCleanup.Gameplay
         {
             var ps = Game.Cur; var sw = System.Diagnostics.Stopwatch.StartNew(); planet.Build(ps); long tP = sw.ElapsedMilliseconds; world.Build(ps); Debug.Log("Lunar Cleanup: Planet " + ps.pid + " aufgebaut – Boden " + tP + " ms, Basis " + (sw.ElapsedMilliseconds - tP) + " ms"); hud.CloseSheet();
             var c = ps.pd.cells[ps.pd.baseCell]; cd = ps.clean[ps.pd.start] ? c.c : (ps.pd.cells[ps.pd.start].c * .7f + c.c * .3f).normalized; north = c.e2; mapMode = false; alt = altGoal = 64;
-            ApplyCam();
+            ApplyCam(); Resources.UnloadUnusedAssets(); lastUnload = Time.realtimeSinceStartup; /* Fabian 02.11.: alte Meshes/Materialien des vorigen Planeten freigeben (Browser lief beim Meteor in „OOM“) */
         }
+        float lastUnload;
 
         void Start() { if (!offlineRunning) StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); } /* OnApplicationPause(false) kommt beim Start schon vor Start() – sonst lief die Offline-Zeit doppelt */
 
@@ -182,7 +183,7 @@ namespace LunarCleanup.Gameplay
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevKeys();
 #endif
-            if (!offlineRunning) Game.Step(dt); CatchUpOthers();
+            if (!offlineRunning) Game.Step(dt); CatchUpOthers(); if (Time.realtimeSinceStartup - lastUnload > 180 && !exploding && Game.Icp == null) { lastUnload = Time.realtimeSinceStartup; Resources.UnloadUnusedAssets(); } /* Umbauten erzeugen neue Meshes – alle 3 min aufräumen */
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */

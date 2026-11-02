@@ -31,6 +31,7 @@ namespace LunarCleanup.EditorTools
             PlayerSettings.WebGL.nameFilesAsHashes = false;
             SetCodeOptimization(pub ? "BuildTimes" : null); /* der erste Release-Versuch mit voller Optimierung hat Unity abstürzen lassen */
             PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.WebGL.maximumMemorySize = 4096; /* Fabian 02.11.: „OOM“ beim Riesenmeteor mit voll ausgebauten Planeten – 2 GB reichten nicht */
             PlayerSettings.defaultWebScreenWidth = 540; PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.runInBackground = true;
             PlayerSettings.stripEngineCode = false; // sonst fehlen z. B. Collider-Klassen (Meldung „SphereCollider doesn't exist“)
