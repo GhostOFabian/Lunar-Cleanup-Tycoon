@@ -228,7 +228,13 @@ namespace LunarCleanup.UI
             var o = UiKit.Glass(root, "Offline", new Color(.03f, .05f, .1f, .92f), 2); o.rectTransform.Anchor(0, 0, 1, 1); o.raycastTarget = true; offlineGo = o.gameObject;
             offlineTxt = UiKit.Text(o.transform, "Text", "", 18, Pal.Ink, true, FontStyles.Normal, TextAlignmentOptions.Center); offlineTxt.rectTransform.Anchor(0, .4f, 1, .6f, 30, 0, 30, 0);
             offlineGo.SetActive(false);
+            /* Fabian 02.11.: kleiner Hinweis (blockiert nichts), solange ein Planet seine Offline-Zeit nachholt */
+            var k = UiKit.Glass(root, "CatchUp", new Color(.03f, .05f, .1f, .85f), 2); k.rectTransform.Anchor(.08f, .775f, .92f, .805f); k.raycastTarget = false; catchGo = k.gameObject;
+            catchTxt = UiKit.Text(k.transform, "Text", "", 13, Pal.Ink, true, FontStyles.Normal, TextAlignmentOptions.Center); catchTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); catchTxt.raycastTarget = false;
+            catchGo.SetActive(false);
         }
+        GameObject catchGo; TextMeshProUGUI catchTxt;
+        public void ShowCatchUp(string t) { if (catchGo == null) return; catchGo.SetActive(t != null); if (t != null) catchTxt.text = t; }
         public void ShowOffline(string t) { offlineGo.SetActive(t != null); if (t != null) offlineTxt.text = t; }
 
         public void OpenSheet(string kind, string arg = null)
@@ -353,20 +359,23 @@ namespace LunarCleanup.UI
         public void Bind() { foreach (var b in binders) b(); }
 
         // ---------- Erklärfenster (Fabian 02.11.): warum etwas gesperrt ist und wie man es freischaltet ----------
-        GameObject exGo; TextMeshProUGUI exTitle, exBody;
+        GameObject exGo; TextMeshProUGUI exTitle, exBody; RectTransform exBox;
         public void Explain(string title, string body)
         {
             if (string.IsNullOrEmpty(body)) return;
             if (!exGo)
             {
                 var dim = UiKit.Glass(root, "Erklärung", new Color(0, 0, 0, .55f), 0); exGo = dim.gameObject; dim.raycastTarget = true; dim.rectTransform.Anchor(0, 0, 1, 1);
-                var box = UiKit.Glass(dim.transform, "Kasten", new Color(.06f, .1f, .18f, 1), 18); box.raycastTarget = true; box.rectTransform.anchorMin = new Vector2(0, .5f); box.rectTransform.anchorMax = new Vector2(1, .5f); box.rectTransform.offsetMin = new Vector2(20, -230); box.rectTransform.offsetMax = new Vector2(-20, 230);
+                var box = UiKit.Glass(dim.transform, "Kasten", new Color(.06f, .1f, .18f, 1), 18); box.raycastTarget = true; box.rectTransform.anchorMin = new Vector2(0, .5f); box.rectTransform.anchorMax = new Vector2(1, .5f); box.rectTransform.offsetMin = new Vector2(20, -230); box.rectTransform.offsetMax = new Vector2(-20, 230); exBox = box.rectTransform;
                 exTitle = UiKit.Text(box.transform, "Titel", "", 17, Pal.Ink, true, FontStyles.Bold); exTitle.rectTransform.Anchor(0, 1, 1, 1, 20, -54, 20, 18);
-                exBody = UiKit.Text(box.transform, "Text", "", 14.5f, Pal.Ink2); exBody.rectTransform.Anchor(0, 0, 1, 1, 20, 76, 20, 60); exBody.overflowMode = TextOverflowModes.Ellipsis; exBody.enableAutoSizing = true; exBody.fontSizeMin = 11; exBody.fontSizeMax = 14.5f;
+                exBody = UiKit.Text(box.transform, "Text", "", 14.5f, Pal.Ink2); exBody.rectTransform.Anchor(0, 0, 1, 1, 20, 76, 20, 60); exBody.overflowMode = TextOverflowModes.Ellipsis; exBody.enableAutoSizing = true; exBody.fontSizeMin = 11; exBody.fontSizeMax = 14.5f; exBody.alignment = TextAlignmentOptions.TopLeft;
                 var ok = UiKit.Btn(box.transform, "Verstanden", () => exGo.SetActive(false), Pal.Credit, 12); ((RectTransform)ok.transform).Anchor(.5f, 0, .5f, 0, -90, 16, -90, -64);
                 var ot = UiKit.Text(ok.transform, "Text", "Verstanden", 15, Pal.CreditInk, true, FontStyles.Bold, TextAlignmentOptions.Center); ot.rectTransform.Anchor(0, 0, 1, 1);
             }
             exGo.transform.SetAsLastSibling(); exTitle.text = title; exBody.text = body; exGo.SetActive(true);
+            /* Kasten so hoch wie der Text (zwischen 220 und 460) */
+            float w = Mathf.Max(200, ((RectTransform)root).rect.width - 80); float h = exBody.GetPreferredValues(body, w, 0).y; float half = Mathf.Clamp((h + 76 + 60 + 16) / 2f, 110, 230);
+            exBox.offsetMin = new Vector2(20, -half); exBox.offsetMax = new Vector2(-20, half);
         }
         /// <summary>Tipp auf einen grauen Knopf: Grund und Schritte erklären statt nichts zu tun.</summary>
         void Locked(string title, Func<string> btn, Func<string> why, Func<string> desc)
@@ -402,9 +411,12 @@ namespace LunarCleanup.UI
         System.Collections.IEnumerator Rise(TextMeshProUGUI t) { float a = 0; var p0 = t.rectTransform.anchoredPosition; while (a < 1.4f && t) { a += Time.deltaTime; t.rectTransform.anchoredPosition = p0 + new Vector2(0, a * 34); t.alpha = Mathf.Clamp01(1.6f - a * 1.15f); yield return null; } if (t) Destroy(t.gameObject); }
 
         // ---------- pro Frame ----------
+        bool toastLow;
         void Update()
         {
             if (Game.S == null) return; var ps = Game.Cur; var P = ps.P;
+            /* Fabian 02.11.: beim Abfangen Meldungen nach unten, damit sie keine Brocken verdecken */
+            bool icpLow = Game.Icp != null; if (icpLow != toastLow) { toastLow = icpLow; if (icpLow) toastBox.Anchor(0, 0, 1, 0, 24, 40, 24, -170); else toastBox.Anchor(0, 1, 1, 1, 24, -330, 24, 196); }
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;
             credits.text = Game.Fmt(credShown);
             pname.text = P.name; pname.fontSize = P.name.Length > 9 ? 11 : P.name.Length > 7 ? 12.5f : 14;

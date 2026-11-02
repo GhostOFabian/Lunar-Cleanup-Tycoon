@@ -16,6 +16,7 @@ namespace LunarCleanup.Core
         }
         /// <summary>Offene Offline-Zeit an alle anderen Planeten verteilen (vor dem Nachrechnen).</summary>
         public static void DeferOthers(float seconds) { foreach (var q in P.Values) if (q.pid != S.planet) q.sv.offPend = Mathf.Min(q.sv.offPend + seconds, OfflineCap); }
+        public static string DevPend() => string.Join(" ", P.Values.Where(x => x.sv.offPend > 0).Select(x => x.pid + ":" + x.sv.offPend.ToString("0")));
         public static int PendingPlanets => P == null ? 0 : P.Values.Count(q => q.sv.offPend > .5f);
         /// <summary>Einen Planeten nachrechnen, höchstens budgetMs Millisekunden lang. Rückgabe: fertig?</summary>
         public static bool CatchUp(PState ps, float budgetMs)
@@ -34,10 +35,11 @@ namespace LunarCleanup.Core
             if (ps.sv.offPend <= .5f) { ps.sv.offPend = 0; return true; }
             return false;
         }
-        /// <summary>Hintergrund: pro Bild ein paar Millisekunden für den nächsten Planeten mit offener Zeit.</summary>
-        public static void CatchUpTick(float budgetMs)
+        /// <summary>Hintergrund: pro Bild ein paar Millisekunden. Der aktuelle Planet (z. B. nach einer Reise) hat Vorrang und bekommt mehr Zeit.</summary>
+        public static void CatchUpTick(float budgetMs, float curBudgetMs)
         {
-            var q = P.Values.Where(x => x.sv.offPend > .5f && x.pid != S.planet).OrderBy(x => x.sv.offPend).FirstOrDefault();
+            if (Cur.sv.offPend > .5f) { CatchUp(Cur, curBudgetMs); return; }
+            var q = P.Values.Where(x => x.sv.offPend > .5f).OrderBy(x => x.sv.offPend).FirstOrDefault();
             if (q != null) CatchUp(q, budgetMs);
         }
     }

@@ -27,8 +27,9 @@ namespace LunarCleanup.Core
         {
             var l = new List<int>();
             foreach (var t in ps.P.types) { int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m)) l.Add(m); }
-            void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach)) return; foreach (var r in rs) if (!l.Contains(r.outp)) l.Add(r.outp); }
-            Add("presse", ps.line.presse); Add("schmelze", ps.line.schmelze); Add("raff", ps.line.raff);
+            /* nur Rezepte, die wirklich laufen können: Plan freigeschaltet und Zutat vorhanden (2 Runden für Ketten) */
+            void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach) || (mach == "raff" && !PlanOn(ps, "refine"))) return; foreach (var r in rs) if (PlanOn(ps, r.plan) && l.Contains(r.inp) && !l.Contains(r.outp)) l.Add(r.outp); }
+            for (int round = 0; round < 2; round++) { Add("presse", ps.line.presse); Add("schmelze", ps.line.schmelze); Add("raff", ps.line.raff); }
             return l;
         }
         public static double GoodValue(string gid) { int i = Array.IndexOf(GameData.POrder, gid); return 150 * Math.Pow(2.4, Math.Max(0, i)); }
@@ -58,6 +59,8 @@ namespace LunarCleanup.Core
         }
         public static float OrderProgress(VisitOrder o) { float n = 0, g = 0; foreach (var it in o.items) { n += it.n; g += Mathf.Min(it.n, it.got); } return n > 0 ? g / n : 0; }
         /// <summary>Je Schritt (live und offline): neue Besucher, Waren aus den Lagern zurücklegen, fertige Bestellungen bezahlen, abgelaufene verabschieden.</summary>
+        public static void DevOrders(int n) { for (int i = 0; i < n && VO.Count < OrderMax(); i++) NewVisitOrder(); }
+        public static string DevOrderInfo() => S.vorders == null ? "keine" : string.Join(" | ", S.vorders.Select(o => o.who + "@" + o.pid + " " + (OrderProgress(o) * 100).ToString("0") + "% " + string.Join(",", o.items.Select(it => ItemName(it) + " " + it.got.ToString("0") + "/" + it.n.ToString("0")))));
         static void OrdersStep(float dt)
         {
             if (!OrdersOpen) return;

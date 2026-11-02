@@ -147,12 +147,19 @@ namespace LunarCleanup.Gameplay
             if (Game.PendingPlanets > 0) { catchC0 = Game.S.credits; catchE0 = Game.S.stats.earned; catchOn = true; Game.Toast("Die anderen " + Game.PendingPlanets + " Planeten rechnen im Hintergrund nach – ihre Einnahmen kommen gleich dazu", ""); }
             Game.Save();
         }
-        double catchC0, catchE0; bool catchOn;
+        double catchC0, catchE0; bool catchOn, curCatch;
         /// <summary>Fabian 02.11.: andere Planeten holen ihre Offline-Zeit nach, ein paar Millisekunden pro Bild.</summary>
         void CatchUpOthers()
         {
             if (offlineRunning || Game.S == null) return;
-            if (Game.PendingPlanets > 0) { Game.CatchUpTick(4f); return; }
+            if (Game.PendingPlanets > 0)
+            {
+                Game.CatchUpTick(6f, 25f);
+                if (Game.Cur.sv.offPend > .5f) { int m = Mathf.CeilToInt(Game.Cur.sv.offPend / 60f); hud.ShowCatchUp("Offline-Zeit wird nachgeholt · noch " + (m >= 60 ? (m / 60) + " h " + (m % 60) + " min" : m + " min")); curCatch = true; }
+                else if (curCatch) { curCatch = false; hud.ShowCatchUp(null); }
+                return;
+            }
+            if (curCatch) { curCatch = false; hud.ShowCatchUp(null); }
             if (catchOn) { catchOn = false; double g = System.Math.Max(Game.S.credits - catchC0, Game.S.stats.earned - catchE0); if (g > 0) Game.Toast("Alle Planeten sind auf dem neuesten Stand · zusammen +" + Game.Fmt(g) + " Cr", "good"); Game.Save(); }
         }
 

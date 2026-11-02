@@ -1499,7 +1499,7 @@ namespace LunarCleanup.Core
             S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); Travel(pid);
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }
-        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (P[pid].sv.offPend > .5f) CatchUp(P[pid], 1e9f); /* Fabian 02.11.: Zielplanet erst fertig nachrechnen */ if (Icp != null) { Fail("Erst die Meteorbrocken abwehren!"); return; } if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
+        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Icp != null) { Fail("Erst die Meteorbrocken abwehren!"); return; } if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
 
         // ================= Ziele =================
         static PState Moon => P["moon"];
