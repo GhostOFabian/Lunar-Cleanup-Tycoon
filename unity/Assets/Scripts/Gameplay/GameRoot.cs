@@ -130,11 +130,12 @@ namespace LunarCleanup.Gameplay
         {
             float t = Mathf.Min(seconds, Game.OfflineCap); if (t < 5) yield break;
             offlineRunning = true; Game.Offline = true; double c0 = Game.S.credits, e0 = Game.S.stats.earned; float el = 0; int r0 = 0, n0 = 0; foreach (var q in Game.P.Values) { r0 += q.sv.nRockets; n0 += q.nClean; }
+            Game.DeferOthers(t); /* Fabian 02.11.: sofort nur dieser Planet – die anderen holen im Hintergrund auf */
             while (el < t)
             {
                 float t0 = Time.realtimeSinceStartup;
                 float stepS = t > 7200 ? 4 : t > 1800 ? 3 : t > 600 ? 2 : 1; /* Fabian 01.11.: lange Abwesenheit in größeren Schritten – dieselbe Simulation, nur gröber */
-                while (el < t && Time.realtimeSinceStartup - t0 < .06f) { float d = Mathf.Min(stepS, t - el); Game.Step(d); el += d; }
+                while (el < t && Time.realtimeSinceStartup - t0 < .06f) { float d = Mathf.Min(stepS, t - el); Game.StepOffline(d); el += d; }
                 if (t > 600) hud.ShowOffline("Deine Basis hat weitergearbeitet … " + Mathf.FloorToInt(el / t * 100) + " %");
                 yield return null;
             }
@@ -143,7 +144,16 @@ namespace LunarCleanup.Gameplay
             /* Fabian 01.11.: zeigen, was offline passiert ist – nicht nur Credits */
             Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr" + (r1 > r0 ? " · " + (r1 - r0) + (r1 - r0 == 1 ? " Rakete" : " Raketen") : "") + (n1 > n0 ? " · " + (n1 - n0) + " Parzellen gereinigt" : ""), "good");
             if (Game.S.wrecks.Count > 0) { Game.Toast("Totalschaden: " + string.Join(", ", Game.S.wrecks) + " – neue Fahrzeuge bauen", "bad"); Game.S.wrecks.Clear(); }
+            if (Game.PendingPlanets > 0) { catchC0 = Game.S.credits; catchE0 = Game.S.stats.earned; catchOn = true; Game.Toast("Die anderen " + Game.PendingPlanets + " Planeten rechnen im Hintergrund nach – ihre Einnahmen kommen gleich dazu", ""); }
             Game.Save();
+        }
+        double catchC0, catchE0; bool catchOn;
+        /// <summary>Fabian 02.11.: andere Planeten holen ihre Offline-Zeit nach, ein paar Millisekunden pro Bild.</summary>
+        void CatchUpOthers()
+        {
+            if (offlineRunning || Game.S == null) return;
+            if (Game.PendingPlanets > 0) { Game.CatchUpTick(4f); return; }
+            if (catchOn) { catchOn = false; double g = System.Math.Max(Game.S.credits - catchC0, Game.S.stats.earned - catchE0); if (g > 0) Game.Toast("Alle Planeten sind auf dem neuesten Stand · zusammen +" + Game.Fmt(g) + " Cr", "good"); Game.Save(); }
         }
 
         void OnApplicationPause(bool p) { if (p) Game.Save(); else if (!offlineRunning && Game.S != null) StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); }
@@ -163,7 +173,7 @@ namespace LunarCleanup.Gameplay
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevKeys();
 #endif
-            if (!offlineRunning) Game.Step(dt);
+            if (!offlineRunning) Game.Step(dt); CatchUpOthers();
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */

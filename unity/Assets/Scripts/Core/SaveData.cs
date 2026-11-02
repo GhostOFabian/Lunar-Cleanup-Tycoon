@@ -85,6 +85,7 @@ namespace LunarCleanup.Core
         public int terra; public float terraHp = 1; // Terraforming-Stufe 0–5 und Zustand 0–1
         public float gAcc, upAcc, hitT;          // Güter-Produktion, Unterhalt, Einschlagschaden (Anlagen gestört, s)
         public bool supOk = true;                // letzter Unterhalt geliefert
+        public float offPend;                    // Offline-Zeit, die dieser Planet noch nachrechnen muss (s)
         public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
     }
 
