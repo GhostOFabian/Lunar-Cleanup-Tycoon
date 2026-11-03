@@ -95,6 +95,7 @@ namespace LunarCleanup.Gameplay
             if (changed && debBatchOfCell.TryGetValue(id, out var bs)) foreach (var b in bs) b.dirty = true;
         }
 
+        static Matrix4x4[] debTmp;
         void DrawDebris()
         {
             if (ps == null || MapMode) return;
@@ -107,6 +108,8 @@ namespace LunarCleanup.Gameplay
                 var done = new List<int>(); foreach (var id in debWatch) { RefreshDebrisCell(id, false); if (!ps.act.ContainsKey(id)) done.Add(id); } foreach (var id in done) debWatch.Remove(id);
             }
             var cam = Camera.main; if (!cam) return; var cdir = cam.transform.position.normalized;
+            /* Fabian 03.11.: Steinchen sind aus über 110 m nicht zu sehen – dann gar nicht zeichnen; Schatten nur aus der Nähe */
+            float camAlt = cam.transform.position.magnitude - pd.R; if (camAlt > 110) return; var shadow = camAlt < 40 ? ShadowCastingMode.On : ShadowCastingMode.Off;
             foreach (var b in debBatches)
             {
                 if (b.chunk >= 0 && b.chunk < pd.faceCenters.Length && Vector3.Dot(pd.faceCenters[b.chunk].normalized, cdir) < -.15f) continue; /* Rückseite */
@@ -119,9 +122,9 @@ namespace LunarCleanup.Gameplay
                 for (int i = 0; i < b.n; i += 1023)
                 {
                     int cnt = Mathf.Min(1023, b.n - i);
-                    var arr = b.arr; if (i > 0) { arr = new Matrix4x4[cnt]; System.Array.Copy(b.arr, i, arr, 0, cnt); }
-                    if (b.mats == null) Graphics.DrawMeshInstanced(b.mesh, 0, b.mat, arr, cnt, null, ShadowCastingMode.On, true);
-                    else for (int sm = 0; sm < b.mats.Length; sm++) Graphics.DrawMeshInstanced(b.mesh, sm, b.mats[sm], arr, cnt, null, ShadowCastingMode.On, true);
+                    var arr = b.arr; if (i > 0) { if (debTmp == null) debTmp = new Matrix4x4[1023]; System.Array.Copy(b.arr, i, debTmp, 0, cnt); arr = debTmp; } /* kein neues Array pro Bild (Müll → Ruckler) */
+                    if (b.mats == null) Graphics.DrawMeshInstanced(b.mesh, 0, b.mat, arr, cnt, null, shadow, true);
+                    else for (int sm = 0; sm < b.mats.Length; sm++) Graphics.DrawMeshInstanced(b.mesh, sm, b.mats[sm], arr, cnt, null, shadow, true);
                 }
             }
         }

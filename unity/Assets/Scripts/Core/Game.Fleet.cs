@@ -15,7 +15,7 @@ namespace LunarCleanup.Core
         /// <summary>Farben für die Ränder sauberer Parzellen (Einstellungen).</summary>
         public static readonly (string name, Color col)[] LineColors = { ("Grün", new Color(.1f, 1f, .3f)), ("Türkis", new Color(0f, 1f, .9f)), ("Blau", new Color(.1f, .45f, 1f)), ("Violett", new Color(.62f, .2f, 1f)), ("Pink", new Color(1f, .12f, .7f)), ("Rot", new Color(1f, .1f, .08f)), ("Orange", new Color(1f, .48f, 0f)), ("Gold", new Color(1f, .82f, 0f)), ("Weiß", new Color(1f, 1f, 1f)), ("Aus", new Color(0, 0, 0, 0)) }; /* Fabian 01.11.: knalliger */
         public static Color LineColor => S == null ? LineColors[0].col : LineColors[Mathf.Clamp(S.lineCol, 0, LineColors.Length - 1)].col;
-        public static void NextLineColor() { S.lineCol = (S.lineCol + 1) % LineColors.Length; foreach (var p in P.Values) for (int i = 0; i < p.pd.N; i++) if (p.clean[i]) p.dirtyCells.Add(i); }
+        public static void NextLineColor() { S.lineCol = (S.lineCol + 1) % LineColors.Length; foreach (var p in P.Values) for (int i = 0; i < p.pd.N; i++) if (!p.clean[i]) p.dirtyCells.Add(i); } /* 03.11.: Rand sitzt jetzt an den dreckigen Parzellen */
         /// <summary>Fabian 01.11.: Gebäude-Upgrades haben mehr Stufen, damit sich gelbe und rote Ampeln immer beheben lassen. Die alten Höchststufen (max0) bleiben die Hürde für die Gebäudestufen.</summary>
         static void ExtendBuildingUpgrades()
         {

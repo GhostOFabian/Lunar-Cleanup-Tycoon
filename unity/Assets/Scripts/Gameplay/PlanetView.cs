@@ -10,7 +10,8 @@ namespace LunarCleanup.Gameplay
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
         public const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
-        class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty; public Material mat; }
+        class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty; public Material mat; public float upT = -9; }
+        int upNext;
         /// <summary>Fabian 01.11.: grüne Ränder sauberer Parzellen leuchten weit rausgezoomt (0 = nah, 1 = ganzer Planet); setzt GameRoot.</summary>
         public static float GlowK; float glowSet = -1;
         int NT = 64; /* Pixel je Parzelle in der Reliefkarte */
@@ -299,8 +300,10 @@ namespace LunarCleanup.Gameplay
                         float ea = EdgeA(ed, edgeW); float fa0 = 0;
                         if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { col = Color.Lerp(col, fc, fa * (1 - g * .55f)); fGlow = fg * (1 - g * .7f); fa0 = fa; } else fGlow = Color.black;
                         ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
-                        if (ea > 0) col = clean && act == null ? (CleanLine.a > 0 ? Color.Lerp(col, CleanLine, Mathf.Min(1, 1.25f * ea)) : col * (1 - .12f * ea)) : clean ? Color.Lerp(col, MeteorLine, .5f * ea) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
-                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = clean && act == null ? ea : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
+                        /* Fabian 03.11.: umgedreht – saubere Parzellen ohne Rand (man sieht, wie schön der Planet ist), nur was noch dreckig ist, leuchtet umrandet */
+                        bool lined = !(clean && act == null);
+                        if (ea > 0) col = !lined ? col : clean ? Color.Lerp(col, MeteorLine, .55f * ea) : CleanLine.a > 0 ? Color.Lerp(col, CleanLine, Mathf.Min(1, 1.1f * ea)) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
+                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = !clean && CleanLine.a > 0 ? ea * .8f : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }
@@ -312,7 +315,13 @@ namespace LunarCleanup.Gameplay
         {
             if (ps == null) return;
             if (ps.dirtyCells.Count > 0) { foreach (int id in ps.dirtyCells) PaintCell(id); ps.dirtyCells.Clear(); }
-            foreach (var ch in chunks) if (ch != null && ch.dirty) { ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.gtex.SetPixels32(ch.gpx); ch.gtex.Apply(true); ch.dirty = false; }
+            /* Fabian 03.11.: Ruckeln auf großen Planeten – höchstens 2 Abschnitte pro Bild hochladen, jeden höchstens alle 0,25 s (die Fahrzeuge putzen sonst jedes Bild mehrere große Texturen neu) */
+            int up = 0; float now = Time.unscaledTime;
+            for (int k = 0; k < chunks.Count && up < 2; k++)
+            {
+                int i = (upNext + k) % chunks.Count; var ch = chunks[i]; if (ch == null || !ch.dirty || now - ch.upT < .25f) continue;
+                ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.gtex.SetPixels32(ch.gpx); ch.gtex.Apply(true); ch.dirty = false; ch.upT = now; up++; upNext = i + 1;
+            }
             if (Mathf.Abs(GlowK - glowSet) > .02f) { glowSet = GlowK; var ec = Color.white * (.45f + 2.2f * GlowK); /* Ränder leuchten auch nah */ foreach (var ch in chunks) if (ch != null) ch.mat.SetColor("_EmissionColor", ec); }
         }
 

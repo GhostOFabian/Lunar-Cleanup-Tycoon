@@ -789,7 +789,7 @@ namespace LunarCleanup.Gameplay
             RenderSettings.ambientSkyColor = Color.Lerp(th.hemiSky, sky.neb1, .3f) * th.hemiI * 1.15f; RenderSettings.ambientEquatorColor = Color.Lerp(Color.Lerp(th.hemiSky, th.hemiGround, .5f), sky.neb2, .25f) * th.hemiI * .85f; RenderSettings.ambientGroundColor = Color.Lerp(th.hemiGround, sky.neb2, .2f) * th.hemiI * .7f;
             amb0 = RenderSettings.ambientSkyColor; amb1 = RenderSettings.ambientEquatorColor; amb2 = RenderSettings.ambientGroundColor;
             RenderSettings.fog = false;
-            sun = FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional);
+            sun = FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional && l.name != "Mondlicht");
             if (!sun) { var lg = new GameObject("Sonne"); sun = lg.AddComponent<Light>(); sun.type = LightType.Directional; }
             sun.color = th.sun; sunI0 = th.sunI * 1.15f; sun.intensity = sunI0; sun.shadows = LightShadows.Soft; sun.shadowStrength = .85f;
             // Sternlicht: zweites, farbiges Licht aus Richtung des hellsten Nebels – auch die Nachtseite bleibt sichtbar
@@ -882,12 +882,16 @@ namespace LunarCleanup.Gameplay
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
+        Light fillLight;
         void UpdateSun()
         {
             if (!sun) return; var sd = Game.SunDir(ps); sun.transform.rotation = Quaternion.LookRotation(-sd);
             var cam = Camera.main; var cd = cam ? cam.transform.position.normalized : pd.cells[pd.baseCell].c;
             float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-.14f, .3f, Vector3.Dot(sd, cd)));
-            sun.intensity = sunI0; float a = .34f + .66f * k;
+            sun.intensity = sunI0; float a = .55f + .45f * k; /* Fabian 03.11.: Nachtseite heller (vorher 34 %) */
+            /* … und ein schwaches, kühles Gegenlicht von der anderen Seite, damit der Planet auch ohne Sonne Form und Farbe zeigt */
+            if (!fillLight) { var fl = new GameObject("Mondlicht").AddComponent<Light>(); fl.type = LightType.Directional; fl.shadows = LightShadows.None; fl.color = new Color(.62f, .72f, 1f); fillLight = fl; }
+            fillLight.transform.rotation = Quaternion.LookRotation(sd); fillLight.intensity = sunI0 * .32f;
             sun.shadowStrength = .85f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.12f, .45f, Vector3.Dot(sd, cd))); // tiefe Sonne: keine meterlangen Schattenstreifen über den Planeten
             RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);

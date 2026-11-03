@@ -412,7 +412,7 @@ namespace LunarCleanup.UI
         System.Collections.IEnumerator Rise(TextMeshProUGUI t) { float a = 0; var p0 = t.rectTransform.anchoredPosition; while (a < 1.4f && t) { a += Time.deltaTime; t.rectTransform.anchoredPosition = p0 + new Vector2(0, a * 34); t.alpha = Mathf.Clamp01(1.6f - a * 1.15f); yield return null; } if (t) Destroy(t.gameObject); }
 
         // ---------- pro Frame ----------
-        bool toastLow;
+        bool toastLow; PlanetData totFor; int totCells;
         void Update()
         {
             if (Game.S == null) return; var ps = Game.Cur; var P = ps.P;
@@ -421,7 +421,7 @@ namespace LunarCleanup.UI
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;
             credits.text = Game.Fmt(credShown);
             pname.text = P.name; pname.fontSize = P.name.Length > 9 ? 11 : P.name.Length > 7 ? 12.5f : 14;
-            int c = ps.nClean, tot = ps.pd.cells.Count(x => !x.IsBase); pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
+            int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
             foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
