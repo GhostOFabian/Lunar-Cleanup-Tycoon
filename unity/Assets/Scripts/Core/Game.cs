@@ -270,13 +270,13 @@ namespace LunarCleanup.Core
         static void TravelPrize(PState ps, bool live)
         {
             if (ps.sv.prize) return; ps.sv.prize = true; int i = Array.IndexOf(GameData.POrder, ps.pid); if (i < 0 || i + 1 >= GameData.POrder.Length) return; string nx = GameData.POrder[i + 1]; if (P.ContainsKey(nx)) return;
-            double c = GameData.Planets[nx].unlockCost; AddCash(ps, c); if (live) Toast("Reiseprämie für den sauberen Planeten: +" + Fmt(c) + " Cr – genug für die Reise nach " + GameData.Planets[nx].name, "good");
+            double c = UnlockCost(nx); AddCash(ps, c); if (live) Toast("Reiseprämie für den sauberen Planeten: +" + Fmt(c) + " Cr – genug für die Reise nach " + GameData.Planets[nx].name, "good");
         }
         /// <summary>C) Reise auf Kredit: fehlt Geld, wird der Rest geliehen und mit der Hälfte jeder Einnahme abbezahlt.</summary>
-        public static bool CanCredit(string pid) => !P.ContainsKey(pid) && UnlockWhy(pid) == "" && S.credits < GameData.Planets[pid].unlockCost && S.debt <= 0;
+        public static bool CanCredit(string pid) => !P.ContainsKey(pid) && UnlockWhy(pid) == "" && S.credits < UnlockCost(pid) && S.debt <= 0;
         public static bool UnlockOnCredit(string pid)
         {
-            if (!CanCredit(pid)) return false; double c = GameData.Planets[pid].unlockCost, miss = c - S.credits; S.debt += miss * 1.1; S.credits += miss; /* 10 % Gebühr */
+            if (!CanCredit(pid)) return false; double c = UnlockCost(pid), miss = c - S.credits; S.debt += miss * 1.1; S.credits += miss; /* 10 % Gebühr */
             bool ok = Unlock(pid); if (ok) Toast("Reise auf Kredit: " + Fmt(miss * 1.1) + " Cr werden mit der Hälfte deiner Einnahmen abbezahlt", "good"); return ok;
         }
         public static bool Fail(string t) { Toast(t, "bad"); return false; }
@@ -1526,7 +1526,7 @@ namespace LunarCleanup.Core
         public static bool Unlock(string pid)
         {
             if (P.ContainsKey(pid)) return false; string why = UnlockWhy(pid); if (why != "") return Fail(why);
-            double c = GameData.Planets[pid].unlockCost; if (S.credits < c) return Fail(Lacks(c));
+            double c = UnlockCost(pid); if (S.credits < c) return Fail(Lacks(c));
             S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); string from = S.planet; double carry = CarryTo(from, pid); Travel(pid); if (carry > 0) Toast("Startbudget " + Fmt(carry) + " Cr mitgenommen – der Rest bleibt in der Kasse von " + GameData.Planets[from].name, "good");
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }

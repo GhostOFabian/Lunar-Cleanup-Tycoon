@@ -16,7 +16,7 @@ namespace LunarCleanup.Core
         public static readonly List<PerkDef> Perks = new List<PerkDef>
         {
             new PerkDef { id = "bomb", name = "Putzbombe", icon = "B", kind = 0, desc = "Reinigt bis zu 5 Parzellen auf einmal rund um die Stelle, die du antippst" },
-            new PerkDef { id = "nuke", name = "Putz-Nuke", icon = "N", kind = 0, desc = "Reinigt auf einen Schlag so viel wie möglich – bis zu 60 Parzellen im großen Umkreis" },
+            new PerkDef { id = "nuke", name = "Putz-Nuke", icon = "N", kind = 0, desc = "ULTIMATE: reinigt auf einen Schlag bis zu 60 Parzellen im großen Umkreis – sehr teuer, du trägst nur eine" },
             new PerkDef { id = "kaercher", name = "Hochdruck-Kärcher", icon = "K", kind = 0, desc = "Eine schnurgerade Schneise: reinigt bis zu 8 Parzellen in einer Linie, von der Basis aus durch die Stelle, die du antippst" },
             new PerkDef { id = "foam", name = "Schaumkanone", icon = "S", kind = 0, desc = "Weicht im Umkreis von 15 m allen Schmutz ein – danach wischst du ihn mit einem Streich weg (70 % schon gelöst)" },
             new PerkDef { id = "tornado", name = "Staubsauger-Tornado", icon = "W", kind = 0, desc = "Ein kleiner Wirbelsturm saust 25 Sekunden über den Planeten und saugt Parzelle um Parzelle weg" },
@@ -45,7 +45,7 @@ namespace LunarCleanup.Core
            Dazu: man trägt nur wenige Ladungen (Nuke 2). */
         static readonly Dictionary<string, (double f, int cap)> PerkVal = new Dictionary<string, (double, int)>
         {
-            { "bomb", (1, 10) }, { "nuke", (10, 2) }, { "kaercher", (2, 5) }, { "foam", (1.2, 8) }, { "tornado", (4, 3) },
+            { "bomb", (1, 10) }, { "nuke", (60, 1) } /* Fabian 03.11.: Ultimate – sehr teuer, nur eine Ladung */, { "kaercher", (2, 5) }, { "foam", (1.2, 8) }, { "tornado", (4, 3) },
             { "turbo", (.8, 6) }, { "wide", (.8, 6) }, { "magnet", (.6, 6) }, { "espresso", (1.5, 4) }, { "goldmop", (2.5, 4) }, { "rohrpost", (1, 6) }, { "helper", (6, 99) },
         };
         const double PERK_INC_MIN = 2; /* Faktor 1 = 2 min Einkommen */ const float HEAT_DECAY = 600;

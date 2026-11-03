@@ -39,6 +39,8 @@ namespace LunarCleanup.Core
             Toast(on ? "Hard Mode: du putzt selbst – dein Sammelshuttle bringt die Ladung zur Basis, alles bringt dreimal so viel" : "Zurück im normalen Spiel", "good");
         }
         /// <summary>Fabian 03.11.: im Hard Mode fliegt ein Shuttle statt des Sammelwagens.</summary>
+        /// <summary>Fabian 03.11.: im Hard Mode verdienst du weniger nebenbei – Reisen zum nächsten Planeten kostet nur 40 %.</summary>
+        public static double UnlockCost(string pid) => Math.Round(GameData.Planets[pid].unlockCost * (Hard ? .4 : 1));
         public static string CartName => Hard ? "Sammelshuttle" : "Sammelwagen";
         /// <summary>Sammelshuttle fliegt geradeaus über alles hinweg (1,4× schneller), der Sammelwagen fährt über die Wege.</summary>
         static bool CartMove(PState ps, CartSave c, Vector3 to, float step, int x)
