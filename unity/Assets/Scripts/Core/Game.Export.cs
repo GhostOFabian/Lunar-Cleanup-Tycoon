@@ -8,14 +8,16 @@ namespace LunarCleanup.Core
 {
     public static partial class Game
     {
-        public const float XPORT_VALUE = .4f, XPORT_FROM = .9f, XPORT_RATE = .03f;
+        public const float XPORT_FROM = .9f, XPORT_RATE = .03f;
+        public static float XPORT_VALUE => S != null && S.owned.Contains("xlic") ? .6f : .4f; /* Shop: Export-Lizenz */
+        public static string XportPct => Mathf.RoundToInt(XPORT_VALUE * 100) + " %";
         public static bool XportOpen(PState ps) => Gs(ps) >= 3 && ps.bld.Contains("roh");
         public static double XportCost(PState ps) => Math.Round(250000 * Math.Pow(6, Math.Max(0, Gs(ps) - 3)));
         public static string XportWhy(PState ps) => ps.sv.xport ? "" : !XportOpen(ps) ? "Erst Basisstufe 3" : S.credits < XportCost(ps) ? Lacks(XportCost(ps)) : "";
         public static bool BuyXport(PState ps)
         {
             if (ps.sv.xport) return false; string w = XportWhy(ps); if (w != "") return Fail(w);
-            S.credits -= XportCost(ps); ps.sv.xport = true; Toast("Export-Frachter auf " + ps.P.name + " · volle Lager laufen nicht mehr über, der Überschuss bringt 40 % des Werts", "good"); Save(); return true;
+            S.credits -= XportCost(ps); ps.sv.xport = true; Toast("Export-Frachter auf " + ps.P.name + " · volle Lager laufen nicht mehr über, der Überschuss bringt " + XportPct + " des Werts", "good"); Save(); return true;
         }
         /// <summary>Teil der Simulation (live und offline): Überschuss abnehmen und bezahlen.</summary>
         static void XportStep(PState ps, float dt)

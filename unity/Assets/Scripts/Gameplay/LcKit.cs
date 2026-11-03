@@ -328,7 +328,8 @@ namespace LunarCleanup.Gameplay
 
         // ---------- Fahrzeuge, Suchtrupp, Drohnen ----------
         /// <summary>Erkennungsfarbe je Fahrzeugtyp (LC_akzent) – wie bisher, damit man die Typen im Gewimmel unterscheidet.</summary>
-        static Color BodyOf(VehDef T, Color acc) => T.key == "staubi" ? Hex("#d9dee6") : T.key == "buggy" ? Hex("#ffbf4d") : T.key == "sauger" ? Hex("#58cdb4") : T.key == "truck" ? Hex("#e2553a") :
+        static Color BodyOf(VehDef T, Color acc) => LunarCleanup.Core.Platform.Owned("skin_gold") ? Hex("#e3b341") : BodyOf0(T, acc); /* Shop: Goldflotte */
+        static Color BodyOf0(VehDef T, Color acc) => T.key == "staubi" ? Hex("#d9dee6") : T.key == "buggy" ? Hex("#ffbf4d") : T.key == "sauger" ? Hex("#58cdb4") : T.key == "truck" ? Hex("#e2553a") :
             T.key == "schwebe" ? Hex("#6fe0ff") : T.key == "magnetgleiter" ? Hex("#b79cff") : acc;
         /// <summary>Der FBX-Export dreht die Modelle um 180° (Vorderseite −Z, „Eigene Modelle prüfen“ meldet es). Hier ausgeglichen, damit Fahrzeuge vorwärts fahren.
         /// Wird in Blender mit FRONT_FLIP = True neu exportiert, hier 0 eintragen.</summary>

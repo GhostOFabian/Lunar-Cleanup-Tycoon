@@ -71,7 +71,7 @@ namespace LunarCleanup.Core
                     else Add(s, nm, 0, "Läuft – Puffer " + Mathf.RoundToInt(f * 100) + " %");
                 }
             }
-            if (rf > .97f && sv.xport) Add("roh", "Rohstofflager", 0, "Voll – der Export-Frachter nimmt den Überschuss ab (40 % des Werts, bisher " + Fmt(sv.xEarn) + " Cr).");
+            if (rf > .97f && sv.xport) Add("roh", "Rohstofflager", 0, "Voll – der Export-Frachter nimmt den Überschuss ab (" + XportPct + " des Werts, bisher " + Fmt(sv.xEarn) + " Cr).");
             else if (rf > .97f) Add("roh", "Rohstofflager", 2, "Voll – Maschinen verarbeiten zu wenig. (Ab 97 % geht der Überschuss zur Rakete.)", "rohcap", "mspeed", "sellcap");
             else if (rf > .85f && sv.xport) Add("roh", "Rohstofflager", 0, "Läuft – der Export-Frachter hält Platz frei (bisher " + Fmt(sv.xEarn) + " Cr).");
             else if (rf > .85f) Add("roh", "Rohstofflager", 1, "Fast voll.", "rohcap", "sellcap", "bspeed"); else Add("roh", "Rohstofflager", 0, "Läuft – " + Mathf.RoundToInt(rf * 100) + " % belegt");

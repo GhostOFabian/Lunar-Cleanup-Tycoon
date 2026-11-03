@@ -51,24 +51,30 @@ namespace LunarCleanup.Core
             if (!Cloud.SignedIn) return; if (!force && Time.unscaledTime - lastUp < 120) return; lastUp = Time.unscaledTime; Cloud.Upload(json, stamp);
         }
 
-        /// <summary>Platzhalter-Angebote. Preise sind Beispiele; echte Preise kommen später aus dem Store (Unity IAP).</summary>
-        /// <summary>Angebote ohne Geld-Pakete: Komfort, Platz, Zeit und Aussehen – nichts, was man in Minuten selbst erspielt.</summary>
+        /// <summary>Fabian 03.11.: Angebote, die zum Spiel passen – Komfort, Zeit, Schutz und Aussehen. Keine zusätzlichen Fahrzeuge, keine Geld-Pakete.
+        /// Preise sind Beispiele; echte Preise kommen später aus dem Store (Unity IAP).</summary>
         public static readonly List<ShopOffer> Offers = new List<ShopOffer>
         {
-            new ShopOffer { id = "slot", name = "Zusätzlicher Fahrzeugplatz", desc = "+1 Fahrzeug über der Obergrenze – auf jedem Planeten, dauerhaft (bis zu 3-mal)", price = "1,99 €" },
-            new ShopOffer { id = "cargo2", name = "Großer Frachtraum", desc = "Jede Rakete fasst dauerhaft 50 % mehr", price = "2,99 €" },
-            new ShopOffer { id = "offline24", name = "Langschläfer", desc = "Offline-Zeit dauerhaft auf 24 Stunden", price = "4,99 €" },
-            new ShopOffer { id = "timeskip", name = "Zeitsprung 4 h", desc = "Deine Basis arbeitet sofort 4 Stunden (wie offline)", price = "1,99 €", consumable = true },
-            new ShopOffer { id = "season", name = "Saisonpass", desc = "Eigene Saisonziele mit Lackierungen, Leuchtfarben und Basis-Themen als Belohnung", price = "4,99 €" },
-            new ShopOffer { id = "skin_gold", name = "Goldflotte", desc = "Goldene Lackierung für alle Fahrzeuge und Drohnen", price = "1,99 €" },
-            new ShopOffer { id = "theme_neon", name = "Neon-Basis", desc = "Leuchtende Kanten an Gebäuden und Bändern bei Nacht", price = "1,99 €" },
-            new ShopOffer { id = "noads", name = "Werbefrei", desc = "Für immer ohne Werbung – Bonus-Belohnungen gibt es trotzdem", price = "3,99 €" },
+            new ShopOffer { id = "offline24", name = "Langschläfer", desc = "Deine Basis arbeitet offline bis zu 24 Stunden statt 8 – dauerhaft", price = "3,99 €" },
+            new ShopOffer { id = "timeskip", name = "Zeitsprung 4 h", desc = "Alle Planeten arbeiten sofort 4 Stunden weiter (wie offline)", price = "0,99 €", consumable = true },
+            new ShopOffer { id = "cargo2", name = "Großer Frachtraum", desc = "Jede Rakete fasst dauerhaft 50 % mehr – weniger Wartezeit bis zum Start", price = "2,99 €" },
+            new ShopOffer { id = "xlic", name = "Export-Lizenz", desc = "Der Export-Frachter zahlt 60 % statt 40 % des Werts – auf allen Planeten", price = "1,99 €" },
+            new ShopOffer { id = "insure", name = "Meteor-Versicherung", desc = "Kommt ein Riesenmeteor durch, ist der Schaden nur halb so groß und die Lager bleiben voll", price = "2,99 €" },
+            new ShopOffer { id = "sd50", name = "Sternenstaub-Beutel", desc = "+50 Sternenstaub für Forschung und Sonderwünsche", price = "0,99 €", consumable = true },
+            new ShopOffer { id = "skin_gold", name = "Goldflotte", desc = "Goldene Lackierung für alle Fahrzeuge (nur Aussehen)", price = "1,99 €" },
+            new ShopOffer { id = "supporter", name = "Unterstützer-Paket", desc = "Langschläfer, Großer Frachtraum, Meteor-Versicherung, Goldflotte und 100 Sternenstaub – du unterstützt die Entwicklung", price = "7,99 €" },
         };
+        public static bool Owned(string id) => Game.S != null && Game.S.owned.Contains(id);
         /// <summary>Wirkung eines bestätigten Kaufs (wird erst nach echter Store-Bestätigung aufgerufen).</summary>
         public static void Grant(string id)
         {
             var S = Game.S; if (S == null) return;
-            if (id == "slot") { if (S.extraSlots < 3) S.extraSlots++; return; }
+            switch (id)
+            {
+                case "timeskip": Game.TimeSkip(4 * 3600); return;
+                case "sd50": S.stardust += 50; return;
+                case "supporter": foreach (var x in new[] { "offline24", "cargo2", "insure", "skin_gold" }) if (!S.owned.Contains(x)) S.owned.Add(x); S.stardust += 100; return;
+            }
             if (!S.owned.Contains(id)) S.owned.Add(id);
         }
 

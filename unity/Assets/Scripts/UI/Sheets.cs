@@ -159,7 +159,7 @@ namespace LunarCleanup.UI
         /// <summary>Fabian 01.11.: Ampel zeigt den Zustand jeder Station; bei Gelb/Rot steht das Problem dabei und direkt darunter die Upgrades, die es beheben.</summary>
         static bool xportShown;
         /// <summary>Fabian 02.11.: Ausweg aus dem Stau im späten Spiel.</summary>
-        static void XportRow(Hud h) => h.Row("Export-Frachter", () => ps.sv.xport ? "Nimmt alles über 90 % Lagerfüllung ab und zahlt 40 % des Werts · bisher " + Game.Fmt(ps.sv.xEarn) + " Cr" : "Volle Lager laufen nicht mehr über: Überschuss ab 90 % wird für 40 % des Werts verkauft. Die Basis steht nie mehr still.",
+        static void XportRow(Hud h) => h.Row("Export-Frachter", () => ps.sv.xport ? "Nimmt alles über 90 % Lagerfüllung ab und zahlt " + Game.XportPct + " des Werts · bisher " + Game.Fmt(ps.sv.xEarn) + " Cr" : "Volle Lager laufen nicht mehr über: Überschuss ab 90 % wird für " + Game.XportPct + " des Werts verkauft. Die Basis steht nie mehr still.",
             () => ps.sv.xport ? "Aktiv" : Game.Fmt(Game.XportCost(ps)) + " Cr", () => !ps.sv.xport && Game.XportWhy(ps) == "", () => Game.BuyXport(ps), true, null, true, () => ps.sv.xport ? "" : Game.XportWhy(ps));
         static void Ampel(Hud h)
         {
@@ -783,7 +783,7 @@ namespace LunarCleanup.UI
                 () => Platform.Cloud.SignedIn ? "Verbunden" : "Anmelden", () => !Platform.Cloud.SignedIn, () => Platform.Cloud.SignIn(ok => Game.Toast(ok ? "Angemeldet – Spielstand wird gesichert" : "Anmeldung kommt mit der Handy-Version", ok ? "good" : "")), false);
             h.Section("Shop (Vorschau)");
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");
-            foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => oo.price, () => true, () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
+            foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => !oo.consumable && Platform.Owned(oo.id) ? "Gekauft" : oo.price, () => oo.consumable || !Platform.Owned(oo.id), () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
             h.Section("Über");
             h.Note("Lunar Cleanup Tycoon · " + Game.VersionText + ". Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp; Modelle von Fabian.");
         }

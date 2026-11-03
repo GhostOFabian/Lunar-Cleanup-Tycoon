@@ -12,6 +12,7 @@ namespace LunarCleanup.Gameplay
         Transform defRoot; string defFor; int defVer = -1, defMs = -1, defFlak = -1;
         GameObject shieldGo, flakGo; Transform shieldSpin, flakTurret; Material shieldField; Vector2 shieldAt, flakAt; object flakAim;
         const float DEF_FP = 2.4f;
+        Transform dome; Material domeMat; public float domeR = 30; public Vector3 domeAt; public float DomePulse;
         public Vector3? DefPos(int i) { var g = i == 0 ? shieldGo : flakGo; return g ? g.transform.position : (Vector3?)null; }
         /// <summary>Freier Platz an der Basis: nicht auf Gebäudeflächen (auch noch nicht gebauten), nicht auf Bändern, Laternen oder dem anderen Abwehrbau.</summary>
         Vector2? FreeSpot(Vector2 prefer, params Vector2[] avoid)
@@ -36,10 +37,18 @@ namespace LunarCleanup.Gameplay
         void BuildDefense()
         {
             defFor = ps.pid; defVer = ps.baseVersion; defMs = ps.sv.msLv; defFlak = ps.sv.flakLv;
-            if (defRoot) Destroy(defRoot.gameObject); defRoot = New("Abwehr"); shieldGo = flakGo = null; shieldSpin = flakTurret = null; shieldField = null;
+            if (defRoot) Destroy(defRoot.gameObject); if (domeMat) Destroy(domeMat); dome = null; domeMat = null; defRoot = New("Abwehr"); shieldGo = flakGo = null; shieldSpin = flakTurret = null; shieldField = null;
             Color acc = ps.P.col0; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero, sell = ps.lay.pos.ContainsKey("sell") ? ps.lay.pos["sell"] : Vector2.one * 10;
-            if (ps.sv.msLv > 0) { var sp = FreeSpot(hq + (hq - sell).normalized * 10); if (sp.HasValue) { shieldAt = sp.Value; shieldGo = PlaceDef("Abwehr/schild", shieldAt, acc, .85f + .05f * ps.sv.msLv); } }
+            /* Fabian 03.11.: Schildkuppel über der ganzen Basis – Mitte und Radius aus allen Basisparzellen, der Generator steht möglichst mittig */
+            Vector2 bc = Vector2.zero; int nb = 0; foreach (var cl in pd.cells) if (cl.IsBase) { bc += pd.PlanLocal(cl.c); nb++; } if (nb > 0) bc /= nb;
+            float br = 0; foreach (var cl in pd.cells) if (cl.IsBase) br = Mathf.Max(br, (pd.PlanLocal(cl.c) - bc).magnitude + cl.H * 1.25f); domeR = Mathf.Max(20, br + 3); domeAt = pd.Surf(pd.PlanDir(bc), 0);
+            if (ps.sv.msLv > 0) { var sp = FreeSpot(bc); if (sp.HasValue) { shieldAt = sp.Value; shieldGo = PlaceDef("Abwehr/schild", shieldAt, acc, .85f + .05f * ps.sv.msLv); } }
+            if (ps.sv.msLv > 0)
+            {
+                domeMat = GlowMat(Texture2D.whiteTexture, new Color(.35f, .75f, 1f, .05f)); var dg = MeshKit.Part(defRoot, MeshKit.Sphere, domeMat, Vector3.zero, Vector3.one); NoShadow(dg); dome = dg.transform;
+                dome.position = domeAt; dome.rotation = Quaternion.FromToRotation(Vector3.up, domeAt.normalized); dome.localScale = Vector3.one * domeR * 2f / Mathf.Max(.01f, defRoot.lossyScale.x);
+            }
             if (ps.sv.flakLv > 0) { var sp = shieldGo ? FreeSpot(sell + (sell - hq).normalized * 8, shieldAt) : FreeSpot(sell + (sell - hq).normalized * 8); if (sp.HasValue) { flakAt = sp.Value; flakGo = PlaceDef("Abwehr/flak", flakAt, acc, .9f + .03f * ps.sv.flakLv); } }
             if (shieldGo)
             {
@@ -66,6 +75,13 @@ namespace LunarCleanup.Gameplay
             if (ps == null) return;
             if (defFor != ps.pid || defVer != ps.baseVersion || defMs != ps.sv.msLv || defFlak != ps.sv.flakLv || !defRoot) { if (builtVersion == ps.baseVersion) BuildDefense(); else return; }
             float t = Time.time;
+            if (dome && domeMat)
+            {
+                /* Kuppel: bereit = zartes Blau (stärker, solange ein Riesenmeteor anfliegt), lädt nach = schwach orange, Batterie leer = aus; bei Abwehr blitzt sie auf */
+                DomePulse = Mathf.Max(0, DomePulse - Time.deltaTime * .6f); bool threat = Game.DoomActive && Game.S.doomPid == ps.pid;
+                Color c = ps.sv.msCool > 0 ? new Color(1f, .55f, .2f, .03f) : ps.sv.energy < 2 ? new Color(.35f, .75f, 1f, 0) : new Color(.35f, .75f, 1f, (threat ? .1f : .035f) + .015f * Mathf.Sin(t * 1.6f));
+                c.a += .35f * DomePulse; domeMat.SetColor("_BaseColor", c); dome.gameObject.SetActive(c.a > .004f && !MapMode);
+            }
             if (shieldSpin) shieldSpin.Rotate(Vector3.forward, (ps.sv.msCool > 0 ? 15 : 60) * Time.deltaTime, Space.Self);
             if (shieldField)
             {

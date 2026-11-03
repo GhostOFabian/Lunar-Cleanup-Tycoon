@@ -17,6 +17,8 @@ namespace LunarCleanup.Core
         /// <summary>Offene Offline-Zeit an alle anderen Planeten verteilen (vor dem Nachrechnen).</summary>
         public static void DeferOthers(float seconds) { foreach (var q in P.Values) if (q.pid != S.planet) q.sv.offPend = Mathf.Min(q.sv.offPend + seconds, OfflineCap); }
         public static string DevPend() => string.Join(" ", P.Values.Where(x => x.sv.offPend > 0).Select(x => x.pid + ":" + x.sv.offPend.ToString("0")));
+        /// <summary>Shop „Zeitsprung“: alle Planeten holen sofort zusätzliche Zeit nach (über das Nachrechnen im Hintergrund).</summary>
+        public static void TimeSkip(float seconds) { foreach (var q in P.Values) q.sv.offPend = Mathf.Min(q.sv.offPend + seconds, seconds + OfflineCap); Toast("Zeitsprung: alle Planeten arbeiten " + Mathf.RoundToInt(seconds / 3600) + " Stunden weiter", "good"); Save(); }
         public static int PendingPlanets => P == null ? 0 : P.Values.Count(q => q.sv.offPend > .5f);
         /// <summary>Einen Planeten nachrechnen, höchstens budgetMs Millisekunden lang. Rückgabe: fertig?</summary>
         public static bool CatchUp(PState ps, float budgetMs)

@@ -26,22 +26,22 @@ namespace LunarCleanup.Gameplay
         /// <summary>Der Meteor wird vom Schild abgelenkt: Schildkuppel leuchtet auf, der Meteor prallt ab und fliegt davon.</summary>
         public void ShieldBlock()
         {
-            var bc = pd.cells[pd.baseCell]; var at = shieldGo ? shieldGo.transform.position : pd.Surf(bc.c, 0); var go = doomGo; doomGo = null; doomTo = Vector3.zero; StartCoroutine(Deflect(go, at));
+            var bc = pd.cells[pd.baseCell]; var at = dome ? domeAt : shieldGo ? shieldGo.transform.position : pd.Surf(bc.c, 0); DomePulse = 1; var go = doomGo; doomGo = null; doomTo = Vector3.zero; StartCoroutine(Deflect(go, at));
         }
         IEnumerator Deflect(GameObject go, Vector3 baseAt)
         {
-            var dome = MeshKit.Part(transform, MeshKit.Sphere, GlowMat(Texture2D.whiteTexture, new Color(.35f, .75f, 1f, .0f)), baseAt, Vector3.one * 70); NoShadow(dome); var dm = dome.GetComponent<MeshRenderer>().sharedMaterial;
+            float D0 = (dome ? domeR : 35) * 2; var flare = MeshKit.Part(transform, MeshKit.Sphere, GlowMat(Texture2D.whiteTexture, new Color(.35f, .75f, 1f, .0f)), baseAt, Vector3.one * D0); NoShadow(flare); var dm = flare.GetComponent<MeshRenderer>().sharedMaterial;
             Vector3 p0 = go ? go.transform.position : baseAt + baseAt.normalized * 60, v = Vector3.Reflect((baseAt - p0).normalized, baseAt.normalized) * 60 + Random.onUnitSphere * 10;
             Flash(p0, new Color(.6f, .85f, 1f)); Sfx.Play("big", 1.4f, .8f); Shake = Mathf.Max(Shake, .8f);
             float T = 0;
             while (T < 2.2f)
             {
                 float dt = Time.deltaTime; T += dt; float a = T < .25f ? T / .25f : Mathf.Clamp01(1 - (T - .25f) / 1.6f);
-                dm.SetColor("_BaseColor", new Color(.35f, .75f, 1f, .32f * a)); dome.transform.localScale = Vector3.one * (70 + 8 * T);
+                dm.SetColor("_BaseColor", new Color(.35f, .75f, 1f, .32f * a)); flare.transform.localScale = Vector3.one * (D0 + 8 * T);
                 if (go) { go.transform.position += v * dt; go.transform.localScale *= 1 - dt * .5f; }
                 yield return null;
             }
-            Destroy(dome); if (go) Destroy(go);
+            Destroy(flare); Destroy(dm); if (go) Destroy(go);
         }
         /// <summary>Ohne Abwehr: der Meteor stürzt das letzte Stück auf die Basis, danach Explode().</summary>
         public IEnumerator DoomDive()

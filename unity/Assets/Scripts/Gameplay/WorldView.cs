@@ -930,16 +930,37 @@ namespace LunarCleanup.Gameplay
             }
         }
 
+        /* Fabian 03.11.: Fahrzeuge fahren nicht mehr ineinander – sie stoßen sich ab und weichen seitlich aus (nur die Darstellung; die Simulation bleibt gleich) */
+        readonly Dictionary<int, Vector3> vehOff = new Dictionary<int, Vector3>(); readonly List<(int id, Vector3 p, float r, bool fix)> vehNear = new List<(int, Vector3, float, bool)>();
+        static readonly HashSet<string> VehFixed = new HashSet<string> { "unload", "unloadRoh", "rigload", "load", "liftwait", "lifted", "repair", "stdrop", "drop", "mineCr", "boom" };
+        void VehAvoid()
+        {
+            vehNear.Clear();
+            foreach (var v in ps.sv.veh) { var T = GameData.Veh[v.type]; if (T.fly || v.mode == "lifted") continue; vehNear.Add((v.id, v.d * pd.R, VehRadius(v.type), VehFixed.Contains(v.mode))); }
+            float k = 1 - Mathf.Exp(-5f * Time.deltaTime);
+            for (int i = 0; i < vehNear.Count; i++)
+            {
+                var a = vehNear[i]; vehOff.TryGetValue(a.id, out var off); if (a.fix) { vehOff[a.id] = Vector3.Lerp(off, Vector3.zero, k); continue; }
+                Vector3 push = Vector3.zero, pa = a.p + off, up = a.p.normalized;
+                for (int j = 0; j < vehNear.Count; j++)
+                {
+                    if (i == j) continue; var b = vehNear[j]; vehOff.TryGetValue(b.id, out var ob); var d = pa - (b.p + ob); d -= up * Vector3.Dot(d, up); float dist = d.magnitude, min = a.r + b.r;
+                    if (dist >= min) continue; if (dist < 1e-3f) d = Vector3.Cross(up, Vector3.right + Vector3.forward * (a.id % 7)).normalized * .01f; push += d.normalized * (min - dist) * (b.fix ? 1f : .6f); /* stehende Fahrzeuge schieben stärker */
+                }
+                var want = Vector3.ClampMagnitude(off * .985f + push, 3.2f); want -= up * Vector3.Dot(want, up); vehOff[a.id] = Vector3.Lerp(off, want, k);
+            }
+        }
+        static float VehRadius(string type) => type == "truck" || type == "kryokoloss" || type == "lavapanzer" ? 1.7f : type == "staubi" ? .9f : 1.25f;
         void SyncVehicles()
         {
             var alive = new HashSet<int>();
-            Color acc = ps.P.col0;
+            Color acc = ps.P.col0; VehAvoid();
             foreach (var v in ps.sv.veh)
             {
                 alive.Add(v.id);
                 if (!vehs.TryGetValue(v.id, out var vp)) { vp = Models.Vehicle(GameData.Veh[v.type], acc); vp.root.transform.SetParent(vehRoot, false); vp.root.transform.position = v.d * pd.R; AddHeadlight(vp); vehs[v.id] = vp; }
                 float air = v.mode == "lifted" && liftAlt.TryGetValue(v.lift, out var la) ? Mathf.Max(0, la - 2.8f) : 0;
-                var tr = vp.root.transform; var target = pd.Surf(v.d, air); var mv = target - tr.position; var up = GameData.Veh[v.type].fly ? v.d : Vector3.Slerp(v.d, pd.SurfNormal(v.d), .85f); // Bodenfahrzeuge neigen sich mit dem Gelände
+                var tr = vp.root.transform; var target = pd.Surf(vehOff.TryGetValue(v.id, out var vo) ? (v.d * pd.R + vo).normalized : v.d, air); var mv = target - tr.position; var up = GameData.Veh[v.type].fly ? v.d : Vector3.Slerp(v.d, pd.SurfNormal(v.d), .85f); // Bodenfahrzeuge neigen sich mit dem Gelände
                 var fwd = mv - up * Vector3.Dot(mv, up);
                 Quaternion rot = fwd.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(fwd.normalized, up) : Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, up).normalized + up * 1e-4f, up);
                 tr.position = target; tr.rotation = Quaternion.Slerp(tr.rotation, rot, 1 - Mathf.Exp(-8 * Time.deltaTime));
@@ -947,7 +968,7 @@ namespace LunarCleanup.Gameplay
                 if (vp.tool) vp.tool.Rotate(Vector3.up, (v.mode == "clean" ? 900 : 60) * Time.deltaTime, Space.Self);
                 if (v.mode == "clean" && Random.value < Time.deltaTime * 12) EmitDust(v.d, GameData.Dirt[pd.cells[v.cell >= 0 ? v.cell : 0].type].lightC, 2);
             }
-            foreach (var id in vehs.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(vehs[id].root); vehs.Remove(id); }
+            foreach (var id in vehs.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(vehs[id].root); vehs.Remove(id); vehOff.Remove(id); }
         }
 
         Material PoolMat()
