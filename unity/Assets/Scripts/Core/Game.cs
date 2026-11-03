@@ -480,9 +480,9 @@ namespace LunarCleanup.Core
         }
         static void LoadCart(PState ps)
         {
-            var c = ps.sv.cart; float tot = HandSum(), free = CartCap() - Sum(c.tank); float amt = Mathf.Min(tot, free); if (amt <= .05f) { Fail("Der Sammelwagen ist voll"); return; }
+            var c = ps.sv.cart; float tot = HandSum(), free = CartCap() - Sum(c.tank); float amt = Mathf.Min(tot, free); if (amt <= .05f) { Fail(CartName + " ist voll"); return; }
             float k = amt / tot; for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; c.tank[m] += x; }
-            c.mode = "back"; c.to = ""; c.wt = 0; S.stats.handUnloads++; Toast(Fmt(amt) + " E in den Sammelwagen", "good");
+            c.mode = "back"; c.to = ""; c.wt = 0; S.stats.handUnloads++; Toast(Fmt(amt) + " E an " + CartName + " übergeben", "good");
         }
         static void CartStep(PState ps, float dt)
         {
@@ -491,11 +491,11 @@ namespace LunarCleanup.Core
             {
                 case "park":
                     if (tot > .05f) { c.mode = "back"; c.wt = 0; break; }
-                    if (here && HandSum() >= HandCap() * .95f) { c.mode = "go"; Toast("Der Sammelwagen kommt zu dir", "good"); break; }
-                    NavMove(ps, c, pd.PlanDir(ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start), step, -1); break;
+                    if (here && HandSum() >= HandCap() * .95f) { c.mode = "go"; Toast(CartName + " kommt zu dir", "good"); break; }
+                    CartMove(ps, c, pd.PlanDir(ps.bld.Contains("werkstatt") ? ps.lay.shop : ps.lay.start), step, -1); break;
                 case "go":
                     if (!here) { c.mode = tot > .05f ? "back" : "park"; c.wt = 0; break; }
-                    if (pd.Arc(c.d, CartGoal) < 3.2f || NavMove(ps, c, CartGoal, step, -1)) { c.mode = "wait"; c.wt = 0; Toast("Der Sammelwagen ist da – tippe auf deinen Behälter", "good"); }
+                    if (pd.Arc(c.d, CartGoal) < 3.2f || CartMove(ps, c, CartGoal, step, -1)) { c.mode = "wait"; c.wt = 0; Toast(CartName + " ist da – tippe auf deinen Behälter", "good"); }
                     break;
                 case "wait":
                     if (!here) { c.mode = tot > .05f ? "back" : "park"; c.wt = 0; break; }
@@ -504,17 +504,19 @@ namespace LunarCleanup.Core
                     break;
                 case "back":
                     if (tot < .05f) { c.mode = "park"; c.to = ""; break; }
-                    if (string.IsNullOrEmpty(c.to) || (c.to != "roh" && !ps.bld.Contains(c.to)))
+                    if (string.IsNullOrEmpty(c.to) || (c.to != "roh" && c.to != "depot" && !ps.bld.Contains(c.to)))
                     {
                         c.to = "roh"; float bf = 1; foreach (var s in GameData.Stations) if (ps.bld.Contains(s)) { float f = StBuf(ps, s) - Sum(ps.st[s].buf); if (f > bf) { bf = f; c.to = s; } }
+                        if (Hard && c.to == "roh" && RohCap(ps) - RohSum(ps) <= 1) c.to = "depot"; /* Fabian 03.11.: alles voll – ab ins Zwischenlager */
                     }
-                    { var p = ps.lay.pos[c.to]; var dropAt = c.to == "roh" ? p + new Vector2(-GameData.Bld["roh"].fp - 1.6f, 0) : StLoc(ps, c.to, 6.4f, 0); var dd = pd.PlanDir(dropAt); c.wt += dt;
+                    { var dropAt = c.to == "depot" ? DepotPos(ps) : c.to == "roh" ? ps.lay.pos["roh"] + new Vector2(-GameData.Bld["roh"].fp - 1.6f, 0) : StLoc(ps, c.to, 6.4f, 0); var dd = pd.PlanDir(dropAt); c.wt += dt;
                       /* Fabian 01.11.: Wagen blieb stehen („bringt gerade eine Ladung weg“), wenn der Abladeplatz im neuen Layout nicht erreichbar war – nah dran oder nach 40 s wird trotzdem abgeladen */
-                      if (NavMove(ps, c, dd, step, -1) || pd.Arc(c.d, dd) < 4f || c.wt > 40) { c.mode = "drop"; c.wt = 0; } }
+                      if (CartMove(ps, c, dd, step, -1) || pd.Arc(c.d, dd) < 4f || c.wt > 40) { c.mode = "drop"; c.wt = 0; } }
                     break;
                 case "drop":
                     {
-                        float[] dst = c.to == "roh" ? ps.sv.roh : ps.st[c.to].buf; float free = c.to == "roh" ? RohCap(ps) - RohSum(ps) : StBuf(ps, c.to) - Sum(dst);
+                        bool dep = c.to == "depot"; if (dep) HardDepot(ps);
+                        float[] dst = dep ? ps.sv.depot : c.to == "roh" ? ps.sv.roh : ps.st[c.to].buf; float free = dep ? float.MaxValue : c.to == "roh" ? RohCap(ps) - RohSum(ps) : StBuf(ps, c.to) - Sum(dst);
                         float amt = Mathf.Min(tot, free, 30 * dt); if (amt > 0) { float k = amt / tot; for (int m = 0; m < NM; m++) { float x = c.tank[m] * k; c.tank[m] -= x; dst[m] += x; } }
                         c.wt += dt; if (Sum(c.tank) < .05f) { Array.Clear(c.tank, 0, NM); c.mode = "park"; } else if (free <= .05f && c.wt > 4) { c.to = ""; c.mode = "back"; c.wt = 0; }
                         break;
@@ -1740,7 +1742,7 @@ namespace LunarCleanup.Core
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
-            if (Hard) { HardCart(ps); CartStep(ps, dt); PerkStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
+            if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
             EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

@@ -91,7 +91,7 @@ namespace LunarCleanup.Core
         public float offPend;                    // Offline-Zeit, die dieser Planet noch nachrechnen muss (s)
         public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
         public List<BPosSave> bMove = new List<BPosSave>();
-        public List<HelperSave> helpers = new List<HelperSave>(); public int helperNext; public List<FKV> perkHeat = new List<FKV>(); /* 03.11.: Perk-Preisaufschlag je Kauf, sinkt mit der Zeit */   // 03.11.: Putzhelfer (Hard Mode)          // 03.11.: verschobene Gebäude
+        public List<HelperSave> helpers = new List<HelperSave>(); public int helperNext; public List<FKV> perkHeat = new List<FKV>(); public float[] depot; /* 03.11.: Zwischenlager des Sammelshuttles (Hard Mode), null = leer */ /* 03.11.: Perk-Preisaufschlag je Kauf, sinkt mit der Zeit */   // 03.11.: Putzhelfer (Hard Mode)          // 03.11.: verschobene Gebäude
     }
 
     [Serializable]

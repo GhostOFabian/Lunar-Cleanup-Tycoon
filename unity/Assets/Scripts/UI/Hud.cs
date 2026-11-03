@@ -215,11 +215,11 @@ namespace LunarCleanup.UI
         GameObject cargoTip; Image cargoTipImg; public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
         void BuildPerkBar()
         {
-            var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+            var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.childControlHeight = true; /* 03.11.: feste Breite – ein einzelner Shop-Knopf wurde sonst riesig */
             for (int i = 0; i < 7; i++)
             {
                 string id = i == 6 ? "shop" : "";
-                int slot = i; var b = UiKit.Btn(row, "Perk " + i, () => PerkTap(slot), Pal.Glass, 12); var img = b.GetComponent<Image>();
+                int slot = i; var b = UiKit.Btn(row, "Perk " + i, () => PerkTap(slot), Pal.Glass, 12); var img = b.GetComponent<Image>(); UiKit.LE(b, -1, -1, 0, 48).minWidth = 40;
                 var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 7; t.fontSizeMax = 11;
                 pbBtns.Add((id, img, t)); /* nicht in bottomBtns: die blenden alles wieder ein, auch leere Plätze */
             }

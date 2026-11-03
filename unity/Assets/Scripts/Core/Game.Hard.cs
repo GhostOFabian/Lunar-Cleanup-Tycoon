@@ -36,7 +36,39 @@ namespace LunarCleanup.Core
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon";
             Save(); OnPlanetChanged?.Invoke();
-            Toast(on ? "Hard Mode: du putzt selbst – dein Sammelwagen bringt die Ladung zur Basis, alles bringt dreimal so viel" : "Zurück im normalen Spiel", "good");
+            Toast(on ? "Hard Mode: du putzt selbst – dein Sammelshuttle bringt die Ladung zur Basis, alles bringt dreimal so viel" : "Zurück im normalen Spiel", "good");
+        }
+        /// <summary>Fabian 03.11.: im Hard Mode fliegt ein Shuttle statt des Sammelwagens.</summary>
+        public static string CartName => Hard ? "Sammelshuttle" : "Sammelwagen";
+        /// <summary>Sammelshuttle fliegt geradeaus über alles hinweg (1,4× schneller), der Sammelwagen fährt über die Wege.</summary>
+        static bool CartMove(PState ps, CartSave c, Vector3 to, float step, int x)
+        {
+            if (!Hard) return NavMove(ps, c, to, step, x);
+            float rad = step * 1.4f / ps.pd.R, ang = Vector3.Angle(c.d, to) * Mathf.Deg2Rad; if (ang <= rad || ang < 1e-4f) { c.d = to.normalized; return true; }
+            c.d = Vector3.Slerp(c.d.normalized, to.normalized, rad / ang).normalized; return false;
+        }
+        static void HardDepot(PState ps) { if (ps.sv.depot == null || ps.sv.depot.Length != NM) { var o = ps.sv.depot; ps.sv.depot = new float[NM]; if (o != null) Array.Copy(o, ps.sv.depot, Math.Min(o.Length, NM)); } }
+        public static float DepotSum(PState ps) => ps.sv.depot == null ? 0 : Sum(ps.sv.depot);
+        static readonly System.Collections.Generic.Dictionary<string, (int v, Vector2 p)> depotPos = new System.Collections.Generic.Dictionary<string, (int, Vector2)>();
+        /// <summary>Platz des Zwischenlagers: freie Basisfläche nahe dem Rohstofflager, mit Abstand zu allen Gebäuden.</summary>
+        public static Vector2 DepotPos(PState ps)
+        {
+            if (depotPos.TryGetValue(ps.pid, out var cp) && cp.v == ps.baseVersion) return cp.p;
+            var pd = ps.pd; var roh = ps.lay.pos.ContainsKey("roh") ? ps.lay.pos["roh"] : Vector2.zero; var hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var away = (roh - hq).sqrMagnitude > .01f ? (roh - hq).normalized : Vector2.left;
+            Vector2 best = roh + away * 10; float bs = float.MaxValue;
+            for (float r = 6; r <= 40; r += 2) for (int k = 0; k < 24; k++)
+            {
+                float a = k * Mathf.PI / 12; var q = roh + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r; int cl = pd.CellOf(pd.PlanDir(q)); if (cl < 0 || !pd.cells[cl].IsBase) continue;
+                bool ok = true; foreach (var kv in ps.lay.pos) { if (!GameData.Bld.ContainsKey(kv.Key)) continue; if ((kv.Value - q).magnitude < GameData.Bld[kv.Key].fp + 5f) { ok = false; break; } }
+                if (!ok) continue; float sc = r - Vector2.Dot(new Vector2(Mathf.Cos(a), Mathf.Sin(a)), away) * 4; if (sc < bs) { bs = sc; best = q; }
+            }
+            depotPos[ps.pid] = (ps.baseVersion, best); return best;
+        }
+        /// <summary>Zwischenlager gibt nach und nach ans Rohstofflager ab, sobald dort Platz ist (Simulation, live und offline).</summary>
+        static void DepotStep(PState ps, float dt)
+        {
+            if (ps.sv.depot == null) return; float tot = Sum(ps.sv.depot); if (tot < .01f) return; float free = RohCap(ps) - RohSum(ps); if (free <= .01f) return;
+            float amt = Mathf.Min(tot, free, 20 * dt), k = amt / tot; for (int m = 0; m < NM; m++) { float x = ps.sv.depot[m] * k; ps.sv.depot[m] -= x; ps.sv.roh[m] += x; }
         }
         /// <summary>Hard Mode: jeder Planet hat seinen Sammelwagen (kostenlos).</summary>
         static void HardCart(PState ps) { if (!Hard) return; var c = ps.sv.cart; if (!c.owned) { c.owned = true; c.d = ps.pd.PlanDir(ps.lay.start); c.mode = "park"; } }
@@ -45,8 +77,8 @@ namespace LunarCleanup.Core
         {
             if (!Hard) return false; var c = ps.sv.cart; HardCart(ps);
             if (c.mode == "wait" && ps.pd.Arc(c.d, CartGoal) < 9f) { LoadCart(ps); return true; }
-            if (c.mode == "back" || c.mode == "drop") { Toast("Der Sammelwagen bringt gerade eine Ladung weg – gleich ist er wieder da", ""); return true; }
-            c.mode = "go"; Toast("Der Sammelwagen kommt zu dir – tippe gleich noch einmal auf den Behälter", ""); return true;
+            if (c.mode == "back" || c.mode == "drop") { Toast(CartName + " bringt gerade eine Ladung weg – gleich ist es wieder da", ""); return true; }
+            c.mode = "go"; Toast(CartName + " kommt zu dir – tippe gleich noch einmal auf den Behälter", ""); return true;
         }
     }
 }

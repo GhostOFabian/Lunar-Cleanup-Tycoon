@@ -40,7 +40,7 @@ namespace LunarCleanup.UI
         /// <summary>Fabian 03.11.: Hard Mode aus dem Startmenü – was er ist und wie man ihn freischaltet.</summary>
         static void HardSheet(Hud h)
         {
-            h.Note("Ein eigener, neuer Spielstand ab dem Mond. Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme – du putzt alles selbst. Ein Sammelwagen bringt deine Ladung zur Basis, im Perk-Shop gibt es Bomben, Helfer und Buffs, und alles bringt dreimal so viel Geld. Dein normaler Spielstand bleibt unberührt.");
+            h.Note("Ein eigener, neuer Spielstand ab dem Mond. Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme – du putzt alles selbst. Ein fliegendes Sammelshuttle bringt deine Ladung zur Basis, im Perk-Shop gibt es Bomben, Helfer und Buffs, und alles bringt dreimal so viel Geld. Dein normaler Spielstand bleibt unberührt.");
             if (Game.Hard || Game.HardOpen)
             {
                 h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode ist frei", () => Game.Hard ? "Du spielst gerade den Hard Mode." : "Du kannst jederzeit wechseln – auch später in den Einstellungen.",
@@ -68,7 +68,7 @@ namespace LunarCleanup.UI
         static void UpRow(Hud h, string id)
         {
             var u = GameData.Up[id];
-            h.Row(u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : "") + (Game.UGoods(id).Length > 0 ? " · Top-Stufe braucht " + Game.GoodsTxt(Game.UGoods(id)) + " (Lager: " + Mathf.FloorToInt(Game.GoodAmt(Game.UGoods(id)[0].g)) + ")" : ""); },
+            h.Row(Game.Hard && id == "cartspd" ? "Schnelles Sammelshuttle" : u.name, () => { int l = Game.Lvl(id); return "Stufe " + l + "/" + u.max + (u.loc ? " · nur " + ps.P.name : "") + " · " + u.label + ": " + Game.UShow(id, l) + (l < u.max ? " → " + Game.UShow(id, l + 1) : "") + (Game.UGoods(id).Length > 0 ? " · Top-Stufe braucht " + Game.GoodsTxt(Game.UGoods(id)) + " (Lager: " + Mathf.FloorToInt(Game.GoodAmt(Game.UGoods(id)[0].g)) + ")" : ""); },
                 () => Game.Lvl(id) >= u.max ? "Max" : Cr(Game.UCost(id)), () => Game.Lvl(id) < u.max && Game.S.credits >= Game.UCost(id) && Game.HasGoods(Game.UGoods(id)),
                 () => { Game.BuyUpgrade(id); if (Game.Lvl(id) >= u.max) h.Rebuild(); }, true, null, false, () => { var ps0 = Game.Cur; string w = u.stage > 0 && Game.Gs(ps0) < u.stage ? "Erst Basisstufe " + u.stage : !Game.HasGoods(Game.UGoods(id)) ? "Es fehlen " + Game.GoodsTxt(Game.UGoods(id)) + " (von " + GameData.Planets[Game.Needs(ps0.pid)[0]].name + ")" : ""; return Game.Steps(w, Game.UCost(id)); }); /* Fabian 01.11.: Zeile bleibt stehen, erst bei Max wandert sie nach unten */
         }
@@ -84,11 +84,12 @@ namespace LunarCleanup.UI
         static readonly Color AccVeh = new Color(.43f, .95f, .82f), AccBld = new Color(1f, .75f, .3f), AccDrone = new Color(.5f, .7f, 1f);
         static void Vehicles(Hud h)
         {
-            if (Game.Hard) /* Fabian 03.11.: Hard Mode – nur der Sammelwagen */
+            if (Game.Hard) /* Fabian 03.11.: Hard Mode – nur das Sammelshuttle */
             {
-                h.Section("Hard Mode · Sammelwagen");
-                h.Note("Im Hard Mode putzt du alles selbst. Ist dein Behälter voll, tippe unten links auf ihn: Der Sammelwagen kommt zu dir, du lädst um, und er bringt die Ladung zur Entladestation oder ins Rohstofflager. Alles bringt dreimal so viel Geld.");
-                h.Row("Sammelwagen", () => { var c = ps.sv.cart; return (c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Wartet bei dir – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : c.mode == "drop" ? "Lädt ab" : "Steht bereit") + " · fasst " + Game.Fmt(Game.CartCap()) + " E (doppelter Behälter) · schneller mit dem Upgrade „Sammelwagen“"; }, () => "Rufen", () => ps.sv.cart.mode == "park", () => { ps.sv.cart.mode = "go"; });
+                h.Section("Hard Mode · Sammelshuttle");
+                h.Note("Im Hard Mode putzt du alles selbst. Ist dein Behälter voll, tippe unten links auf ihn: Das Sammelshuttle fliegt zu dir, du lädst um, und es bringt die Ladung zur Entladestation oder ins Rohstofflager. Ist dort alles voll, legt es im Zwischenlager ab – von dort geht es von selbst ins Lager, sobald Platz ist. Alles bringt dreimal so viel Geld.");
+                h.Row("Sammelshuttle", () => { var c = ps.sv.cart; return (c.mode == "go" ? "Fliegt zu dir" : c.mode == "wait" ? "Wartet bei dir – tippe auf deinen Behälter" : c.mode == "back" ? (c.to == "depot" ? "Fliegt ins Zwischenlager (alles voll)" : "Bringt die Ladung weg") : c.mode == "drop" ? "Lädt ab" : "Steht bereit") + " · fasst " + Game.Fmt(Game.CartCap()) + " E (doppelter Behälter) · schneller mit dem Upgrade „Schnelles Sammelshuttle“"; }, () => "Rufen", () => ps.sv.cart.mode == "park", () => { ps.sv.cart.mode = "go"; });
+                h.Row("Zwischenlager", () => Game.DepotSum(ps) < .5f ? "Leer – hier landet die Ladung, wenn Entladestation und Rohstofflager voll sind" : Game.Fmt(Game.DepotSum(ps)) + " E warten – gehen von selbst ins Rohstofflager, sobald dort Platz ist (größeres Lager hilft)");
                 return;
             }
             h.Tabs("Kaufen", "Flotte " + ps.sv.veh.Count + "/" + Game.VehSlots(ps)); /* Upgrades nur noch im Upgrades-Menü (Fabian 01.11.: keine doppelte Menüführung) */
@@ -818,7 +819,7 @@ namespace LunarCleanup.UI
                 h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
             }
             h.Section("Spielmodus");
-            h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelwagen bringt deine Ladung, dreifache Einnahmen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelwagen bringt deine Ladung zur Basis. Upgrades nur für Handgerät und Produktion, dafür bringt alles dreimal so viel. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
+            h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelshuttle bringt deine Ladung, dreifache Einnahmen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelshuttle bringt deine Ladung zur Basis. Upgrades nur für Handgerät und Produktion, dafür bringt alles dreimal so viel. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
                 () => Game.Hard ? "Zum normalen Spiel" : "Hard Mode spielen", () => Game.Hard || Game.HardOpen, () => { h.CloseSheet(); Game.SwitchHard(!Game.Hard); }, !Game.Hard, null, true, () => Game.Hard ? "" : Game.HardWhy);
             if (Game.AdminWeb) h.Row("Admin-Modus", () => "Nur für dich: Test-Knöpfe an, eigener Test-Spielstand (dein normaler Spielstand bleibt unberührt). Beenden und neu laden = normales Spiel.", () => "Beenden", () => true, () => { Game.Save(); PlayerPrefs.DeleteKey("LunarCleanup.Admin"); PlayerPrefs.Save(); Game.Toast("Admin-Modus aus – Seite neu laden", "good"); }, false);
             if (Debug.isDebugBuild && !Application.isEditor)

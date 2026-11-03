@@ -1058,14 +1058,45 @@ namespace LunarCleanup.Gameplay
             foreach (var id in drones.Keys.Where(k => !alive.Contains(k)).ToList()) { Destroy(drones[id].root); drones.Remove(id); droneAlt.Remove(id); }
         }
 
+        Models.DroneParts cartDp; bool cartFly; GameObject depotGo; Transform depotCrates; int depotN = -1; string depotFor; int depotVer = -1;
         void SyncCart()
         {
-            var c = ps.sv.cart; if (!c.owned) { if (cartGo) Destroy(cartGo); return; }
-            if (!cartGo) { cartGo = Models.Cart(); cartGo.transform.SetParent(vehRoot, false); cartGo.transform.position = pd.Surf(c.d); }
-            var tr = cartGo.transform; var target = pd.Surf(c.d); var mv = target - tr.position; var fwd = mv - c.d * Vector3.Dot(mv, c.d);
+            var c = ps.sv.cart; bool fly = Game.Hard; SyncDepot();
+            if (!c.owned) { if (cartGo) Destroy(cartGo); cartGo = null; return; }
+            if (cartGo && cartFly != fly) { Destroy(cartGo); cartGo = null; }
+            if (!cartGo)
+            {
+                cartFly = fly;
+                if (fly) { cartDp = Models.Drone(GameData.Hex("#ffbf4d"), false); cartGo = cartDp.root; cartGo.name = "Sammelshuttle"; cartGo.transform.localScale *= 1.6f; } /* Fabian 03.11.: Hard Mode – fliegendes Sammelshuttle */
+                else { cartDp = null; cartGo = Models.Cart(); }
+                cartGo.transform.SetParent(vehRoot, false); cartGo.transform.position = pd.Surf(c.d, fly ? 7 : 0);
+            }
+            var tr = cartGo.transform; bool low = c.mode == "wait" || c.mode == "drop"; float alt = !fly ? 0 : (low ? 3.2f : 7f) + Mathf.Sin(Time.time * 2.1f) * .25f;
+            var target = pd.Surf(c.d, alt); var mv = target - tr.position; var fwd = mv - c.d * Vector3.Dot(mv, c.d);
             if (fwd.sqrMagnitude > 1e-6f) tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(fwd.normalized, c.d), 1 - Mathf.Exp(-8 * Time.deltaTime));
             else tr.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(tr.forward, c.d).normalized + c.d * 1e-4f, c.d);
-            tr.position = target;
+            tr.position = fly ? Vector3.Lerp(tr.position, target, 1 - Mathf.Exp(-6 * Time.deltaTime)) : target;
+            if (cartDp != null) foreach (var r in cartDp.rotors) if (r) r.Rotate(Vector3.up, 1800 * Time.deltaTime, Space.Self);
+        }
+        /// <summary>Zwischenlager des Sammelshuttles: Landeplatz mit Kisten, je voller, desto mehr Kisten.</summary>
+        void SyncDepot()
+        {
+            bool show = Game.Hard; if (depotFor != ps.pid || depotVer != ps.baseVersion || (depotGo != null) != show) { if (depotGo) Destroy(depotGo); depotGo = null; depotN = -1; depotFor = ps.pid; depotVer = ps.baseVersion; }
+            if (!show) return;
+            if (!depotGo)
+            {
+                var p = Game.DepotPos(ps); var d = pd.PlanDir(p); depotGo = new GameObject("Zwischenlager"); depotGo.transform.SetParent(transform, false);
+                depotGo.transform.position = pd.Surf(d, 0); depotGo.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+                var padM = MeshKit.Mat(new Color(.22f, .25f, .3f), .2f, .5f); MeshKit.Cyl(depotGo.transform, padM, new Vector3(0, .05f, 0), 2.4f, 2.5f, .12f, 24);
+                var ring = MeshKit.Cyl(depotGo.transform, MeshKit.Glow(GameData.Hex("#ffbf4d"), 1.6f), new Vector3(0, .13f, 0), 2.1f, 2.1f, .03f, 24); NoShadow(ring);
+                depotCrates = new GameObject("Kisten").transform; depotCrates.SetParent(depotGo.transform, false);
+            }
+            float cap = Mathf.Max(1, Game.CartCap()); int n = Mathf.Clamp(Mathf.CeilToInt(Game.DepotSum(ps) / cap * 2), 0, 12);
+            if (n != depotN)
+            {
+                depotN = n; foreach (Transform t in depotCrates) Destroy(t.gameObject); var cm = MeshKit.Mat(new Color(.62f, .48f, .28f), 0, .6f);
+                for (int i = 0; i < n; i++) { int layer = i / 4, k = i % 4; var pos = new Vector3((k % 2 - .5f) * 1.1f, .45f + layer * .85f, (k / 2 - .5f) * 1.1f); MeshKit.Box(depotCrates, cm, pos, new Vector3(.9f, .8f, .9f)); }
+            }
         }
 
         // Leuchtsäule über einem Ereignis-Ort (z. B. Wrack-Absturz)

@@ -136,7 +136,7 @@ namespace LunarCleanup.Core
         // Ein Schauer bedeckt eine saubere Parzelle und 1–3 Nachbarn (auf fertigen Planeten 3–6) fast ganz mit Staub.
         // Die Parzellen bleiben „sauber“ (Fortschritt sinkt nicht), haben aber wieder Schmutz zum Abbauen – Arbeit für die Flotte.
         public const float DoneMeteorAmt = 3f;
-        public static float MeteorEvery(PState ps) => IsDone(ps.pid) ? Mathf.Max(90, 1200 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(150, 3000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
+        public static float MeteorEvery(PState ps) => (Hard ? 3f : 1f) /* Fabian 03.11.: im Hard Mode dreimal seltener – du putzt ja alles selbst */ * (IsDone(ps.pid) ? Mathf.Max(90, 1200 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(150, 3000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean)))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
         static void MeteorStep(PState ps, float dt)
         {
             if (ps.nClean < 3) return; ps.sv.met += dt; float iv = MeteorEvery(ps); int guard = 0;
