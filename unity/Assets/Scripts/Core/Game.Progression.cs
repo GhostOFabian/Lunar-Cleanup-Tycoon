@@ -95,7 +95,7 @@ namespace LunarCleanup.Core
         /// <summary>Alles, was gerade abholbar ist (Hauptziel, Tagesaufträge, Planetenziele) – für den Punkt am Ziele-Knopf.</summary>
         public static int ClaimableCount()
         {
-            var ps = Cur; if (ps == null) return 0; int n = PGoalsReady(ps) + AchPending();
+            var ps = Cur; if (ps == null) return 0; int n = PGoalsReady(ps) + AchPending(); n += HardGoalsClaimable();
             if (S.quest < Mathf.Min(QuestsSupported, GameData.Quests.Count) && QuestProgress(S.quest) >= 1) n++;
             if (S.contracts != null) foreach (var it in S.contracts.list) if (!it.done && ContractProg(it) >= it.target) n++;
             return n;

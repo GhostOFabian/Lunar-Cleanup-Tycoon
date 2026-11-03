@@ -1061,7 +1061,7 @@ namespace LunarCleanup.Gameplay
         Models.DroneParts cartDp; bool cartFly; GameObject depotGo; Transform depotCrates; int depotN = -1; string depotFor; int depotVer = -1;
         void SyncCart()
         {
-            var c = ps.sv.cart; bool fly = Game.Hard; SyncDepot();
+            var c = ps.sv.cart; bool fly = Game.Hard; SyncDepot(); UpdateWaveMark();
             if (!c.owned) { if (cartGo) Destroy(cartGo); cartGo = null; return; }
             if (cartGo && cartFly != fly) { Destroy(cartGo); cartGo = null; }
             if (!cartGo)

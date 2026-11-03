@@ -36,7 +36,7 @@ namespace LunarCleanup.Core
         public static float BuffLeft(string id) { var e = S.buffT.Find(x => x.k == id); return e == null ? 0 : e.v; }
         static float BuffF(string id, float f) => Hard && BuffLeft(id) > 0 ? f : 1;
         public static float GoldF => BuffF("goldmop", 3f); public static float EspressoF => BuffF("espresso", 3f);
-        public static float PowerF => BuffF("turbo", 2.5f); public static float RadiusF => BuffF("wide", 1.7f); public static float HandF => BuffF("magnet", 3f);
+        public static float PowerF => BuffF("turbo", 2.5f) * TalPower; public static float RadiusF => BuffF("wide", 1.7f) * TalRadius; public static float HandF => BuffF("magnet", 3f) * TalHand; /* 03.11.: × Talente */
         /// <summary>Preis: wächst mit Schwierigkeit und Basisstufe des aktuellen Planeten (Hard-Mode-Einnahmen ×3 sind eingerechnet).</summary>
         /* Fabian 03.11.: Perks dürfen das Spiel später nicht billig machen. Drei Bremsen:
            1. Grundpreis wächst mit Planet (Schwierigkeit × 1,35 je Planet in der Reihe) und Basisstufe.
@@ -125,7 +125,7 @@ namespace LunarCleanup.Core
         }
         /// <summary>Fabian 03.11.: Effekt-Ereignis für die Ansicht – welcher Perk, wo, welche Parzellen.</summary>
         public static event Action<string, Vector3, List<int>> OnPerk; public static Vector3 PerkAt;
-        static void PerkFx(string id, Vector3 d, List<int> cells) { PerkAt = d.normalized; if (!Offline) OnPerk?.Invoke(id, d.normalized, cells); }
+        static void PerkFx(string id, Vector3 d, List<int> cells) { if (id != "wave") PerkUsed(); PerkAt = d.normalized; if (!Offline) OnPerk?.Invoke(id, d.normalized, cells); }
         static float rohrT;
         /// <summary>Rohrpost: Behälter direkt ins Rohstofflager.</summary>
         static void PipeHand(PState ps)
@@ -176,7 +176,7 @@ namespace LunarCleanup.Core
             ps.sv.helpers.RemoveAll(x => x.life > 0 && (x.life -= dt) <= 0); /* Tornado vorbei */
             foreach (var h in ps.sv.helpers)
             {
-                bool tor = h.life > 0; float spd = tor ? 7f : 2.2f * EspressoF, sweepF = tor ? 9f : EspressoF;
+                bool tor = h.life > 0; float spd = tor ? 7f : 2.2f * EspressoF * TalHelper, sweepF = tor ? 9f : EspressoF * TalHelper;
                 if (h.cell >= 0 && (ps.clean[h.cell] || !Workable(ps, h.cell))) h.cell = -1;
                 if (h.cell < 0)
                 {

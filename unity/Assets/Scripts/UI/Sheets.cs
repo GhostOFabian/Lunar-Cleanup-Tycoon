@@ -67,6 +67,9 @@ namespace LunarCleanup.UI
                 h.Section(tier == 0 ? "Kleine Helfer" : tier == 1 ? "Große Helfer" : "Ultimate");
                 foreach (var P in list) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
             }
+            h.Section("Putz-Level " + Game.HardLevel);
+            h.Row("Erfahrung", () => Mathf.FloorToInt(Game.LevelXp) + " / " + Mathf.FloorToInt(Game.LevelNeed(Game.HardLevel)) + " bis Level " + (Game.HardLevel + 1) + " · jede selbst gewischte Parzelle gibt 1, Kombos mehr · Ultimate " + Mathf.FloorToInt(Game.Ult * 100) + " %");
+            foreach (var T in Game.Talents) { var tt = T; h.Row(tt.name, () => (Game.HardLevel >= tt.lv ? "Aktiv · " : "Ab Level " + tt.lv + " · ") + tt.desc); }
         }
         static void UpRow(Hud h, string id)
         {
@@ -600,6 +603,12 @@ namespace LunarCleanup.UI
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { Codex(h); return; }
             if (gtab == 3) { Stats(h); return; }
+            if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
+            {
+                h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);
+                foreach (int gi in Game.HardGoalsOpen()) { int g = gi; var G = Game.HardGoals[g]; h.Row(G.t, () => Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " % · Belohnung " + Cr(Game.HardGoalReward(g)) + (G.perk != "" ? " + " + G.n + "× " + Game.Perk(G.perk).name : ""), () => Game.HardGoalProg(g) >= 1 ? "Abholen" : Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " %", () => Game.HardGoalProg(g) >= 1, () => Game.ClaimHardGoal(g), true, null, true, () => "Noch nicht geschafft – " + G.t); }
+                if (Game.HardGoalsOpen().Count == 0) h.Note("Alle Hard-Ziele geschafft – Respekt!");
+            }
             Game.DailyContracts(); var cs = Game.S.contracts;
             /* Fabian 01.11.: Herausforderungen mit Zeitlimit */
             { Game.ChalRefresh(); var ch = Game.S.chal; h.Section("Herausforderungen");

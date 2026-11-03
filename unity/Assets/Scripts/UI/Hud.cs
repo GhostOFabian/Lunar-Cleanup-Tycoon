@@ -137,7 +137,7 @@ namespace LunarCleanup.UI
             goalReward = UiKit.Text(b.transform, "Belohnung", "", 13, Pal.Credit, true, FontStyles.Bold); goalReward.rectTransform.Anchor(1, 0, 1, 1, -70, 14, 12, 24); goalReward.alignment = TextAlignmentOptions.MidlineRight;
             UiKit.Bar(b.transform, "Fortschritt", Pal.Credit, out goalFill, 4).Anchor(0, 0, 1, 0, 14, 8, 14, -12);
             // Warnhinweis (Sturm, zu schwache Fahrzeuge) – antippen öffnet das passende Fenster
-            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "care") Game.Attend(); else if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { OpenSheet("base", "2"); } else if (warnTarget == "doomgo") { if (Game.DoomActive) Game.Travel(Game.S.doomPid); } else if (warnTarget == "icp") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
+            var w = UiKit.Btn(root, "Warnung", () => { if (warnTarget == "wave") { var wc = Game.WaveCell(Game.Cur); if (wc >= 0) LunarCleanup.Gameplay.GameRoot.FocusReq = Game.Cur.pd.cells[wc].c.normalized; } else if (warnTarget == "care") Game.Attend(); else if (warnTarget == "focus") OnFocusEvent?.Invoke(); else if (warnTarget == "trader") { Game.SellToTrader(); } else if (warnTarget == "doom") { OpenSheet("base", "2"); } else if (warnTarget == "doomgo") { if (Game.DoomActive) Game.Travel(Game.S.doomPid); } else if (warnTarget == "icp") { } else OpenSheet(warnTarget); }, new Color(.16f, .1f, .03f, .9f), 12); warnGo = w.gameObject; warnImg = w.GetComponent<Image>();
             ((RectTransform)w.transform).Anchor(0, 1, 1, 1, 12, -144, 12, 112); /* sitzt jetzt dort, wo früher die Zielkarte war */
             warnTxt = UiKit.Text(w.transform, "Text", "", 12, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); warnTxt.rectTransform.Anchor(0, 0, 1, 1, 10, 0, 10, 0); warnTxt.enableAutoSizing = true; warnTxt.fontSizeMin = 9; warnTxt.fontSizeMax = 12;
             warnGo.SetActive(false);
@@ -208,6 +208,7 @@ namespace LunarCleanup.UI
             else if (ps.sv.veh.Any(v => v.mode == "broken" || v.mode == "fieldRepair")) { int n = ps.sv.veh.Count(v => v.mode == "broken" || v.mode == "fieldRepair"); t = n + (n > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen" + (ps.bld.Contains("werkstatt") ? " – fährt zur Werkstatt" : " – baue eine Roboterwerkstatt (Basisstufe 3)"); warnTarget = "vehicles"; }
             else if (ps.sv.veh.Count > 0 && !Game.PowOK(ps)) { t = "Fahrzeuge zu schwach für " + ps.P.name + " (nur 30 %): Doppelbürsten Stufe " + Game.PowReq(ps.pid) + " nötig"; warnTarget = "vehicles"; }
             else if (ps.ef < .99f && (ps.sv.veh.Count > 0 || ps.bld.Contains("presse"))) { t = "Energie reicht nicht – alles läuft langsamer"; warnTarget = "energy"; }
+            else if (Game.Hard && Game.WaveCell(ps) >= 0) { t = "Schmutzwelle in " + Mathf.CeilToInt(Mathf.Max(0, Game.WaveIn(ps))) + " s · putz die dreckigen Nachbarn der Stelle, dann stoppst du sie · antippen = hin"; warnTarget = "wave"; }
             else if (Game.CareF(ps) < .97f) { t = "Deine Crew braucht dich – alles läuft nur mit " + Mathf.RoundToInt(Game.CareF(ps) * 100) + " % · tippe hier oder auf den Planeten"; warnTarget = "care"; } /* 03.11.: Betreuung */
             warnGo.SetActive(t != null && !SheetOpen && !MenuOpen); if (t != null) warnTxt.text = t;
         }
@@ -228,13 +229,14 @@ namespace LunarCleanup.UI
         void PerkTap(int slot)
         {
             string id = slot >= 0 && slot < pbIds.Length ? pbIds[slot] : null; if (string.IsNullOrEmpty(id) || id == "shop") { OpenSheet("perks"); return; }
+            if (id == "ult") { if (Game.Ult >= 1) PerkReq = "ult"; else Game.Toast("Ultimate lädt: " + Mathf.FloorToInt(Game.Ult * 100) + " % – wische selbst, Kombos laden schneller. Voll = Gratis-Nuke", ""); return; }
             var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
             if (P.kind == 0) { ArmedTool = null; PerkReq = id; } /* Fabian 03.11.: ein Tipp genügt – wirkt sofort an der nächsten dreckigen Stelle bei der Kamera */
             else Game.UseBuff(id);
         }
         // ---------- Fabian 03.11.: Perks sichtbar machen – Banner beim Start eines Buffs, Leuchtrand solange er läuft, Blitz bei der Nuke ----------
         TextMeshProUGUI buffBan, buffBanSub; CanvasGroup buffBanCg; float buffBanT = -99; Image flashImg; float flashT, flashDur = 1; readonly Image[] edges = new Image[4];
-        public void BuffPop(string name, Color c, float dur)
+        public void BuffPop(string name, Color c, float dur, string sub = null)
         {
             if (!buffBan)
             {
@@ -242,7 +244,7 @@ namespace LunarCleanup.UI
                 buffBan = UiKit.Text(g, "Name", "", 30, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); buffBan.rectTransform.Anchor(0, .4f, 1, 1, 10, 0, 10, 0); buffBan.enableAutoSizing = true; buffBan.fontSizeMin = 16; buffBan.fontSizeMax = 30;
                 buffBanSub = UiKit.Text(g, "Dauer", "", 15, Pal.Ink, false, FontStyles.Bold, TextAlignmentOptions.Center); buffBanSub.rectTransform.Anchor(0, 0, 1, .4f, 10, 0, 10, 0); buffBan.raycastTarget = buffBanSub.raycastTarget = false;
             }
-            buffBan.text = name.ToUpper() + "!"; buffBan.color = c; buffBanSub.text = Mathf.RoundToInt(dur) + " s aktiv"; buffBanSub.color = new Color(c.r, c.g, c.b, .85f); buffBanT = Time.unscaledTime;
+            buffBan.text = name.ToUpper() + "!"; buffBan.color = c; buffBanSub.text = sub ?? (Mathf.RoundToInt(dur) + " s aktiv"); buffBanSub.color = new Color(c.r, c.g, c.b, .85f); buffBanT = Time.unscaledTime;
         }
         public void Flash(Color c, float dur)
         {
@@ -272,12 +274,13 @@ namespace LunarCleanup.UI
         {
             bool on = Game.PerksOpen && !SheetOpen && !MenuOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; return; }
             /* Fabian 03.11.: die Leiste zeigt nur, was du hast (oder was gerade läuft) – höchstens 6, dahinter der Shop */
-            var have = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Take(6).Select(x => x.id).ToList();
+            var have = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Take(5).Select(x => x.id).ToList(); have.Insert(0, "ult"); /* 03.11.: Ultimate-Leiste ganz links */
             for (int i = 0; i < pbBtns.Count; i++)
             {
                 var (_, img, txt) = pbBtns[i]; string id = i == 6 ? "shop" : i < have.Count ? have[i] : ""; pbIds[i] = id; img.gameObject.SetActive(id != "");
                 if (id == "") continue;
-                if (id == "shop") { txt.text = "+\nShop"; continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
+                if (id == "shop") { txt.text = "+\nShop"; continue; }
+                if (id == "ult") { bool full = Game.Ult >= 1; txt.text = full ? "ULTI\nBEREIT" : "Ulti\n" + Mathf.FloorToInt(Game.Ult * 100) + " %"; img.color = full ? Color.Lerp(new Color(.5f, .35f, .05f, .95f), new Color(.85f, .6f, .1f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Color.Lerp(Pal.Glass, new Color(.45f, .25f, .7f, .9f), Game.Ult); continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
                 txt.text = PerkShort(id) + "\n" + (bl > 0 ? Mathf.CeilToInt(bl) + " s" : "×" + n);
                 img.color = ArmedTool == id ? new Color(1f, .75f, .3f, .55f) : bl > 0 ? new Color(.43f, .95f, .82f, .35f) : n > 0 ? Pal.Glass : new Color(Pal.Glass.r, Pal.Glass.g, Pal.Glass.b, Pal.Glass.a * .5f);
             }

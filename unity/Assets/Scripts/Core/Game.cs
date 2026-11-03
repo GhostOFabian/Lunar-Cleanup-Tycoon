@@ -1743,7 +1743,7 @@ namespace LunarCleanup.Core
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
-            if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
+            if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); WaveStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
             ps.sv.careT += dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps); /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

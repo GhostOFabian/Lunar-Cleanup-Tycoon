@@ -63,6 +63,10 @@ namespace LunarCleanup.Gameplay
                     Sfx.Play("pop", .8f, .8f); StartCoroutine(Shock(d, cs * 3.2f, col, .8f, .45f));
                     if (cells != null) foreach (int c in cells) { StartCoroutine(Foam(pd.cells[c].c.normalized, cs * .35f)); yield return new WaitForSeconds(.04f); }
                     break;
+                case "wave":
+                    Sfx.Play("bad", .7f, .8f); StartCoroutine(Shock(d, cs * 2.2f, new Color(.55f, .4f, .25f), 1.1f, .6f));
+                    if (cells != null) foreach (int c in cells) { var cd = pd.cells[c].c.normalized; EmitDust(cd, new Color(.45f, .35f, .25f), 60); yield return new WaitForSeconds(.15f); }
+                    break;
                 case "tornado":
                     Sfx.Play("geyser", .7f, 1f); StartCoroutine(Shock(d, cs * 1.4f, col, .7f, .5f)); for (int i = 0; i < 4; i++) { EmitDust(d, col, 50); yield return new WaitForSeconds(.1f); }
                     break;
@@ -109,6 +113,14 @@ namespace LunarCleanup.Gameplay
                 foreach (var b in bl) { b.t.position = b.p + d * b.s * .4f; b.t.rotation = rot; b.t.localScale = Vector3.one * b.s * grow * (.85f + .15f * fade) * (1 + .05f * Mathf.Sin(t * 6 + b.s * 10)); }
                 m.SetColor("_BaseColor", new Color(1, 1, 1, .85f * fade)); yield return null; }
             foreach (var b in bl) Destroy(b.t.gameObject); Destroy(m);
+        }
+        /* Markierung der kommenden Schmutzwelle: pulsierender brauner Ring über der Parzelle */
+        GameObject waveMark; Material waveMat; int waveFor = -2;
+        public void UpdateWaveMark()
+        {
+            int wc = Game.Hard && ps != null ? Game.WaveCell(ps) : -1;
+            if (wc != waveFor) { if (waveMark) Destroy(waveMark); if (waveMat) Destroy(waveMat); waveMark = null; waveFor = wc; if (wc >= 0) { var d = pd.cells[wc].c.normalized; waveMark = FxQuad(d, .5f, FxRingTex(), new Color(.75f, .5f, .3f), out waveMat); } }
+            if (waveMark) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); waveMark.transform.localScale = Vector3.one * CellSize(pd.cells[wc].c.normalized) * (1.4f + .25f * k); waveMat.SetColor("_BaseColor", new Color(.8f, .5f, .25f, .35f + .35f * k)); }
         }
         IEnumerator ScreenFlash() { LunarCleanup.UI.Hud.I?.Flash(new Color(1, .97f, .85f), .9f); yield break; }
     }

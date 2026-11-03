@@ -46,7 +46,7 @@ namespace LunarCleanup.Core
         static bool CartMove(PState ps, CartSave c, Vector3 to, float step, int x)
         {
             if (!Hard) return NavMove(ps, c, to, step, x);
-            float rad = step * 1.4f / ps.pd.R, ang = Vector3.Angle(c.d, to) * Mathf.Deg2Rad; if (ang <= rad || ang < 1e-4f) { c.d = to.normalized; return true; }
+            float rad = step * 1.4f * TalShuttle / ps.pd.R, ang = Vector3.Angle(c.d, to) * Mathf.Deg2Rad; if (ang <= rad || ang < 1e-4f) { c.d = to.normalized; return true; }
             c.d = Vector3.Slerp(c.d.normalized, to.normalized, rad / ang).normalized; return false;
         }
         static void HardDepot(PState ps) { if (ps.sv.depot == null || ps.sv.depot.Length != NM) { var o = ps.sv.depot; ps.sv.depot = new float[NM]; if (o != null) Array.Copy(o, ps.sv.depot, Math.Min(o.Length, NM)); } }

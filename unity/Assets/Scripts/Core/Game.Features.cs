@@ -22,6 +22,7 @@ namespace LunarCleanup.Core
             {
                 float now = Time.realtimeSinceStartup; ComboN = now - comboLast <= FeatureData.COMBO_WINDOW ? Mathf.Min(FeatureData.COMBO_MAX, ComboN + 1) : 1; if (ComboN > S.stats.comboMax) S.stats.comboMax = ComboN; comboLast = now;
                 if (ComboN > 1) { double extra = bonus * FeatureData.COMBO_STEP * (ComboN - 1); Earn(extra); FloatTxt(ps.pd.cells[id].c, "Kombo ×" + ComboN + " · +" + Fmt(extra), "good"); }
+                HardHandCell(ps, id, ComboN); /* 03.11.: Hard Mode – Erfahrung, Ultimate, Perk-Funde */
             }
             // Wrack-Ereignis: rechtzeitig sauber = Bonus
             var ev = ps.sv.ev; if (false && ev != null && ev.key == "wreck" && ev.cell == id && ev.t > 0) { double w = FeatureData.WRECK_BONUS * ps.P.diff + bonus * (FeatureData.WRECK_AMT - 1); Earn(w); if (live) Toast("Wrack geborgen · +" + Fmt(w) + " Cr", "good"); EvEnd(ps, null); }

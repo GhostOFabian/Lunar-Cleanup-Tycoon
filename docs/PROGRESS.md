@@ -270,3 +270,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 03.11. 20:28: Build 47 gebaut (iPhone-Paket + Browser-Dateien auf dem Mac): Perks günstiger, kein Aufschlag je Kauf. Browser v41 online.
 - 03.11. 21:34: Build 48 (iPhone-Paket + Browser v42): Perks ein Tipp, sichtbare Effekte, Kärcher repariert. Im Editor mit Screenshots geprüft.
 - 03.11. 21:53: Build 49 (iPhone-Paket + Browser v43): Nuke teuer, Hard-Mode-Reisen günstiger.
+- 03.11. 22:36: Build 50 (iPhone-Paket + Browser v44): Hard Mode überarbeitet (Ultimate-Leiste, Hard-Ziele, Putz-Level & Talente, Perk-Funde, Schmutzwellen), Perk-Shop sortiert. Im Editor getestet (Level-Aufstieg, Ziel abholen, Ultimate gefüllt und gezündet, Welle gewarnt und ausgelöst).
