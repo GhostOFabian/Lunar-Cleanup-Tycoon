@@ -48,6 +48,12 @@ namespace LunarCleanup.Core
             ps.sv.bRoutes?.RemoveAll(r => { var b = ps.lay.belts.FirstOrDefault(x => x.id == r.id); return b != null && (GroupId(b.from) == g || GroupId(b.to) == g); });
             ps.baseVersion++; Save(); Toast(GameData.Bld[id].name + " wieder am Standardplatz", "");
         }
+        /// <summary>Neues Gebäude: steht an seinem Standardplatz schon ein verschobenes Gebäude, wird der nächste freie Platz im Basisgelände gesucht.</summary>
+        static void FreeSpotIfBlocked(PState ps, string id)
+        {
+            if (ps.sv.bMove == null || ps.sv.bMove.Count == 0 || !ps.lay.pos.ContainsKey(id)) return; var p0 = ps.lay.pos[id]; if (MoveWhy(ps, id, p0) == "") return;
+            for (float r = 2; r <= 40; r += 1.5f) for (int k = 0; k < 24; k++) { float a = k * Mathf.PI / 12; var p = p0 + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r; if (MoveWhy(ps, id, p) != "") continue; string g = GroupId(id); ps.sv.bMove.RemoveAll(m => GroupId(m.id) == g); ps.sv.bMove.Add(new BPosSave { id = g, x = p.x, y = p.y }); ApplyMovesFresh(ps); Toast(GameData.Bld[id].name + ": Standardplatz war belegt – steht jetzt daneben (Gebäude antippen → Verschieben)", ""); return; }
+        }
         public static bool Moved(PState ps, string id) => ps.sv.bMove != null && ps.sv.bMove.Any(m => GroupId(m.id) == GroupId(id));
         /// <summary>Layout neu aus der Vorlage aufbauen und alle eigenen Plätze anwenden.</summary>
         static void ApplyMovesFresh(PState ps) { ps.lay = OneStation(GameData.Layouts[GameData.SizeKey(ps.pid, ps.sv.freq)]); ApplyMoves(ps); }

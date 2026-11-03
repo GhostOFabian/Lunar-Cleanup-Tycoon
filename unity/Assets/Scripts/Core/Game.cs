@@ -244,7 +244,7 @@ namespace LunarCleanup.Core
         public static float RohCap(PState ps) => Uv("rohcap", ps) * BlF(ps, "roh") * ExpF(ps) * SpecF(ps, "store");
         public static float ProdCap(PState ps) => Uv("prodcap", ps) * BlF(ps, "prod") * ExpF(ps) * SpecF(ps, "store");
         public static float SellCap(PState ps) => Uv("sellcap", ps) * BlF(ps, "sell") * (S != null && S.owned.Contains("cargo2") ? 1.5f : 1);
-        public static float HandCap() => Uv("handcap");
+        public static float HandCap() => Uv("handcap") * HandF; /* 03.11.: Magnet-Behälter */
         public static float Sum(float[] a) { float s = 0; for (int i = 0; i < a.Length; i++) s += a[i]; return s; }
         public static float RohSum(PState ps) { float s = 0; foreach (int m in GameData.Raw) s += ps.sv.roh[m]; return s; }
         public static float ProdSum(PState ps) { float s = 0; for (int m = 0; m < ps.sv.prod.Length; m++) s += ps.sv.prod[m]; return s; } /* zählt auch Rohstoffe, die auf dem Weg zur Rakete im Produktlager liegen */
@@ -439,13 +439,13 @@ namespace LunarCleanup.Core
             strokeCells.RemoveAll(c => !Workable(ps, c));
             if (Workable(ps, c0) && !strokeCells.Contains(c0) && strokeCells.Count < StrokeMax) strokeCells.Add(c0);
             if (strokeCells.Count == 0) return 0;
-            float r = Uv("radius"), total = 0;
+            float r = Uv("radius") * RadiusF, total = 0; /* 03.11.: Breiter Pinsel */
             foreach (int sc in strokeCells)
             {
                 var a = EnsureAct(ps, sc); if (a == null) continue;
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
-                float k = 1 - Mathf.Exp(-.35f * Uv("power") * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
+                float k = 1 - Mathf.Exp(-.35f * Uv("power") * PowerF * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
                 if (IsPile(ps, sc)) k = Mathf.Min(k, PileK(ps, sc, null, dt));
                 float got = CleanAt(ps, a, l.x, l.y, r, k); /* Pinsel wieder wie bis Build 21 (Fabian: Build 22 war schlechter) */
                 if (got <= 0) continue;
@@ -546,7 +546,7 @@ namespace LunarCleanup.Core
         {
             var ps = Cur; string why = BuildWhy(ps, id); if (why != "") return Fail(why);
             double c = BuildCost(ps, id); if (S.credits < c) return Fail(Lacks(c));
-            S.credits -= c; ps.bld.Add(id); ps.baseVersion++; ps.navKey = null; if (id == "research") CalcFront(ps);
+            S.credits -= c; ps.bld.Add(id); FreeSpotIfBlocked(ps, id); ps.baseVersion++; ps.navKey = null; if (id == "research") CalcFront(ps); /* 03.11.: Standardplatz von verschobenem Gebäude belegt → nächster freier Platz */
             Toast(GameData.Bld[id].name + " steht", "good"); return true;
         }
 
@@ -1740,7 +1740,7 @@ namespace LunarCleanup.Core
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
-            if (Hard) { HardCart(ps); CartStep(ps, dt); } /* Hard Mode: Sammelwagen fährt */
+            if (Hard) { HardCart(ps); CartStep(ps, dt); PerkStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
             EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

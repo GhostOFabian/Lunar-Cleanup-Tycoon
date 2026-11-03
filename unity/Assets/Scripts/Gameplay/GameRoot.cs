@@ -488,7 +488,7 @@ namespace LunarCleanup.Gameplay
                         float spd = hasLastWipe ? Game.Cur.pd.Arc(lastWipe, dir) / Mathf.Max(.001f, dt) : 0, boost = 1 + 2 * Mathf.Clamp01((spd / Mathf.Max(.5f, rr) - 2f) / 10f);
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; Game.FindWipe(dd, dt / steps); }
                         lastWipe = dir; hasLastWipe = true; WorldView.WipeDir = dir;
-                        brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
+                        brush.SetActive(true); float r = Game.Uv("radius") * Game.RadiusF; brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
                         Sfx.Wipe(true, spd / Mathf.Max(.5f, rr), amt > 0);
                         FollowWipe(dir, pos, dt); /* Kamera folgt wieder der Putzstelle (wie bis Build 21) */
                         if (amt > 0) { int c = Game.Cur.pd.CellOf(dir); int nd = Mathf.Clamp(Mathf.RoundToInt(1 + spd / Mathf.Max(.5f, rr) * .4f), 1, 6); world.EmitDust(dir, GameData.Dirt[Game.Cur.pd.cells[c].type].lightC, nd); }
@@ -554,6 +554,7 @@ namespace LunarCleanup.Gameplay
             var ps = Game.Cur;
             if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
             if (world.Moving) { if (Hit(pos, out var dmv)) world.MoveTo(ps.pd.PlanLocal(dmv)); return; } /* Gebäude verschieben: Tipp = dorthin */
+            if (Hud.ArmedTool != null) { var tool = Hud.ArmedTool; Hud.ArmedTool = null; if (Hit(pos, out var dtool)) { int n = Game.UseTool(tool, dtool); if (n > 0) { WorldView.Shake = Mathf.Max(WorldView.Shake, tool == "nuke" ? 2f : .8f); world.EmitDust(dtool, new Color(1f, .9f, .6f), tool == "nuke" ? 160 : 50); Sfx.Play("boom", tool == "nuke" ? .6f : 1.1f, .7f); } } return; } /* 03.11.: Perk-Werkzeug */
             if (world.Editing) { if (Hit(pos, out var de)) world.TapEdit(ps.pd.PlanLocal(de)); return; } /* Band-Editor: Tipp aufs Band = neuer Punkt */
             if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */

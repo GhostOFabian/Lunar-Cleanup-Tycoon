@@ -31,10 +31,22 @@ namespace LunarCleanup.UI
                 case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); BuildingUpgrades(h, "outpost"); break;
                 case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); BuildingUpgrades(h, "rig"); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
+                case "perks": title = "Perk-Shop"; PerkShop(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
         }
 
+        /// <summary>Fabian 03.11.: Perk-Shop (Hard Mode).</summary>
+        static void PerkShop(Hud h)
+        {
+            if (!Game.Hard) { h.Note("Den Perk-Shop gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
+            h.Note("Im Hard Mode putzt du selbst – hier gibt es Hilfe dafür. Werkzeuge und Buffs liegen danach unten in der Leiste: Werkzeug antippen, dann die Stelle. Preise steigen mit der Basisstufe.");
+            foreach (var kind in new[] { 0, 1, 2 })
+            {
+                h.Section(kind == 0 ? "Werkzeuge" : kind == 1 ? "Buffs (90 s)" : "Putzhelfer");
+                foreach (var P in Game.Perks.Where(x => x.kind == kind)) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+            }
+        }
         static void UpRow(Hud h, string id)
         {
             var u = GameData.Up[id];

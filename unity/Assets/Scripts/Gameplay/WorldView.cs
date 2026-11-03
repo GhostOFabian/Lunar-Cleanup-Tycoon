@@ -882,18 +882,15 @@ namespace LunarCleanup.Gameplay
         }
 
         /// <summary>Tag und Nacht: die Sonne kreist über der Basis (wie im Browser), nachts wird das Umgebungslicht schwächer.</summary>
-        Light fillLight;
         void UpdateSun()
         {
             if (!sun) return; var sd = Game.SunDir(ps); sun.transform.rotation = Quaternion.LookRotation(-sd);
             var cam = Camera.main; var cd = cam ? cam.transform.position.normalized : pd.cells[pd.baseCell].c;
             float k = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-.14f, .3f, Vector3.Dot(sd, cd)));
-            sun.intensity = sunI0; float a = .55f + .45f * k; /* Fabian 03.11.: Nachtseite heller (vorher 34 %) */
-            /* … und ein schwaches, kühles Gegenlicht von der anderen Seite, damit der Planet auch ohne Sonne Form und Farbe zeigt */
-            if (!fillLight) { var fl = new GameObject("Mondlicht").AddComponent<Light>(); fl.type = LightType.Directional; fl.shadows = LightShadows.None; fl.color = new Color(.62f, .72f, 1f); fillLight = fl; }
-            fillLight.transform.rotation = Quaternion.LookRotation(sd); fillLight.intensity = sunI0 * .32f;
+            sun.intensity = sunI0; float a = .62f + .38f * k; /* Fabian 03.11.: Nachtseite heller (vorher 34 %) – nur über das Umgebungslicht, ein zweites Licht hätte auf dem Handy Leistung gekostet */
+            var cool = new Color(.78f, .86f, 1.12f); float nk = 1 - k; /* nachts leicht kühl-bläulich wie Mondlicht */
             sun.shadowStrength = .85f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.12f, .45f, Vector3.Dot(sd, cd))); // tiefe Sonne: keine meterlangen Schattenstreifen über den Planeten
-            RenderSettings.ambientSkyColor = amb0 * a; RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
+            RenderSettings.ambientSkyColor = amb0 * a * Color.Lerp(Color.white, cool, nk); RenderSettings.ambientEquatorColor = amb1 * a * Color.Lerp(Color.white, cool, nk); RenderSettings.ambientGroundColor = amb2 * a * Color.Lerp(Color.white, cool, nk * .7f);
             NightF = Mathf.Lerp(NightF, 1 - k, 1 - Mathf.Exp(-3 * Time.deltaTime)); float nf = Mathf.Clamp01((NightF - .2f) / .6f);
             foreach (var L in lamps) if (L) L.intensity = 4.6f * nf; /* hellere Laternen: die Basis liegt nachts im warmen Licht */
             if (lampHead) lampHead.SetColor("_EmissionColor", new Color(.92f, .96f, 1f) * (.1f + 3f * nf));

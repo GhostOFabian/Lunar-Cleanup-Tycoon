@@ -200,6 +200,35 @@ namespace LunarCleanup.UI
             warnGo.SetActive(t != null && !SheetOpen && !MenuOpen); if (t != null) warnTxt.text = t;
         }
 
+        // ---------- Fabian 03.11.: Perk-Leiste (Hard Mode) – Werkzeuge antippen und dann die Stelle, Buffs sofort; „+“ öffnet den Perk-Shop ----------
+        public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>();
+        void BuildPerkBar()
+        {
+            var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+            foreach (var id in new[] { "bomb", "nuke", "turbo", "wide", "magnet", "shop" })
+            {
+                string key = id; var b = UiKit.Btn(row, key, () => PerkTap(key), Pal.Glass, 12); var img = b.GetComponent<Image>();
+                var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 7; t.fontSizeMax = 11;
+                pbBtns.Add((key, img, t)); bottomBtns.Add(b.gameObject);
+            }
+        }
+        void PerkTap(string id)
+        {
+            if (id == "shop") { OpenSheet("perks"); return; }
+            var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
+            if (P.kind == 0) { ArmedTool = ArmedTool == id ? null : id; if (ArmedTool != null) Game.Toast(P.name + " bereit – tippe auf die Stelle, die gereinigt werden soll", ""); }
+            else Game.UseBuff(id);
+        }
+        void UpdatePerkBar()
+        {
+            bool on = Game.PerksOpen && !SheetOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; return; }
+            foreach (var (id, img, txt) in pbBtns)
+            {
+                if (id == "shop") { txt.text = "+\nShop"; continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
+                txt.text = P.name.Split(' ', '-')[0] + "\n" + (bl > 0 ? Mathf.CeilToInt(bl) + " s" : "×" + n);
+                img.color = ArmedTool == id ? new Color(1f, .75f, .3f, .55f) : bl > 0 ? new Color(.43f, .95f, .82f, .35f) : n > 0 ? Pal.Glass : new Color(Pal.Glass.r, Pal.Glass.g, Pal.Glass.b, Pal.Glass.a * .5f);
+            }
+        }
         // ---------- unten ----------
         readonly List<GameObject> bottomBtns = new List<GameObject>(); /* Fabian 02.11.: beim Abfangen ausgeblendet, damit kein Brocken hinter einem Knopf liegt */
         void BuildBottom()
@@ -446,7 +475,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
