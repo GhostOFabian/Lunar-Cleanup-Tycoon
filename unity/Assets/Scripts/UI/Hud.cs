@@ -213,7 +213,7 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Fabian 03.11.: Perk-Leiste (Hard Mode) – Werkzeuge antippen und dann die Stelle, Buffs sofort; „+“ öffnet den Perk-Shop ----------
-        GameObject cargoTip; Image cargoTipImg; public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
+        GameObject cargoTip; Image cargoTipImg; public static string ArmedTool, PerkReq; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
         void BuildPerkBar()
         {
             var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.childControlHeight = true; /* 03.11.: feste Breite – ein einzelner Shop-Knopf wurde sonst riesig */
@@ -229,8 +229,43 @@ namespace LunarCleanup.UI
         {
             string id = slot >= 0 && slot < pbIds.Length ? pbIds[slot] : null; if (string.IsNullOrEmpty(id) || id == "shop") { OpenSheet("perks"); return; }
             var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
-            if (P.kind == 0) { ArmedTool = ArmedTool == id ? null : id; if (ArmedTool != null) Game.Toast(P.name + " bereit – tippe auf den Planeten, es geht an der nächsten dreckigen Stelle los (Knopf nochmal = abbrechen)", ""); }
+            if (P.kind == 0) { ArmedTool = null; PerkReq = id; } /* Fabian 03.11.: ein Tipp genügt – wirkt sofort an der nächsten dreckigen Stelle bei der Kamera */
             else Game.UseBuff(id);
+        }
+        // ---------- Fabian 03.11.: Perks sichtbar machen – Banner beim Start eines Buffs, Leuchtrand solange er läuft, Blitz bei der Nuke ----------
+        TextMeshProUGUI buffBan, buffBanSub; CanvasGroup buffBanCg; float buffBanT = -99; Image flashImg; float flashT, flashDur = 1; readonly Image[] edges = new Image[4];
+        public void BuffPop(string name, Color c, float dur)
+        {
+            if (!buffBan)
+            {
+                var g = UiKit.Rt(root, "Buff-Banner").Anchor(0, .58f, 1, .58f, 0, -60, 0, -60); buffBanCg = g.gameObject.AddComponent<CanvasGroup>(); buffBanCg.blocksRaycasts = false; buffBanCg.interactable = false;
+                buffBan = UiKit.Text(g, "Name", "", 30, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); buffBan.rectTransform.Anchor(0, .4f, 1, 1, 10, 0, 10, 0); buffBan.enableAutoSizing = true; buffBan.fontSizeMin = 16; buffBan.fontSizeMax = 30;
+                buffBanSub = UiKit.Text(g, "Dauer", "", 15, Pal.Ink, false, FontStyles.Bold, TextAlignmentOptions.Center); buffBanSub.rectTransform.Anchor(0, 0, 1, .4f, 10, 0, 10, 0); buffBan.raycastTarget = buffBanSub.raycastTarget = false;
+            }
+            buffBan.text = name.ToUpper() + "!"; buffBan.color = c; buffBanSub.text = Mathf.RoundToInt(dur) + " s aktiv"; buffBanSub.color = new Color(c.r, c.g, c.b, .85f); buffBanT = Time.unscaledTime;
+        }
+        public void Flash(Color c, float dur)
+        {
+            if (!flashImg) { flashImg = UiKit.Img(root, "Blitz", null, c); flashImg.rectTransform.Anchor(0, 0, 1, 1, -400, -400, -400, -400); flashImg.raycastTarget = false; }
+            flashImg.color = c; flashT = Time.unscaledTime; flashDur = dur; flashImg.gameObject.SetActive(true);
+        }
+        void UpdatePerkFx()
+        {
+            if (buffBan) { float e = (Time.unscaledTime - buffBanT) / 1.8f; bool on = e < 1; if (buffBanCg.gameObject.activeSelf != on) buffBanCg.gameObject.SetActive(on); if (on) { buffBanCg.alpha = e < .15f ? e / .15f : e > .7f ? (1 - e) / .3f : 1; buffBanCg.transform.localScale = Vector3.one * (e < .15f ? Mathf.Lerp(.6f, 1.08f, e / .15f) : Mathf.Lerp(1.08f, 1f, Mathf.Min(1, (e - .15f) * 4))); } }
+            if (flashImg && flashImg.gameObject.activeSelf) { float e = (Time.unscaledTime - flashT) / flashDur; if (e >= 1) flashImg.gameObject.SetActive(false); else { var c = flashImg.color; c.a = .9f * (1 - e) * (1 - e); flashImg.color = c; } }
+            /* Leuchtrand: solange ein Buff läuft, in seiner Farbe */
+            string act = null; if (Game.S != null && Game.Hard) foreach (var P in Game.Perks) if (P.kind == 1 && Game.BuffLeft(P.id) > 0) { act = P.id; break; }
+            if (act == null) { foreach (var e0 in edges) if (e0 && e0.gameObject.activeSelf) e0.gameObject.SetActive(false); return; }
+            if (!edges[0])
+            {
+                var cnv = root; edges[0] = UiKit.Img(cnv, "Rand oben", null, Color.white); edges[0].rectTransform.Anchor(0, 1, 1, 1, 0, -10, 0, 0);
+                edges[1] = UiKit.Img(cnv, "Rand unten", null, Color.white); edges[1].rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -10);
+                edges[2] = UiKit.Img(cnv, "Rand links", null, Color.white); edges[2].rectTransform.Anchor(0, 0, 0, 1, 0, 0, -10, 0);
+                edges[3] = UiKit.Img(cnv, "Rand rechts", null, Color.white); edges[3].rectTransform.Anchor(1, 0, 1, 1, -10, 0, 0, 0);
+                foreach (var e0 in edges) { e0.raycastTarget = false; e0.transform.SetAsFirstSibling(); }
+            }
+            var col = LunarCleanup.Gameplay.WorldView.PerkColor(act); float k = .16f + .1f * Mathf.Sin(Time.unscaledTime * 3.2f);
+            foreach (var e0 in edges) { if (!e0.gameObject.activeSelf) e0.gameObject.SetActive(true); e0.color = new Color(col.r, col.g, col.b, k); }
         }
         static string PerkShort(string id) { switch (id) { case "bomb": return "Bombe"; case "nuke": return "Nuke"; case "kaercher": return "Kärcher"; case "foam": return "Schaum"; case "tornado": return "Tornado"; case "turbo": return "Turbo"; case "wide": return "Breit"; case "magnet": return "Magnet"; case "espresso": return "Espresso"; case "goldmop": return "Gold"; case "rohrpost": return "Rohr"; } return id; }
         void UpdatePerkBar()
@@ -507,7 +542,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdatePerkFx(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */

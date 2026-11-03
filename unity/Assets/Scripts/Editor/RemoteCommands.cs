@@ -122,6 +122,7 @@ namespace LunarCleanup.EditorTools
                         if (c == "beltok") { var w = Object.FindAnyObjectByType<LunarCleanup.Gameplay.WorldView>(); Write("ok beltok " + w.CommitEdit() + " " + w.EditWhy); break; }
                         if (c == "beltreset") { var w = Object.FindAnyObjectByType<LunarCleanup.Gameplay.WorldView>(); w.ResetEdit(); Write("ok beltreset"); break; }
                         if (c == "lookrig") { var ps = LunarCleanup.Core.Game.Cur; if (ps.sv.rigs.Count > 0) { LunarCleanup.Gameplay.GameRoot.FocusReq = ps.pd.cells[ps.sv.rigs[ps.sv.rigs.Count - 1].cell].c.normalized; Write("ok lookrig"); } else Write("fehlt rig"); break; }
+                        if (c.StartsWith("perktap ")) { LunarCleanup.UI.Hud.PerkReq = c.Substring(8); Write("ok " + c); break; }
                         if (c == "lookcart") { var cs = LunarCleanup.Core.Game.Cur.sv.cart; LunarCleanup.Gameplay.GameRoot.FocusReq = cs.d.normalized; Write("ok lookcart " + cs.mode + " to=" + cs.to + " owned=" + cs.owned); break; }
                         if (c == "lookev") { var p = LunarCleanup.Core.Game.EventPlace(LunarCleanup.Core.Game.Cur); if (p.HasValue) LunarCleanup.Gameplay.GameRoot.FocusReq = p.Value; Write("ok lookev " + p.HasValue); break; }
                         if (c.StartsWith("quality ")) { QualitySettings.SetQualityLevel(int.Parse(c.Substring(8)), true); var u = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline; Write("ok " + c + " " + QualitySettings.names[QualitySettings.GetQualityLevel()] + " " + (u ? u.name : "")); break; }
