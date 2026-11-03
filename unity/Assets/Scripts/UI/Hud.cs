@@ -201,7 +201,7 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Fabian 03.11.: Perk-Leiste (Hard Mode) – Werkzeuge antippen und dann die Stelle, Buffs sofort; „+“ öffnet den Perk-Shop ----------
-        public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
+        GameObject cargoTip; Image cargoTipImg; public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
         void BuildPerkBar()
         {
             var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
@@ -244,11 +244,16 @@ namespace LunarCleanup.UI
             handTxt = UiKit.Text(hb.transform, "Wert", "0/60", 13, Pal.Ink, true, FontStyles.Bold); handTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); handTxt.alignment = TextAlignmentOptions.MidlineLeft;
             UiKit.Bar(hb.transform, "Balken", Pal.Clean, out handFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
             /* Fabian 01.11.: Rakete nicht mehr versteckt – Frachtraum-Anzeige über dem Behälter, Tippen startet die Rakete (leer: öffnet den Verkauf) */
-            var rb = UiKit.Btn(root, "Rakete", () => { var ps = Game.Cur; if (ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0) Game.LaunchRocket(); else OpenSheet("production", "1"); }, Pal.Glass, 16); rocketImg = rb.GetComponent<Image>(); bottomBtns.Add(rb.gameObject);
+            var rb = UiKit.Btn(root, "Rakete", () => { var ps = Game.Cur; if (Game.CargoHint(ps)) Game.LoadAllCargo(); else if (ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0) Game.LaunchRocket(); else OpenSheet("production", "1"); } /* 03.11.: Anfangsbereich – erst laden, dann starten */, Pal.Glass, 16); rocketImg = rb.GetComponent<Image>(); bottomBtns.Add(rb.gameObject);
             ((RectTransform)rb.transform).Anchor(0, 0, 0, 0, 12, 142, -120, -194);
             UiKit.Img(rb.transform, "Icon", UiKit.Icon("rocket"), Pal.Credit).rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             rocketTxt = UiKit.Text(rb.transform, "Wert", "", 12, Pal.Ink, true, FontStyles.Bold); rocketTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); rocketTxt.alignment = TextAlignmentOptions.MidlineLeft; rocketTxt.enableAutoSizing = true; rocketTxt.fontSizeMin = 8; rocketTxt.fontSizeMax = 12; rocketTxt.textWrappingMode = TextWrappingModes.NoWrap;
             UiKit.Bar(rb.transform, "Balken", Pal.Credit, out rocketFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
+            /* Fabian 03.11.: Sprechblase neben der Rakete, solange im Anfangsbereich Ware von Hand geladen werden muss */
+            var cb = UiKit.Glass(root, "Fracht-Hinweis", new Color(.35f, .27f, .06f, .96f), 12); cargoTip = cb.gameObject; cb.raycastTarget = true; ((RectTransform)cb.transform).Anchor(0, 0, 0, 0, 140, 142, -380, -194);
+            var cbb = cb.gameObject.AddComponent<Button>(); cbb.onClick.AddListener(() => Game.LoadAllCargo()); cargoTipImg = cb;
+            var ct = UiKit.Text(cb.transform, "Text", "◀ Ware im Lager! Tippe hier oder auf die Rakete, um sie einzuladen", 13, Pal.Ink, true, FontStyles.Bold); ct.rectTransform.Anchor(0, 0, 1, 1, 10, 4, 10, 4); ct.alignment = TextAlignmentOptions.MidlineLeft; ct.enableAutoSizing = true; ct.fontSizeMin = 9; ct.fontSizeMax = 13;
+            cargoTip.SetActive(false);
             var mb = UiKit.Btn(root, "Karte", () => OnMap?.Invoke(), Pal.Glass, 16); bottomBtns.Add(mb.gameObject); ((RectTransform)mb.transform).Anchor(1, 0, 1, 0, -64, 78, 12, -130);
             UiKit.Img(mb.transform, "Icon", UiKit.Icon("globe"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
             /* Fabian 01.11.: ein Tipp zurück zur Basis-Ansicht */
@@ -311,6 +316,15 @@ namespace LunarCleanup.UI
 
         // ---------- Bausteine für Fenster ----------
         public void Section(string title) { var t = UiKit.Text(sheetContent, "Abschnitt", title, 11, Pal.Ink2, true, FontStyles.Bold | FontStyles.UpperCase); t.characterSpacing = 10; UiKit.LE(t, 30, 30); t.alignment = TextAlignmentOptions.BottomLeft; }
+        /// <summary>Hervorgehobener Kasten (Gold) für wichtige Hinweise.</summary>
+        public void Callout(string title, string txt)
+        {
+            var box = UiKit.Glass(sheetContent, "Wichtig", new Color(.35f, .27f, .06f, .95f), 14); var vl = box.gameObject.AddComponent<VerticalLayoutGroup>(); vl.childControlHeight = true; vl.childControlWidth = true; vl.childForceExpandHeight = false; vl.padding = new RectOffset(14, 14, 12, 12); vl.spacing = 4;
+            UiKit.Add<ContentSizeFitter>(box).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var t = UiKit.Text(box.transform, "Titel", title, 17, Pal.Credit, true, FontStyles.Bold); UiKit.Add<ContentSizeFitter>(t).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var d = UiKit.Text(box.transform, "Text", txt, 14, Pal.Ink); UiKit.Add<ContentSizeFitter>(d).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var bi = box; binders.Add(() => bi.color = Color.Lerp(new Color(.35f, .27f, .06f, .95f), new Color(.5f, .38f, .08f, .95f), .5f + .5f * Mathf.Sin(Time.time * 3)));
+        }
         public void Note(string txt, Func<string> live = null)
         {
             var t = UiKit.Text(sheetContent, "Hinweis", txt, 14, Pal.Ink2); UiKit.Add<ContentSizeFitter>(t).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -487,7 +501,7 @@ namespace LunarCleanup.UI
             { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
               if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
-            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : cg > 0 ? "Starten" : "Leer"; UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && !SheetOpen && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) cargoTip.SetActive(show); if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }

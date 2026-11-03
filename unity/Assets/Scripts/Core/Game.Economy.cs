@@ -21,6 +21,28 @@ namespace LunarCleanup.Core
             var sv = Cur.sv; bool on = SellOn(Cur, m); sv.sellYes.Remove(m); sv.autoOff.Remove(m); if (on) sv.autoOff.Add(m); else sv.sellYes.Add(m);
             Toast(GameData.Mats[m].name + (SellOn(Cur, m) ? " ist zum Verkauf freigegeben – fährt in den Frachtraum der Rakete" : " ist gesperrt – bleibt im Lager"));
         }
+        /// <summary>Fabian 03.11.: Anfangsbereich (vor Basisstufe 2) – liegt verkaufbare Ware im Lager, die von Hand in die Rakete muss?</summary>
+        public static bool CargoHint(PState ps)
+        {
+            if (Gs(ps) >= 2 || ps.sv.rk > 0 || SellCap(ps) - Sum(ps.sv.sellBuf) <= .5f) return false;
+            for (int m = 0; m < NM; m++) { bool raw = GameData.Mats[m].raw; if ((raw ? ps.sv.roh : ps.sv.prod)[m] >= (raw ? .5f : 1) && SellOn(ps, m)) return true; }
+            return false;
+        }
+        /// <summary>Alle freigegebenen Waren auf einmal in den Frachtraum (Anfangsbereich).</summary>
+        public static void LoadAllCargo()
+        {
+            var ps = Cur; if (ps.sv.rk > 0) { Fail("Die Rakete ist unterwegs"); return; }
+            float before = Sum(ps.sv.sellBuf);
+            for (int m = 0; m < NM; m++)
+            {
+                bool raw = GameData.Mats[m].raw; var store = raw ? ps.sv.roh : ps.sv.prod; if (!SellOn(ps, m) || store[m] < (raw ? .5f : 1)) continue;
+                float room = SellCap(ps) - Sum(ps.sv.sellBuf); if (room <= .01f) break; float u = Mathf.Min(store[m], room); if (!raw) u = Mathf.Floor(u + 1e-6f); if (u <= .01f) continue;
+                store[m] -= u; ps.sv.sellBuf[m] += u;
+            }
+            float got = Sum(ps.sv.sellBuf) - before;
+            if (got <= .01f) { Fail(SellCap(ps) - before <= .01f ? "Der Frachtraum ist voll – starte die Rakete" : "Nichts Freigegebenes auf Lager"); return; }
+            Toast(Fmt(got) + " Waren in die Rakete geladen – jetzt starten, dann gibt es Geld", "good"); Save();
+        }
         /// <summary>Freigegebene Ware von Hand in den Frachtraum laden (vor allem bevor es Förderbänder gibt).</summary>
         public static void LoadRocket(int m)
         {

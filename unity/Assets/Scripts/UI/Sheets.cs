@@ -153,6 +153,11 @@ namespace LunarCleanup.UI
         /// <summary>Verkauf: nur freigegebene Waren gehen in den Frachtraum der Rakete – verkauft wird erst beim Start.</summary>
         static void Selling(Hud h)
         {
+            if (Game.Gs(ps) < 2)
+            { /* Fabian 03.11.: im Anfangsbereich gut sichtbar, wie man Geld bekommt */
+                h.Callout("So bekommst du Geld", "1  Ware freigeben   ·   2  In die Rakete laden   ·   3  Rakete starten\nOhne Laden fliegt nichts weg – erst ab Basisstufe 2 bringt ein Band die Ware von selbst.");
+                h.Row("Alles in die Rakete laden", () => Game.CargoHint(ps) ? "Lädt alle freigegebenen Waren auf einmal ein" : ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Gerade nichts Freigegebenes auf Lager", () => "Alles laden", () => Game.CargoHint(ps), () => Game.LoadAllCargo(), true, null, false, () => ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Erst Ware reinigen, ins Lager bringen und freigeben");
+            }
             h.Section("Rakete");
             h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst ab " + Game.Fmt(Game.SellTarget(ps)) + " E",
                 () => "Starten", () => ps.sv.rk <= 0 && Game.Sum(ps.sv.sellBuf) > 0, () => Game.LaunchRocket(), false);
@@ -170,7 +175,7 @@ namespace LunarCleanup.UI
                 int m = i; var M = GameData.Mats[m]; var st = M.raw ? ps.sv.roh : ps.sv.prod; if (st[m] < (M.raw ? .5f : 1) && !Game.PlanetRaws(ps).Contains(m)) continue;
                 h.Row(M.name, () => Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr · " + (Game.SellOn(ps, m) ? "freigegeben" : "gesperrt"),
                     () => Game.SellOn(ps, m) ? "Sperren" : "Freigeben", () => true, () => Game.ToggleAuto(m), false);
-                if (Game.Gs(ps) < 2) h.Row("   In den Frachtraum laden", () => "", () => "Laden", () => Game.SellOn(ps, m) && ps.sv.rk <= 0 && (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.LoadRocket(m), false);
+                if (Game.Gs(ps) < 2) h.Row("   In die Rakete laden", () => "", () => "Laden", () => Game.SellOn(ps, m) && ps.sv.rk <= 0 && (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.LoadRocket(m), true);
             }
         }
         // Produktions-Ampel: Engpässe mit Ursache und den passenden Upgrades
