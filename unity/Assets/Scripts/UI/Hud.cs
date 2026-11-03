@@ -30,11 +30,19 @@ namespace LunarCleanup.UI
         public bool MenuOpen => menuGo && menuGo.activeSelf;
         public void HideMenu() { if (menuGo) menuGo.SetActive(false); }
         GameObject menuGo; float quitT = -99;
+        TextMeshProUGUI hardMenuTxt, hardMenuSub; Image hardMenuImg;
+        void UpdateHardMenu()
+        {
+            if (!MenuOpen || hardMenuTxt == null) return; bool open = Game.Hard || Game.HardOpen;
+            hardMenuTxt.text = Game.Hard ? "Normales Spiel" : open ? "Hard Mode" : "Hard Mode (gesperrt)";
+            hardMenuSub.text = Game.Hard ? "Zurück zu deinem normalen Spielstand" : open ? "Eigener Spielstand · du putzt selbst · ×3 Geld" : "Gesperrt · " + Game.HardDoneN + "/" + GameData.POrder.Length + " Planeten sauber – oder im Shop · antippen für Infos";
+            hardMenuImg.color = open ? new Color(1, .75f, .3f, .3f) : new Color(1, 1, 1, .05f); hardMenuTxt.color = open ? Pal.Credit : Pal.Ink3;
+        }
         /// <summary>Startmenü (Fabian 01.11.): Spiel starten, Einstellungen, Beenden – liegt über der Basis, unter den Einstellungen.</summary>
         void BuildMenu()
         {
             var bg = UiKit.Glass(root, "Startmenü", new Color(.02f, .04f, .1f, .72f), 0); bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 1, -300, -300, -300, -300); menuGo = bg.gameObject;
-            var box = UiKit.Rt(bg.transform, "Mitte").Anchor(.5f, .5f, .5f, .5f, -150, -210, -150, -230);
+            var box = UiKit.Rt(bg.transform, "Mitte").Anchor(.5f, .5f, .5f, .5f, -150, -250, -150, -230); /* 03.11.: Platz für Hard Mode */
             var t1 = UiKit.Text(box, "Titel", "LUNAR CLEANUP", 34, Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t1.rectTransform.Anchor(0, 1, 1, 1, 0, -50, 0, 0); t1.textWrappingMode = TextWrappingModes.NoWrap; t1.enableAutoSizing = true; t1.fontSizeMin = 18; t1.fontSizeMax = 34;
             var t2 = UiKit.Text(box, "Untertitel", "TYCOON", 18, Pal.Credit, true, FontStyles.Bold, TextAlignmentOptions.Center); t2.rectTransform.Anchor(0, 1, 1, 1, 0, -82, 0, 50); t2.characterSpacing = 18;
             float y = -150;
@@ -45,6 +53,9 @@ namespace LunarCleanup.UI
                 var st = UiKit.Text(b.transform, "Hinweis", sub, 11, new Color(fg.r, fg.g, fg.b, .7f), false, FontStyles.Normal, TextAlignmentOptions.Center); st.rectTransform.Anchor(0, 0, 1, .42f, 8, 6, 8, 0);
             }
             Big("Spiel starten", "Weiter mit deiner Basis", new Color(.43f, .95f, .82f, .95f), new Color(.03f, .08f, .12f), () => { menuGo.SetActive(false); LunarCleanup.Gameplay.Sfx.Play("pop", 1.2f, .4f); });
+            /* Fabian 03.11.: Hard Mode von Anfang an sichtbar – gesperrt mit Hinweis, wie man ihn freischaltet */
+            Big("Hard Mode", "", new Color(1, .75f, .3f, .14f), Pal.Credit, () => { if (Game.Hard || Game.HardOpen) { menuGo.SetActive(false); Game.SwitchHard(!Game.Hard); } else OpenSheet("hard"); });
+            { var hb = box.Find("Hard Mode"); if (hb) { hardMenuTxt = hb.Find("Text")?.GetComponent<TextMeshProUGUI>(); hardMenuSub = hb.Find("Hinweis")?.GetComponent<TextMeshProUGUI>(); hardMenuImg = hb.GetComponent<Image>(); } }
             Big("Einstellungen", "Sprache, Ton, Spielstand", new Color(1, 1, 1, .1f), Pal.Ink, () => OpenSheet("settings"));
             Big("Beenden", "Speichert und schließt das Spiel", new Color(1, 1, 1, .06f), Pal.Ink2, () =>
             {
@@ -494,7 +505,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */

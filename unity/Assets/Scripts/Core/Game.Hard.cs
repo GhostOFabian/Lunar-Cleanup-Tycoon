@@ -1,4 +1,4 @@
-// Fabian 03.11.: Hard Mode – ein eigener Spielstand, freigeschaltet, wenn im normalen Spiel alle Planeten frei sind.
+// Fabian 03.11.: Hard Mode – ein eigener Spielstand, freigeschaltet, wenn im normalen Spiel alle Planeten komplett gesäubert sind (oder per Shop).
 // Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme: du putzt alles selbst. Je Planet fährt ein Sammelwagen deine volle Hand-Ladung zur Basis.
 // Upgrades nur für Handgerät, Sammelwagen, Stationen, Bänder, Maschinen, Lager, Basis und Verkauf. Dafür bringt alles dreimal so viel Geld.
 // Normaler und Hard-Spielstand liegen getrennt nebeneinander; Wechseln in den Einstellungen.
@@ -17,10 +17,13 @@ namespace LunarCleanup.Core
         static readonly string[] HardNoBld = { "werkstatt", "hangar", "lifter" };
         /// <summary>Beim Start: zuletzt gespielter Modus.</summary>
         public static void InitHard() { Hard = PlayerPrefs.GetInt(HardKey, 0) == 1 && PlayerPrefs.GetInt(HardOpenKey, 0) == 1; }
-        public static bool HardOpen { get { if (PlayerPrefs.GetInt(HardOpenKey, 0) == 1) return true; if (!Hard && S != null && GameData.POrder.All(p => P.ContainsKey(p))) { PlayerPrefs.SetInt(HardOpenKey, 1); PlayerPrefs.Save(); return true; } return false; } }
+        /// <summary>Fabian 03.11.: frei, wenn im normalen Spiel alle Planeten komplett gesäubert sind (oder per Shop). Einmal frei bleibt frei.</summary>
+        public static bool HardOpen { get { if (PlayerPrefs.GetInt(HardOpenKey, 0) == 1) return true; if (!Hard && S != null && HardDoneN >= GameData.POrder.Length) { PlayerPrefs.SetInt(HardOpenKey, 1); PlayerPrefs.Save(); return true; } return false; } }
+        /// <summary>Wie viele Planeten im normalen Spiel schon komplett sauber sind.</summary>
+        public static int HardDoneN => Hard || S == null ? GameData.POrder.Length : GameData.POrder.Count(p => S.done.Contains(p));
         /// <summary>Shop „Hard Mode sofort“: freischalten, ohne erst alle Planeten zu haben (gilt für beide Spielstände, im Gerät gemerkt).</summary>
         public static void UnlockHard() { PlayerPrefs.SetInt(HardOpenKey, 1); PlayerPrefs.Save(); Toast("Hard Mode freigeschaltet – Einstellungen → Spielmodus", "good"); }
-        public static string HardWhy => HardOpen ? "" : "Erst im normalen Spiel alle " + GameData.POrder.Length + " Planeten freischalten (" + (Hard ? 0 : P.Count) + "/" + GameData.POrder.Length + ") – oder im Shop „Hard Mode sofort“";
+        public static string HardWhy => HardOpen ? "" : "Säubere im normalen Spiel alle " + GameData.POrder.Length + " Planeten komplett (" + HardDoneN + "/" + GameData.POrder.Length + ") – oder schalte ihn im Shop frei („Hard Mode sofort“)";
         public static bool HardUpgOk(UpgDef u) => !Hard || (Array.IndexOf(HardNoCat, u.cat) < 0 && u.id != "slots");
         public static bool HardBldOk(string id) => !Hard || Array.IndexOf(HardNoBld, id) < 0;
         /// <summary>Spielstand wechseln: der aktuelle wird gespeichert, der andere geladen (oder neu angelegt).</summary>

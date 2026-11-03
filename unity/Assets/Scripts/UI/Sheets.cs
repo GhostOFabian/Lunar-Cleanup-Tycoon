@@ -32,10 +32,28 @@ namespace LunarCleanup.UI
                 case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); BuildingUpgrades(h, "rig"); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "perks": title = "Perk-Shop"; PerkShop(h); break;
+                case "hard": title = "Hard Mode"; HardSheet(h); break;
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
         }
 
+        /// <summary>Fabian 03.11.: Hard Mode aus dem Startmenü – was er ist und wie man ihn freischaltet.</summary>
+        static void HardSheet(Hud h)
+        {
+            h.Note("Ein eigener, neuer Spielstand ab dem Mond. Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme – du putzt alles selbst. Ein Sammelwagen bringt deine Ladung zur Basis, im Perk-Shop gibt es Bomben, Helfer und Buffs, und alles bringt dreimal so viel Geld. Dein normaler Spielstand bleibt unberührt.");
+            if (Game.Hard || Game.HardOpen)
+            {
+                h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode ist frei", () => Game.Hard ? "Du spielst gerade den Hard Mode." : "Du kannst jederzeit wechseln – auch später in den Einstellungen.",
+                    () => Game.Hard ? "Zum normalen Spiel" : "Hard Mode spielen", () => true, () => { h.CloseSheet(); h.HideMenu(); Game.SwitchHard(!Game.Hard); }, !Game.Hard);
+                return;
+            }
+            h.Callout("So schaltest du ihn frei", "Säubere im normalen Spiel alle " + GameData.POrder.Length + " Planeten komplett – oder schalte ihn direkt im Shop frei.");
+            int n = Game.HardDoneN, all = GameData.POrder.Length;
+            h.Row("Alle Planeten säubern", () => n + " von " + all + " Planeten komplett sauber" + (n < all ? " · als Nächstes: " + NextDirty() : ""));
+            var o = Platform.Offers.FirstOrDefault(x => x.id == "hardmode");
+            if (o != null) h.Row(o.name, () => o.desc, () => o.price, () => true, () => Platform.Buy(o, ok => Game.Toast(ok ? o.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true);
+        }
+        static string NextDirty() { foreach (var p in GameData.POrder) if (!Game.S.done.Contains(p)) return GameData.Planets[p].name + (Game.P.ContainsKey(p) ? " (" + Mathf.FloorToInt(Game.CleanPct(Game.P[p]) * 100) + " %)" : " (noch nicht freigeschaltet)"); return "–"; }
         /// <summary>Fabian 03.11.: Perk-Shop (Hard Mode).</summary>
         static void PerkShop(Hud h)
         {
