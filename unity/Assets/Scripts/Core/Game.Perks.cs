@@ -57,16 +57,16 @@ namespace LunarCleanup.Core
         }
         static FKV Heat(PState ps, string id) { if (ps.sv.perkHeat == null) ps.sv.perkHeat = new List<FKV>(); var e = ps.sv.perkHeat.Find(x => x.k == id); if (e == null) { e = new FKV { k = id }; ps.sv.perkHeat.Add(e); } return e; }
         public static float PerkHeat(string id) => Cur.sv.perkHeat == null ? 0 : (Cur.sv.perkHeat.Find(x => x.k == id)?.v ?? 0);
-        static double HeatMul(string id) => Math.Pow(id == "nuke" ? 1.8 : 1.3, Mathf.Ceil(PerkHeat(id) - .001f));
+        static double HeatMul(string id) => 1; /* Fabian 03.11.: kein Aufschlag mehr je Kauf – nur die Tragegrenze bremst */
         /// <summary>Nur für Tests: Perk-Preise und Ladungen zurücksetzen.</summary>
         public static void DevResetPerks() { S.perkInc = 0; S.perkN.Clear(); S.buffT.Clear(); foreach (var p in P.Values) p.sv.perkHeat?.Clear(); }
         public static int PerkCap(string id) => PerkVal.TryGetValue(id, out var v) ? v.cap : 5;
         public static double PerkCost(string id)
         {
             var ps = Cur; if (!PerkVal.TryGetValue(id, out var pv)) return 0;
-            double b = 400 * ps.P.diff * Math.Pow(1.35, PlanetRank(ps.pid)) * Math.Pow(2.6, Math.Max(0, Gs(ps) - 1));
+            double b = 150 * ps.P.diff * Math.Pow(1.2, PlanetRank(ps.pid)) * Math.Pow(2, Math.Max(0, Gs(ps) - 1)); /* Fabian 03.11.: günstiger – Mond am Anfang: Bombe 150, Nuke 1 500 */
             double c = b * pv.f * HeatMul(id); /* Fabian 03.11.: kein Einkommens-Mindestpreis mehr – der Preis steigt nur mit Planet, Basisstufe und eigenen Käufen */
-            if (id == "helper") c *= Math.Pow(1.6, ps.sv.helpers.Count(x => x.life <= 0));
+            /* 03.11.: Helfer werden je Kauf nicht mehr teurer (Höchstzahl je Planet bleibt) */
             return Math.Round(c);
         }
         public static string PerkWhy(string id)
@@ -78,7 +78,7 @@ namespace LunarCleanup.Core
         }
         public static bool BuyPerk(string id)
         {
-            string w = PerkWhy(id); if (w != "") return Fail(w); var ps = Cur; S.credits -= PerkCost(id); Heat(ps, id).v += 1;
+            string w = PerkWhy(id); if (w != "") return Fail(w); var ps = Cur; S.credits -= PerkCost(id);
             if (id == "helper") { ps.sv.helpers.Add(new HelperSave { id = ++ps.sv.helperNext, d = ps.pd.PlanDir(ps.lay.start) }); Toast("Neuer Putzhelfer auf " + ps.P.name + " – er legt gleich los", "good"); }
             else { PerkAdd(id, 1); Toast(Perk(id).name + " gekauft · " + PerkN(id) + " bereit (Leiste unten)", "good"); }
             Save(); return true;

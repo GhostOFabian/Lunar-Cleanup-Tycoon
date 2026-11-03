@@ -267,3 +267,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 03.11. 19:06: Build 44 (iPhone-Paket + Browser v38): Perks leichter einsetzen, Preise stabil, Bombe reinigt 5 Parzellen. Im Editor getestet.
 - 03.11. 19:28: Build 45 (iPhone-Paket + Browser v39): Sammelshuttle, Zwischenlager, seltenere Meteoritenschauer im Hard Mode, Perk-Leiste mit fester Knopfbreite. Im Editor getestet (Zwischenlager füllt sich bei vollem Lager, Shuttle schwebt).
 - 03.11. 19:53: Build 46 (iPhone-Paket + Browser v40): Planetenkasse und Betreuung. Im Editor getestet: alter Stand migriert (Mond 25 k, Mars 50 k …), Reisen tauscht die Kasse, 4 h offline → 43 %, Antippen → 100 %.
+- 03.11. 20:28: Build 47 gebaut (iPhone-Paket + Browser-Dateien auf dem Mac): Perks günstiger, kein Aufschlag je Kauf. Browser noch nicht hochgeladen – Verbindung zum Mac brach ab.
