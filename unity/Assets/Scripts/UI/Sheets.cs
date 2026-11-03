@@ -397,6 +397,7 @@ namespace LunarCleanup.UI
             }
             foreach (var pid in GameData.POrder) if (!Regions.Any(r => r.ids.Contains(pid)) && Game.P.ContainsKey(pid) == travel) { PlanetRow(h, pid); shown++; } /* Sicherheitsnetz für neue Planeten */
             if (shown == 0) h.Note(travel ? "Noch keine Planeten." : "Alle Planeten sind freigeschaltet.");
+            if (travel) h.Note("Jeder Planet hat seine eigene Kasse: Was er verdient, bleibt bei ihm. Von außen darf nur ein Startbudget kommen (2× Freischaltpreis). Ohne dich lassen Maschinen und Fahrzeuge nach 30 min langsam nach – kurz vorbeischauen und antippen bringt sie zurück.");
             if (Game.S.debt > 0) h.Note("Reisekredit offen: " + Cr(Game.S.debt) + " – wird mit der Hälfte jeder Einnahme abbezahlt.");
             if (!travel && Game.S.debt > 0 && Game.StardustPending() > 0) h.Note("Tipp: Ein Sternenstaub-Neustart (Reiter Sternenstaub) bringt jetzt +" + Game.StardustPending() + " Sternenstaub für dauerhafte Boni.");
             else if (!travel) h.Note("Freischalten kannst du immer den nächsten Planeten der Reihe.");
@@ -407,12 +408,13 @@ namespace LunarCleanup.UI
             string dirt = string.Join(", ", P.types.Select(t => GameData.Dirt[t.Key].name));
             if (GameData.PLiq.TryGetValue(pid, out var lq)) { var LD = GameData.Liq.Find(x => x.key == lq); if (LD != null) dirt += " · " + LD.name + "-Flächen: nur Schwebefahrzeuge oder Hand"; }
             int nP = (have ? Game.P[pid].pd.N : GameData.Cells[pid].N); string size = Game.Num(nP) + " Parzellen";
-            if (cur) h.Row(P.name, () => "Du bist hier · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
-            else if (have) h.Row(P.name, () => Game.Ruined(key) ? "Zerstört vom Riesenmeteor – wird neu aufgebaut, noch " + Mathf.CeilToInt(Game.RuinLeft(key) / 60f) + " min" : Game.P[key].sv.rest ? "Gerettet · ruht · " + Game.Fmt(Game.P[key].sv.restRate * 3600) + " Cr/h" : Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => Game.Ruined(key) ? "Gesperrt" : "Reisen", () => !Game.Ruined(key), () => { Game.Travel(key); h.CloseSheet(); }, false);
-            else
+            if (cur) h.Row(P.name, () => "Du bist hier · Kasse " + Cr(Game.S.credits) + " · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub);
+            else if (have) h.Row(P.name, () => Game.Ruined(key) ? "Zerstört vom Riesenmeteor – wird neu aufgebaut, noch " + Mathf.CeilToInt(Game.RuinLeft(key) / 60f) + " min" : Game.P[key].sv.rest ? "Gerettet · ruht · " + Game.Fmt(Game.P[key].sv.restRate * 3600) + " Cr/h" : "Kasse " + Cr(Game.P[key].sv.cash) + " · " + Mathf.FloorToInt(Game.CleanPct(Game.P[key]) * 100) + " % sauber · " + size + " · " + P.sub, () => Game.Ruined(key) ? "Gesperrt" : "Reisen", () => !Game.Ruined(key), () => { Game.Travel(key); h.CloseSheet(); }, false);
+            if (have && !cur && Game.ImportLeft(Game.P[key]) >= 1) h.Row("   Zuschuss schicken", () => "Noch bis " + Cr(Game.ImportLeft(Game.P[key])) + " von außen erlaubt – danach muss " + P.name + " selbst verdienen", () => "Schicken", () => Game.S.credits >= 1, () => Game.SendCash(key), false); /* 03.11.: Planetenkasse */
+            if (!have)
             {
                 int i = System.Array.IndexOf(GameData.POrder, pid); string prev = i > 0 ? GameData.POrder[i - 1] : null;
-                if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : ""); }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); }, why: () => Game.Steps(Game.UnlockWhy(key), P.unlockCost) + (Game.UnlockWhy(key) == "" && Game.CanCredit(key) ? "\n\nOder: „Auf Kredit reisen“ direkt darunter." : ""));
+                if (prev != null && Game.P.ContainsKey(prev)) h.Row(P.name, () => { string w = Game.UnlockWhy(key); return (w != "" ? w + " · " : "") + size + " · " + P.sub + " · " + dirt + (P.hzName != "" ? " · Gefahr: " + P.hzName : "") + " · Startbudget: bis " + Cr(Game.ImportCap(key)) + " aus dieser Kasse, der Rest bleibt hier"; }, () => Cr(P.unlockCost), () => Game.UnlockWhy(key) == "" && Game.S.credits >= P.unlockCost, () => { if (Game.Unlock(key)) h.CloseSheet(); }, why: () => Game.Steps(Game.UnlockWhy(key), P.unlockCost) + (Game.UnlockWhy(key) == "" && Game.CanCredit(key) ? "\n\nOder: „Auf Kredit reisen“ direkt darunter." : ""));
                 if (Game.CanCredit(key)) h.Row("   Auf Kredit reisen", () => "Dir fehlen " + Cr(P.unlockCost - Game.S.credits) + ". Der Rest wird geliehen (+10 %) und mit der Hälfte deiner Einnahmen abbezahlt.", () => "Kredit", () => Game.CanCredit(key), () => { if (Game.UnlockOnCredit(key)) h.CloseSheet(); }, false);
                 else h.Row(P.name, () => size + " · " + P.sub + " · noch nicht erreichbar");
             }

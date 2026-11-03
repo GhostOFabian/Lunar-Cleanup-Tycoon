@@ -71,7 +71,7 @@ namespace LunarCleanup.Core
             Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades(); InitHard();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes();
+            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet();
             if (!P.ContainsKey(S.planet)) S.planet = "moon";
         }
 
@@ -213,7 +213,7 @@ namespace LunarCleanup.Core
                 Save(); PlayerPrefs.SetString(Key + "-vorImport", PlayerPrefs.GetString(Key, ""));
                 if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid));
                 S = s; GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); if (!P.ContainsKey(S.planet)) S.planet = "moon";
+                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet(); if (!P.ContainsKey(S.planet)) S.planet = "moon";
                 Save(); OnPlanetChanged?.Invoke(); return "";
             }
             catch (Exception e) { return "Code nicht lesbar (" + e.GetType().Name + ")"; }
@@ -255,7 +255,7 @@ namespace LunarCleanup.Core
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
             return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1) * RestSellF * (Hard ? HARD_PRICE : 1); /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 %; 03.11.: Hard Mode ×3 */
         }
-        public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
+        public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } if (earnPid != null && earnPid != S.planet && P.TryGetValue(earnPid, out var eps)) eps.sv.cash += cr; else S.credits += cr; } /* 03.11.: Planetenkasse */
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
         /// A) Reiseprämie: Wer einen Planeten komplett reinigt, bekommt einmalig die Reisekosten zum nächsten Planeten.</summary>
         static readonly List<PState> pendingPrize = new List<PState>();
@@ -270,7 +270,7 @@ namespace LunarCleanup.Core
         static void TravelPrize(PState ps, bool live)
         {
             if (ps.sv.prize) return; ps.sv.prize = true; int i = Array.IndexOf(GameData.POrder, ps.pid); if (i < 0 || i + 1 >= GameData.POrder.Length) return; string nx = GameData.POrder[i + 1]; if (P.ContainsKey(nx)) return;
-            double c = GameData.Planets[nx].unlockCost; S.credits += c; if (live) Toast("Reiseprämie für den sauberen Planeten: +" + Fmt(c) + " Cr – genug für die Reise nach " + GameData.Planets[nx].name, "good");
+            double c = GameData.Planets[nx].unlockCost; AddCash(ps, c); if (live) Toast("Reiseprämie für den sauberen Planeten: +" + Fmt(c) + " Cr – genug für die Reise nach " + GameData.Planets[nx].name, "good");
         }
         /// <summary>C) Reise auf Kredit: fehlt Geld, wird der Rest geliehen und mit der Hälfte jeder Einnahme abbezahlt.</summary>
         public static bool CanCredit(string pid) => !P.ContainsKey(pid) && UnlockWhy(pid) == "" && S.credits < GameData.Planets[pid].unlockCost && S.debt <= 0;
@@ -424,7 +424,7 @@ namespace LunarCleanup.Core
         static int lastCell = -1; static float fullWarnT;
         /// <summary>Ein Wisch darf bis zu zwei Parzellen gleichzeitig reinigen (die erste und eine benachbarte, auf die der Pinsel hinüberstreicht).</summary>
         static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 2;
-        public static void BeginStroke() { strokeCells.Clear(); }
+        public static void BeginStroke() { strokeCells.Clear(); Attend(); }
         public static bool CanClean(Vector3 d) { var ps = Cur; int c = ps.pd.CellOf(d, lastCell); return Workable(ps, c); }
         /// <summary>Wischen an der Stelle d (Einheitsvektor). Liefert die aufgenommene Menge.</summary>
         public static float Stroke(Vector3 d, float dt, out int mat)
@@ -1011,7 +1011,7 @@ namespace LunarCleanup.Core
         public static bool SendToShop(PState ps, VehSave v, bool auto)
         {
             if (!ps.bld.Contains("werkstatt")) return auto ? false : Fail("Erst eine Roboterwerkstatt bauen"); if (v.rep >= VM_REPS) return auto ? false : Fail("Schon zweimal repariert – ersetzen");
-            if (v.mode == "toShop" || v.mode == "repair") return false; double c = RepCost(ps, v); if (S.credits < c) return auto ? false : Fail(Lacks(c)); S.credits -= c;
+            if (v.mode == "toShop" || v.mode == "repair") return false; double c = RepCost(ps, v); if (Cash(ps) < c) return auto ? false : Fail(Lacks(c)); AddCash(ps, -c); /* 03.11.: aus der Kasse dieses Planeten */
             if ((v.mode == "queue" || v.mode == "unload") && HasSt(ps, v.sid)) FreeDock(ps.st[v.sid], v);
             if (v.drone >= 0) v.drone = -1; if (v.rig >= 0) { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r != null && r.claim == v.id) r.claim = -1; v.rig = -1; } v.sid = null; v.cell = -1; v.mode = "toShop"; return true;
         }
@@ -1527,10 +1527,10 @@ namespace LunarCleanup.Core
         {
             if (P.ContainsKey(pid)) return false; string why = UnlockWhy(pid); if (why != "") return Fail(why);
             double c = GameData.Planets[pid].unlockCost; if (S.credits < c) return Fail(Lacks(c));
-            S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); Travel(pid);
+            S.credits -= c; var sv = NewPlanet(pid); S.planets.Add(sv); P[pid] = Attach(sv); string from = S.planet; double carry = CarryTo(from, pid); Travel(pid); if (carry > 0) Toast("Startbudget " + Fmt(carry) + " Cr mitgenommen – der Rest bleibt in der Kasse von " + GameData.Planets[from].name, "good");
             Toast(GameData.Planets[pid].name + ": neuer Anfang – Basis, Technik und Fahrzeug-Upgrades baust du hier selbst auf.", "good"); return true;
         }
-        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Icp != null) { Fail("Erst die Meteorbrocken abwehren!"); return; } if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); }
+        public static void Travel(string pid) { if (!P.ContainsKey(pid) || S.planet == pid) return; if (Icp != null) { Fail("Erst die Meteorbrocken abwehren!"); return; } if (Ruined(pid)) { Fail(GameData.Planets[pid].name + " wird gerade neu aufgebaut – noch " + Mathf.CeilToInt(RuinLeft(pid) / 60f) + " min"); return; } SwapWallet(S.planet, pid); S.planet = pid; strokeCells.Clear(); lastCell = -1; OnPlanetChanged?.Invoke(); } /* 03.11.: Planetenkasse wechselt mit */
 
         // ================= Ziele =================
         static PState Moon => P["moon"];
@@ -1737,13 +1737,14 @@ namespace LunarCleanup.Core
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
             AchievementStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
-        static void StepPlanet(PState ps, float dt)
+        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; } }
+        static void StepPlanet0(PState ps, float dt)
         {
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
             if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
-            EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
+            ps.sv.careT += dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps); /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }

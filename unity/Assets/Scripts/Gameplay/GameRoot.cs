@@ -551,7 +551,7 @@ namespace LunarCleanup.Gameplay
         }
         void Tap(Vector2 pos)
         {
-            var ps = Game.Cur;
+            var ps = Game.Cur; Game.Attend(); /* 03.11.: Betreuung */
             if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
             if (world.Moving) { if (Hit(pos, out var dmv)) world.MoveTo(ps.pd.PlanLocal(dmv)); return; } /* Gebäude verschieben: Tipp = dorthin */
             if (Hud.ArmedTool != null) { var tool = Hud.ArmedTool; if (Hit(pos, out var dtool)) { int n = Game.UseTool(tool, dtool); if (n > 0) { Hud.ArmedTool = null; /* 03.11.: bleibt scharf, bis es wirklich gewirkt hat */ WorldView.Shake = Mathf.Max(WorldView.Shake, tool == "nuke" ? 2f : .8f); world.EmitDust(dtool, new Color(1f, .9f, .6f), tool == "nuke" ? 160 : 50); Sfx.Play("boom", tool == "nuke" ? .6f : 1.1f, .7f); } } return; } /* 03.11.: Perk-Werkzeug */

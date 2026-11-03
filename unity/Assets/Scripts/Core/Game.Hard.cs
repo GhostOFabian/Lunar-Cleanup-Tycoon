@@ -34,7 +34,7 @@ namespace LunarCleanup.Core
             Icp = null; Find = null; restN = -1; ResetStats();
             S = Load() ?? Fresh(); if (Hard) S.hard = true;
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon";
+            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon"; MigrateWallet(); ResetStats();
             Save(); OnPlanetChanged?.Invoke();
             Toast(on ? "Hard Mode: du putzt selbst – dein Sammelshuttle bringt die Ladung zur Basis, alles bringt dreimal so viel" : "Zurück im normalen Spiel", "good");
         }
