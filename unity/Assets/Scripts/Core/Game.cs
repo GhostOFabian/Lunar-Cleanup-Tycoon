@@ -409,7 +409,7 @@ namespace LunarCleanup.Core
             if (!ps.paid[id])
             {
                 ps.paid[id] = true;
-                double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff; Earn(bonus);
+                double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff * (ps.pid == S.planet ? GoldF : 1); Earn(bonus); /* 03.11.: Goldener Mopp */
                 if (GameData.Kinds[cl.kind].key == "rich") { int m = GameData.Dirt[cl.type].mat; float x = Mathf.Min(ParcelYield(cl) * .2f, RohCap(ps) - RohSum(ps)); if (x > 0) ps.sv.roh[m] += x; }
                 FloatTxt(ps.pd.cells[id].c, "+" + Fmt(bonus) + " Cr", "big");
                 OnCellDone(ps, id, bonus);

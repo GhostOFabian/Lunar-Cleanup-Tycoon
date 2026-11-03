@@ -201,20 +201,21 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Fabian 03.11.: Perk-Leiste (Hard Mode) – Werkzeuge antippen und dann die Stelle, Buffs sofort; „+“ öffnet den Perk-Shop ----------
-        public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>();
+        public static string ArmedTool; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
         void BuildPerkBar()
         {
             var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
-            foreach (var id in new[] { "bomb", "nuke", "turbo", "wide", "magnet", "shop" })
+            for (int i = 0; i < 7; i++)
             {
-                string key = id; var b = UiKit.Btn(row, key, () => PerkTap(key), Pal.Glass, 12); var img = b.GetComponent<Image>();
+                string id = i == 6 ? "shop" : "";
+                int slot = i; var b = UiKit.Btn(row, "Perk " + i, () => PerkTap(slot), Pal.Glass, 12); var img = b.GetComponent<Image>();
                 var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 7; t.fontSizeMax = 11;
-                pbBtns.Add((key, img, t)); bottomBtns.Add(b.gameObject);
+                pbBtns.Add((id, img, t)); bottomBtns.Add(b.gameObject);
             }
         }
-        void PerkTap(string id)
+        void PerkTap(int slot)
         {
-            if (id == "shop") { OpenSheet("perks"); return; }
+            string id = slot >= 0 && slot < pbIds.Length ? pbIds[slot] : null; if (string.IsNullOrEmpty(id) || id == "shop") { OpenSheet("perks"); return; }
             var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
             if (P.kind == 0) { ArmedTool = ArmedTool == id ? null : id; if (ArmedTool != null) Game.Toast(P.name + " bereit – tippe auf die Stelle, die gereinigt werden soll", ""); }
             else Game.UseBuff(id);
@@ -222,8 +223,12 @@ namespace LunarCleanup.UI
         void UpdatePerkBar()
         {
             bool on = Game.PerksOpen && !SheetOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; return; }
-            foreach (var (id, img, txt) in pbBtns)
+            /* Fabian 03.11.: die Leiste zeigt nur, was du hast (oder was gerade läuft) – höchstens 6, dahinter der Shop */
+            var have = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Take(6).Select(x => x.id).ToList();
+            for (int i = 0; i < pbBtns.Count; i++)
             {
+                var (_, img, txt) = pbBtns[i]; string id = i == 6 ? "shop" : i < have.Count ? have[i] : ""; pbIds[i] = id; img.gameObject.SetActive(id != "");
+                if (id == "") continue;
                 if (id == "shop") { txt.text = "+\nShop"; continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
                 txt.text = P.name.Split(' ', '-')[0] + "\n" + (bl > 0 ? Mathf.CeilToInt(bl) + " s" : "×" + n);
                 img.color = ArmedTool == id ? new Color(1f, .75f, .3f, .55f) : bl > 0 ? new Color(.43f, .95f, .82f, .35f) : n > 0 ? Pal.Glass : new Color(Pal.Glass.r, Pal.Glass.g, Pal.Glass.b, Pal.Glass.a * .5f);

@@ -2391,5 +2391,22 @@
 " · auf ": " · on ",
 " · bereit: ": " · ready: ",
 " bereit – tippe auf die Stelle, die gereinigt werden soll": " ready – tap the spot to clean",
-": Standardplatz war belegt – steht jetzt daneben (Gebäude antippen → Verschieben)": ": default spot was taken – now stands next to it (tap building → Move)"
+": Standardplatz war belegt – steht jetzt daneben (Gebäude antippen → Verschieben)": ": default spot was taken – now stands next to it (tap building → Move)",
+"Hochdruck-Kärcher": "Pressure Washer",
+"Eine schnurgerade Schneise: reinigt bis zu 8 Parzellen in einer Linie, von der Basis aus durch die Stelle, die du antippst": "A dead-straight lane: cleans up to 8 parcels in a line, from the base through the spot you tap",
+"Schaumkanone": "Foam Cannon",
+"Weicht im Umkreis von 15 m allen Schmutz ein – danach wischst du ihn mit einem Streich weg (70 % schon gelöst)": "Soaks all dirt within 15 m – then you wipe it away in one stroke (70 % already loosened)",
+"Staubsauger-Tornado": "Vacuum Tornado",
+"Ein kleiner Wirbelsturm saust 25 Sekunden über den Planeten und saugt Parzelle um Parzelle weg": "A little whirlwind races across the planet for 25 seconds, sucking up parcel after parcel",
+"Espresso für die Helfer": "Espresso for the Helpers",
+"2 Minuten lang laufen und fegen deine Putzhelfer dreimal so schnell": "For 2 minutes your cleaning helpers walk and sweep three times as fast",
+"Goldener Mopp": "Golden Mop",
+"90 s lang bringt jede fertige Parzelle den dreifachen Bonus": "For 90 s every finished parcel pays triple bonus",
+"Rohrpost": "Pneumatic Tube",
+"2 Minuten lang saugt eine Rohrpost deinen Behälter alle 3 Sekunden leer – direkt ins Rohstofflager, ganz ohne Sammelwagen": "For 2 minutes a pneumatic tube empties your container every 3 seconds – straight into raw storage, no collector cart needed",
+"Staubsauger-Tornado losgelassen – 25 Sekunden Chaos!": "Vacuum tornado released – 25 seconds of chaos!",
+"Hier gibt es nichts einzuschäumen – tippe auf dreckige Parzellen am Rand des Sauberen": "Nothing to foam here – tap dirty parcels at the edge of the clean area",
+"Die Schneise trifft nichts Dreckiges – zieh sie vom Sauberen aus ins Dreckige": "The lane hits nothing dirty – aim it from the clean area into the dirt",
+"Parzellen eingeweicht – jetzt einmal drüberwischen!": "parcels soaked – now wipe over them once!",
+"Parzellen in einer Schneise!": "parcels in one lane!"
 }
