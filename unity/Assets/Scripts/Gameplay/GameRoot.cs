@@ -554,7 +554,7 @@ namespace LunarCleanup.Gameplay
             var ps = Game.Cur;
             if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
             if (world.Moving) { if (Hit(pos, out var dmv)) world.MoveTo(ps.pd.PlanLocal(dmv)); return; } /* Gebäude verschieben: Tipp = dorthin */
-            if (Hud.ArmedTool != null) { var tool = Hud.ArmedTool; Hud.ArmedTool = null; if (Hit(pos, out var dtool)) { int n = Game.UseTool(tool, dtool); if (n > 0) { WorldView.Shake = Mathf.Max(WorldView.Shake, tool == "nuke" ? 2f : .8f); world.EmitDust(dtool, new Color(1f, .9f, .6f), tool == "nuke" ? 160 : 50); Sfx.Play("boom", tool == "nuke" ? .6f : 1.1f, .7f); } } return; } /* 03.11.: Perk-Werkzeug */
+            if (Hud.ArmedTool != null) { var tool = Hud.ArmedTool; if (Hit(pos, out var dtool)) { int n = Game.UseTool(tool, dtool); if (n > 0) { Hud.ArmedTool = null; /* 03.11.: bleibt scharf, bis es wirklich gewirkt hat */ WorldView.Shake = Mathf.Max(WorldView.Shake, tool == "nuke" ? 2f : .8f); world.EmitDust(dtool, new Color(1f, .9f, .6f), tool == "nuke" ? 160 : 50); Sfx.Play("boom", tool == "nuke" ? .6f : 1.1f, .7f); } } return; } /* 03.11.: Perk-Werkzeug */
             if (world.Editing) { if (Hit(pos, out var de)) world.TapEdit(ps.pd.PlanLocal(de)); return; } /* Band-Editor: Tipp aufs Band = neuer Punkt */
             if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */

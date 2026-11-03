@@ -40,7 +40,7 @@ namespace LunarCleanup.Core
         /// <summary>Preis: wächst mit Schwierigkeit und Basisstufe des aktuellen Planeten (Hard-Mode-Einnahmen ×3 sind eingerechnet).</summary>
         /* Fabian 03.11.: Perks dürfen das Spiel später nicht billig machen. Drei Bremsen:
            1. Grundpreis wächst mit Planet (Schwierigkeit × 1,35 je Planet in der Reihe) und Basisstufe.
-           2. Preis ist nie kleiner als ein paar Minuten deines Einkommens (wer reich ist, zahlt mehr).
+           2. (entfernt 03.11.: Einkommens-Mindestpreis – der Preis stieg ständig, auch ohne Kauf)
            3. Jeder Kauf auf diesem Planeten macht den nächsten teurer (+30 %, Nuke +80 %); alle 10 min sinkt das um eine Stufe.
            Dazu: man trägt nur wenige Ladungen (Nuke 2). */
         static readonly Dictionary<string, (double f, int cap)> PerkVal = new Dictionary<string, (double, int)>
@@ -57,7 +57,7 @@ namespace LunarCleanup.Core
         }
         static FKV Heat(PState ps, string id) { if (ps.sv.perkHeat == null) ps.sv.perkHeat = new List<FKV>(); var e = ps.sv.perkHeat.Find(x => x.k == id); if (e == null) { e = new FKV { k = id }; ps.sv.perkHeat.Add(e); } return e; }
         public static float PerkHeat(string id) => Cur.sv.perkHeat == null ? 0 : (Cur.sv.perkHeat.Find(x => x.k == id)?.v ?? 0);
-        static double HeatMul(string id) => Math.Pow(id == "nuke" ? 1.8 : 1.3, Mathf.Floor(PerkHeat(id)));
+        static double HeatMul(string id) => Math.Pow(id == "nuke" ? 1.8 : 1.3, Mathf.Ceil(PerkHeat(id) - .001f));
         /// <summary>Nur für Tests: Perk-Preise und Ladungen zurücksetzen.</summary>
         public static void DevResetPerks() { S.perkInc = 0; S.perkN.Clear(); S.buffT.Clear(); foreach (var p in P.Values) p.sv.perkHeat?.Clear(); }
         public static int PerkCap(string id) => PerkVal.TryGetValue(id, out var v) ? v.cap : 5;
@@ -65,7 +65,7 @@ namespace LunarCleanup.Core
         {
             var ps = Cur; if (!PerkVal.TryGetValue(id, out var pv)) return 0;
             double b = 400 * ps.P.diff * Math.Pow(1.35, PlanetRank(ps.pid)) * Math.Pow(2.6, Math.Max(0, Gs(ps) - 1));
-            double inc = S.perkInc * PERK_INC_MIN; double c = Math.Max(b, inc) * pv.f * HeatMul(id);
+            double c = b * pv.f * HeatMul(id); /* Fabian 03.11.: kein Einkommens-Mindestpreis mehr – der Preis steigt nur mit Planet, Basisstufe und eigenen Käufen */
             if (id == "helper") c *= Math.Pow(1.6, ps.sv.helpers.Count(x => x.life <= 0));
             return Math.Round(c);
         }
@@ -97,7 +97,7 @@ namespace LunarCleanup.Core
             if (id == "foam") return Foam(ps, d);
             if (id == "tornado") { var t0 = new HelperSave { id = ++ps.sv.helperNext, d = d.normalized, life = 25 }; ps.sv.helpers.Add(t0); PerkAdd(id, -1); Toast("Staubsauger-Tornado losgelassen – 25 Sekunden Chaos!", "good"); Save(); return 1; }
             if (id == "kaercher") return Kaercher(ps, d);
-            int max = id == "nuke" ? 60 : 5; float reach = id == "nuke" ? 45f : 12f; int c0 = pd.CellOf(d);
+            int max = id == "nuke" ? 60 : 5; float reach = id == "nuke" ? 45f : 12f; int c0 = SnapWork(ps, d); if (c0 < 0) { Toast("Hier gibt es nichts zu reinigen – der Planet ist schon sauber", "bad"); return 0; } d = pd.cells[c0].c.normalized; { float nd = 0; int nn = 0; foreach (int b in pd.cells[c0].nb) { nd += pd.Arc(pd.cells[b].c, d); nn++; } if (nn > 0) { nd /= nn; reach = Mathf.Max(reach, nd * (id == "nuke" ? 6.5f : 2.3f)); } } /* Reichweite nach Parzellengröße – auf großen Parzellen reichten 12 m nicht bis zum Nachbarn */ /* Fabian 03.11.: Tipp muss nicht genau sitzen – es geht an der nächsten reinigbaren Parzelle los */
             /* Ausbreitung vom Ziel aus über reinigbare Parzellen (jede fertige macht ihre Nachbarn reinigbar) */
             var q = new List<int> { c0 }; var seen = new HashSet<int> { c0 }; int done = 0; float got = 0;
             while (q.Count > 0 && done < max)
@@ -115,6 +115,14 @@ namespace LunarCleanup.Core
             if (done == 0) { Toast("Hier gibt es nichts zu reinigen – tippe auf dreckige Parzellen am Rand des Sauberen", "bad"); return 0; }
             PerkAdd(id, -1); Toast(Perk(id).name + ": " + done + " Parzellen auf einen Schlag sauber!", "good"); Save(); return done;
         }
+        /// <summary>Nächste reinigbare (dreckige, angrenzende) Parzelle zur Stelle d – so muss man nicht genau treffen.</summary>
+        static int SnapWork(PState ps, Vector3 d)
+        {
+            var pd = ps.pd; int c0 = pd.CellOf(d); if (c0 >= 0 && !ps.clean[c0] && Workable(ps, c0) && !pd.cells[c0].IsBase) return c0;
+            int best = -1; float bd = float.MaxValue;
+            for (int c = 0; c < pd.N; c++) { if (ps.clean[c] || pd.cells[c].IsBase || !Workable(ps, c)) continue; float a = pd.Arc(pd.cells[c].c, d); if (a < bd) { bd = a; best = c; } }
+            return best;
+        }
         static float rohrT;
         /// <summary>Rohrpost: Behälter direkt ins Rohstofflager.</summary>
         static void PipeHand(PState ps)
@@ -125,7 +133,7 @@ namespace LunarCleanup.Core
         /// <summary>Schaumkanone: Schmutz im Umkreis zu 70 % lösen.</summary>
         static int Foam(PState ps, Vector3 d)
         {
-            var pd = ps.pd; int n = 0;
+            var pd = ps.pd; int n = 0; { int sc = SnapWork(ps, d); if (sc >= 0 && pd.Arc(pd.cells[sc].c, d) > 6f) d = pd.cells[sc].c.normalized; } /* 03.11.: neben das Saubere gezielt? dann dort einschäumen */
             for (int c = 0; c < pd.N; c++)
             {
                 if (ps.clean[c] && !ps.act.ContainsKey(c)) continue; if (pd.Arc(pd.cells[c].c, d) > 15f || !Workable(ps, c)) continue;

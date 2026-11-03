@@ -228,7 +228,7 @@ namespace LunarCleanup.UI
         {
             string id = slot >= 0 && slot < pbIds.Length ? pbIds[slot] : null; if (string.IsNullOrEmpty(id) || id == "shop") { OpenSheet("perks"); return; }
             var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
-            if (P.kind == 0) { ArmedTool = ArmedTool == id ? null : id; if (ArmedTool != null) Game.Toast(P.name + " bereit – tippe auf die Stelle, die gereinigt werden soll", ""); }
+            if (P.kind == 0) { ArmedTool = ArmedTool == id ? null : id; if (ArmedTool != null) Game.Toast(P.name + " bereit – tippe auf den Planeten, es geht an der nächsten dreckigen Stelle los (Knopf nochmal = abbrechen)", ""); }
             else Game.UseBuff(id);
         }
         static string PerkShort(string id) { switch (id) { case "bomb": return "Bombe"; case "nuke": return "Nuke"; case "kaercher": return "Kärcher"; case "foam": return "Schaum"; case "tornado": return "Tornado"; case "turbo": return "Turbo"; case "wide": return "Breit"; case "magnet": return "Magnet"; case "espresso": return "Espresso"; case "goldmop": return "Gold"; case "rohrpost": return "Rohr"; } return id; }
