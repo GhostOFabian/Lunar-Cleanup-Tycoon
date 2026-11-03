@@ -31,7 +31,7 @@ namespace LunarCleanup.Core
         {
             if (on == Hard) return; if (on && !HardOpen) { Fail(HardWhy); return; }
             Save(); Hard = on; PlayerPrefs.SetInt(HardKey, on ? 1 : 0); PlayerPrefs.Save();
-            Icp = null; Find = null; restN = -1;
+            Icp = null; Find = null; restN = -1; ResetStats();
             S = Load() ?? Fresh(); if (Hard) S.hard = true;
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon";

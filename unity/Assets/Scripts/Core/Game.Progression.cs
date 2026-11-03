@@ -137,6 +137,9 @@ namespace LunarCleanup.Core
         {
             statT += dt; if (statT < 10) return; statT = 0; statHist.Enqueue((Time.realtimeSinceStartup, S.stats.earned, Cur.nClean)); while (statHist.Count > 31) statHist.Dequeue();
         }
+        /// <summary>03.11.: Verlauf leeren (Spielstand gewechselt) – sonst zählt das Einkommen des anderen Spielstands mit.</summary>
+        public static float IncomeSpan() => statHist.Count < 2 ? 0 : statHist.Last().t - statHist.Peek().t;
+        public static void ResetStats() { statHist.Clear(); statT = 0; }
         public static double IncomePerMin() { if (statHist.Count < 2) return 0; var a = statHist.Peek(); var b = statHist.Last(); float dt = Mathf.Max(1, b.t - a.t); return (b.earned - a.earned) / dt * 60; }
         public static float CellsPerMin() { if (statHist.Count < 2) return 0; var a = statHist.Peek(); var b = statHist.Last(); float dt = Mathf.Max(1, b.t - a.t); return (b.clean - a.clean) / dt * 60; }
 

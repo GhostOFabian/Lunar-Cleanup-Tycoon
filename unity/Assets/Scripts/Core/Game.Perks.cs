@@ -58,6 +58,8 @@ namespace LunarCleanup.Core
         static FKV Heat(PState ps, string id) { if (ps.sv.perkHeat == null) ps.sv.perkHeat = new List<FKV>(); var e = ps.sv.perkHeat.Find(x => x.k == id); if (e == null) { e = new FKV { k = id }; ps.sv.perkHeat.Add(e); } return e; }
         public static float PerkHeat(string id) => Cur.sv.perkHeat == null ? 0 : (Cur.sv.perkHeat.Find(x => x.k == id)?.v ?? 0);
         static double HeatMul(string id) => Math.Pow(id == "nuke" ? 1.8 : 1.3, Mathf.Floor(PerkHeat(id)));
+        /// <summary>Nur für Tests: Perk-Preise und Ladungen zurücksetzen.</summary>
+        public static void DevResetPerks() { S.perkInc = 0; S.perkN.Clear(); S.buffT.Clear(); foreach (var p in P.Values) p.sv.perkHeat?.Clear(); }
         public static int PerkCap(string id) => PerkVal.TryGetValue(id, out var v) ? v.cap : 5;
         public static double PerkCost(string id)
         {
@@ -149,7 +151,7 @@ namespace LunarCleanup.Core
         {
             if (!Hard) return;
             if (ps.sv.perkHeat != null) foreach (var e in ps.sv.perkHeat) if (e.v > 0) e.v = Mathf.Max(0, e.v - dt / HEAT_DECAY); /* Aufschlag sinkt (auch offline) */
-            if (ps.pid == S.planet) { double inc = IncomePerMin(); if (inc > 0) S.perkInc += (inc - S.perkInc) * Math.Min(1, dt / (inc > S.perkInc ? 60.0 : 1800.0)); } /* steigt schnell, sinkt langsam */
+            if (ps.pid == S.planet && !Offline && IncomeSpan() >= 120) { double inc = Math.Max(0, IncomePerMin()); S.perkInc += (inc - S.perkInc) * Math.Min(1, dt / (inc > S.perkInc ? 300.0 : 1800.0)); } /* steigt in ~5 min, sinkt in ~30 min – ein einzelner Raketenverkauf verzieht den Preis kaum */
             if (ps.pid == S.planet) foreach (var e in S.buffT) if (e.v > 0) e.v = Mathf.Max(0, e.v - dt);
             if (ps.pid == S.planet && BuffLeft("rohrpost") > 0) { rohrT -= dt; if (rohrT <= 0) { rohrT = 3; PipeHand(ps); } }
             if (ps.sv.helpers.Count == 0) return; var pd = ps.pd;
