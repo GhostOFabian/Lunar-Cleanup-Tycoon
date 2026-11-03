@@ -18,7 +18,9 @@ namespace LunarCleanup.Core
         /// <summary>Beim Start: zuletzt gespielter Modus.</summary>
         public static void InitHard() { Hard = PlayerPrefs.GetInt(HardKey, 0) == 1 && PlayerPrefs.GetInt(HardOpenKey, 0) == 1; }
         public static bool HardOpen { get { if (PlayerPrefs.GetInt(HardOpenKey, 0) == 1) return true; if (!Hard && S != null && GameData.POrder.All(p => P.ContainsKey(p))) { PlayerPrefs.SetInt(HardOpenKey, 1); PlayerPrefs.Save(); return true; } return false; } }
-        public static string HardWhy => HardOpen ? "" : "Erst im normalen Spiel alle " + GameData.POrder.Length + " Planeten freischalten (" + (Hard ? 0 : P.Count) + "/" + GameData.POrder.Length + ")";
+        /// <summary>Shop „Hard Mode sofort“: freischalten, ohne erst alle Planeten zu haben (gilt für beide Spielstände, im Gerät gemerkt).</summary>
+        public static void UnlockHard() { PlayerPrefs.SetInt(HardOpenKey, 1); PlayerPrefs.Save(); Toast("Hard Mode freigeschaltet – Einstellungen → Spielmodus", "good"); }
+        public static string HardWhy => HardOpen ? "" : "Erst im normalen Spiel alle " + GameData.POrder.Length + " Planeten freischalten (" + (Hard ? 0 : P.Count) + "/" + GameData.POrder.Length + ") – oder im Shop „Hard Mode sofort“";
         public static bool HardUpgOk(UpgDef u) => !Hard || (Array.IndexOf(HardNoCat, u.cat) < 0 && u.id != "slots");
         public static bool HardBldOk(string id) => !Hard || Array.IndexOf(HardNoBld, id) < 0;
         /// <summary>Spielstand wechseln: der aktuelle wird gespeichert, der andere geladen (oder neu angelegt).</summary>

@@ -2352,5 +2352,13 @@
 " (mindestens 2 m Abstand)": " (at least 2 m apart)",
 " versetzt – die Bänder werden neu verlegt": " moved – the belts are re-laid",
 " wieder am Standardplatz": " back at its default spot",
-"Zeichnen": "Draw"
+"Zeichnen": "Draw",
+"Hard Mode sofort": "Hard Mode now",
+"Schaltet den Hard Mode gleich frei, ohne erst alle 18 Planeten zu haben: eigener Spielstand, du putzt selbst, dreifache Einnahmen": "Unlocks Hard Mode right away without needing all 18 planets: separate save, you clean yourself, triple income",
+"Hard Mode freigeschaltet – Einstellungen → Spielmodus": "Hard Mode unlocked – Settings → Game mode",
+") – oder im Shop „Hard Mode sofort“": ") – or “Hard Mode now” in the shop",
+"Hard Mode freischalten": "Unlock Hard Mode",
+"Ist schon frei – Einstellungen → Spielmodus.": "Already unlocked – Settings → Game mode.",
+"Schaltet den Hard Mode zum Testen frei (wie der Shop-Kauf).": "Unlocks Hard Mode for testing (like the shop purchase).",
+"Frei": "Unlock"
 }
