@@ -13,24 +13,26 @@ namespace LunarCleanup.Gameplay
     {
         // ----- eigene Wege in die Bandverlegung einsetzen (nach RouteBelts, vor PlanBridges) -----
         readonly Dictionary<string, Vector2[]> autoRouted = new Dictionary<string, Vector2[]>(); string autoKey;
-        const float CUSTOM_R = 2.2f, MIN_R = .95f, MAX_H = 4.5f;
+        const float CUSTOM_R = 1.5f, MIN_R = .9f, MAX_H = 4.5f; /* 03.11.: kleinerer Rundungsradius – der Weg folgt den Punkten genauer */
         void ApplyCustomRoutes()
         {
             if (autoKey != routedKey) { autoRouted.Clear(); foreach (var kv in routed) autoRouted[kv.Key] = kv.Value; autoKey = routedKey; }
             routed.Clear(); foreach (var kv in autoRouted) routed[kv.Key] = kv.Value;
             if (ps.sv.bRoutes == null) return;
-            foreach (var cr in ps.sv.bRoutes) { var bd = ps.lay.belts.FirstOrDefault(x => x.id == cr.id); if (bd != null && autoRouted.TryGetValue(cr.id, out var a) && a.Length >= 3 && cr.p.Count > 0) routed[cr.id] = CustomShape(bd, a, cr.p, cr.a0, cr.a1); }
+            foreach (var cr in ps.sv.bRoutes) { var bd = ps.lay.belts.FirstOrDefault(x => x.id == cr.id); if (bd != null && autoRouted.TryGetValue(cr.id, out var a) && a.Length >= 3 && cr.p.Count > 0) routed[cr.id] = CustomShape(bd, a, cr.p, cr.a0, cr.a1, cr.d0, cr.d1); }
         }
         /// <summary>Anschlüsse aus dem automatischen Weg (erste/letzte 1,6 m im Gebäude), dazwischen die eigenen Punkte.</summary>
         /// <summary>a0/a1: eigener Aus-/Eingang als Winkel um das Gebäude (Fabian 02.11.: Ausgang ziehen), −999 = Anschluss des automatischen Wegs.</summary>
-        Vector2[] CustomShape(BeltDef b, Vector2[] auto, List<Vector2> mid, float a0, float a1)
+        /// <summary>Fabian 03.11.: d0/d1 = freier Endpunkt in diesem Abstand vor der Wand (statt fester 3,4-m-Stummel) – der Weg geht von der Wand gerade zu deinem Griff und dann zu deinen Punkten.</summary>
+        Vector2[] CustomShape(BeltDef b, Vector2[] auto, List<Vector2> mid, float a0, float a1, float d0 = -1, float d1 = -1)
         {
-            Vector2 p0 = auto[0], q0 = auto[auto.Length - 1]; var da = (auto[1] - p0).normalized; var db = (auto[auto.Length - 2] - q0).normalized;
-            if (a0 > -900 && ps.lay.pos.ContainsKey(b.from)) { var d = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)); float fp = GameData.Bld[b.from].fp; p0 = ps.lay.pos[b.from] + d * (fp * .95f - 1.6f); da = d; }
-            if (a1 > -900 && ps.lay.pos.ContainsKey(b.to)) { var d = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)); float fp = GameData.Bld[b.to].fp; q0 = ps.lay.pos[b.to] + d * (fp * .95f - 1.6f); db = d; }
-            var pts = new List<Vector2> { p0, p0 + da * 1.6f, p0 + da * 3.4f }; pts.AddRange(mid); pts.Add(q0 + db * 3.4f); pts.Add(q0 + db * 1.6f); pts.Add(q0);
+            Vector2 p0 = auto[0], q0 = auto[auto.Length - 1]; var da = (auto[1] - p0).normalized; var db = (auto[auto.Length - 2] - q0).normalized; float s0 = 3.4f, s1 = 3.4f;
+            if (a0 > -900 && ps.lay.pos.ContainsKey(b.from)) { var d = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)); float fp = GameData.Bld[b.from].fp; p0 = ps.lay.pos[b.from] + d * (fp * .95f - 1.6f); da = d; if (d0 > 0) s0 = 1.6f + d0; }
+            if (a1 > -900 && ps.lay.pos.ContainsKey(b.to)) { var d = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)); float fp = GameData.Bld[b.to].fp; q0 = ps.lay.pos[b.to] + d * (fp * .95f - 1.6f); db = d; if (d1 > 0) s1 = 1.6f + d1; }
+            var pts = new List<Vector2> { p0, p0 + da * 1.6f, p0 + da * s0 }; pts.AddRange(mid); pts.Add(q0 + db * s1); pts.Add(q0 + db * 1.6f); pts.Add(q0);
             return Round(Dedupe(pts), CUSTOM_R);
         }
+        float eD0 = -1, eD1 = -1;
         /// <summary>Höhen der eigenen Punkte als Brücken-Abschnitte (Stützen kommen von selbst).</summary>
         void AddCustomLifts()
         {
@@ -82,7 +84,7 @@ namespace LunarCleanup.Gameplay
         {
             EndEdit(); if (!autoRouted.TryGetValue(id, out var auto)) return; EditBelt = id; SelPt = -1; eAuto = 0; ePts.Clear(); eH.Clear();
             var cr = ps.sv.bRoutes.FirstOrDefault(x => x.id == id);
-            eA0 = eA1 = -999; if (cr != null && cr.p.Count > 0) { ePts.AddRange(cr.p); eH.AddRange(cr.h); while (eH.Count < ePts.Count) eH.Add(0); eA0 = cr.a0; eA1 = cr.a1; }
+            eA0 = eA1 = -999; eD0 = eD1 = -1; if (cr != null && cr.p.Count > 0) { ePts.AddRange(cr.p); eH.AddRange(cr.h); while (eH.Count < ePts.Count) eH.Add(0); eA0 = cr.a0; eA1 = cr.a1; eD0 = cr.d0; eD1 = cr.d1; }
             else
             {
                 // Startpunkte: Ecken des automatischen Wegs (vereinfacht), ohne die Anschlussstücke
@@ -112,7 +114,7 @@ namespace LunarCleanup.Gameplay
         public bool CommitEdit()
         {
             if (!EditValid) return false; var id = EditBelt; ps.sv.bRoutes.RemoveAll(x => x.id == id);
-            ps.sv.bRoutes.Add(new BeltRouteSave { id = id, p = new List<Vector2>(ePts), h = new List<float>(eH), a0 = eA0, a1 = eA1 });
+            ps.sv.bRoutes.Add(new BeltRouteSave { id = id, p = new List<Vector2>(ePts), h = new List<float>(eH), a0 = eA0, a1 = eA1, d0 = eD0, d1 = eD1 });
             EndEdit(); ps.baseVersion++; Game.Save(); Game.Toast("Band verlegt", "good"); return true;
         }
         public void ResetEdit() { var id = EditBelt; if (id == null) return; ps.sv.bRoutes.RemoveAll(x => x.id == id); EndEdit(); ps.baseVersion++; Game.Save(); Game.Toast("Band wieder automatisch verlegt"); }
@@ -128,7 +130,7 @@ namespace LunarCleanup.Gameplay
             if (i == END0 || i == END1) /* Anfang/Ende um das Gebäude ziehen */
             {
                 var b0 = ps.lay.belts.FirstOrDefault(x => x.id == EditBelt); if (b0 == null) return; string bid = i == END0 ? b0.from : b0.to; if (!ps.lay.pos.ContainsKey(bid)) return;
-                var d = pl - ps.lay.pos[bid]; if (d.sqrMagnitude < .01f) return; float a = Mathf.Atan2(d.y, d.x); if (i == END0) eA0 = a; else eA1 = a; eDirty = true; return;
+                var d = pl - ps.lay.pos[bid]; if (d.sqrMagnitude < .01f) return; float a = Mathf.Atan2(d.y, d.x), dist = Mathf.Clamp(d.magnitude - GameData.Bld[bid].fp * .95f, .6f, 14f); /* 03.11.: Griff frei – Richtung UND Abstand */ if (i == END0) { eA0 = a; eD0 = dist; } else { eA1 = a; eD1 = dist; } eDirty = true; return;
             }
             if (i < 0 || i >= ePts.Count) return; pl.x = Mathf.Clamp(pl.x, -GOFF + 2, GOFF - 2); pl.y = Mathf.Clamp(pl.y, -GOFF + 2, GOFF - 2); ePts[i] = pl; eDirty = true; }
         /// <summary>Höher/Tiefer-Knöpfe: gewählter Punkt, ohne Auswahl das ganze Band.</summary>
@@ -165,7 +167,7 @@ namespace LunarCleanup.Gameplay
             if ((pts[0] - c0).magnitude + (pts[pts.Count - 1] - c1).magnitude > (pts[0] - c1).magnitude + (pts[pts.Count - 1] - c0).magnitude) pts.Reverse(); /* egal, in welche Richtung gezeichnet wurde */
             List<Vector2> simp = null; for (float eps = .6f; eps < 8; eps *= 1.5f) { simp = Rdp(pts, eps); var sp = new List<Vector2>(); foreach (var p in simp) if (sp.Count == 0 || (p - sp[sp.Count - 1]).magnitude >= 2.4f) sp.Add(p); simp = sp; if (simp.Count <= 12) break; }
             ePts.Clear(); ePts.AddRange(simp); eH.Clear(); foreach (var _ in simp) eH.Add(0);
-            var f = simp[0] - c0; var l = simp[simp.Count - 1] - c1; if (f.sqrMagnitude > .01f) eA0 = Mathf.Atan2(f.y, f.x); if (l.sqrMagnitude > .01f) eA1 = Mathf.Atan2(l.y, l.x);
+            var f = simp[0] - c0; var l = simp[simp.Count - 1] - c1; if (f.sqrMagnitude > .01f) { eA0 = Mathf.Atan2(f.y, f.x); eD0 = .6f; } if (l.sqrMagnitude > .01f) { eA1 = Mathf.Atan2(l.y, l.x); eD1 = .6f; } /* gezeichnet: Weg beginnt direkt an der Wand */
             eAuto = final ? 5 : 0; eDirty = true;
         }
         static List<Vector2> Rdp(List<Vector2> p, float eps)
@@ -182,7 +184,7 @@ namespace LunarCleanup.Gameplay
             var b = ps.lay.belts.FirstOrDefault(x => x.id == EditBelt); if (b == null || !autoRouted.TryGetValue(EditBelt, out var auto)) { EndEdit(); return; }
             if (eDirty)
             {
-                eDirty = false; eShape = CustomShape(b, auto, ePts, eA0, eA1); eCum = new float[eShape.Length]; for (int i = 1; i < eShape.Length; i++) eCum[i] = eCum[i - 1] + (eShape[i] - eShape[i - 1]).magnitude;
+                eDirty = false; eShape = CustomShape(b, auto, ePts, eA0, eA1, eD0, eD1); eCum = new float[eShape.Length]; for (int i = 1; i < eShape.Length; i++) eCum[i] = eCum[i - 1] + (eShape[i] - eShape[i - 1]).magnitude;
                 var lifts = AddLifts(eShape, eCum, ePts, eH); float Lf(float s) { float best = 0; foreach (var w in lifts) { float k = s < w.x ? Mathf.SmoothStep(0, 1, 1 - (w.x - s) / 3f) : s > w.y ? Mathf.SmoothStep(0, 1, 1 - (s - w.y) / 3f) : 1; best = Mathf.Max(best, w.z * Mathf.Clamp01(k)); } return best; }
                 eWhy = Validate(b, Lf);
                 /* Fabian 02.11.: der vorgeschlagene Weg soll gleich gültig sein – kreuzt er ein Band, die Punkte selbst etwas anheben (wie die Brücken des automatischen Wegs) */

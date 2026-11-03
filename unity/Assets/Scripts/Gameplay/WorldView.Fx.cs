@@ -187,6 +187,8 @@ namespace LunarCleanup.Gameplay
         // ---------- Ampel-Masten neben den Gebäuden ----------
         readonly Dictionary<string, (GameObject go, Material mat)> ampel = new Dictionary<string, (GameObject, Material)>(); int ampelVer = -1; float ampelT;
         static readonly string[] AmpelIds = { "u1", "roh", "presse", "schmelze", "raff", "prod", "sell", "energy" };
+        /// <summary>Fabian 03.11.: Ampeln antippbar – Lampe, Mastmitte und Fuß (Weltpunkte).</summary>
+        public IEnumerable<(string id, Vector3 pos)> AmpelSpots() { foreach (var kv in ampel) if (kv.Value.go && kv.Value.go.activeInHierarchy) { var t = kv.Value.go.transform; var h = t.Find("Schein"); var top = h ? h.position : t.position + t.up * 3; yield return (kv.Key, top); yield return (kv.Key, Vector3.Lerp(t.position, top, .5f)); yield return (kv.Key, t.position); } }
         void Ampeln()
         {
             if (Game.Gs(ps) < 2) { foreach (var a in ampel.Values) if (a.go) a.go.SetActive(false); return; }

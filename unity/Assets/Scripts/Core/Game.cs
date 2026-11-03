@@ -60,7 +60,7 @@ namespace LunarCleanup.Core
         const float VEH_BUFF = 2.6f, BSP = 1.25f;
         /// <summary>Im Editor kann ein getrennter Test-Spielstand benutzt werden (Menü Lunar Cleanup → Testmodus), damit Test-Tasten nie deinen echten Stand verändern.</summary>
         public static bool TestMode, AdminWeb; /* AdminWeb: Browser-Admin für Fabian (02.11.) */
-        static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "");
+        static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "") + (Hard ? "-hard" : ""); /* 03.11.: Hard Mode eigener Spielstand */
 
         public static PState Cur => P[S.planet];
         public static PlanetDef CurP => GameData.Planets[S.planet];
@@ -68,7 +68,7 @@ namespace LunarCleanup.Core
         // ================= Start, Speichern, Laden =================
         public static void Init()
         {
-            Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades();
+            Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades(); InitHard();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes();
@@ -115,9 +115,10 @@ namespace LunarCleanup.Core
             if (sv.freq <= 0) sv.freq = GameData.OldFreq.TryGetValue(sv.pid, out int of) ? of : GameData.Planets[sv.pid].freq;
             string sk = GameData.SizeKey(sv.pid, sv.freq);
             var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = OneStation(GameData.Layouts[sk]), line = GameData.Lines[sv.pid] };
+            ApplyMoves(ps); /* 03.11.: verschobene Gebäude */
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
-            if (sv.cart.owned) { for (int m = 0; m < NM; m++) sv.roh[m] += sv.cart.tank[m]; Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
+            if (sv.cart.owned && !Hard) { for (int m = 0; m < NM; m++) sv.roh[m] += sv.cart.tank[m]; Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
             foreach (var b in sv.bld) ps.bld.Add(b);
             foreach (var kv in sv.upg) ps.upg[kv.k] = kv.v;
             int N = ps.pd.N; ps.clean = new bool[N]; ps.paid = new bool[N];
@@ -231,6 +232,7 @@ namespace LunarCleanup.Core
         public static bool BuyUpgrade(string id)
         {
             var u = GameData.Up[id]; var ps = Cur; int l = Lvl(id, ps);
+            if (!HardUpgOk(u)) return Fail("Im Hard Mode nicht verfügbar");
             if (l >= u.max) return Fail("Höchste Stufe erreicht");
             if (u.stage > 0 && Gs(ps) < u.stage) return Fail("Erst Basisstufe " + u.stage);
             double c = UCost(id, ps); if (S.credits < c) return Fail(Lacks(c));
@@ -251,7 +253,7 @@ namespace LunarCleanup.Core
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
-            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1) * RestSellF; /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 % */
+            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1) * RestSellF * (Hard ? HARD_PRICE : 1); /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 %; 03.11.: Hard Mode ×3 */
         }
         public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } S.credits += cr; }
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
@@ -457,6 +459,7 @@ namespace LunarCleanup.Core
         public static void UnloadHand()
         {
             var ps = Cur; float tot = HandSum(); if (tot < .05f) { Fail("Dein Sammelbehälter ist leer"); return; }
+            if (HardUnload(ps)) return; /* Hard Mode: Sammelwagen */
             /* Fabian 01.11.: kein Sammelwagen mehr – was du selbst sammelst, kommt direkt ins Rohstofflager */
             float free = RohCap(ps) - RohSum(ps); float[] dst = ps.sv.roh; string name = GameData.Bld["roh"].name, best = "roh";
             if (free < .05f) { Fail("Kein Platz – das Rohstofflager ist voll"); return; }
@@ -531,6 +534,7 @@ namespace LunarCleanup.Core
         public static string BuildWhy(PState ps, string id)
         {
             var B = GameData.Bld[id]; if (ps.bld.Contains(id)) return "Steht schon";
+            if (!HardBldOk(id)) return "Im Hard Mode nicht nötig – keine Fahrzeuge und Drohnen";
             if (Gs(ps) < B.stage) return "Erst Basisstufe " + B.stage;
             if (id == "u2" && !ps.bld.Contains("u1")) return "Erst die Entladeanlage (Stufe 1) bauen"; if (id == "u3" && !ps.bld.Contains("u2")) return "Erst Stufe 2 der Entladeanlage bauen";
             if (!string.IsNullOrEmpty(B.research) && !ResDone(B.research)) return "Erst erforschen: " + (GameData.Res.Find(r => r.id == B.research)?.name ?? B.research);
@@ -752,6 +756,7 @@ namespace LunarCleanup.Core
         public static int VehSlots(PState ps) => Math.Min(VehMax(ps), (Gs(ps) >= 2 ? 4 : 0) + (ps.bld.Contains("werkstatt") ? 4 : 0) + (ps.sv.stage >= 4 ? 4 : 0) + (ps.sv.stage >= 5 ? 6 : 0) + (int)Uv("slots", ps) + DoneCount() + ExpN(ps));
         public static string VehWhy(PState ps, string t)
         {
+            if (Hard) return "Im Hard Mode putzt du selbst – keine Putzfahrzeuge";
             var T = GameData.Veh[t]; if (Gs(ps) < T.stage) return "Erst Basisstufe " + T.stage;
             if (!string.IsNullOrEmpty(T.planet) && !P.ContainsKey(T.planet)) return "Erst " + GameData.Planets[T.planet].name + " erreichen";
             if (ps.sv.veh.Count >= VehSlots(ps)) return "Keine freien Fahrzeugplätze";
@@ -1080,6 +1085,7 @@ namespace LunarCleanup.Core
         public static Vector3 RigDock(PState ps, RigSave r) => ps.pd.ToDir(ps.pd.cells[r.cell], 2.7f, 0);
         public static string RigWhy(PState ps, int id)
         {
+            if (Hard) return "Im Hard Mode gibt es keine Bohrtürme – ohne Fahrzeuge holt niemand das Erz ab";
             var cl = ps.pd.cells[id];
             if (!IsDone(ps.pid)) return "Erst wenn " + ps.P.name + " komplett sauber ist";
             if (cl.IsBase || !ps.clean[id]) return "Nur auf sauberen Parzellen außerhalb der Basis"; if (cl.ring < 2) return "Zu nah an der Basis";
@@ -1420,7 +1426,7 @@ namespace LunarCleanup.Core
         static Vector2 NavPt(int k) => new Vector2(k % NN - NOFF + .5f, k / NN - NOFF + .5f);
         static bool[] NavGrid(PState ps)
         {
-            string key = string.Join(",", GameData.BOrder.Where(ps.bld.Contains)) + "|" + Gs(ps) + "|" + ps.visVer;
+            string key = string.Join(",", GameData.BOrder.Where(ps.bld.Contains)) + "|" + Gs(ps) + "|" + ps.visVer + MoveKey(ps); /* 03.11.: verschobene Gebäude */
             if (ps.navG != null && ps.navKey == key) return ps.navG;
             var g = new bool[NN * NN]; var blds = GameData.BOrder.Where(ps.bld.Contains).ToList(); var belts = ps.lay.belts.Where(b => BeltLive(ps, b) && !HiddenBelt(b)).ToList();
             for (int j = 0; j < NN; j++) for (int i = 0; i < NN; i++)
@@ -1545,13 +1551,13 @@ namespace LunarCleanup.Core
                 case 6: return Mathf.Min(1f, S.stats.handUnloads / 3f); /* früher: Sammelwagen kaufen (abgeschafft) */
                 case 7: return m.sv.stage >= 2 ? 1 : Mathf.Min(.99f, (float)(S.credits / 200));
                 case 8: return m.bld.Contains("u1") ? 1 : 0;
-                case 9: return m.sv.veh.Any(v => v.type == "buggy") ? 1 : 0;
+                case 9: return Hard || m.sv.veh.Any(v => v.type == "buggy") ? 1 : 0; /* Hard Mode: übersprungen */
                 case 10: return m.bld.Contains("presse") ? 1 : 0;
                 case 11: return S.stats.bricks > 0 ? 1 : 0;
                 case 12: return m.sv.stage >= 3 ? 1 : Mathf.Min(.99f, (float)(S.credits / 5000));
                 case 13: return m.bld.Contains("schmelze") ? 1 : 0;
                 case 14: return S.stats.barren > 0 ? 1 : 0;
-                case 16: return P.Values.Any(p => p.sv.drones.Count > 0) ? 1 : P.Values.Any(p => p.bld.Contains("hangar")) ? .5f : 0;
+                case 16: return Hard || P.Values.Any(p => p.sv.drones.Count > 0) ? 1 : P.Values.Any(p => p.bld.Contains("hangar")) ? .5f : 0;
                 case 17: return CleanPct(Moon) / .8f;
                 case 18: return P.ContainsKey("mars") ? 1 : 0;
                 case 19: return P.Values.Any(p => p.sv.outposts.Count > 0) ? 1 : ResDone("outpost") ? .3f : 0;
@@ -1734,6 +1740,7 @@ namespace LunarCleanup.Core
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
+            if (Hard) { HardCart(ps); CartStep(ps, dt); } /* Hard Mode: Sammelwagen fährt */
             EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f); /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

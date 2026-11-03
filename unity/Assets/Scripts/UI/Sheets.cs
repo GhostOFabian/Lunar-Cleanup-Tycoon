@@ -49,11 +49,18 @@ namespace LunarCleanup.UI
         }
         /// <summary>Upgrades für Systeme, die in Unity noch fehlen (Tiefenabbau), bleiben bis dahin ausgeblendet – kein Knopf ohne Wirkung.</summary>
         static readonly string[] NotPorted = { };
-        static bool UpVisible(UpgDef u) => !u.hide && System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
+        static bool UpVisible(UpgDef u) => Game.HardUpgOk(u) && (!u.hide || (Game.Hard && u.id == "cartspd")) && /* 03.11.: Hard Mode */ System.Array.IndexOf(NotPorted, u.id) < 0 && (!u.done || Game.CleanPct(ps) >= .999f) && (!u.rad || ps.P.rad > 0) && (u.stage == 0 || Game.Gs(ps) >= u.stage) && (string.IsNullOrEmpty(u.res) || Game.ResDone(u.res));
 
         static readonly Color AccVeh = new Color(.43f, .95f, .82f), AccBld = new Color(1f, .75f, .3f), AccDrone = new Color(.5f, .7f, 1f);
         static void Vehicles(Hud h)
         {
+            if (Game.Hard) /* Fabian 03.11.: Hard Mode – nur der Sammelwagen */
+            {
+                h.Section("Hard Mode · Sammelwagen");
+                h.Note("Im Hard Mode putzt du alles selbst. Ist dein Behälter voll, tippe unten links auf ihn: Der Sammelwagen kommt zu dir, du lädst um, und er bringt die Ladung zur Entladestation oder ins Rohstofflager. Alles bringt dreimal so viel Geld.");
+                h.Row("Sammelwagen", () => { var c = ps.sv.cart; return (c.mode == "go" ? "Kommt zu dir" : c.mode == "wait" ? "Wartet bei dir – tippe auf deinen Behälter" : c.mode == "back" ? "Bringt die Ladung weg" : c.mode == "drop" ? "Lädt ab" : "Steht bereit") + " · fasst " + Game.Fmt(Game.CartCap()) + " E (doppelter Behälter) · schneller mit dem Upgrade „Sammelwagen“"; }, () => "Rufen", () => ps.sv.cart.mode == "park", () => { ps.sv.cart.mode = "go"; });
+                return;
+            }
             h.Tabs("Kaufen", "Flotte " + ps.sv.veh.Count + "/" + Game.VehSlots(ps)); /* Upgrades nur noch im Upgrades-Menü (Fabian 01.11.: keine doppelte Menüführung) */
             int tab = h.Tab;
             if (tab == 0)
@@ -774,6 +781,9 @@ namespace LunarCleanup.UI
                 h.Row("Terraforming -1 (Verfall)", () => "Eine Stufe zurück – so sterben die Bäume.", () => "-1", () => Game.Cur.sv.terra > 0, () => { Game.DevTerra(Game.Cur.sv.terra - 1); h.CloseSheet(); }, false);
                 h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
             }
+            h.Section("Spielmodus");
+            h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelwagen bringt deine Ladung, dreifache Einnahmen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelwagen bringt deine Ladung zur Basis. Upgrades nur für Handgerät und Produktion, dafür bringt alles dreimal so viel. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
+                () => Game.Hard ? "Zum normalen Spiel" : "Hard Mode spielen", () => Game.Hard || Game.HardOpen, () => { h.CloseSheet(); Game.SwitchHard(!Game.Hard); }, !Game.Hard, null, true, () => Game.Hard ? "" : Game.HardWhy);
             if (Game.AdminWeb) h.Row("Admin-Modus", () => "Nur für dich: Test-Knöpfe an, eigener Test-Spielstand (dein normaler Spielstand bleibt unberührt). Beenden und neu laden = normales Spiel.", () => "Beenden", () => true, () => { Game.Save(); PlayerPrefs.DeleteKey("LunarCleanup.Admin"); PlayerPrefs.Save(); Game.Toast("Admin-Modus aus – Seite neu laden", "good"); }, false);
             if (Debug.isDebugBuild && !Application.isEditor)
                 h.Row("Testmodus " + (Game.TestMode ? "an" : "aus"), () => Game.TestMode ? "Du spielst mit einem eigenen Test-Spielstand. Ausschalten und die Seite neu laden = normaler Spielstand." : "Normaler Spielstand. Einschalten und die Seite neu laden = Test-Spielstand mit Test-Knöpfen.",
@@ -811,6 +821,7 @@ namespace LunarCleanup.UI
         static void Building(Hud h, string id)
         {
             var B = GameData.Bld[id]; h.Note(B.desc);
+            if (ps.bld.Contains(id)) h.Row("Verschieben", () => (Game.Moved(ps, id) ? "Steht an deinem eigenen Platz. " : "") + "Stell das Gebäude frei an einen anderen Platz im Basisgelände – die Bänder werden neu verlegt.", () => "Verschieben", () => true, () => { h.CloseSheet(); LunarCleanup.Gameplay.GameRoot.MoveReq = id; }, false); /* Fabian 03.11. */
             BuildingAmpel(h, id);
             BuildingUpgrades(h, id); BuildingLevel(h, id);
             if (id == "roh" || id == "prod" || id == "sell" || GameData.Stations.Contains(id) || id == "presse" || id == "schmelze" || id == "raff") { ProductionOverview(h); if (id == "sell" || id == "roh" || id == "prod") Selling(h); return; }

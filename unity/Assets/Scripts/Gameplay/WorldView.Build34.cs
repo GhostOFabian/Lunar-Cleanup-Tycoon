@@ -192,7 +192,9 @@ namespace LunarCleanup.Gameplay
         // Terraforming: Grünflächen, Moos, Gras und Sträucher, Teiche, Bäume, die sich im Wind wiegen
         // =====================================================================
         Transform terraRoot; int terraBuilt = -1; string terraFor; Material greenMat;
-        class Tree { public Transform t; public Quaternion r0; public float ph, s, full = 1, grow, die = -1; public MeshRenderer crown; public bool young; }
+        class Tree { public Transform t; public Quaternion r0; public float ph, s, full = 1, grow, die = -1, duck = 1; public MeshRenderer crown; public bool young; public int cell = -1; public Vector3 dir; }
+        /// <summary>Fabian 03.11.: Wo gerade gewischt wird (Einheitsvektor, sonst null) – Bäume dort ducken sich weg, damit man den Schmutz darunter sieht und trifft.</summary>
+        public static Vector3 WipeDir;
         readonly List<Tree> trees = new List<Tree>();
         public static readonly Color TerraSky = new Color(.45f, .72f, 1f);
         /// <summary>Stufe hat sich geändert (Kauf oder Verfall).</summary>
@@ -316,7 +318,7 @@ namespace LunarCleanup.Gameplay
             }
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             float s = young ? full * .55f : full;
-            var tr = new Tree { t = g.transform, r0 = g.transform.rotation, ph = (float)rng.NextDouble() * 6.283f, s = s, full = full, grow = grow ? 0 : 1, crown = mr, young = young };
+            var tr = new Tree { t = g.transform, r0 = g.transform.rotation, ph = (float)rng.NextDouble() * 6.283f, s = s, full = full, grow = grow ? 0 : 1, crown = mr, young = young, cell = pd.CellOf(dir), dir = dir.normalized };
             g.transform.localScale = Vector3.one * s * (grow ? .01f : 1); trees.Add(tr);
         }
         /// <summary>Viele kleine Teile aus einem Blender-Modell (je Material eine Mesh).</summary>
@@ -348,8 +350,11 @@ namespace LunarCleanup.Gameplay
                     if (tr.die >= 1.4f) { Destroy(tr.t.gameObject); trees.RemoveAt(i); }
                     continue;
                 }
-                if (tr.grow < 1) { tr.grow = Mathf.Min(1, tr.grow + Time.deltaTime / 3f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow); }
-                if (tr.young && ps.sv.terra >= 5) tr.young = false; float target = tr.young ? tr.full * .55f : tr.full; if (tr.s < target) { tr.s = Mathf.MoveTowards(tr.s, target, Time.deltaTime * .1f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow); }
+                if (tr.grow < 1) tr.grow = Mathf.Min(1, tr.grow + Time.deltaTime / 3f);
+                if (tr.young && ps.sv.terra >= 5) tr.young = false; float target = tr.young ? tr.full * .55f : tr.full; if (tr.s < target) tr.s = Mathf.MoveTowards(tr.s, target, Time.deltaTime * .1f);
+                /* Fabian 03.11.: über Schmutz (Meteoritenstaub) und dort, wo du wischst, ducken sich die Bäume weg */
+                float duckTo = WipeDir != Vector3.zero && (tr.dir - WipeDir).magnitude * pd.R < 8f ? .1f : tr.cell >= 0 && ps.act.ContainsKey(tr.cell) ? .4f : 1f;
+                tr.duck = Mathf.MoveTowards(tr.duck, duckTo, Time.deltaTime * 4f); tr.t.localScale = Vector3.one * tr.s * Mathf.SmoothStep(.01f, 1, tr.grow) * tr.duck;
                 float a = wind * (2.2f + Mathf.Sin(tm * .7f + tr.ph * 2) * .8f);
                 tr.t.rotation = tr.r0 * Quaternion.Euler(Mathf.Sin(tm * 1.3f + tr.ph) * a, 0, Mathf.Cos(tm * 1.05f + tr.ph * 1.7f) * a * .6f);
             }

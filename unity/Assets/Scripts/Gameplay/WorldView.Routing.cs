@@ -21,7 +21,7 @@ namespace LunarCleanup.Gameplay
         void RouteBelts()
         {
             var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
-            string key = "m2|" + ps.pid + "|" + ps.sv.freq + "|" /* m2 = mit Zusammenführungen (02.11.) */ + string.Join(",", ps.bld.OrderBy(x => x)) + "|" + string.Join(",", live.Select(x => x.id));
+            string key = "m2|" + ps.pid + "|" + ps.sv.freq + Game.MoveKey(ps) + "|" /* m2 = mit Zusammenführungen (02.11.) */ + string.Join(",", ps.bld.OrderBy(x => x)) + "|" + string.Join(",", live.Select(x => x.id));
             if (key == routedKey) return; routedKey = key; routed.Clear(); sharedEnd.Clear();
             /* Fabian 01.11.: Reisen schneller – fertige Wege je Basis-Stand auf dem Gerät merken (Wegsuche kostete auf großen Basen mehrere Sekunden) */
             if (RouteCache.TryGet(key, routed, sharedEnd)) return;

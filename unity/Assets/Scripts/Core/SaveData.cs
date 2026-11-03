@@ -21,7 +21,8 @@ namespace LunarCleanup.Core
     [Serializable] public class EventSave { public string key = ""; public float t; public int cell = -1; public bool done; public int mat = -1; public float amt0; /* Händler: Ware; Müllberg: Anfangsmenge */ }
     [Serializable] public class ChalSave { public List<string> offer = new List<string>(); public string act = ""; public double v0; public float left; public long refresh; public int done; } // Fabian 01.11.: Herausforderungen
     [Serializable] public class FKV { public string k = ""; public float v; } // Fabian 02.11.: Spezialgüter im Galaxie-Lager
-    [Serializable] public class BeltRouteSave { public string id = ""; public List<Vector2> p = new List<Vector2>(); public List<float> h = new List<float>(); public float a0 = -999, a1 = -999; /* eigener Aus-/Eingang: Winkel um das Gebäude (−999 = automatisch) */ } // eigener Bandverlauf (Band-Editor)
+    [Serializable] public class BPosSave { public string id = ""; public float x, y; } // 03.11.: eigener Gebäudeplatz
+    [Serializable] public class BeltRouteSave { public string id = ""; public List<Vector2> p = new List<Vector2>(); public List<float> h = new List<float>(); public float a0 = -999, a1 = -999; public float d0 = -1, d1 = -1; /* 03.11.: Abstand des freien Endpunkts vor der Gebäudewand (−1 = alt) */ /* eigener Aus-/Eingang: Winkel um das Gebäude (−999 = automatisch) */ } // eigener Bandverlauf (Band-Editor)
     [Serializable] public class DailySave { public int lastDay, streak; }
     [Serializable] public class RuleSave { public string ifK = "", thenK = "", arg = ""; public float val; public bool on = true; }
     [Serializable] public class SeasonSave { public string key = ""; public float clean; public bool claimed; }
@@ -89,6 +90,7 @@ namespace LunarCleanup.Core
         public bool xport; public double xEarn;    // Export-Frachter gekauft, Einnahmen daraus (02.11.)
         public float offPend;                    // Offline-Zeit, die dieser Planet noch nachrechnen muss (s)
         public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
+        public List<BPosSave> bMove = new List<BPosSave>();          // 03.11.: verschobene Gebäude
     }
 
     [Serializable]
@@ -106,6 +108,7 @@ namespace LunarCleanup.Core
         public int lineCol; // Fabian 01.11.: Farbe der Parzellenränder (0 = Grün … , siehe Game.LineColors)
         public ContractSave contracts = new ContractSave();
         public int fleetPlus; // Fabian 01.11.: gekaufte Flottenplätze über 15 hinaus (höchstens 5)
+        public bool hard;                                          // 03.11.: Spielstand des Hard Mode
         public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe
         public float volSfx = .8f, volMusic = .6f; // Lautstärke Geräusche / Musik (0–1)
         public List<string> resDone = new List<string>();

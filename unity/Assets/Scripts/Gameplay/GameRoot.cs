@@ -21,11 +21,12 @@ namespace LunarCleanup.Gameplay
         PlanetView planet; WorldView world; Hud hud; Camera cam;
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
         /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
+        public static string MoveReq; /* 03.11.: Gebäude verschieben (aus dem Gebäudefenster) */
         public static float ZoomReq = -1; public static Vector3? FocusReq; public static bool CheckReq, CheckNoPhotos;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
-        enum Mode { None, Wipe, Pan, Ui } int editDrag = -1; bool editKnob, drawing;
+        enum Mode { None, Wipe, Pan, Ui } int editDrag = -1; bool editKnob, drawing, moving;
         Mode mode; Vector2 downPos, lastPos; float downT, lastPinch; bool moved;
         GameObject brush; Light brushLight; Vector3 lastWipe; bool hasLastWipe; Vector2 rotPos, wipeS;
         bool lastTouch; int followCell = -1; Vector2 followRef; // Touch-Ende merken; Kamera folgt der Parzelle, die gerade gereinigt wird
@@ -117,6 +118,10 @@ namespace LunarCleanup.Gameplay
                 bool here = pid == Game.S.planet; hud.Explain("Riesenmeteor im Anflug!", "Ein Riesenmeteor fliegt auf " + GameData.Planets[pid].name + " zu. In 60 Sekunden schlägt er ein." + (here ? "" : "\n\nDu bist gerade nicht dort. Tippe auf das Warnband oben, um hinzufliegen – nur vor Ort kannst du Brocken abfangen.") +
                     "\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis schwer verwüstet: ein großer Krater voller Schmutz, kaputte Fahrzeuge, 10 Minuten gedrosselte Produktion. Gebaut bleibt alles – räum auf, dann läuft es wieder."); };
             WorldView.OnFeedback += (wp, txt, kind) => { if (!cam || !hud) return; var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) hud.FloatText(sp, txt, kind); };
+            hud.MoveOn = () => world && world.Moving; hud.MoveOk = () => world && world.MoveValid;
+            hud.MoveTitle = () => world && world.Moving ? GameData.Bld[world.MoveId].name + " verschieben" : "";
+            hud.MoveInfo = () => !world || !world.Moving ? "" : (world.MoveWhyText != "" ? "Rot: " + world.MoveWhyText + ". " : "Grün: passt. ") + "Zieh das Gebäude mit dem Finger an einen freien Platz im Basisgelände. Die Bänder werden danach neu verlegt.";
+            hud.MoveBtn = k => { if (!world || !world.Moving) return; if (k == "ok") world.CommitMove(); else if (k == "reset") world.ResetMove(); else world.EndMove(); };
             hud.BeltOn = () => world && world.Editing; hud.BeltOk = () => world && world.EditValid; hud.BeltDrawOn = () => world && world.Editing && world.DrawMode;
             hud.BeltTitle = () => world && world.Editing ? "Band verlegen · " + world.BeltName(world.EditBelt) : "";
             hud.BeltInfo = () => !world || !world.Editing ? "" : world.DrawMode ? "Zeichnen: Zieh mit dem Finger den ganzen Weg von " + world.BeltName(world.EditBelt).Replace(" → ", " bis ") + " – loslassen, fertig. Kreuzt er ein Band, wird er automatisch angehoben." : (world.EditWhy != "" ? "Rot: " + world.EditWhy + ". " : "") + (world.SelPt >= WorldView.END0 ? "Orange Griff: um das Gebäude ziehen, um den " + (world.SelPt == WorldView.END0 ? "Ausgang" : "Eingang") + " zu verlegen. " : world.SelPt >= 0 ? "Punkt gewählt · Höhe " + world.EditHeight.ToString("0.0") + " m – blauen Knopf ziehen oder „Höher“/„Tiefer“. " : "Weiße Punkte ziehen = Weg, aufs Band tippen = neuer Punkt, orange Griffe = Aus- und Eingang verlegen. „Höher“/„Tiefer“ ohne Auswahl hebt das ganze Band.");
@@ -195,6 +200,7 @@ namespace LunarCleanup.Gameplay
             if (!offlineRunning) Game.Step(dt); CatchUpOthers(); if (Time.realtimeSinceStartup - lastUnload > 180 && !exploding && Game.Icp == null) { lastUnload = Time.realtimeSinceStartup; Resources.UnloadUnusedAssets(); } /* Umbauten erzeugen neue Meshes – alle 3 min aufräumen */
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
+            if (MoveReq != null) { var mr = MoveReq; MoveReq = null; if (world) { world.BeginMove(mr); if (Game.Cur.lay.pos.ContainsKey(mr)) { cd = Game.Cur.pd.PlanDir(Game.Cur.lay.pos[mr]); altGoal = Mathf.Clamp(altGoal, 30, 60); } } }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
@@ -457,7 +463,8 @@ namespace LunarCleanup.Gameplay
             {
                 downPos = lastPos = pos; downT = Time.time; moved = false;
                 if (Hud.PointerOverUi(pid) || offlineRunning) { mode = Mode.Ui; return; }
-                editDrag = -1; drawing = false; if (world.Editing && world.DrawMode) { if (Hit(pos, out var dd0)) { drawing = true; world.DrawBegin(Game.Cur.pd.PlanLocal(dd0)); } mode = Mode.Pan; } /* Fabian 02.11.: Weg frei nachzeichnen */
+                editDrag = -1; drawing = false; moving = false; if (world.Moving) { moving = Hit(pos, out var dm0); if (moving) world.MoveTo(Game.Cur.pd.PlanLocal(dm0)); mode = Mode.Pan; } /* 03.11.: Gebäude ziehen */
+                else if (world.Editing && world.DrawMode) { if (Hit(pos, out var dd0)) { drawing = true; world.DrawBegin(Game.Cur.pd.PlanLocal(dd0)); } mode = Mode.Pan; } /* Fabian 02.11.: Weg frei nachzeichnen */
                 else if (world.Editing) { editDrag = world.HandleAt(cam, pos, out editKnob); if (editDrag >= 0) world.SelPt = editDrag; mode = Mode.Pan; } /* Band-Editor: Griff ziehen */
                 else if (!mapMode && Hit(pos, out var dir) && (Game.CanClean(dir) || Game.FindAt(dir)) && !Hud.I.SheetOpen) { mode = Mode.Wipe; Game.BeginStroke(); hasLastWipe = false; followCell = Game.Cur.pd.CellOf(dir); followRef = pos; wipeS = pos; }
                 else mode = Mode.Pan;
@@ -480,7 +487,7 @@ namespace LunarCleanup.Gameplay
                         /* Fabian 01.11.: Wischen fühlte sich klebrig an – zügige Striche reinigen bis zu 3× mehr je Bild, damit man nicht hängen bleibt */
                         float spd = hasLastWipe ? Game.Cur.pd.Arc(lastWipe, dir) / Mathf.Max(.001f, dt) : 0, boost = 1 + 2 * Mathf.Clamp01((spd / Mathf.Max(.5f, rr) - 2f) / 10f);
                         for (int s = 1; s <= steps; s++) { var dd = hasLastWipe ? Vector3.Slerp(lastWipe, dir, s / (float)steps).normalized : dir; amt += Game.Stroke(dd, dt * boost / steps, out int m0); if (m0 >= 0) mat = m0; Game.FindWipe(dd, dt / steps); }
-                        lastWipe = dir; hasLastWipe = true;
+                        lastWipe = dir; hasLastWipe = true; WorldView.WipeDir = dir;
                         brush.SetActive(true); float r = Game.Uv("radius"); brush.transform.position = Game.Cur.pd.Surf(dir, .08f); brush.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir); brush.transform.localScale = new Vector3(r, 1, r); brushLight.intensity = 9f * Mathf.Clamp01((WorldView.NightF - .1f) / .5f); /* hell und warmweiß – nachts sieht man, was man putzt */
                         Sfx.Wipe(true, spd / Mathf.Max(.5f, rr), amt > 0);
                         FollowWipe(dir, pos, dt); /* Kamera folgt wieder der Putzstelle (wie bis Build 21) */
@@ -489,7 +496,8 @@ namespace LunarCleanup.Gameplay
                 }
                 else if (mode == Mode.Pan)
                 {
-                    if (drawing && world.Editing) { if (Hit(pos, out var d3)) world.DrawAdd(Game.Cur.pd.PlanLocal(d3)); }
+                    if (moving && world.Moving) { if (Hit(pos, out var d4)) world.MoveTo(Game.Cur.pd.PlanLocal(d4)); }
+                    else if (drawing && world.Editing) { if (Hit(pos, out var d3)) world.DrawAdd(Game.Cur.pd.PlanLocal(d3)); }
                     else if (editDrag >= 0 && world.Editing) { if (editKnob) world.SetHeight(editDrag, world.EditHeight + (pos.y - lastPos.y) * .03f / U); else if (moved && Hit(pos, out var d2)) world.MovePoint(editDrag, Game.Cur.pd.PlanLocal(d2)); }
                     else Pan(pos - lastPos);
                 }
@@ -497,10 +505,11 @@ namespace LunarCleanup.Gameplay
             }
             if (mode == Mode.Wipe) EndWipe();
             if (drawing) { drawing = false; if (world.Editing) world.DrawEnd(); mode = Mode.None; return; }
+            if (moving) { moving = false; mode = Mode.None; return; }
             if (mode == Mode.Pan && !moved && Time.time - downT < .7f && editDrag < 0) Tap(pos);
             mode = Mode.None; editDrag = -1;
         }
-        void EndWipe() { brush.SetActive(false); mode = Mode.None; Sfx.Wipe(false); }
+        void EndWipe() { brush.SetActive(false); mode = Mode.None; Sfx.Wipe(false); WorldView.WipeDir = Vector3.zero; }
         /// <summary>Beim Putzen gleitet die Kamera sanft zur Parzelle, die gerade gereinigt wird; ist sie sauber, zur dreckigen Nachbarparzelle.
         /// Die Zielparzelle wechselt nur, wenn der Finger wirklich weiterwischt – hält man still, wandert die Kamera nicht von selbst weiter.</summary>
         void FollowWipe(Vector3 dir, Vector2 pos, float dt)
@@ -544,6 +553,7 @@ namespace LunarCleanup.Gameplay
         {
             var ps = Game.Cur;
             if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
+            if (world.Moving) { if (Hit(pos, out var dmv)) world.MoveTo(ps.pd.PlanLocal(dmv)); return; } /* Gebäude verschieben: Tipp = dorthin */
             if (world.Editing) { if (Hit(pos, out var de)) world.TapEdit(ps.pd.PlanLocal(de)); return; } /* Band-Editor: Tipp aufs Band = neuer Punkt */
             if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */
@@ -563,9 +573,15 @@ namespace LunarCleanup.Gameplay
             }
             /* Wrack oder Einschlag antippen: Stand des Suchtrupps zeigen */
             { var ep = Game.EventPlace(ps); if (ep.HasValue) { var sp = cam.WorldToScreenPoint(ps.pd.Surf(ep.Value, 1)); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < 50 * U) { var tt = Game.TeamText(ps); if (tt != null) { Game.Toast(tt.Replace(" · Tippen: hinsehen", "")); return; } } } }
-            /* Flagge antippen: einsammeln, gefundene beschriften */
+            /* Fabian 03.11.: Ampel antippen = Zustand dieses Gebäudes (großzügige Trefferfläche) */
             {
-                FlagSave bf = null; float bpx = 44f * U; int bi = -1, k = 0;
+                string ba = null; float bpx = 52f * U;
+                foreach (var (aid, wp) in world.AmpelSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0) continue; float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; ba = aid; } }
+                if (ba != null) { hud.OpenSheet("building", ba); return; }
+            }
+            /* Flagge antippen: einsammeln, gefundene beschriften (Fabian 03.11.: größere Trefferfläche) */
+            {
+                FlagSave bf = null; float bpx = 70f * U; int bi = -1, k = 0;
                 foreach (var (f, wp) in world.FlagSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) { float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bf = f; bi = ps.sv.flags.IndexOf(f); } } k++; }
                 if (bf != null) { bool was = bf.got; Game.CollectFlag(ps, bf); if (was || bf.got) hud.OpenSheet("flag", bi.ToString()); return; } /* Fabian 01.11.: Truhe öffnen, dann gleich die Flagge beschriften */
             }

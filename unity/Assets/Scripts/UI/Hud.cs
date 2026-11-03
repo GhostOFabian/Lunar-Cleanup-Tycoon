@@ -155,6 +155,28 @@ namespace LunarCleanup.UI
             BtnRow(66, 114, new[] { ("draw", "Zeichnen", false), ("add", "Punkt +", false), ("del", "Punkt –", false), ("up", "Höher", false), ("down", "Tiefer", false) });
             BtnRow(10, 58, new[] { ("reset", "Zurücksetzen", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) });
         }
+        // ---------- Fabian 03.11.: Gebäude verschieben ----------
+        public Func<bool> MoveOn, MoveOk; public Func<string> MoveTitle, MoveInfo; public Action<string> MoveBtn;
+        GameObject mvGo; TextMeshProUGUI mvTitle, mvInfo; Button mvOk; CanvasGroup mvOkCg;
+        void BuildMovePanel()
+        {
+            var bg = UiKit.Glass(root, "Gebäude verschieben", new Color(.04f, .07f, .11f, 1f), 16); mvGo = bg.gameObject; bg.raycastTarget = true; bg.rectTransform.Anchor(0, 0, 1, 0, 8, 72, 8, -232);
+            mvTitle = UiKit.Text(bg.transform, "Titel", "", 14, Pal.Ink, true, FontStyles.Bold); mvTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -30, 14, 10);
+            mvInfo = UiKit.Text(bg.transform, "Info", "", 12, Pal.Ink2); mvInfo.rectTransform.Anchor(0, 1, 1, 1, 14, -96, 14, 34); mvInfo.enableAutoSizing = true; mvInfo.fontSizeMin = 9; mvInfo.fontSizeMax = 12;
+            var row = UiKit.Rt(bg.transform, "Knöpfe").Anchor(0, 0, 1, 0, 10, 10, 10, -58); var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+            foreach (var (k, lbl, gold) in new[] { ("reset", "Standardplatz", false), ("cancel", "Abbrechen", false), ("ok", "Fertig", true) })
+            {
+                string key = k; var b = UiKit.Btn(row, lbl, () => MoveBtn?.Invoke(key), gold ? Pal.Credit : new Color(.43f, .95f, .82f, .16f), 12);
+                var t = UiKit.Text(b.transform, "Text", lbl, 12, gold ? Pal.CreditInk : Pal.Clean, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 4, 2, 4, 2); t.enableAutoSizing = true; t.fontSizeMin = 8; t.fontSizeMax = 12;
+                if (key == "ok") { mvOk = b; mvOkCg = b.gameObject.AddComponent<CanvasGroup>(); }
+            }
+        }
+        void UpdateMovePanel()
+        {
+            bool on = MoveOn != null && MoveOn(); if (on && !mvGo) BuildMovePanel(); if (!mvGo) return;
+            if (mvGo.activeSelf != on) mvGo.SetActive(on); if (!on) return;
+            mvTitle.text = MoveTitle?.Invoke() ?? ""; mvInfo.text = MoveInfo?.Invoke() ?? ""; bool ok = MoveOk == null || MoveOk(); mvOk.interactable = ok; mvOkCg.alpha = ok ? 1 : .38f;
+        }
         void UpdateBeltEdit()
         {
             bool on = BeltOn != null && BeltOn(); if (on && !beGo) BuildBeltEdit(); if (!beGo) return;
@@ -424,7 +446,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */

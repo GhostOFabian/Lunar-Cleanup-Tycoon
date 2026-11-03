@@ -45,7 +45,26 @@ namespace LunarCleanup.Gameplay
         }
 
         /// <summary>Parzelle fertig: Glocke; mehrere kurz nacheinander steigen wie eine Tonleiter.</summary>
-        void Chain() { if (Time.time - chainT > 3.5f) chainN = 0; chainT = Time.time; PlayI("chime", Penta[Mathf.Min(chainN, Penta.Length - 1)] * .75f, .42f); chainN++; }
+        /// <summary>Fabian 03.11.: Kombo-Putzen spielt kleine Melodien – jede Serie eine neue, hier erzeugt (frei verwendbar, keine fremden Songs).
+        /// Aufbau A A' B A'' über einer zufälligen Tonart und Tonleiter; jede fertige Parzelle spielt den nächsten Ton, jeder vierte bekommt einen leisen Basston.</summary>
+        void Chain()
+        {
+            if (Time.time - chainT > 3.5f || tune == null) { chainN = 0; NewTune(); } chainT = Time.time;
+            var n = tune[chainN % tune.Length]; PlayI("chime", n.p, .38f + .06f * Mathf.Min(1, chainN / 8f));
+            if (chainN % 4 == 0) PlayI("pop", n.bass, .22f);
+            chainN++;
+        }
+        (float p, float bass)[] tune;
+        static readonly int[][] Scales = { new[] { 0, 2, 4, 7, 9 }, new[] { 0, 3, 5, 7, 10 }, new[] { 0, 2, 3, 5, 7, 9, 10 }, new[] { 0, 2, 4, 5, 7, 9, 11 }, new[] { 0, 2, 4, 6, 7, 9, 11 } }; // Dur-/Moll-Pentatonik, Dorisch, Dur, Lydisch
+        void NewTune()
+        {
+            var r = new System.Random(System.Environment.TickCount); var sc = Scales[r.Next(Scales.Length)]; int root = r.Next(-5, 5); /* Halbtöne um die Glocke herum */
+            float Freq(int deg) { int o = Mathf.FloorToInt(deg / (float)sc.Length); int i = ((deg % sc.Length) + sc.Length) % sc.Length; return Mathf.Pow(2, (root + sc[i] + 12 * o) / 12f) * .75f; }
+            int[] Phrase(int start) { var ph = new int[4]; int d = start; for (int k = 0; k < 4; k++) { ph[k] = d; d += new[] { -2, -1, 1, 1, 2, 0, 3 }[r.Next(7)]; d = Mathf.Clamp(d, 0, sc.Length * 2); } return ph; }
+            var A = Phrase(r.Next(sc.Length)); var B = Phrase(sc.Length + r.Next(3)); var A2 = (int[])A.Clone(); A2[3] = A[0] + (r.Next(2) == 0 ? 2 : -1); var A3 = (int[])A.Clone(); A3[2] = A[2] + 1; A3[3] = 0; /* endet auf dem Grundton */
+            var seq = new List<int>(); seq.AddRange(A); seq.AddRange(A2); seq.AddRange(B); seq.AddRange(A3);
+            tune = new (float, float)[seq.Count]; for (int k = 0; k < seq.Count; k++) tune[k] = (Freq(seq[k]), Freq(seq[k - k % 4]) * .5f);
+        }
 
         /// <summary>Kurze Vibration am Handy (Raketenstart, Fund, Explosion) – in den Einstellungen abschaltbar.</summary>
         public static void Buzz()

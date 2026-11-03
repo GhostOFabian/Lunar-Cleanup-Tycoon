@@ -81,6 +81,6 @@ namespace LunarCleanup.Gameplay
         }
         void Wave() { ChestAnim(); float t = Time.time; for (int i = 0; i < flagViews.Count; i++) { var c = flagViews[i].cloth; if (c && c.gameObject.activeInHierarchy) c.localRotation = Quaternion.Euler(0, Mathf.Sin(t * 1.7f + i) * 14, Mathf.Sin(t * 2.3f + i * 1.3f) * 3); } }
         /// <summary>Für das Antippen: sichtbare Flaggen mit Weltposition (Mitte des Tuchs).</summary>
-        public IEnumerable<(FlagSave f, Vector3 pos)> FlagSpots() { foreach (var v in flagViews) if (v.go && v.go.activeInHierarchy) { yield return (v.f, v.go.transform.TransformPoint(new Vector3(.5f, 1.6f, 0))); if (v.chest) yield return (v.f, v.chest.position + v.chest.up * .25f); } }
+        public IEnumerable<(FlagSave f, Vector3 pos)> FlagSpots() { foreach (var v in flagViews) if (v.go && v.go.activeInHierarchy) { yield return (v.f, v.go.transform.TransformPoint(new Vector3(.5f, 1.6f, 0))); yield return (v.f, v.go.transform.TransformPoint(new Vector3(0, .5f, 0))); yield return (v.f, v.go.transform.TransformPoint(new Vector3(.3f, 2.6f, 0))); if (v.chest) yield return (v.f, v.chest.position + v.chest.up * .25f); } }
     }
 }
