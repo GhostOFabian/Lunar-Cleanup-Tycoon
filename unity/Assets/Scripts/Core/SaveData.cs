@@ -91,7 +91,7 @@ namespace LunarCleanup.Core
         public float offPend;                    // Offline-Zeit, die dieser Planet noch nachrechnen muss (s)
         public List<BeltRouteSave> bRoutes = new List<BeltRouteSave>();
         public List<BPosSave> bMove = new List<BPosSave>();
-        public List<HelperSave> helpers = new List<HelperSave>(); public int helperNext;   // 03.11.: Putzhelfer (Hard Mode)          // 03.11.: verschobene Gebäude
+        public List<HelperSave> helpers = new List<HelperSave>(); public int helperNext; public List<FKV> perkHeat = new List<FKV>(); /* 03.11.: Perk-Preisaufschlag je Kauf, sinkt mit der Zeit */   // 03.11.: Putzhelfer (Hard Mode)          // 03.11.: verschobene Gebäude
     }
 
     [Serializable]
@@ -109,7 +109,7 @@ namespace LunarCleanup.Core
         public int lineCol; // Fabian 01.11.: Farbe der Parzellenränder (0 = Grün … , siehe Game.LineColors)
         public ContractSave contracts = new ContractSave();
         public int fleetPlus; // Fabian 01.11.: gekaufte Flottenplätze über 15 hinaus (höchstens 5)
-        public bool hard; public List<KV> perkN = new List<KV>(); public List<FKV> buffT = new List<FKV>(); // 03.11.: Perk-Shop (Hard Mode)                                          // 03.11.: Spielstand des Hard Mode
+        public bool hard; public double perkInc; /* 03.11.: geglättetes Einkommen/min für Perk-Preise */ public List<KV> perkN = new List<KV>(); public List<FKV> buffT = new List<FKV>(); // 03.11.: Perk-Shop (Hard Mode)                                          // 03.11.: Spielstand des Hard Mode
         public int extraSlots; public List<string> owned = new List<string>(); // Shop: dauerhafte Käufe
         public float volSfx = .8f, volMusic = .6f; // Lautstärke Geräusche / Musik (0–1)
         public List<string> resDone = new List<string>();

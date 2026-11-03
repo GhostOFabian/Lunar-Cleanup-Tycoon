@@ -40,11 +40,11 @@ namespace LunarCleanup.UI
         static void PerkShop(Hud h)
         {
             if (!Game.Hard) { h.Note("Den Perk-Shop gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
-            h.Note("Im Hard Mode putzt du selbst – hier gibt es Hilfe dafür. Werkzeuge und Buffs liegen danach unten in der Leiste: Werkzeug antippen, dann die Stelle. Preise steigen mit der Basisstufe.");
+            h.Note("Im Hard Mode putzt du selbst – hier gibt es Hilfe dafür. Werkzeuge und Buffs liegen danach unten in der Leiste: Werkzeug antippen, dann die Stelle. Preise steigen mit Planet, Basisstufe und deinem Einkommen – und mit jedem Kauf (+30 %, sinkt alle 10 min wieder). Du trägst nur wenige Ladungen.");
             foreach (var kind in new[] { 0, 1, 2 })
             {
-                h.Section(kind == 0 ? "Werkzeuge" : kind == 1 ? "Buffs (90 s)" : "Putzhelfer");
-                foreach (var P in Game.Perks.Where(x => x.kind == kind)) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+                h.Section(kind == 0 ? "Werkzeuge" : kind == 1 ? "Buffs" : "Putzhelfer");
+                foreach (var P in Game.Perks.Where(x => x.kind == kind)) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id)) + (Game.PerkHeat(pp.id) >= 1 ? " · Aufschlag ×" + System.Math.Pow(pp.id == "nuke" ? 1.8 : 1.3, Mathf.Floor(Game.PerkHeat(pp.id))).ToString("0.0") : ""), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
             }
         }
         static void UpRow(Hud h, string id)

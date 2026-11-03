@@ -38,16 +38,45 @@ namespace LunarCleanup.Core
         public static float GoldF => BuffF("goldmop", 3f); public static float EspressoF => BuffF("espresso", 3f);
         public static float PowerF => BuffF("turbo", 2.5f); public static float RadiusF => BuffF("wide", 1.7f); public static float HandF => BuffF("magnet", 3f);
         /// <summary>Preis: wächst mit Schwierigkeit und Basisstufe des aktuellen Planeten (Hard-Mode-Einnahmen ×3 sind eingerechnet).</summary>
+        /* Fabian 03.11.: Perks dürfen das Spiel später nicht billig machen. Drei Bremsen:
+           1. Grundpreis wächst mit Planet (Schwierigkeit × 1,35 je Planet in der Reihe) und Basisstufe.
+           2. Preis ist nie kleiner als ein paar Minuten deines Einkommens (wer reich ist, zahlt mehr).
+           3. Jeder Kauf auf diesem Planeten macht den nächsten teurer (+30 %, Nuke +80 %); alle 10 min sinkt das um eine Stufe.
+           Dazu: man trägt nur wenige Ladungen (Nuke 2). */
+        static readonly Dictionary<string, (double f, int cap)> PerkVal = new Dictionary<string, (double, int)>
+        {
+            { "bomb", (1, 10) }, { "nuke", (10, 2) }, { "kaercher", (2, 5) }, { "foam", (1.2, 8) }, { "tornado", (4, 3) },
+            { "turbo", (.8, 6) }, { "wide", (.8, 6) }, { "magnet", (.6, 6) }, { "espresso", (1.5, 4) }, { "goldmop", (2.5, 4) }, { "rohrpost", (1, 6) }, { "helper", (6, 99) },
+        };
+        const double PERK_INC_MIN = 2; /* Faktor 1 = 2 min Einkommen */ const float HEAT_DECAY = 600;
+        static Dictionary<string, int> pRank;
+        static int PlanetRank(string pid)
+        {
+            if (pRank == null) { pRank = new Dictionary<string, int>(); int r = 0; foreach (var kv in GameData.Planets.OrderBy(x => x.Value.diff)) pRank[kv.Key] = r++; }
+            return pRank.TryGetValue(pid, out var v) ? v : 0;
+        }
+        static FKV Heat(PState ps, string id) { if (ps.sv.perkHeat == null) ps.sv.perkHeat = new List<FKV>(); var e = ps.sv.perkHeat.Find(x => x.k == id); if (e == null) { e = new FKV { k = id }; ps.sv.perkHeat.Add(e); } return e; }
+        public static float PerkHeat(string id) => Cur.sv.perkHeat == null ? 0 : (Cur.sv.perkHeat.Find(x => x.k == id)?.v ?? 0);
+        static double HeatMul(string id) => Math.Pow(id == "nuke" ? 1.8 : 1.3, Mathf.Floor(PerkHeat(id)));
+        public static int PerkCap(string id) => PerkVal.TryGetValue(id, out var v) ? v.cap : 5;
         public static double PerkCost(string id)
         {
-            var ps = Cur; double b = 400 * ps.P.diff * Math.Pow(2.6, Math.Max(0, Gs(ps) - 1));
-            switch (id) { case "bomb": return Math.Round(b); case "nuke": return Math.Round(b * 10); case "turbo": case "wide": return Math.Round(b * .8); case "magnet": return Math.Round(b * .6); case "kaercher": return Math.Round(b * 2); case "foam": return Math.Round(b * 1.2); case "tornado": return Math.Round(b * 4); case "espresso": return Math.Round(b * 1.5); case "goldmop": return Math.Round(b * 2.5); case "rohrpost": return Math.Round(b); case "helper": return Math.Round(b * 6 * Math.Pow(1.6, ps.sv.helpers.Count(x => x.life <= 0))); }
-            return 0;
+            var ps = Cur; if (!PerkVal.TryGetValue(id, out var pv)) return 0;
+            double b = 400 * ps.P.diff * Math.Pow(1.35, PlanetRank(ps.pid)) * Math.Pow(2.6, Math.Max(0, Gs(ps) - 1));
+            double inc = S.perkInc * PERK_INC_MIN; double c = Math.Max(b, inc) * pv.f * HeatMul(id);
+            if (id == "helper") c *= Math.Pow(1.6, ps.sv.helpers.Count(x => x.life <= 0));
+            return Math.Round(c);
         }
-        public static string PerkWhy(string id) { if (!Hard) return "Nur im Hard Mode"; if (id == "helper" && Cur.sv.helpers.Count(x => x.life <= 0) >= HELPER_MAX) return "Höchstens " + HELPER_MAX + " Helfer je Planet"; return S.credits < PerkCost(id) ? Lacks(PerkCost(id)) : ""; }
+        public static string PerkWhy(string id)
+        {
+            if (!Hard) return "Nur im Hard Mode";
+            if (id == "helper" && Cur.sv.helpers.Count(x => x.life <= 0) >= HELPER_MAX) return "Höchstens " + HELPER_MAX + " Helfer je Planet";
+            if (id != "helper" && PerkN(id) >= PerkCap(id)) return "Du trägst schon " + PerkCap(id) + " – erst einsetzen";
+            return S.credits < PerkCost(id) ? Lacks(PerkCost(id)) : "";
+        }
         public static bool BuyPerk(string id)
         {
-            string w = PerkWhy(id); if (w != "") return Fail(w); var ps = Cur; S.credits -= PerkCost(id);
+            string w = PerkWhy(id); if (w != "") return Fail(w); var ps = Cur; S.credits -= PerkCost(id); Heat(ps, id).v += 1;
             if (id == "helper") { ps.sv.helpers.Add(new HelperSave { id = ++ps.sv.helperNext, d = ps.pd.PlanDir(ps.lay.start) }); Toast("Neuer Putzhelfer auf " + ps.P.name + " – er legt gleich los", "good"); }
             else { PerkAdd(id, 1); Toast(Perk(id).name + " gekauft · " + PerkN(id) + " bereit (Leiste unten)", "good"); }
             Save(); return true;
@@ -119,6 +148,8 @@ namespace LunarCleanup.Core
         static void PerkStep(PState ps, float dt)
         {
             if (!Hard) return;
+            if (ps.sv.perkHeat != null) foreach (var e in ps.sv.perkHeat) if (e.v > 0) e.v = Mathf.Max(0, e.v - dt / HEAT_DECAY); /* Aufschlag sinkt (auch offline) */
+            if (ps.pid == S.planet) { double inc = IncomePerMin(); if (inc > 0) S.perkInc += (inc - S.perkInc) * Math.Min(1, dt / (inc > S.perkInc ? 60.0 : 1800.0)); } /* steigt schnell, sinkt langsam */
             if (ps.pid == S.planet) foreach (var e in S.buffT) if (e.v > 0) e.v = Mathf.Max(0, e.v - dt);
             if (ps.pid == S.planet && BuffLeft("rohrpost") > 0) { rohrT -= dt; if (rohrT <= 0) { rohrT = 3; PipeHand(ps); } }
             if (ps.sv.helpers.Count == 0) return; var pd = ps.pd;
