@@ -124,7 +124,7 @@ Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen)
 
 ---
 
-## G. Aufräumen: weniger Gedränge, schönere Menüs ⬜ (04.11., Prüfung im Code)
+## G. Aufräumen: weniger Gedränge, schönere Menüs 🟡 (04.11.: Code geschrieben – fehlt noch: Bildschirmfoto-Durchgang aller Fenster und schmalere Kopfanzeigen)
 
 ### Im Bild
 - „Erste Schritte“-Karte: im Hard Mode ausblenden (dort gibt es die Hard-Ziele), sonst nach den 10 Schritten ganz weg (ist schon so).

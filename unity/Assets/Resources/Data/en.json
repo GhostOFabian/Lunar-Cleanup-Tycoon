@@ -2608,5 +2608,17 @@
 "E nötig, im Lager": "units needed, in storage",
 "Ein fliegendes Sammelshuttle bringt deine Ladung zur Basis, Perks findest du beim Wischen, und dein Anzug braucht Energie – Ladesäulen bringen dich weiter hinaus.": "A flying collector shuttle brings your load to the base, you find perks while wiping, and your suit needs energy – charging posts take you further out.",
 "Eigener Spielstand · du putzt selbst · Expedition": "Own save · you clean yourself · expedition",
-"Alle\nPerks": "All\nperks"
+"Alle\nPerks": "All\nperks",
+"Besucher": "Visitors",
+"Aufträge": "Jobs",
+"alle Tagesaufträge geschafft": "all daily jobs done",
+"alle drei Tagesaufträge: +50 % Bonus": "all three daily jobs: +50 % bonus",
+"Allgemein": "General",
+"Test": "Test",
+"Shop": "Shop",
+"Geschafft": "Done",
+"weitere.": "more.",
+"Rest bleibt im Behälter": "rest stays in the container",
+"Hauptziel": "Main goal",
+"Planetenziele": "Planet goals"
 }

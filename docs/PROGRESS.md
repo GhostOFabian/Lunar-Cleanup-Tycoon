@@ -275,3 +275,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 04.11. 06:41: Build 52 (iPhone-Paket + Browser v46): direkteres Wischen, weichere Kamera mit Schwung, aufklappbare Perk-Leiste. Wischgefühl und Kamera nur im Editor kompiliert/angesehen, auf dem Handy noch ungetestet.
 - 04.11. 06:48: Build 53 (iPhone-Paket + Browser v47): Version 0.5 · Build 53 überall (Spiel, iPhone, Browser, Webseite).
 - 04.11. 08:05: Plan für Hard Mode und normalen Modus in docs/HARD_MODE_KONZEPT.md (Reihenfolge 1–6). Build 54 (A1–A3) wartet auf den Mac.
+- 04.11. 15:20: Aufräumen geschrieben (Ziele, Einstellungen, Schwebezahlen, Meldungen, Fracht-Hinweis) – noch nicht kompiliert. Kommt mit Build 54 (zusammen mit Hard Mode A1–A3).

@@ -411,7 +411,7 @@ namespace LunarCleanup.Core
                 ps.paid[id] = true;
                 double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff * (ps.pid == S.planet ? GoldF : 1); Earn(bonus); /* 03.11.: Goldener Mopp */
                 if (GameData.Kinds[cl.kind].key == "rich") { int m = GameData.Dirt[cl.type].mat; float x = Mathf.Min(ParcelYield(cl) * .2f, RohCap(ps) - RohSum(ps)); if (x > 0) ps.sv.roh[m] += x; }
-                FloatTxt(ps.pd.cells[id].c, "+" + Fmt(bonus) + " Cr", "big");
+                if (strokeCells.Contains(id)) FloatTxt(ps.pd.cells[id].c, "+" + Fmt(bonus) + " Cr", "big"); /* 04.11.: nur für selbst geputzte Parzellen */
                 OnCellDone(ps, id, bonus);
             }
             ps.front.Remove(id); foreach (int b in cl.nb) if (IsFront(ps, b)) ps.front.Add(b);
@@ -468,7 +468,7 @@ namespace LunarCleanup.Core
             for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; if (ps.sv.hand[m] < 1e-6f) ps.sv.hand[m] = 0; dst[m] += x; }
             S.stats.handUnloads++;
             FloatAmt(ps.pd.PlanDir(ps.lay.pos[best]), amt, "entladen");
-            Toast(Fmt(amt) + " E in " + name + (amt < tot - .05f ? " · Rest bleibt im Behälter" : ""), "good");
+            if (amt < tot - .05f) Toast(Fmt(amt) + " E in " + name + " · Rest bleibt im Behälter", ""); /* 04.11.: sonst reicht die Schwebezahl */
         }
 
         // ================= Sammelwagen =================
@@ -942,7 +942,7 @@ namespace LunarCleanup.Core
                         v.fullT = 0; float amt = Mathf.Min(StRate(s) * Uv("urate", ps) * (IsOut(s) ? 1 : BlF(ps, s)) * dt, Mathf.Min(free, tank)), f0 = tank > 0 ? amt / tank : 0;
                         for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; st.buf[m] += x; }
                         if (Sum(v.tank) < .01f && !charged) { Array.Clear(v.tank, 0, NM); break; }
-                        if (Sum(v.tank) < .01f) { Array.Clear(v.tank, 0, NM); FreeDock(st, v); v.mode = "seek"; v.sid = null; if (v.coll >= 1) FloatAmt(StDir(ps, s, 'c'), v.coll, "entladen"); v.coll = 0; }
+                        if (Sum(v.tank) < .01f) { Array.Clear(v.tank, 0, NM); FreeDock(st, v); v.mode = "seek"; v.sid = null; /* 04.11.: keine Schwebezahl mehr bei jeder Fahrzeug-Entladung */ v.coll = 0; }
                         break;
                     }
                 case "wait":
@@ -958,7 +958,7 @@ namespace LunarCleanup.Core
                         var cr = ps.sv.crystals.Find(x => x.id == v.cr); if (cr == null) { v.cr = -1; v.mode = "seek"; break; }
                         v.busy = true; v.crT += dt; if (v.crT < 3.5f) break;
                         float amt = Mathf.Min(CrystalYield(cr), cap - tank); v.tank[GameData.MatIx["kristall"]] += Mathf.Max(0, amt); ps.sv.crystals.Remove(cr); v.cr = -1; S.stats.crystals++;
-                        FloatTxt(CrystalDir(ps, cr), "+" + Mathf.RoundToInt(amt) + " " + CrystalTypes[cr.t].name, "good"); v.mode = tank + amt >= cap * .9f ? "toUnload" : "seek"; break;
+                        /* 04.11.: Fahrzeug-Kristallernte ohne Schwebezahl */ v.mode = tank + amt >= cap * .9f ? "toUnload" : "seek"; break;
                     }
                 case "toRig": { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r == null || r.claim != v.id) { v.rig = -1; v.mode = "seek"; break; } v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, RigDock(ps, r), spd * dt, v.id)) v.mode = "rigload"; break; }
                 case "rigload":
@@ -978,7 +978,7 @@ namespace LunarCleanup.Core
                 case "unloadRoh":
                     {
                         float free = RohCap(ps) - RohSum(ps); if (T.batt > 0) { float bc = BattCap(ps, v), b0 = Bat(ps, v); if (b0 < bc) { v.bat = Mathf.Min(bc, b0 + bc / 30 * Mathf.Max(.25f, f) * dt); v.charging = true; } }
-                        if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { if (v.coll >= 1) FloatAmt(pd.PlanDir(ps.lay.pos["roh"]), v.coll, "entladen"); v.coll = 0; v.mode = "seek"; } break; }
+                        if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { /* 04.11.: keine Schwebezahl mehr bei jeder Fahrzeug-Entladung */ v.coll = 0; v.mode = "seek"; } break; }
                         if (free <= .01f) { v.fullT += dt; break; } v.fullT = 0;
                         float amt = Mathf.Min(10 * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = amt / tank; for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; ps.sv.roh[m] += x; }
                         break;

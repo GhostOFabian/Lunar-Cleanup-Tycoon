@@ -170,10 +170,11 @@ namespace LunarCleanup.UI
 
         static void Production(Hud h)
         {
-            h.Tabs("Ampel", "Verkauf", "Plan");
+            h.Tabs("Ampel", "Verkauf", "Plan", "Lieferketten"); /* 04.11.: Lieferketten aus dem Planeten-Fenster hierher */
             int tab = h.Tab;
             if (tab == 0) { ProductionOverview(h); return; }
             if (tab == 1) { Selling(h); return; }
+            if (tab == 3) { Supply(h); return; }
             if (!ps.bld.Contains("presse")) h.Note("Baue die Staubpresse (Basisstufe 2), um mit der Veredelung zu beginnen."); Plan(h);
         }
         static void ProductionOverview(Hud h)
@@ -302,7 +303,7 @@ namespace LunarCleanup.UI
             }
             if (tab == 1)
             {
-                Specialize(h); WorkOrder(h);
+                WorkOrder(h); /* 04.11.: Ausrichtung ausgeblendet (wirkte kaum spürbar) – gewählte Ausrichtungen wirken weiter */
                 BaseMore(h);
                 h.Section("Steht schon");
                 h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
@@ -411,9 +412,8 @@ namespace LunarCleanup.UI
         {
             bool sd = Game.S.done.Count > 0 || Game.S.stardust > 0;
             int owned = GameData.POrder.Count(x => Game.P.ContainsKey(x));
-            if (sd) h.Tabs("Reisen " + owned, "Neue Planeten", "Sternenstaub " + Game.StardustFree(), "Lieferketten"); else h.Tabs("Reisen " + owned, "Neue Planeten", "Lieferketten");
+            if (sd) h.Tabs("Reisen " + owned, "Neue Planeten", "Sternenstaub " + Game.StardustFree()); else h.Tabs("Reisen " + owned, "Neue Planeten");
             int tab = h.Tab;
-            if (tab == (sd ? 3 : 2)) { Supply(h); return; }
             if (sd && tab == 2) { Stardust(h); return; }
             bool travel = tab == 0; int shown = 0;
             foreach (var (rname, ids) in Regions)
@@ -616,13 +616,11 @@ namespace LunarCleanup.UI
         }
         static void Goals(Hud h)
         {
-            /* Fabian 01.11.: Kodex (Entdeckungen, Funde, Erfolge) und Statistik je Planet als eigene Reiter */
-            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Kodex", "Statistik", "Abschluss", "Bestellungen" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : "")); int gtab = h.Tab;
-            if (gtab == 5) { OrdersSheet(h); return; }
-            if (gtab == 4) { Completion(h); return; }
+            /* Fabian 04.11.: kompakter – 4 statt 6 Reiter (Statistik und Abschluss stecken im Kodex), keine doppelten Abschnitte, Aufträge in einem Abschnitt */
+            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Kodex"); int gtab = h.Tab;
             if (gtab == 1) { Achievements(h); return; }
-            if (gtab == 2) { Codex(h); return; }
-            if (gtab == 3) { Stats(h); return; }
+            if (gtab == 2) { OrdersSheet(h); return; }
+            if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);
@@ -630,36 +628,29 @@ namespace LunarCleanup.UI
                 if (Game.HardGoalsOpen().Count == 0) h.Note("Alle Hard-Ziele geschafft – Respekt!");
             }
             Game.DailyContracts(); var cs = Game.S.contracts;
-            /* Fabian 01.11.: Herausforderungen mit Zeitlimit */
-            { Game.ChalRefresh(); var ch = Game.S.chal; h.Section("Herausforderungen");
+            int qn = Mathf.Min(Game.QuestsSupported, GameData.Quests.Count);
+            if (Game.S.quest < qn)
+            {
+                int qi = Game.S.quest; var Q = GameData.Quests[qi]; bool qr = Game.QuestProgress(qi) >= 1; h.Section("Hauptziel " + (qi + 1) + " von " + qn);
+                h.Row(Q.t, () => (qr ? "Geschafft" : Mathf.RoundToInt(Game.QuestProgress(qi) * 100) + " %") + " · Belohnung " + Cr(System.Math.Round(Q.r * Game.GoalF)), () => Game.QuestProgress(qi) >= 1 ? "Abholen" : "Zeigen", () => true, () => { if (Game.QuestProgress(qi) >= 1) Game.ClaimQuest(); else { h.CloseSheet(); h.OnFocusQuest?.Invoke(); } }, Game.QuestProgress(qi) >= 1);
+            }
+            h.Section("Aufträge" + (cs.bonus ? " · alle Tagesaufträge geschafft" : " · alle drei Tagesaufträge: +50 % Bonus"));
+            /* fertige zuerst */
+            var order = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done).OrderBy(k => Game.ContractProg(cs.list[k]) >= cs.list[k].target ? 0 : 1).ToList();
+            foreach (int k0 in order) { int i = k0;
+    int k = i; var it = cs.list[k]; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k));
+            }
+            { Game.ChalRefresh(); var ch = Game.S.chal; 
               if (ch.act != "") { var c = Game.Chal(ch.act); if (c != null) h.Row(c.name + " · läuft", () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(c.id))) + " · " + Mathf.Min(100, Mathf.FloorToInt((float)Game.ChalProgress() * 100)) + " % · noch " + Dur(Mathf.Max(0, Game.S.chal.left)), () => "+" + Cr(Game.ChalReward(c.id)), () => false, null, false); }
               else foreach (var id in ch.offer) { var c = Game.Chal(id); if (c == null) continue; var cid = id; h.Row(c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(cid))) + " in " + Mathf.RoundToInt(c.time / 60) + " min · Belohnung " + Cr(Game.ChalReward(cid)) + (c.sd > 0 ? " + " + c.sd + " Sternenstaub" : ""), () => "Starten", () => Game.S.chal.act == "", () => Game.ChalStart(cid), false); }
               if (ch.act == "" && ch.offer.Count == 0) h.Note("Neue Herausforderungen in " + Dur(System.Math.Max(0L, ch.refresh - Game.Now())) + ".");
               if (ch.done > 0) h.Note("Geschafft: " + ch.done); }
-            /* Fabian 01.11.: Abholbares immer ganz oben */
-            bool qReady = Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count) && Game.QuestProgress(Game.S.quest) >= 1;
-            var dReady = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done && Game.ContractProg(cs.list[k]) >= cs.list[k].target).ToList();
-            var pReady = Enumerable.Range(0, Game.PlanetGoals.Length).Where(k => !Game.PGoalClaimed(ps, k) && Game.PGoalProg(ps, k) >= 1).ToList();
-            if (qReady || dReady.Count > 0 || pReady.Count > 0)
+            var pl = Enumerable.Range(0, Game.PlanetGoals.Length).Where(k => !Game.PGoalClaimed(ps, k)).OrderBy(k => Game.PGoalProg(ps, k) >= 1 ? 0 : 1).ToList();
+            if (pl.Count > 0)
             {
-                h.Section("Jetzt abholen");
-                if (qReady) { var Q = GameData.Quests[Game.S.quest]; h.Row("Hauptziel: " + Q.t, () => "Belohnung " + Cr(Q.r), () => "Abholen", () => true, () => Game.ClaimQuest()); }
-                foreach (int k in dReady) { int kk = k; h.Row("Tagesauftrag: " + Game.ContractText(cs.list[kk]), () => "Belohnung " + Cr(cs.list[kk].reward), () => "Abholen", () => !cs.list[kk].done, () => Game.ClaimContract(kk)); }
-                foreach (int k in pReady) { int kk = k; h.Row("Planetenziel: " + Game.PlanetGoals[kk].text, () => "Belohnung " + Cr(Game.PGoalReward(ps, kk)), () => "Abholen", () => !Game.PGoalClaimed(ps, kk), () => Game.ClaimPGoal(kk)); }
-            }
-            /* Fabian 01.11.: Hauptziel steht nicht mehr dauerhaft im Bild, sondern hier */
-            if (!qReady && Game.S.quest < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count))
-            {
-                int qi = Game.S.quest; var Q = GameData.Quests[qi]; h.Section("Hauptziel " + (qi + 1) + " von " + GameData.Quests.Count);
-                h.Row(Q.t, () => Mathf.RoundToInt(Game.QuestProgress(qi) * 100) + " % · Belohnung " + Cr(Q.r), () => "Zeigen", () => true, () => { h.CloseSheet(); h.OnFocusQuest?.Invoke(); }, false);
-            }
-            h.Section("Tägliche Aufträge" + (cs.bonus ? " · alle geschafft" : " · alle drei: +50 % Bonus"));
-            for (int i = 0; i < cs.list.Count; i++) { int k = i; var it = cs.list[k]; if (dReady.Contains(k)) continue; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k)); }
-            h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
-            for (int i = 0; i < Game.PlanetGoals.Length; i++)
-            {
-                int k = i; if (Game.PGoalClaimed(ps, k) || pReady.Contains(k)) continue;
-                h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k));
+                h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
+                foreach (int k0 in pl.Take(4)) { int k = k0; h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k)); }
+                if (pl.Count > 4) h.Note("… und " + (pl.Count - 4) + " weitere.");
             }
             var ev = ps.sv.ev;
             if (ev != null && ev.key != "")
@@ -667,13 +658,6 @@ namespace LunarCleanup.UI
                 var E = Game.EvDef(ev.key); h.Section("Ereignis");
                 h.Row(E != null ? E.name : "Ereignis", () => (E != null ? E.hint : "") + " · noch " + Mathf.CeilToInt(Mathf.Max(0, ps.sv.ev.t) / 60f) + " min", () => ps.sv.ev.cell >= 0 ? "Hinfliegen" : "OK", () => true, () => { h.CloseSheet(); h.OnFocusEvent?.Invoke(); }, false);
             }
-            h.Section("Hauptziele");
-            for (int i = 0; i < Mathf.Min(Game.QuestsSupported, GameData.Quests.Count); i++)
-            {
-                int q = i; var Q = GameData.Quests[i];
-                h.Row((q == Game.S.quest ? "Jetzt: " : "") + Q.t, () => q < Game.S.quest ? "Erledigt" : q == Game.S.quest ? Mathf.FloorToInt(Mathf.Clamp01(Game.QuestProgress(q)) * 100) + " % · Belohnung " + Cr(Q.r) : "Belohnung " + Cr(Q.r));
-            }
-            if (GameData.Quests.Count > Game.QuestsSupported) h.Note("Die übrigen " + (GameData.Quests.Count - Game.QuestsSupported) + " Ziele kommen mit den nächsten Systemen in der Unity-Version (Neustart mit Sternenstaub).");
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
@@ -801,6 +785,10 @@ namespace LunarCleanup.UI
         static float resetT;
         static void Settings(Hud h)
         {
+            /* Fabian 04.11.: Reiter statt einer langen Liste */
+            if (Game.TestMode) h.Tabs("Allgemein", "Ton", "Spielstand", "Test", "Shop"); else h.Tabs("Allgemein", "Ton", "Spielstand", "Shop");
+            int stab = h.Tab; if (!Game.TestMode && stab == 3) stab = 4;
+            if (stab == 0) {
             if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
             h.Section("Darstellung");
             h.Row("Farbe der Parzellenränder", () => "Parzellen, die noch dreckig sind, bekommen einen leuchtenden Rand (saubere zeigen den Planeten ohne Rand) – jetzt: " + Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => true, () => Game.NextLineColor(), false);
@@ -808,12 +796,14 @@ namespace LunarCleanup.UI
             h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);
             h.Section("Foto-Modus");
             h.Row("Oberfläche ausblenden", () => "Für schöne Bilder deiner Basis – mach dann einfach einen Screenshot. Der Knopf oben links holt die Oberfläche zurück.", () => "Foto-Modus", () => true, () => { h.CloseSheet(); h.OnPhoto?.Invoke(); }, false);
+            } if (stab == 1) {
             h.Section("Ton");
             h.Row("Geräusche", () => "Wischen, Kasse, Rakete, Kristalle, Funde", () => Game.S.sound ? "An" : "Aus", () => true, () => Game.S.sound = !Game.S.sound, false);
             h.Row("Musik", () => "Leiser Klangteppich, wird lauter, wenn deine Basis arbeitet", () => Game.S.music ? "An" : "Aus", () => true, () => Game.S.music = !Game.S.music, false);
             h.Slider("Lautstärke Geräusche", () => Game.S.volSfx, v => Game.S.volSfx = v);
             h.Row("Vibration", () => "Kurz bei Raketenstart, Funden und Explosionen (nur am Handy)", () => Game.S.vibrate ? "An" : "Aus", () => true, () => Game.S.vibrate = !Game.S.vibrate, false);
             h.Slider("Lautstärke Musik", () => Game.S.volMusic, v => Game.S.volMusic = v);
+            } if (stab == 2) {
             h.Section("Spielstand");
             h.Row("Jetzt speichern", () => "Das Spiel speichert alle 10 Sekunden und beim Schließen von selbst.", () => "Speichern", () => true, () => { Game.Save(); Game.Toast("Gespeichert", "good"); }, false);
             h.Row("Spielstand-Code kopieren", () => "Kopiert deinen ganzen Spielstand als Text in die Zwischenablage – in Notizen sichern oder auf ein anderes Gerät übertragen.", () => "Kopieren", () => true, () => { GUIUtility.systemCopyBuffer = Game.ExportCode(); Game.Toast("Spielstand-Code kopiert (" + (GUIUtility.systemCopyBuffer.Length / 1024 + 1) + " KB)", "good"); }, false);
@@ -822,6 +812,7 @@ namespace LunarCleanup.UI
             if (Game.HasImportBackup) h.Row("Import rückgängig", () => "Holt den Spielstand von vor dem letzten Einfügen zurück.", () => "Zurück", () => true, () => { if (Game.UndoImport()) { Game.Toast("Alter Spielstand wiederhergestellt", "good"); h.CloseSheet(); } }, false);
             h.Row("Neu anfangen", () => Time.unscaledTime - resetT < 4 ? "Wirklich? Noch einmal tippen löscht deinen Unity-Spielstand." : "Löscht den Spielstand dieser Unity-Version und startet auf dem Mond.", () => Time.unscaledTime - resetT < 4 ? "Ja, löschen" : "Neu anfangen", () => true,
                 () => { if (Time.unscaledTime - resetT < 4) { Game.ResetAll(); h.CloseSheet(); } else resetT = Time.unscaledTime; }, false);
+            } if (stab == 3) {
             if (Game.TestMode)
             {
                 h.Section("Testmodus");
@@ -852,6 +843,7 @@ namespace LunarCleanup.UI
                 h.Row("Terraforming -1 (Verfall)", () => "Eine Stufe zurück – so sterben die Bäume.", () => "-1", () => Game.Cur.sv.terra > 0, () => { Game.DevTerra(Game.Cur.sv.terra - 1); h.CloseSheet(); }, false);
                 h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
             }
+            } if (stab == 0) {
             h.Section("Spielmodus");
             h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelshuttle bringt deine Ladung, Anzug-Energie und Ladesäulen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelshuttle bringt deine Ladung zur Basis. Perks findest du beim Wischen, dein Anzug braucht Energie, Ladesäulen bringen dich weiter hinaus. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
                 () => Game.Hard ? "Zum normalen Spiel" : "Hard Mode spielen", () => Game.Hard || Game.HardOpen, () => { h.CloseSheet(); Game.SwitchHard(!Game.Hard); }, !Game.Hard, null, true, () => Game.Hard ? "" : Game.HardWhy);
@@ -859,14 +851,18 @@ namespace LunarCleanup.UI
             if (Debug.isDebugBuild && !Application.isEditor)
                 h.Row("Testmodus " + (Game.TestMode ? "an" : "aus"), () => Game.TestMode ? "Du spielst mit einem eigenen Test-Spielstand. Ausschalten und die Seite neu laden = normaler Spielstand." : "Normaler Spielstand. Einschalten und die Seite neu laden = Test-Spielstand mit Test-Knöpfen.",
                     () => Game.TestMode ? "Ausschalten" : "Einschalten", () => true, () => { Game.Save(); PlayerPrefs.SetInt("LunarCleanup.TestMode", Game.TestMode ? 0 : 1); PlayerPrefs.Save(); Game.Toast("Gespeichert – jetzt die Seite neu laden", "good"); }, false);
+            } if (stab == 2) {
             h.Section("Konto-Speicher");
             h.Row(Platform.Cloud.Name, () => Platform.Cloud.SignedIn ? "Verbunden – dein Spielstand wird zusätzlich in deinem Konto gesichert." : "Noch nicht verbunden. Auf dem Handy sicherst du hier deinen Spielstand in deinem " + Platform.Cloud.Name + "-Konto.",
                 () => Platform.Cloud.SignedIn ? "Verbunden" : "Anmelden", () => !Platform.Cloud.SignedIn, () => Platform.Cloud.SignIn(ok => Game.Toast(ok ? "Angemeldet – Spielstand wird gesichert" : "Anmeldung kommt mit der Handy-Version", ok ? "good" : "")), false);
+            } if (stab == 4) {
             h.Section("Shop (Vorschau)");
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");
             foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => !oo.consumable && Platform.Owned(oo.id) ? "Gekauft" : oo.price, () => oo.consumable || !Platform.Owned(oo.id), () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
+            } if (stab == 0) {
             h.Section("Über");
             h.Note("Lunar Cleanup Tycoon · " + Game.VersionText + ". Planeten, Parzellen, Zahlen und Texte stammen 1:1 aus dem Browser-Prototyp; Modelle von Fabian.");
+            }
         }
 
         /// <summary>Welche Upgrades zu welchem Gebäude gehören (Antippen eines Gebäudes zeigt sie oben im Fenster).</summary>

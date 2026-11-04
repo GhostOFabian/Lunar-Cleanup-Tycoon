@@ -214,7 +214,8 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Fabian 03.11.: Perk-Leiste (Hard Mode) – Werkzeuge antippen und dann die Stelle, Buffs sofort; „+“ öffnet den Perk-Shop ----------
-        GameObject cargoTip; Image cargoTipImg; public static string ArmedTool, PerkReq; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
+        GameObject cargoTip; Image cargoTipImg; bool tipWas; /* 04.11.: die Sprechblase nur die ersten 3 Male, danach pulsiert nur die Rakete */
+        bool TipLeft() { int n = PlayerPrefs.GetInt("LunarCleanup.CargoTipN", 0); return n < 3 || tipWas; } public static string ArmedTool, PerkReq; GameObject pbGo; readonly List<(string id, Image img, TextMeshProUGUI txt)> pbBtns = new List<(string, Image, TextMeshProUGUI)>(); readonly string[] pbIds = new string[7];
         void BuildPerkBar()
         {
             var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.childControlHeight = true; /* 03.11.: feste Breite – ein einzelner Shop-Knopf wurde sonst riesig */
@@ -546,14 +547,16 @@ namespace LunarCleanup.UI
         }
 
         // ---------- Meldungen und Schwebetexte ----------
+        string lastToast; float lastToastT = -99;
         public void Toast(string text, string kind)
         {
+            if (text == lastToast && Time.unscaledTime - lastToastT < 4f) return; lastToast = text; lastToastT = Time.unscaledTime; /* 04.11.: gleiche Meldung nicht doppelt */
             var g = UiKit.Glass(toastBox, "Meldung", kind == "bad" ? new Color(.25f, .07f, .08f, .94f) : Pal.GlassHi, 14);
             var hl = g.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.padding = new RectOffset(14, 14, 10, 10); hl.childControlHeight = true; hl.childControlWidth = true;
             var t = UiKit.Text(g.transform, "Text", text, 13.5f, kind == "good" ? Pal.Clean : kind == "bad" ? Pal.Warn : Pal.Ink, false, FontStyles.Normal, TextAlignmentOptions.Center);
             UiKit.Add<ContentSizeFitter>(g).verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            while (toastBox.childCount > 3) DestroyImmediate(toastBox.GetChild(0).gameObject);
-            var cg = g.gameObject.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; if (isActiveAndEnabled) StartCoroutine(Fade(cg, 2.8f)); else Destroy(g.gameObject);
+            while (toastBox.childCount > 2) DestroyImmediate(toastBox.GetChild(0).gameObject); /* 04.11.: höchstens 2 Meldungen */
+            var cg = g.gameObject.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; if (isActiveAndEnabled) StartCoroutine(Fade(cg, 2.4f)); else Destroy(g.gameObject);
         }
         System.Collections.IEnumerator Fade(CanvasGroup cg, float life)
         {
@@ -586,10 +589,10 @@ namespace LunarCleanup.UI
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
-            { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
+            { int q = Game.S.quest; bool tut = !Game.Hard && q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* 04.11.: im Hard Mode gibt es die Hard-Ziele */ /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
               if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(System.Math.Round(GameData.Quests[q].r * Game.GoalF)); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
-            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && !SheetOpen && !MenuOpen && !(pbPop && pbPop.activeSelf) && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) cargoTip.SetActive(show); if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && TipLeft() && !SheetOpen && !MenuOpen && !(pbPop && pbPop.activeSelf) && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) { cargoTip.SetActive(show); if (show && !tipWas) { tipWas = true; PlayerPrefs.SetInt("LunarCleanup.CargoTipN", PlayerPrefs.GetInt("LunarCleanup.CargoTipN", 0) + 1); } if (!show && !hint) tipWas = false; } if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }
