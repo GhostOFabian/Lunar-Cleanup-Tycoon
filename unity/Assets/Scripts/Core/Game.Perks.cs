@@ -15,9 +15,9 @@ namespace LunarCleanup.Core
     {
         public static readonly List<PerkDef> Perks = new List<PerkDef>
         {
-            new PerkDef { id = "bomb", name = "Putzbombe", icon = "B", kind = 0, desc = "Reinigt bis zu 5 Parzellen auf einmal rund um die Stelle, die du antippst" },
+            new PerkDef { id = "bomb", name = "Putzbombe", icon = "B", kind = 0, desc = "Reinigt bis zu 5 Parzellen auf einmal an der nächsten dreckigen Stelle" },
             new PerkDef { id = "nuke", name = "Putz-Nuke", icon = "N", kind = 0, desc = "ULTIMATE: reinigt auf einen Schlag bis zu 60 Parzellen im großen Umkreis – sehr teuer, du trägst nur eine" },
-            new PerkDef { id = "kaercher", name = "Hochdruck-Kärcher", icon = "K", kind = 0, desc = "Eine schnurgerade Schneise: reinigt bis zu 8 Parzellen in einer Linie, von der Basis aus durch die Stelle, die du antippst" },
+            new PerkDef { id = "kaercher", name = "Hochdruck-Kärcher", icon = "K", kind = 0, desc = "Eine Schneise: reinigt bis zu 8 Parzellen hintereinander, von der nächsten dreckigen Stelle aus weg von der Basis" },
             new PerkDef { id = "foam", name = "Schaumkanone", icon = "S", kind = 0, desc = "Weicht im Umkreis von 15 m allen Schmutz ein – danach wischst du ihn mit einem Streich weg (70 % schon gelöst)" },
             new PerkDef { id = "tornado", name = "Staubsauger-Tornado", icon = "W", kind = 0, desc = "Ein kleiner Wirbelsturm saust 25 Sekunden über den Planeten und saugt Parzelle um Parzelle weg" },
             new PerkDef { id = "turbo", name = "Turbo-Wischen", icon = "T", kind = 1, dur = 90, desc = "90 s lang wischst du mit 2,5-facher Kraft" },
