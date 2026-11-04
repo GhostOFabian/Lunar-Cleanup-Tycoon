@@ -121,3 +121,29 @@ Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen)
 6. A5 Astronauten-Crew + A6 Talente.
 7. B1 Belohnungen messen und anpassen.
 8. C2 Planeten-Eigenheiten, ein Planet nach dem anderen.
+
+---
+
+## G. Aufräumen: weniger Gedränge, schönere Menüs ⬜ (04.11., Prüfung im Code)
+
+### Im Bild
+- „Erste Schritte“-Karte: im Hard Mode ausblenden (dort gibt es die Hard-Ziele), sonst nach den 10 Schritten ganz weg (ist schon so).
+- Schwebezahlen: nur noch für eigene Aktionen (Wischen, Kombo, Funde). Kein „+351 entladen“ mehr bei jeder Fahrzeugentladung; Parzellen-Bonus gebündelt.
+- Kopfleiste: Anzeigen Tag/Nacht · ROH · PROD/STAU nur noch als eine schmale Zeile; STAU erscheint nur bei echtem Stau.
+- Fracht-Hinweis: nach den ersten 3 Malen nur noch ein kleiner pulsierender Punkt an der Rakete statt der großen Sprechblase.
+- Meldungen: höchstens 2 gleichzeitig (bisher 3), kürzer sichtbar; gleiche Meldungen zusammenfassen.
+
+### Menüs
+- Ziele-Fenster: 6 Reiter → 3 (Ziele · Erfolge · Kodex). Statistik und Abschluss wandern in den Kodex, Bestellungen bekommen ein eigenes kleines Symbol, wenn Besucher warten.
+- Ziele-Reiter: doppelte Abschnitte („Jetzt abholen“ + darunter dieselben Ziele) zusammenlegen; Reihenfolge: Abholbar → Hauptziel → Planetenziele → Aufträge.
+- Einstellungen (40 Zeilen): Reiter Allgemein · Ton · Spielstand (Test-Knöpfe nur im Testmodus/Admin, ist schon so).
+- Alle Fenster per Bildschirmfoto durchgehen (wenn der Mac an ist): Abstände, zu lange Texte, abgeschnittene Knöpfe.
+
+### Zu viele Ziel-Systeme (8!)
+Hauptziele · Planetenziele · Tagesaufträge · Herausforderungen · Werksaufträge · Bestellungen · Erfolge · (Hard-Ziele).
+Vorschlag: Tagesaufträge + Herausforderungen + Werksaufträge → **ein** System „Aufträge“ (immer 3 offen, eins davon mit Zeitlimit). Planetenziele → später die 3 Sterne (C1).
+
+### Weitere Kandidaten zum Streichen oder Verstecken (nur nach Fabians OK)
+- Lieferketten-Reiter im Planeten-Fenster (selten gebraucht) → in die Produktion.
+- Ausrichtung (Bergbau/Industrie/Handel) – wirkt kaum spürbar.
+- Spielstand-Code kopieren/einfügen → in einen Unterpunkt „Erweitert“.
