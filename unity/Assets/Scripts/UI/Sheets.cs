@@ -58,18 +58,19 @@ namespace LunarCleanup.UI
         static void PerkShop(Hud h)
         {
             if (!Game.Hard) { h.Note("Den Perk-Shop gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
-            h.Note("Im Hard Mode putzt du selbst – hier gibt es Hilfe dafür. Gekauftes liegt unten in der Leiste – einmal antippen, und es wirkt sofort an der nächsten dreckigen Stelle. Preise steigen nur mit Planet und Basisstufe. Du trägst nur wenige Ladungen – erst einsetzen, dann nachkaufen.");
-            /* Fabian 03.11.: kleine Sachen oben, große darunter, die Ultimate ganz unten – innerhalb nach Preis */
+            /* Fabian 04.11.: Putz-Level ganz oben, darunter Reiter statt einer langen Liste */
+            h.Row("Putz-Level " + Game.HardLevel, () => { var nx = Game.Talents.FirstOrDefault(t => t.lv > Game.HardLevel); return Mathf.FloorToInt(Game.LevelXp) + " / " + Mathf.FloorToInt(Game.LevelNeed(Game.HardLevel)) + " Erfahrung bis Level " + (Game.HardLevel + 1) + (nx != null ? " · nächstes Talent: " + nx.name + " (" + nx.desc + ")" : "") + " · Ultimate " + Mathf.FloorToInt(Game.Ult * 100) + " %"; }, titleLive: () => "Putz-Level " + Game.HardLevel);
             var all = Game.Perks.OrderBy(x => Game.PerkCost(x.id)).ToList(); double cut = Game.PerkCost("bomb") * 1.6;
-            foreach (var tier in new[] { 0, 1, 2 })
+            h.Tabs("Klein", "Groß", "Ultimate", "Talente"); int tab = h.Tab;
+            if (tab == 3)
             {
-                var list = all.Where(x => tier == 2 ? x.id == "nuke" : x.id != "nuke" && (tier == 0 ? Game.PerkCost(x.id) <= cut : Game.PerkCost(x.id) > cut)).ToList(); if (list.Count == 0) continue;
-                h.Section(tier == 0 ? "Kleine Helfer" : tier == 1 ? "Große Helfer" : "Ultimate");
-                foreach (var P in list) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+                h.Note("Selbst wischen gibt Erfahrung (1 je Parzelle, Kombos mehr). Jedes Level schaltet ein Talent frei – es wirkt sofort.");
+                foreach (var T in Game.Talents) { var tt = T; h.Row(tt.name, () => (Game.HardLevel >= tt.lv ? "Aktiv · " : "Ab Level " + tt.lv + " · ") + tt.desc); }
+                return;
             }
-            h.Section("Putz-Level " + Game.HardLevel);
-            h.Row("Erfahrung", () => Mathf.FloorToInt(Game.LevelXp) + " / " + Mathf.FloorToInt(Game.LevelNeed(Game.HardLevel)) + " bis Level " + (Game.HardLevel + 1) + " · jede selbst gewischte Parzelle gibt 1, Kombos mehr · Ultimate " + Mathf.FloorToInt(Game.Ult * 100) + " %");
-            foreach (var T in Game.Talents) { var tt = T; h.Row(tt.name, () => (Game.HardLevel >= tt.lv ? "Aktiv · " : "Ab Level " + tt.lv + " · ") + tt.desc); }
+            h.Note(tab == 0 ? "Günstige Helfer für zwischendurch. Einmal in der Leiste antippen – wirkt sofort an der nächsten dreckigen Stelle." : tab == 1 ? "Große Werkzeuge und Putzhelfer. Du trägst nur wenige Ladungen – erst einsetzen, dann nachkaufen." : "Die Ultimate: sehr teuer, nur eine Ladung. Gratis gibt es sie, wenn die Ulti-Leiste voll ist.");
+            var list = all.Where(x => tab == 2 ? x.id == "nuke" : x.id != "nuke" && (tab == 0 ? Game.PerkCost(x.id) <= cut : Game.PerkCost(x.id) > cut)).ToList();
+            foreach (var P in list) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
         }
         static void UpRow(Hud h, string id)
         {
