@@ -205,7 +205,7 @@ namespace LunarCleanup.Gameplay
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
-            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
+            alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(true); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
             saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
@@ -378,12 +378,17 @@ namespace LunarCleanup.Gameplay
             preview = null; if (uiRoot) uiRoot.SetActive(true); BuildPlanet();
         }
 
-        void ApplyCam()
+        Vector3 cdS, northS; bool camS; Vector2 fling, panVel; float lastPanT;
+        /// <summary>Kamera setzen. smooth: Fabian 04.11. – die sichtbare Kamera gleitet weich hinterher (kurze Wege schnell, weite Sprünge wie ein Flug).</summary>
+        void ApplyCam(bool smooth = false)
         {
             float R = VP.pd.R; float tilt = Mathf.Lerp(TILT, 0, Mathf.InverseLerp(60, R * 2f, alt));
             north = (north - cd * Vector3.Dot(north, cd)).normalized;
-            var focus = cd * R; var pos = focus + (cd * Mathf.Cos(tilt) - north * Mathf.Sin(tilt)) * alt;
-            cam.transform.position = pos; cam.transform.rotation = Quaternion.LookRotation(focus - pos, north * Mathf.Cos(tilt) + cd * Mathf.Sin(tilt));
+            if (!smooth || !camS) { cdS = cd; northS = north; camS = true; }
+            else { float ang = Vector3.Angle(cdS, cd), dt0 = Mathf.Min(Time.unscaledDeltaTime, .05f); float k = 1 - Mathf.Exp(-(ang > 6 ? 4.5f : 20f) * dt0); cdS = Vector3.Slerp(cdS, cd, k).normalized; northS = Vector3.Slerp(northS, north, k); northS = (northS - cdS * Vector3.Dot(northS, cdS)).normalized; if (northS.sqrMagnitude < .5f) northS = north; }
+            var c0 = cdS; var n0 = northS;
+            var focus = c0 * R; var pos = focus + (c0 * Mathf.Cos(tilt) - n0 * Mathf.Sin(tilt)) * alt;
+            cam.transform.position = pos; cam.transform.rotation = Quaternion.LookRotation(focus - pos, n0 * Mathf.Cos(tilt) + c0 * Mathf.Sin(tilt));
             if (WorldView.Shake > 0) cam.transform.position += (cam.transform.right * (Mathf.PerlinNoise(Time.time * 25, 0) - .5f) + cam.transform.up * (Mathf.PerlinNoise(0, Time.time * 25) - .5f)) * WorldView.Shake * Mathf.Clamp(alt * .03f, .3f, 4f); // Meteoriteneinschlag
         }
         void Pan(Vector2 delta)
@@ -460,8 +465,11 @@ namespace LunarCleanup.Gameplay
             else if (Mouse.current != null) { pressed = Mouse.current.leftButton.isPressed || Mouse.current.leftButton.wasPressedThisFrame; pos = Mouse.current.position.ReadValue(); float sc = Mouse.current.scroll.ReadValue().y; if (Mathf.Abs(sc) > .01f && !Hud.PointerOverUi()) Zoom(sc > 0 ? .88f : 1.14f); }
             else { pressed = false; pos = Vector2.zero; }
 
+            /* Fabian 04.11.: weichere Kamera – nach dem Loslassen gleitet der Planet mit Schwung aus */
+            if (!pressed && fling.sqrMagnitude > 400) { Pan(fling * dt); fling *= Mathf.Exp(-4.5f * dt); } else if (!pressed) fling = Vector2.zero;
             if (pressed && mode == Mode.None)
             {
+                fling = Vector2.zero; panVel = Vector2.zero;
                 downPos = lastPos = pos; downT = Time.time; moved = false;
                 if (Hud.PointerOverUi(pid) || offlineRunning) { mode = Mode.Ui; return; }
                 editDrag = -1; drawing = false; moving = false; if (world.Moving) { moving = Hit(pos, out var dm0); if (moving) world.MoveTo(Game.Cur.pd.PlanLocal(dm0)); mode = Mode.Pan; } /* 03.11.: Gebäude ziehen */
@@ -500,7 +508,7 @@ namespace LunarCleanup.Gameplay
                     if (moving && world.Moving) { if (Hit(pos, out var d4)) world.MoveTo(Game.Cur.pd.PlanLocal(d4)); }
                     else if (drawing && world.Editing) { if (Hit(pos, out var d3)) world.DrawAdd(Game.Cur.pd.PlanLocal(d3)); }
                     else if (editDrag >= 0 && world.Editing) { if (editKnob) world.SetHeight(editDrag, world.EditHeight + (pos.y - lastPos.y) * .03f / U); else if (moved && Hit(pos, out var d2)) world.MovePoint(editDrag, Game.Cur.pd.PlanLocal(d2)); }
-                    else Pan(pos - lastPos);
+                    else { var dl = pos - lastPos; if (dl.sqrMagnitude > .01f) lastPanT = Time.time; Pan(dl); panVel = Vector2.Lerp(panVel, dl / Mathf.Max(.001f, dt), .5f); } /* 04.11.: Schwung merken */
                 }
                 lastPos = pos; return;
             }
@@ -508,6 +516,7 @@ namespace LunarCleanup.Gameplay
             if (drawing) { drawing = false; if (world.Editing) world.DrawEnd(); mode = Mode.None; return; }
             if (moving) { moving = false; mode = Mode.None; return; }
             if (mode == Mode.Pan && !moved && Time.time - downT < .7f && editDrag < 0) Tap(pos);
+            if (mode == Mode.Pan && moved && editDrag < 0 && !world.Editing && !world.Moving && Time.time - lastPanT < .08f) fling = Vector2.ClampMagnitude(panVel, Screen.height * 2.5f); panVel = Vector2.zero;
             mode = Mode.None; editDrag = -1;
         }
         void EndWipe() { brush.SetActive(false); mode = Mode.None; Sfx.Wipe(false); WorldView.WipeDir = Vector3.zero; }

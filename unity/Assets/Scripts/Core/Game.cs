@@ -423,7 +423,7 @@ namespace LunarCleanup.Core
         public static float HandSum() => Sum(Cur.sv.hand);
         static int lastCell = -1; static float fullWarnT;
         /// <summary>Ein Wisch darf bis zu zwei Parzellen gleichzeitig reinigen (die erste und eine benachbarte, auf die der Pinsel hinüberstreicht).</summary>
-        static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 2;
+        static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 2; public static bool InStroke(int id) => strokeCells.Contains(id); /* 04.11.: Ansicht lädt diese Stellen sofort hoch */
         public static void BeginStroke() { strokeCells.Clear(); Attend(); }
         public static bool CanClean(Vector3 d) { var ps = Cur; int c = ps.pd.CellOf(d, lastCell); return Workable(ps, c); }
         /// <summary>Wischen an der Stelle d (Einheitsvektor). Liefert die aufgenommene Menge.</summary>

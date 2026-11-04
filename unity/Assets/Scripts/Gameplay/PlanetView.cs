@@ -10,7 +10,7 @@ namespace LunarCleanup.Gameplay
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { detail = null; }
         public const int SUB = 3; int TILE = 64; /* Pixel je Parzelle; auf großen Planeten kleiner, sonst werden die Texturen zu groß (18.000 Parzellen × 64² wären über 300 MB) */
-        class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty; public Material mat; public float upT = -9; }
+        class Chunk { public Texture2D tex, nrm, gtex; public Color32[] px, gpx; public int per, size, gs; public bool dirty, hot; public Material mat; public float upT = -9; }
         int upNext;
         /// <summary>Fabian 01.11.: grüne Ränder sauberer Parzellen leuchten weit rausgezoomt (0 = nah, 1 = ganzer Planet); setzt GameRoot.</summary>
         public static float GlowK; float glowSet = -1;
@@ -248,7 +248,7 @@ namespace LunarCleanup.Gameplay
 
         public void PaintCell(int id)
         {
-            var cl = pd.cells[id]; var ch = chunks[cl.chunk]; if (ch == null) return;
+            var cl = pd.cells[id]; var ch = chunks[cl.chunk]; if (ch == null) return; if (LunarCleanup.Core.Game.InStroke(id)) ch.hot = true; /* Fabian 04.11.: unter dem Finger sofort sichtbar */
             int ti = tileOf[id], ox = (ti % ch.per) * TILE, oy = (ti / ch.per) * TILE, G = GameData.GRID;
             bool clean = ps.clean[id], isBase = cl.IsBase, front = ps.front.Contains(id);
             ps.act.TryGetValue(id, out var act);
@@ -317,6 +317,8 @@ namespace LunarCleanup.Gameplay
             if (ps.dirtyCells.Count > 0) { foreach (int id in ps.dirtyCells) PaintCell(id); ps.dirtyCells.Clear(); }
             /* Fabian 03.11.: Ruckeln auf großen Planeten – höchstens 2 Abschnitte pro Bild hochladen, jeden höchstens alle 0,25 s (die Fahrzeuge putzen sonst jedes Bild mehrere große Texturen neu) */
             int up = 0; float now = Time.unscaledTime;
+            /* Fabian 04.11.: Wischen wirkte verzögert – Abschnitte unter dem Finger jedes Bild sofort hochladen, nur der Rest bleibt gedrosselt */
+            foreach (var ch in chunks) if (ch != null && ch.hot && ch.dirty) { ch.tex.SetPixels32(ch.px); ch.tex.Apply(true); ch.gtex.SetPixels32(ch.gpx); ch.gtex.Apply(true); ch.dirty = false; ch.hot = false; ch.upT = now; }
             for (int k = 0; k < chunks.Count && up < 2; k++)
             {
                 int i = (upNext + k) % chunks.Count; var ch = chunks[i]; if (ch == null || !ch.dirty || now - ch.upT < .25f) continue;

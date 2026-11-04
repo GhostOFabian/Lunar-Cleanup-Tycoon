@@ -218,21 +218,38 @@ namespace LunarCleanup.UI
         void BuildPerkBar()
         {
             var row = UiKit.Rt(root, "Perk-Leiste").Anchor(0, 0, 1, 0, 128, 80, 78, -128); pbGo = row.gameObject; var hl = row.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.spacing = 5; hl.childControlWidth = true; hl.childForceExpandWidth = false; hl.childControlHeight = true; /* 03.11.: feste Breite – ein einzelner Shop-Knopf wurde sonst riesig */
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 6; i++)
             {
-                string id = i == 6 ? "shop" : "";
-                int slot = i; var b = UiKit.Btn(row, "Perk " + i, () => PerkTap(slot), Pal.Glass, 12); var img = b.GetComponent<Image>(); UiKit.LE(b, -1, -1, 0, 48).minWidth = 40;
-                var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 7; t.fontSizeMax = 11;
+                string id = i == 5 ? "shop" : "";
+                int slot = i; var b = UiKit.Btn(row, "Perk " + i, () => PerkTap(slot), Pal.Glass, 12); var img = b.GetComponent<Image>(); UiKit.LE(b, -1, -1, 0, 48).minWidth = 30; /* 04.11.: wird bei Platzmangel schmaler statt über den Karten-Knopf zu ragen */
+                var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 6; t.fontSizeMax = 11; t.textWrappingMode = TextWrappingModes.NoWrap;
                 pbBtns.Add((id, img, t)); /* nicht in bottomBtns: die blenden alles wieder ein, auch leere Plätze */
             }
+            /* Fabian 04.11.: „Mehr“ klappt nach oben auf – dort stehen alle weiteren Perks */
+            var pop = UiKit.Glass(root, "Perk-Auswahl", new Color(.05f, .08f, .15f, .94f), 14); pbPop = pop.gameObject; pop.raycastTarget = true; var prt = pop.rectTransform; prt.anchorMin = prt.anchorMax = new Vector2(0, 0); prt.pivot = new Vector2(0, 0); prt.anchoredPosition = new Vector2(128, 136);
+            var gl = pop.gameObject.AddComponent<GridLayoutGroup>(); gl.cellSize = new Vector2(58, 50); gl.spacing = new Vector2(6, 6); gl.padding = new RectOffset(8, 8, 8, 8); gl.constraint = GridLayoutGroup.Constraint.FixedColumnCount; gl.constraintCount = 4;
+            var fit = pop.gameObject.AddComponent<ContentSizeFitter>(); fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize; fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            for (int i = 0; i < 12; i++)
+            {
+                int k = i; var b = UiKit.Btn(pop.transform, "Perk mehr " + i, () => { string id = k < popIds.Count ? popIds[k] : null; pbPop.SetActive(false); if (id != null) UsePerkId(id); }, Pal.Glass, 12);
+                var t = UiKit.Text(b.transform, "Text", "", 11, Pal.Ink, true, FontStyles.Bold, TextAlignmentOptions.Center); t.rectTransform.Anchor(0, 0, 1, 1, 2, 2, 2, 2); t.enableAutoSizing = true; t.fontSizeMin = 7; t.fontSizeMax = 11; popBtns.Add((b.GetComponent<Image>(), t));
+            }
+            pbPop.SetActive(false);
+        }
+        GameObject pbPop; readonly List<(Image img, TextMeshProUGUI txt)> popBtns = new List<(Image, TextMeshProUGUI)>(); readonly List<string> popIds = new List<string>();
+        /// <summary>Einen Perk auslösen (Leiste oder Aufklapp-Feld).</summary>
+        void UsePerkId(string id)
+        {
+            if (id == "ult") { if (Game.Ult >= 1) PerkReq = "ult"; else Game.Toast("Ultimate lädt: " + Mathf.FloorToInt(Game.Ult * 100) + " % – wische selbst, Kombos laden schneller. Voll = Gratis-Nuke", ""); return; }
+            var P = Game.Perk(id); if (P == null) return; if (Game.PerkN(id) <= 0) { if (P.kind == 1 && Game.BuffLeft(id) > 0) Game.Toast(P.name + " läuft noch " + Mathf.CeilToInt(Game.BuffLeft(id)) + " s", ""); else OpenSheet("perks"); return; }
+            if (P.kind == 0) { ArmedTool = null; PerkReq = id; } else Game.UseBuff(id);
         }
         void PerkTap(int slot)
         {
             string id = slot >= 0 && slot < pbIds.Length ? pbIds[slot] : null; if (string.IsNullOrEmpty(id) || id == "shop") { OpenSheet("perks"); return; }
-            if (id == "ult") { if (Game.Ult >= 1) PerkReq = "ult"; else Game.Toast("Ultimate lädt: " + Mathf.FloorToInt(Game.Ult * 100) + " % – wische selbst, Kombos laden schneller. Voll = Gratis-Nuke", ""); return; }
-            var P = Game.Perk(id); if (Game.PerkN(id) <= 0) { OpenSheet("perks"); return; }
-            if (P.kind == 0) { ArmedTool = null; PerkReq = id; } /* Fabian 03.11.: ein Tipp genügt – wirkt sofort an der nächsten dreckigen Stelle bei der Kamera */
-            else Game.UseBuff(id);
+            if (id == "more") { pbPop.SetActive(!pbPop.activeSelf); if (pbPop.activeSelf) pbPop.transform.SetAsLastSibling(); return; }
+            if (pbPop) pbPop.SetActive(false);
+            UsePerkId(id);
         }
         // ---------- Fabian 03.11.: Perks sichtbar machen – Banner beim Start eines Buffs, Leuchtrand solange er läuft, Blitz bei der Nuke ----------
         TextMeshProUGUI buffBan, buffBanSub; CanvasGroup buffBanCg; float buffBanT = -99; Image flashImg; float flashT, flashDur = 1; readonly Image[] edges = new Image[4];
@@ -272,14 +289,19 @@ namespace LunarCleanup.UI
         static string PerkShort(string id) { switch (id) { case "bomb": return "Bombe"; case "nuke": return "Nuke"; case "kaercher": return "Kärcher"; case "foam": return "Schaum"; case "tornado": return "Tornado"; case "turbo": return "Turbo"; case "wide": return "Breit"; case "magnet": return "Magnet"; case "espresso": return "Espresso"; case "goldmop": return "Gold"; case "rohrpost": return "Rohr"; } return id; }
         void UpdatePerkBar()
         {
-            bool on = Game.PerksOpen && !SheetOpen && !MenuOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; return; }
+            bool on = Game.PerksOpen && !SheetOpen && !MenuOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; if (pbPop && pbPop.activeSelf) pbPop.SetActive(false); return; }
             /* Fabian 03.11.: die Leiste zeigt nur, was du hast (oder was gerade läuft) – höchstens 6, dahinter der Shop */
-            var have = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Take(5).Select(x => x.id).ToList(); have.Insert(0, "ult"); /* 03.11.: Ultimate-Leiste ganz links */
+            var own = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Select(x => x.id).ToList();
+            /* 04.11.: Ulti + bis zu 4 Perks; sind es mehr, zeigt Platz 4 „Mehr“ und der Rest klappt nach oben auf */
+            var have = new List<string> { "ult" }; bool more = own.Count > 4; have.AddRange(own.Take(more ? 3 : 4)); if (more) have.Add("more");
+            popIds.Clear(); if (more) popIds.AddRange(own.Skip(3)); if (!more && pbPop && pbPop.activeSelf) pbPop.SetActive(false);
+            if (pbPop && pbPop.activeSelf) for (int i = 0; i < popBtns.Count; i++) { var (pimg, ptxt) = popBtns[i]; bool show = i < popIds.Count; pimg.gameObject.SetActive(show); if (!show) continue; string pid = popIds[i]; var PP = Game.Perk(pid); float pbl = PP.kind == 1 ? Game.BuffLeft(pid) : 0; ptxt.text = PerkShort(pid) + "\n" + (pbl > 0 ? Mathf.CeilToInt(pbl) + " s" : "×" + Game.PerkN(pid)); pimg.color = pbl > 0 ? new Color(.43f, .95f, .82f, .35f) : Pal.Glass; }
             for (int i = 0; i < pbBtns.Count; i++)
             {
-                var (_, img, txt) = pbBtns[i]; string id = i == 6 ? "shop" : i < have.Count ? have[i] : ""; pbIds[i] = id; img.gameObject.SetActive(id != "");
+                var (_, img, txt) = pbBtns[i]; string id = i == 5 ? "shop" : i < have.Count ? have[i] : ""; pbIds[i] = id; img.gameObject.SetActive(id != "");
                 if (id == "") continue;
                 if (id == "shop") { txt.text = "+\nShop"; continue; }
+                if (id == "more") { bool op = pbPop && pbPop.activeSelf; txt.text = op ? "Zu" : "Mehr\n+" + popIds.Count; img.color = op ? new Color(.43f, .95f, .82f, .3f) : Pal.Glass; continue; }
                 if (id == "ult") { bool full = Game.Ult >= 1; txt.text = full ? "ULTI\nBEREIT" : "Ulti\n" + Mathf.FloorToInt(Game.Ult * 100) + " %"; img.color = full ? Color.Lerp(new Color(.5f, .35f, .05f, .95f), new Color(.85f, .6f, .1f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Color.Lerp(Pal.Glass, new Color(.45f, .25f, .7f, .9f), Game.Ult); continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
                 txt.text = PerkShort(id) + "\n" + (bl > 0 ? Mathf.CeilToInt(bl) + " s" : "×" + n);
                 img.color = ArmedTool == id ? new Color(1f, .75f, .3f, .55f) : bl > 0 ? new Color(.43f, .95f, .82f, .35f) : n > 0 ? Pal.Glass : new Color(Pal.Glass.r, Pal.Glass.g, Pal.Glass.b, Pal.Glass.a * .5f);
@@ -552,7 +574,7 @@ namespace LunarCleanup.UI
             { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
               if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
-            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && !SheetOpen && !MenuOpen && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) cargoTip.SetActive(show); if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
+            { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && !SheetOpen && !MenuOpen && !(pbPop && pbPop.activeSelf) && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) cargoTip.SetActive(show); if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }
             foreach (var kv in navIcons) { bool on = kv.Key == (sheetKind ?? "clean"); kv.Value.color = on ? Pal.Clean : Pal.Ink2; navTxt[kv.Key].color = on ? Pal.Clean : Pal.Ink2; }
             bindT += Time.unscaledDeltaTime; if (SheetOpen && bindT > .25f) { bindT = 0; Bind(); }
