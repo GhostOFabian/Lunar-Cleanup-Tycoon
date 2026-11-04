@@ -62,7 +62,7 @@ namespace LunarCleanup.Core
             new ShopOffer { id = "insure", name = "Meteor-Versicherung", desc = "Kommt ein Riesenmeteor durch, ist der Schaden nur halb so groß und die Lager bleiben voll", price = "2,99 €" },
             new ShopOffer { id = "sd50", name = "Sternenstaub-Beutel", desc = "+50 Sternenstaub für Forschung und Sonderwünsche", price = "0,99 €", consumable = true },
             new ShopOffer { id = "skin_gold", name = "Goldflotte", desc = "Goldene Lackierung für alle Fahrzeuge (nur Aussehen)", price = "1,99 €" },
-            new ShopOffer { id = "hardmode", name = "Hard Mode sofort", desc = "Schaltet den Hard Mode gleich frei, ohne erst alle 18 Planeten zu säubern: eigener Spielstand, du putzt selbst, dreifache Einnahmen", price = "2,99 €" },
+            new ShopOffer { id = "hardmode", name = "Hard Mode sofort", desc = "Schaltet den Hard Mode gleich frei, ohne erst alle 18 Planeten zu säubern: eigener Spielstand, du putzt selbst, Perks zum Finden, Anzug-Energie", price = "2,99 €" },
             new ShopOffer { id = "supporter", name = "Unterstützer-Paket", desc = "Langschläfer, Großer Frachtraum, Meteor-Versicherung, Goldflotte und 100 Sternenstaub – du unterstützt die Entwicklung", price = "7,99 €" },
         };
         public static bool Owned(string id) => Game.S != null && (Game.S.owned.Contains(id) || (id == "hardmode" && Game.HardOpen));

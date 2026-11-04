@@ -31,8 +31,9 @@ namespace LunarCleanup.UI
                 case "outpost": title = "Außenlager"; Outpost(h, int.Parse(arg)); BuildingUpgrades(h, "outpost"); break;
                 case "rig": title = "Tiefenabbau"; Rig(h, int.Parse(arg)); BuildingUpgrades(h, "rig"); break;
                 case "settings": title = "Einstellungen"; Settings(h); break;
-                case "perks": title = "Perk-Shop"; PerkShop(h); break;
+                case "perks": title = Game.Hard ? "Inventar" : "Perks"; PerkShop(h); break;
                 case "hard": title = "Hard Mode"; HardSheet(h); break;
+                case "pylon": { int pc = int.TryParse(arg, out var q2) ? q2 : -1; bool has = ps.sv.pylons != null && ps.sv.pylons.Contains(pc); title = has ? "Ladesäule" : "Saubere Parzelle"; PylonSheet(h, pc, has); break; }
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
         }
@@ -40,7 +41,7 @@ namespace LunarCleanup.UI
         /// <summary>Fabian 03.11.: Hard Mode aus dem Startmenü – was er ist und wie man ihn freischaltet.</summary>
         static void HardSheet(Hud h)
         {
-            h.Note("Ein eigener, neuer Spielstand ab dem Mond. Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme – du putzt alles selbst. Ein fliegendes Sammelshuttle bringt deine Ladung zur Basis, im Perk-Shop gibt es Bomben, Helfer und Buffs, und alles bringt dreimal so viel Geld. Dein normaler Spielstand bleibt unberührt.");
+            h.Note("Ein eigener, neuer Spielstand ab dem Mond. Keine Putzfahrzeuge, keine Drohnen, keine Bohrtürme – du putzt alles selbst. Ein fliegendes Sammelshuttle bringt deine Ladung zur Basis, Perks findest du beim Wischen, und dein Anzug braucht Energie – Ladesäulen bringen dich weiter hinaus. Dein normaler Spielstand bleibt unberührt.");
             if (Game.Hard || Game.HardOpen)
             {
                 h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode ist frei", () => Game.Hard ? "Du spielst gerade den Hard Mode." : "Du kannst jederzeit wechseln – auch später in den Einstellungen.",
@@ -55,22 +56,40 @@ namespace LunarCleanup.UI
         }
         static string NextDirty() { foreach (var p in GameData.POrder) if (!Game.S.done.Contains(p)) return GameData.Planets[p].name + (Game.P.ContainsKey(p) ? " (" + Mathf.FloorToInt(Game.CleanPct(Game.P[p]) * 100) + " %)" : " (noch nicht freigeschaltet)"); return "–"; }
         /// <summary>Fabian 03.11.: Perk-Shop (Hard Mode).</summary>
+        /// <summary>Fabian 04.11.: Ladesäule bauen oder abbauen – je näher an einer Ladestelle, desto länger hält der Anzug.</summary>
+        static void PylonSheet(Hud h, int c, bool has)
+        {
+            var d = ps.pd.cells[c].c.normalized;
+            h.Note("Wischen kostet Anzug-Energie. Im Umkreis von " + Mathf.RoundToInt(Game.SUIT_NEAR) + " m um das Hauptgebäude oder eine Ladesäule verbrauchst du am wenigsten, je weiter weg, desto mehr. Hier gerade: " + Game.SuitDrain(ps, d).ToString("0.0").Replace('.', ',') + " je Sekunde (Abstand " + Mathf.RoundToInt(Game.ChargeDist(ps, d)) + " m).");
+            if (has) { h.Row("Ladesäule", () => "Steht hier · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " Ladesäulen auf " + ps.P.name, () => "Abbauen", () => true, () => { Game.RemovePylon(c); h.CloseSheet(); }, false); return; }
+            h.Row("Ladesäule bauen", () => "Kostet " + Game.Fmt(Game.PylonCost(ps)) + " E Rohstoffe aus dem Lager · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " gebaut", () => "Bauen", () => Game.PylonWhy(ps, c) == "", () => { if (Game.BuildPylon(c)) h.CloseSheet(); }, true, null, true, () => Game.PylonWhy(ps, c));
+        }
+        static string Rarity(string id) => id == "tornado" ? "sehr selten" : id == "nuke" ? "nur über die Ulti-Leiste" : new[] { "foam", "kaercher", "espresso", "goldmop", "rohrpost" }.Contains(id) ? "selten" : "häufig";
+        /// <summary>Fabian 04.11.: im Hard Mode gibt es nichts mehr zu kaufen – Perks findest du beim Selbstwischen. Das Fenster ist dein Inventar.</summary>
         static void PerkShop(Hud h)
         {
-            if (!Game.Hard) { h.Note("Den Perk-Shop gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
-            /* Fabian 04.11.: Putz-Level ganz oben, darunter Reiter statt einer langen Liste */
+            if (!Game.Hard) { h.Note("Perks gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
             h.Row("Putz-Level " + Game.HardLevel, () => { var nx = Game.Talents.FirstOrDefault(t => t.lv > Game.HardLevel); return Mathf.FloorToInt(Game.LevelXp) + " / " + Mathf.FloorToInt(Game.LevelNeed(Game.HardLevel)) + " Erfahrung bis Level " + (Game.HardLevel + 1) + (nx != null ? " · nächstes Talent: " + nx.name + " (" + nx.desc + ")" : "") + " · Ultimate " + Mathf.FloorToInt(Game.Ult * 100) + " %"; }, titleLive: () => "Putz-Level " + Game.HardLevel);
-            var all = Game.Perks.OrderBy(x => Game.PerkCost(x.id)).ToList(); double cut = Game.PerkCost("bomb") * 1.6;
-            h.Tabs("Klein", "Groß", "Ultimate", "Talente"); int tab = h.Tab;
-            if (tab == 3)
+            h.Tabs("Inventar", "Talente", "Crew"); int tab = h.Tab;
+            if (tab == 1)
             {
                 h.Note("Selbst wischen gibt Erfahrung (1 je Parzelle, Kombos mehr). Jedes Level schaltet ein Talent frei – es wirkt sofort.");
                 foreach (var T in Game.Talents) { var tt = T; h.Row(tt.name, () => (Game.HardLevel >= tt.lv ? "Aktiv · " : "Ab Level " + tt.lv + " · ") + tt.desc); }
                 return;
             }
-            h.Note(tab == 0 ? "Günstige Helfer für zwischendurch. Einmal in der Leiste antippen – wirkt sofort an der nächsten dreckigen Stelle." : tab == 1 ? "Große Werkzeuge und Putzhelfer. Du trägst nur wenige Ladungen – erst einsetzen, dann nachkaufen." : "Die Ultimate: sehr teuer, nur eine Ladung. Gratis gibt es sie, wenn die Ulti-Leiste voll ist.");
-            var list = all.Where(x => tab == 2 ? x.id == "nuke" : x.id != "nuke" && (tab == 0 ? Game.PerkCost(x.id) <= cut : Game.PerkCost(x.id) > cut)).ToList();
-            foreach (var P in list) { var pp = P; h.Row(P.name, () => pp.desc + (pp.kind == 2 ? " · auf " + ps.P.name + ": " + ps.sv.helpers.Count + "/" + Game.HELPER_MAX : " · bereit: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id)), () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+            if (tab == 2)
+            {
+                h.Note("Putzhelfer laufen mit einem Besen über den Planeten und fegen Parzelle für Parzelle – auch wenn du nicht da bist.");
+                foreach (var P in Game.Perks.Where(x => x.kind == 2)) { var pp = P; h.Row(P.name, () => pp.desc + " · auf " + ps.P.name + ": " + ps.sv.helpers.Count(x => x.life <= 0) + "/" + Game.HELPER_MAX, () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+                return;
+            }
+            h.Note("Perks findest du nur beim Selbstwischen – manchmal springt eine Kiste aus der Parzelle. Häufig: Bombe, Turbo, Breiter Pinsel, Magnet · selten: Schaum, Kärcher, Espresso, Goldener Mopp, Rohrpost · sehr selten: Tornado. Die Nuke lädst du über die Ulti-Leiste.");
+            foreach (var P in Game.Perks.Where(x => x.kind != 2))
+            {
+                var pp = P;
+                h.Row(P.name, () => pp.desc + " · " + Rarity(pp.id) + " · dabei: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id) + (pp.kind == 1 && Game.BuffLeft(pp.id) > 0 ? " · läuft noch " + Mathf.CeilToInt(Game.BuffLeft(pp.id)) + " s" : ""),
+                    () => Game.PerkN(pp.id) > 0 ? "Einsetzen" : "–", () => Game.PerkN(pp.id) > 0, () => { if (pp.kind == 0) { Hud.PerkReq = pp.id; h.CloseSheet(); } else Game.UseBuff(pp.id); }, false, null, true, () => pp.id == "nuke" ? "Die Nuke bekommst du, wenn die Ulti-Leiste voll ist" : "Noch nicht gefunden – wisch weiter selbst, " + Rarity(pp.id) + "er Fund");
+            }
         }
         static void UpRow(Hud h, string id)
         {
@@ -94,7 +113,7 @@ namespace LunarCleanup.UI
             if (Game.Hard) /* Fabian 03.11.: Hard Mode – nur das Sammelshuttle */
             {
                 h.Section("Hard Mode · Sammelshuttle");
-                h.Note("Im Hard Mode putzt du alles selbst. Ist dein Behälter voll, tippe unten links auf ihn: Das Sammelshuttle fliegt zu dir, du lädst um, und es bringt die Ladung zur Entladestation oder ins Rohstofflager. Ist dort alles voll, legt es im Zwischenlager ab – von dort geht es von selbst ins Lager, sobald Platz ist. Alles bringt dreimal so viel Geld.");
+                h.Note("Im Hard Mode putzt du alles selbst. Ist dein Behälter voll, tippe unten links auf ihn: Das Sammelshuttle fliegt zu dir, du lädst um, und es bringt die Ladung zur Entladestation oder ins Rohstofflager. Ist dort alles voll, legt es im Zwischenlager ab – von dort geht es von selbst ins Lager, sobald Platz ist. Ladesäulen baust du, indem du eine saubere Parzelle antippst.");
                 h.Row("Sammelshuttle", () => { var c = ps.sv.cart; return (c.mode == "go" ? "Fliegt zu dir" : c.mode == "wait" ? "Wartet bei dir – tippe auf deinen Behälter" : c.mode == "back" ? (c.to == "depot" ? "Fliegt ins Zwischenlager (alles voll)" : "Bringt die Ladung weg") : c.mode == "drop" ? "Lädt ab" : "Steht bereit") + " · fasst " + Game.Fmt(Game.CartCap()) + " E (doppelter Behälter) · schneller mit dem Upgrade „Schnelles Sammelshuttle“"; }, () => "Rufen", () => ps.sv.cart.mode == "park", () => { ps.sv.cart.mode = "go"; });
                 h.Row("Zwischenlager", () => Game.DepotSum(ps) < .5f ? "Leer – hier landet die Ladung, wenn Entladestation und Rohstofflager voll sind" : Game.Fmt(Game.DepotSum(ps)) + " E warten – gehen von selbst ins Rohstofflager, sobald dort Platz ist (größeres Lager hilft)");
                 return;
@@ -607,7 +626,7 @@ namespace LunarCleanup.UI
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);
-                foreach (int gi in Game.HardGoalsOpen()) { int g = gi; var G = Game.HardGoals[g]; h.Row(G.t, () => Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " % · Belohnung " + Cr(Game.HardGoalReward(g)) + (G.perk != "" ? " + " + G.n + "× " + Game.Perk(G.perk).name : ""), () => Game.HardGoalProg(g) >= 1 ? "Abholen" : Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " %", () => Game.HardGoalProg(g) >= 1, () => Game.ClaimHardGoal(g), true, null, true, () => "Noch nicht geschafft – " + G.t); }
+                foreach (int gi in Game.HardGoalsOpen()) { int g = gi; var G = Game.HardGoals[g]; h.Row(G.t, () => Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " % · Belohnung " + Game.HardGoalXp(g) + " Erfahrung" + (G.perk != "" ? " + " + G.n + "× " + Game.Perk(G.perk).name : ""), () => Game.HardGoalProg(g) >= 1 ? "Abholen" : Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " %", () => Game.HardGoalProg(g) >= 1, () => Game.ClaimHardGoal(g), true, null, true, () => "Noch nicht geschafft – " + G.t); }
                 if (Game.HardGoalsOpen().Count == 0) h.Note("Alle Hard-Ziele geschafft – Respekt!");
             }
             Game.DailyContracts(); var cs = Game.S.contracts;
@@ -834,7 +853,7 @@ namespace LunarCleanup.UI
                 h.Row("Sturm auslösen", () => Game.Cur.P.storm != null ? "Der nächste Sturm kommt in 25 Sekunden." : "Auf diesem Planeten gibt es keine Stürme.", () => "Sturm", () => Game.Cur.P.storm != null, () => { var cs = Game.Cur.sv; cs.hzOn = 0; cs.hzWarned = false; cs.hzT = Game.Cur.P.storm.every - 25; }, false);
             }
             h.Section("Spielmodus");
-            h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelshuttle bringt deine Ladung, dreifache Einnahmen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelshuttle bringt deine Ladung zur Basis. Upgrades nur für Handgerät und Produktion, dafür bringt alles dreimal so viel. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
+            h.Row(Game.Hard ? "Hard Mode (aktiv)" : "Hard Mode", () => Game.Hard ? "Du spielst den Hard Mode: keine Putzfahrzeuge, Sammelshuttle bringt deine Ladung, Anzug-Energie und Ladesäulen. Dein normaler Spielstand wartet unberührt." : "Eigener, neuer Spielstand ab dem Mond: keine Putzfahrzeuge, keine Drohnen und Bohrtürme – du putzt selbst, ein Sammelshuttle bringt deine Ladung zur Basis. Perks findest du beim Wischen, dein Anzug braucht Energie, Ladesäulen bringen dich weiter hinaus. Dein normaler Spielstand bleibt erhalten, du kannst jederzeit zurück.",
                 () => Game.Hard ? "Zum normalen Spiel" : "Hard Mode spielen", () => Game.Hard || Game.HardOpen, () => { h.CloseSheet(); Game.SwitchHard(!Game.Hard); }, !Game.Hard, null, true, () => Game.Hard ? "" : Game.HardWhy);
             if (Game.AdminWeb) h.Row("Admin-Modus", () => "Nur für dich: Test-Knöpfe an, eigener Test-Spielstand (dein normaler Spielstand bleibt unberührt). Beenden und neu laden = normales Spiel.", () => "Beenden", () => true, () => { Game.Save(); PlayerPrefs.DeleteKey("LunarCleanup.Admin"); PlayerPrefs.Save(); Game.Toast("Admin-Modus aus – Seite neu laden", "good"); }, false);
             if (Debug.isDebugBuild && !Application.isEditor)

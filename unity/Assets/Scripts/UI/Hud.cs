@@ -35,7 +35,7 @@ namespace LunarCleanup.UI
         {
             if (!MenuOpen || hardMenuTxt == null) return; bool open = Game.Hard || Game.HardOpen;
             hardMenuTxt.text = Game.Hard ? "Normales Spiel" : open ? "Hard Mode" : "Hard Mode (gesperrt)";
-            hardMenuSub.text = Game.Hard ? "Zurück zu deinem normalen Spielstand" : open ? "Eigener Spielstand · du putzt selbst · ×3 Geld" : "Gesperrt · " + Game.HardDoneN + "/" + GameData.POrder.Length + " Planeten sauber – oder im Shop · antippen für Infos";
+            hardMenuSub.text = Game.Hard ? "Zurück zu deinem normalen Spielstand" : open ? "Eigener Spielstand · du putzt selbst · Expedition" : "Gesperrt · " + Game.HardDoneN + "/" + GameData.POrder.Length + " Planeten sauber – oder im Shop · antippen für Infos";
             hardMenuImg.color = open ? new Color(1, .75f, .3f, .3f) : new Color(1, 1, 1, .05f); hardMenuTxt.color = open ? Pal.Credit : Pal.Ink3;
         }
         /// <summary>Startmenü (Fabian 01.11.): Spiel starten, Einstellungen, Beenden – liegt über der Basis, unter den Einstellungen.</summary>
@@ -286,6 +286,21 @@ namespace LunarCleanup.UI
             var col = LunarCleanup.Gameplay.WorldView.PerkColor(act); float k = .16f + .1f * Mathf.Sin(Time.unscaledTime * 3.2f);
             foreach (var e0 in edges) { if (!e0.gameObject.activeSelf) e0.gameObject.SetActive(true); e0.color = new Color(col.r, col.g, col.b, k); }
         }
+        /* Fabian 04.11.: Anzug-Energie (Hard Mode) – schmale Leiste über der Perk-Leiste */
+        GameObject suitGo; RectTransform suitFill; Image suitFillImg; TextMeshProUGUI suitTxt;
+        void UpdateSuit()
+        {
+            bool on = Game.SuitActive && pbGo && pbGo.activeSelf; if (!on) { if (suitGo && suitGo.activeSelf) suitGo.SetActive(false); return; }
+            if (!suitGo)
+            {
+                var g = UiKit.Glass(root, "Anzug-Energie", new Color(.05f, .08f, .15f, .85f), 6); suitGo = g.gameObject; g.raycastTarget = false; g.rectTransform.Anchor(0, 0, 1, 0, 128, 134, 78, -150);
+                UiKit.Bar(g.transform, "Balken", Pal.Clean, out suitFill, 4).Anchor(0, 0, 1, 1, 70, 5, 6, 5); suitFillImg = suitFill.GetComponent<Image>();
+                suitTxt = UiKit.Text(g.transform, "Text", "Anzug", 9, Pal.Ink, true, FontStyles.Bold); suitTxt.rectTransform.Anchor(0, 0, 0, 1, 6, 0, -68, 0); suitTxt.alignment = TextAlignmentOptions.MidlineLeft; suitTxt.raycastTarget = false;
+            }
+            if (!suitGo.activeSelf) suitGo.SetActive(true); float f = Game.Suit / Game.SUIT_MAX; UiKit.SetFill(suitFill, f);
+            if (suitFillImg) suitFillImg.color = f < .25f ? Color.Lerp(new Color(1f, .4f, .35f), new Color(1f, .6f, .3f), .5f + .5f * Mathf.Sin(Time.time * 6)) : f < .5f ? new Color(1f, .8f, .3f) : Pal.Clean;
+            suitTxt.text = "Anzug " + Mathf.RoundToInt(f * 100) + " %";
+        }
         static string PerkShort(string id) { switch (id) { case "bomb": return "Bombe"; case "nuke": return "Nuke"; case "kaercher": return "Kärcher"; case "foam": return "Schaum"; case "tornado": return "Tornado"; case "turbo": return "Turbo"; case "wide": return "Breit"; case "magnet": return "Magnet"; case "espresso": return "Espresso"; case "goldmop": return "Gold"; case "rohrpost": return "Rohr"; } return id; }
         void UpdatePerkBar()
         {
@@ -300,7 +315,7 @@ namespace LunarCleanup.UI
             {
                 var (_, img, txt) = pbBtns[i]; string id = i == 5 ? "shop" : i < have.Count ? have[i] : ""; pbIds[i] = id; img.gameObject.SetActive(id != "");
                 if (id == "") continue;
-                if (id == "shop") { txt.text = "+\nShop"; continue; }
+                if (id == "shop") { txt.text = "Alle\nPerks"; continue; }
                 if (id == "more") { bool op = pbPop && pbPop.activeSelf; txt.text = op ? "Zu" : "Mehr\n+" + popIds.Count; img.color = op ? new Color(.43f, .95f, .82f, .3f) : Pal.Glass; continue; }
                 if (id == "ult") { bool full = Game.Ult >= 1; txt.text = full ? "ULTI\nBEREIT" : "Ulti\n" + Mathf.FloorToInt(Game.Ult * 100) + " %"; img.color = full ? Color.Lerp(new Color(.5f, .35f, .05f, .95f), new Color(.85f, .6f, .1f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Color.Lerp(Pal.Glass, new Color(.45f, .25f, .7f, .9f), Game.Ult); continue; } var P = Game.Perk(id); int n = Game.PerkN(id); float bl = P.kind == 1 ? Game.BuffLeft(id) : 0;
                 txt.text = PerkShort(id) + "\n" + (bl > 0 ? Mathf.CeilToInt(bl) + " s" : "×" + n);
@@ -567,12 +582,12 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdatePerkFx(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdatePerkFx(); UpdateSuit(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
             { int q = Game.S.quest; bool tut = q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
-              if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(GameData.Quests[q].r); UiKit.SetFill(goalFill, pr);
+              if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(System.Math.Round(GameData.Quests[q].r * Game.GoalF)); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }
             { float cg = Game.Sum(ps.sv.sellBuf), cc = Game.SellTarget(ps); bool away = ps.sv.rk > 0; bool hint = Game.CargoHint(ps); rocketTxt.text = away ? "Unterwegs · " + Mathf.CeilToInt(ps.sv.rk) + " s" : hint ? "Laden!" : cg > 0 ? "Starten" : "Leer"; if (cargoTip) { bool show = hint && !SheetOpen && !MenuOpen && !(pbPop && pbPop.activeSelf) && Game.Icp == null && rocketImg.gameObject.activeInHierarchy; if (cargoTip.activeSelf != show) cargoTip.SetActive(show); if (show) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); cargoTipImg.color = Color.Lerp(new Color(.35f, .27f, .06f, .96f), new Color(.55f, .42f, .1f, .96f), k); cargoTip.transform.localScale = Vector3.one * (1 + .03f * k); } } UiKit.SetFill(rocketFill, away ? 0 : cg / Mathf.Max(1, cc)); rocketImg.color = hint ? Color.Lerp(Pal.Glass, new Color(.45f, .34f, .07f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : !away && cg >= cc * .99f ? new Color(.3f, .22f, .05f, .92f) : Pal.Glass; }
             badgeT -= Time.unscaledDeltaTime; if (badgeT <= 0) { badgeT = .5f; int nc = Game.ClaimableCount(); goalBadge.SetActive(nc > 0); if (nc > 0) goalBadgeTxt.text = nc > 9 ? "9+" : nc.ToString(); }

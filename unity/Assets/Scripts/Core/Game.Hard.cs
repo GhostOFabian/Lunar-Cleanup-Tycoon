@@ -11,7 +11,7 @@ namespace LunarCleanup.Core
     public static partial class Game
     {
         public static bool Hard;
-        public const double HARD_PRICE = 3;
+        public const double HARD_PRICE = 1; /* 04.11.: war ×3 – zu viel Geld im Hard Mode */
         const string HardKey = "LunarCleanup.Hard", HardOpenKey = "LunarCleanup.HardOpen";
         static readonly string[] HardNoCat = { "Fahrzeuge", "Drohnen", "Tiefenabbau", "Strahlenschutz", "Außenlager" };
         static readonly string[] HardNoBld = { "werkstatt", "hangar", "lifter" };
@@ -36,10 +36,12 @@ namespace LunarCleanup.Core
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); if (!P.ContainsKey(S.planet)) S.planet = "moon"; MigrateWallet(); ResetStats();
             Save(); OnPlanetChanged?.Invoke();
-            Toast(on ? "Hard Mode: du putzt selbst – dein Sammelshuttle bringt die Ladung zur Basis, alles bringt dreimal so viel" : "Zurück im normalen Spiel", "good");
+            Toast(on ? "Hard Mode: du putzt selbst – dein Sammelshuttle bringt die Ladung zur Basis, Perks findest du beim Wischen" : "Zurück im normalen Spiel", "good");
         }
         /// <summary>Fabian 03.11.: im Hard Mode fliegt ein Shuttle statt des Sammelwagens.</summary>
         /// <summary>Fabian 03.11.: im Hard Mode verdienst du weniger nebenbei – Reisen zum nächsten Planeten kostet nur 40 %.</summary>
+        /// <summary>Fabian 04.11.: im Hard Mode bringen Ziele, Erfolge, Aufträge kaum Geld (10 %) – man soll nicht durch Abholen die Basis ausbauen.</summary>
+        public static double GoalF => Hard ? .1 : 1;
         public static double UnlockCost(string pid) => Math.Round(GameData.Planets[pid].unlockCost * (Hard ? .4 : 1));
         public static string CartName => Hard ? "Sammelshuttle" : "Sammelwagen";
         /// <summary>Sammelshuttle fliegt geradeaus über alles hinweg (1,4× schneller), der Sammelwagen fährt über die Wege.</summary>

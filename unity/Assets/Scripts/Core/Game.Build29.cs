@@ -117,7 +117,7 @@ namespace LunarCleanup.Core
         public static ChalDef Chal(string id) => Challenges.FirstOrDefault(c => c.id == id);
         static readonly Dictionary<string, double> chalTarget = new Dictionary<string, double>();
         public static double ChalTarget(string id) { if (!chalTarget.TryGetValue(id, out var t)) { t = Chal(id)?.target() ?? 1; chalTarget[id] = t; } return t; }
-        public static double ChalReward(string id) { var c = Chal(id); return Math.Round(Math.Max(300 * Cur.P.diff, IncomePerMin() * c.time / 60 * .8)); }
+        public static double ChalReward(string id) { var c = Chal(id); return Math.Round(Math.Max(300 * Cur.P.diff, IncomePerMin() * c.time / 60 * .8) * GoalF); }
         public static void ChalRefresh(bool force = false)
         {
             var ch = S.chal ?? (S.chal = new ChalSave()); long now = Now();

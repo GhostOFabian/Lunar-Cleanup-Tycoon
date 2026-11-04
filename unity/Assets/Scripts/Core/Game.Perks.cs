@@ -71,7 +71,7 @@ namespace LunarCleanup.Core
         }
         public static string PerkWhy(string id)
         {
-            if (!Hard) return "Nur im Hard Mode";
+            if (!Hard) return "Nur im Hard Mode"; if (id != "helper") return "Perks findest du beim Selbstwischen – kaufen geht nicht mehr";
             if (id == "helper" && Cur.sv.helpers.Count(x => x.life <= 0) >= HELPER_MAX) return "Höchstens " + HELPER_MAX + " Helfer je Planet";
             if (id != "helper" && PerkN(id) >= PerkCap(id)) return "Du trägst schon " + PerkCap(id) + " – erst einsetzen";
             return S.credits < PerkCost(id) ? Lacks(PerkCost(id)) : "";
@@ -86,14 +86,14 @@ namespace LunarCleanup.Core
         /// <summary>Buff starten (verbraucht eine Ladung).</summary>
         public static bool UseBuff(string id)
         {
-            if (PerkN(id) <= 0) return Fail("Keine Ladung – im Perk-Shop kaufen"); PerkAdd(id, -1);
+            if (PerkN(id) <= 0) return Fail("Keine Ladung – Perks findest du beim Selbstwischen"); PerkAdd(id, -1);
             var e = S.buffT.Find(x => x.k == id); if (e == null) { e = new FKV { k = id }; S.buffT.Add(e); } e.v += Perk(id).dur;
             PerkFx(id, CartGoal.sqrMagnitude > .5f ? CartGoal : Cur.pd.PlanDir(Cur.lay.start), null); Toast(Perk(id).name + " aktiv · " + Mathf.RoundToInt(e.v) + " s", "good"); return true;
         }
         /// <summary>Werkzeug an der Stelle d einsetzen. Rückgabe: gereinigte Parzellen.</summary>
         public static int UseTool(string id, Vector3 d)
         {
-            var ps = Cur; var pd = ps.pd; if (PerkN(id) <= 0) { Fail("Keine Ladung – im Perk-Shop kaufen"); return 0; } if (Perk(id) != null && Perk(id).kind == 1) return UseBuff(id) ? 1 : 0;
+            var ps = Cur; var pd = ps.pd; if (PerkN(id) <= 0) { Fail("Keine Ladung – Perks findest du beim Selbstwischen"); return 0; } if (Perk(id) != null && Perk(id).kind == 1) return UseBuff(id) ? 1 : 0;
             if (id == "foam") return Foam(ps, d);
             if (id == "tornado") { { int sc = SnapWork(ps, d); if (sc >= 0) d = pd.cells[sc].c.normalized; } var t0 = new HelperSave { id = ++ps.sv.helperNext, d = d.normalized, life = 25 }; ps.sv.helpers.Add(t0); PerkAdd(id, -1); PerkFx(id, d, null); Toast("Staubsauger-Tornado losgelassen – 25 Sekunden Chaos!", "good"); Save(); return 1; }
             if (id == "kaercher") return Kaercher(ps, d);

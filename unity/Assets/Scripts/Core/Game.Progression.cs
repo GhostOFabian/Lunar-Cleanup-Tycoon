@@ -54,7 +54,7 @@ namespace LunarCleanup.Core
             var goods = PlanetRaws(ps).Select(m => EndGood(ps, m)).Distinct().ToList(); if (goods.Count == 0) return; int prev = ps.sv.wo != null ? ps.sv.wo.m : -1;
             var opts = goods.Where(m => m != prev).ToList(); if (opts.Count == 0) opts = goods; int mm = opts[Rng.Next(opts.Count)];
             double V = 2500 * ps.P.diff * Math.Pow(1.55, ps.sv.woDone); int n = Math.Max(GameData.Mats[mm].raw ? 20 : 3, (int)Math.Round(V / Math.Max(.01, MatValue(mm, ps))));
-            ps.sv.wo = new WorkOrderSave { m = mm, n = n, got = 0, r = Math.Round(V * .8) };
+            ps.sv.wo = new WorkOrderSave { m = mm, n = n, got = 0, r = Math.Round(V * .8 * GoalF) };
         }
         static void WoCount(PState ps, int m, float u)
         {
@@ -88,7 +88,7 @@ namespace LunarCleanup.Core
             new PGoal { text = "Finde alle Funde dieses Planeten", prog = p => FeatureData.Finds.TryGetValue(p.pid, out var a) && a.Length > 0 ? FindsOn(p.pid) / (float)a.Length : 0, k = 8 },
             new PGoal { text = "Erreiche Ausbaustufe 1", prog = p => p.sv.exp, k = 15 },
             new PGoal { text = "Sammle alle Flaggen dieses Planeten", prog = p => p.sv.flags.Count > 0 ? FlagsGot(p) / (float)p.sv.flags.Count : 0, k = 12 } };
-        public static double PGoalReward(PState ps, int i) => Math.Round(250 * ps.P.diff * PlanetGoals[i].k);
+        public static double PGoalReward(PState ps, int i) => Math.Round(250 * ps.P.diff * PlanetGoals[i].k * GoalF);
         public static bool PGoalClaimed(PState ps, int i) => ps.sv.pgDone.Contains(i);
         public static float PGoalProg(PState ps, int i) => Mathf.Clamp01(PlanetGoals[i].prog(ps));
         public static int PGoalsReady(PState ps) { int n = 0; for (int i = 0; i < PlanetGoals.Length; i++) if (!PGoalClaimed(ps, i) && PGoalProg(ps, i) >= 1) n++; return n; }
@@ -112,7 +112,7 @@ namespace LunarCleanup.Core
         {
             int day = Today(); var c = S.contracts ?? (S.contracts = new ContractSave()); if (c.day == day && c.list.Count > 0) return;
             var r = new System.Random(day * 7 + S.resets * 131); int ms = Math.Max(1, S.planets.Max(p => p.stage)); double dm = S.planets.Max(p => GameData.Planets[p.pid].diff);
-            double R0 = Math.Round(300 * ms * ms * dm);
+            double R0 = Math.Round(300 * ms * ms * dm * GoalF);
             var pool = new List<ContractItem> {
                 new ContractItem { type = "cells", target = 3 + ms * 2, reward = R0 },
                 new ContractItem { type = "rockets", target = 2 + ms, reward = R0 * .9 },

@@ -103,7 +103,7 @@ namespace LunarCleanup.Core
             if (S == null || Offline) return null; var d = S.daily ?? (S.daily = new DailySave()); int t = Today(); if (d.lastDay == t) return null;
             int gap = d.lastDay == 0 ? 99 : DayIndex(t) - DayIndex(d.lastDay);
             d.streak = gap >= 1 && gap <= 1 + FeatureData.DAILY_GRACE_DAYS ? d.streak % FeatureData.DailyMult.Length + 1 : 1; d.lastDay = t;
-            var ps = Cur; double cr = Math.Max(FeatureData.DAILY_MIN, 50 * ps.P.diff * ps.sv.stage) * FeatureData.DailyMult[d.streak - 1]; Earn(cr);
+            var ps = Cur; double cr = Math.Round(Math.Max(FeatureData.DAILY_MIN, 50 * ps.P.diff * ps.sv.stage) * FeatureData.DailyMult[d.streak - 1] * GoalF); Earn(cr);
             string txt = "Tagesbonus Tag " + d.streak + "/7 · +" + Fmt(cr) + " Cr";
             if (d.streak == FeatureData.DailyMult.Length)
             {
@@ -247,7 +247,7 @@ namespace LunarCleanup.Core
         public static int AchTier(AchDef a) { int t = 0; for (int i = 0; i < 3; i++) if (S.achievements.Contains("t:" + a.id + ":" + i)) t = i + 1; return t; }
         public static bool AchClaimed(AchDef a, int tier) => S.achievements.Contains("c:" + a.id + ":" + tier);
         public static int AchPending() { if (S == null) return 0; int n = 0; foreach (var a in Achievements) for (int i = 0; i < AchTier(a); i++) if (!AchClaimed(a, i)) n++; return n; }
-        public static double AchCredits(int tier) => Math.Round(4000 * Math.Pow(Cur.P.diff, .9) * (tier == 0 ? 1 : tier == 1 ? 6 : 30));
+        public static double AchCredits(int tier) => Math.Round(4000 * Math.Pow(Cur.P.diff, .9) * (tier == 0 ? 1 : tier == 1 ? 6 : 30) * GoalF);
         public static int AchDust(int tier) => tier == 0 ? 0 : tier == 1 ? 1 : 3;
         public static string AchRewardText(AchDef a, int tier) => Fmt(AchCredits(tier)) + " Cr" + (AchDust(tier) > 0 ? " + " + AchDust(tier) + " Sternenstaub" : "") + (a.titles != null && tier < a.titles.Length && a.titles[tier] != null ? " + Titel „" + a.titles[tier] + "“" : "");
         public static bool ClaimAch(AchDef a, int tier)

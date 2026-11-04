@@ -62,13 +62,20 @@ namespace LunarCleanup.Core
         {
             if (!Hard) return; S.hHand++; S.hNoPerk++; if (S.hNoPerk > S.hNoPerkBest) S.hNoPerkBest = S.hNoPerk;
             AddXp(1 + .5f * Mathf.Max(0, combo - 1)); AddUlt(ULT_CELL + .005f * Mathf.Max(0, combo - 1));
-            /* Perk-Fund im Dreck */
-            if (fr.NextDouble() < .05f * TalFind)
+            /* 04.11.: Perks gibt es im Hard Mode nur noch als Fund – häufig, selten, sehr selten; nach langer Durststrecke steigt die Chance */
+            float ch = (.06f + .012f * Mathf.Max(0, S.dropDry - 12)) * TalFind;
+            if (fr.NextDouble() < ch)
             {
-                string[] pool = { "bomb", "bomb", "turbo", "wide", "magnet", "foam", "espresso", "goldmop", "rohrpost", "kaercher" };
-                string pk = pool[fr.Next(pool.Length)]; if (PerkN(pk) < PerkCap(pk)) { PerkAdd(pk, 1); FloatTxt(ps.pd.cells[id].c, "Fund: " + Perk(pk).name + "!", "good"); Toast("Fund im Dreck: " + Perk(pk).name + " – liegt jetzt unten in der Leiste", "good"); }
+                S.dropDry = 0; double roll = fr.NextDouble(); string[] pool = roll < .04 ? DropVeryRare : roll < .3 ? DropRare : DropCommon; int tier = roll < .04 ? 2 : roll < .3 ? 1 : 0;
+                string pk = pool[fr.Next(pool.Length)];
+                if (PerkN(pk) < PerkCap(pk)) { PerkAdd(pk, 1); FloatTxt(ps.pd.cells[id].c, (tier == 2 ? "SEHR SELTEN: " : tier == 1 ? "Selten: " : "Fund: ") + Perk(pk).name + "!", "good"); OnDrop?.Invoke(ps.pd.cells[id].c, tier); }
+                else { AddXp(3); FloatTxt(ps.pd.cells[id].c, Perk(pk).name + " voll · +3 Erfahrung", ""); }
             }
+            else S.dropDry++;
         }
+        static readonly string[] DropCommon = { "bomb", "turbo", "wide", "magnet" }, DropRare = { "foam", "kaercher", "espresso", "goldmop", "rohrpost" }, DropVeryRare = { "tornado" };
+        /// <summary>Ansicht: Kiste springt aus der Parzelle (Ort, Seltenheit 0–2).</summary>
+        public static event Action<Vector3, int> OnDrop;
         /// <summary>Ein Perk wurde eingesetzt – die Serie „ohne Perk“ beginnt neu.</summary>
         static void PerkUsed() { if (S != null) S.hNoPerk = 0; }
 
@@ -102,6 +109,46 @@ namespace LunarCleanup.Core
             PerkFx("wave", ps.pd.cells[w].c, patch); Toast("Schmutzwelle: " + patch.Count + " Parzellen sind wieder staubig", "bad");
         }
 
+        // ---------- 04.11.: Anzug-Energie und Ladesäulen ----------
+        // Wischen kostet Energie – je weiter von der Basis oder einer Ladesäule, desto mehr. Ohne Wischen lädt der Anzug wieder auf.
+        // Ladesäulen baust du auf sauberen Parzellen (Rohstoffe), damit drückst du die Reichweite immer weiter hinaus.
+        public const float SUIT_MAX = 100, SUIT_NEAR = 20, SUIT_FALL = 30, SUIT_BASE = 1.2f, SUIT_RECHARGE = 8;
+        public static float Suit => S == null ? SUIT_MAX : S.suit < 0 ? SUIT_MAX : S.suit;
+        static float suitLast = -99, suitWarnT = -99;
+        public static bool SuitActive => Hard;
+        /// <summary>Abstand (m) zur nächsten Ladestelle: Hauptgebäude oder Ladesäule.</summary>
+        public static float ChargeDist(PState ps, Vector3 d)
+        {
+            var pd = ps.pd; float best = ps.lay.pos.ContainsKey("hq") ? pd.Arc(d, pd.PlanDir(ps.lay.pos["hq"])) : pd.Arc(d, pd.cells[pd.baseCell].c);
+            if (ps.sv.pylons != null) foreach (int c in ps.sv.pylons) best = Mathf.Min(best, pd.Arc(d, pd.cells[c].c)); return best;
+        }
+        /// <summary>Verbrauch je Sekunde Wischen an dieser Stelle.</summary>
+        public static float SuitDrain(PState ps, Vector3 d) => SUIT_BASE * (1 + Mathf.Max(0, ChargeDist(ps, d) - SUIT_NEAR) / SUIT_FALL);
+        static bool SuitUse(PState ps, Vector3 d, float dt)
+        {
+            if (!Hard) return true; if (S.suit < 0) S.suit = SUIT_MAX; suitLast = Time.realtimeSinceStartup;
+            if (S.suit <= 0) { if (Time.realtimeSinceStartup - suitWarnT > 3) { suitWarnT = Time.realtimeSinceStartup; Toast("Anzug leer – kurz Pause, er lädt gleich wieder auf. Näher an einer Ladesäule wischt du länger", "bad"); } return false; }
+            S.suit = Mathf.Max(0, S.suit - SuitDrain(ps, d) * dt); return true;
+        }
+        static void SuitStep(float dt) { if (!Hard || Offline || S == null) return; if (S.suit < 0) S.suit = SUIT_MAX; if (Time.realtimeSinceStartup - suitLast > .6f) S.suit = Mathf.Min(SUIT_MAX, S.suit + SUIT_RECHARGE * dt); }
+        public static int PylonMax(PState ps) => 2 + 2 * Gs(ps);
+        public static float PylonCost(PState ps) => 30 * (1 + .35f * (ps.sv.pylons?.Count ?? 0));
+        public static string PylonWhy(PState ps, int c)
+        {
+            if (!Hard) return "Nur im Hard Mode"; var pd = ps.pd; if (c < 0 || !ps.clean[c] || pd.cells[c].IsBase) return "Nur auf sauberen Parzellen außerhalb der Basis";
+            if (ps.sv.pylons != null && ps.sv.pylons.Contains(c)) return "Hier steht schon eine Ladesäule";
+            if ((ps.sv.pylons?.Count ?? 0) >= PylonMax(ps)) return "Höchstens " + PylonMax(ps) + " Ladesäulen – mehr mit der nächsten Basisstufe";
+            if (RohSum(ps) < PylonCost(ps)) return "Es fehlen Rohstoffe: " + Fmt(PylonCost(ps)) + " E nötig, im Lager " + Fmt(RohSum(ps)) + " E";
+            return "";
+        }
+        public static bool BuildPylon(int c)
+        {
+            var ps = Cur; string w = PylonWhy(ps, c); if (w != "") return Fail(w); float cost = PylonCost(ps), tot = RohSum(ps), k = cost / tot;
+            foreach (int m in GameData.Raw) ps.sv.roh[m] = Mathf.Max(0, ps.sv.roh[m] - ps.sv.roh[m] * k);
+            (ps.sv.pylons ??= new List<int>()).Add(c); ps.baseVersion++; PerkFx("pylon", ps.pd.cells[c].c, new List<int> { c }); Toast("Ladesäule gebaut – hier wischst du sparsamer", "good"); Save(); return true;
+        }
+        public static bool RemovePylon(int c) { var ps = Cur; if (ps.sv.pylons == null || !ps.sv.pylons.Remove(c)) return false; ps.baseVersion++; Toast("Ladesäule abgebaut", ""); Save(); return true; }
+
         // ---------- Hard-Ziele ----------
         public class HardGoal { public string t; public Func<float> p; public double r; public string perk; public int n; }
         static float Pc(string pid) => P.ContainsKey(pid) ? CleanPct(P[pid]) : 0;
@@ -130,15 +177,15 @@ namespace LunarCleanup.Core
         };
         public static bool HardGoalDone(int i) => S.hGoals != null && S.hGoals.Contains(i);
         public static float HardGoalProg(int i) => Mathf.Clamp01(HardGoals[i].p());
-        public static double HardGoalReward(int i) => Math.Round(HardGoals[i].r * Cur.P.diff);
+        public static int HardGoalXp(int i) => 5 + 3 * i; /* 04.11.: Hard-Ziele geben Erfahrung und Perks statt Geld */
         /// <summary>Die drei nächsten offenen Hard-Ziele.</summary>
         public static List<int> HardGoalsOpen() { var o = new List<int>(); if (!Hard) return o; for (int i = 0; i < HardGoals.Length && o.Count < 3; i++) if (!HardGoalDone(i)) o.Add(i); return o; }
         public static int HardGoalsClaimable() => HardGoalsOpen().Count(i => HardGoalProg(i) >= 1);
         public static bool ClaimHardGoal(int i)
         {
-            if (!Hard || HardGoalDone(i) || HardGoalProg(i) < 1) return false; var g = HardGoals[i]; double r = HardGoalReward(i);
-            (S.hGoals ??= new List<int>()).Add(i); Earn(r); if (!string.IsNullOrEmpty(g.perk)) PerkAdd(g.perk, g.n);
-            Toast("Hard-Ziel geschafft · +" + Fmt(r) + " Cr" + (g.perk != "" ? " · " + g.n + "× " + Perk(g.perk).name : ""), "good"); Save(); return true;
+            if (!Hard || HardGoalDone(i) || HardGoalProg(i) < 1) return false; var g = HardGoals[i]; int xp = HardGoalXp(i);
+            (S.hGoals ??= new List<int>()).Add(i); AddXp(xp); if (!string.IsNullOrEmpty(g.perk)) PerkAdd(g.perk, g.n);
+            Toast("Hard-Ziel geschafft · +" + xp + " Erfahrung" + (g.perk != "" ? " · " + g.n + "× " + Perk(g.perk).name : ""), "good"); Save(); return true;
         }
     }
 }

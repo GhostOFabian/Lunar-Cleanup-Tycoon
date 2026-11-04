@@ -435,6 +435,7 @@ namespace LunarCleanup.Core
                 if (Time.realtimeSinceStartup - fullWarnT > 2.5f) { fullWarnT = Time.realtimeSinceStartup; Toast("Sammelbehälter voll – tippe unten links auf den Behälter", "bad"); }
                 return 0;
             }
+            if (!SuitUse(ps, d, dt)) return 0; /* 04.11.: Hard Mode – Anzug-Energie */
             int c0 = pd.CellOf(d, lastCell); lastCell = c0;
             strokeCells.RemoveAll(c => !Workable(ps, c));
             if (Workable(ps, c0) && !strokeCells.Contains(c0) && strokeCells.Count < StrokeMax) strokeCells.Add(c0);
@@ -1642,7 +1643,7 @@ namespace LunarCleanup.Core
         public static bool ClaimQuest()
         {
             int q = S.quest; if (q >= QuestsSupported || q >= GameData.Quests.Count || QuestProgress(q) < 1) return false;
-            Earn(GameData.Quests[q].r); S.quest++; Toast("Ziel erreicht · +" + Fmt(GameData.Quests[q].r) + " Cr", "good"); return true;
+            double qr = Math.Round(GameData.Quests[q].r * GoalF); Earn(qr); S.quest++; Toast("Ziel erreicht · +" + Fmt(qr) + " Cr", "good"); return true;
         }
 
         // ================= Energie, Tag und Nacht =================
@@ -1735,7 +1736,7 @@ namespace LunarCleanup.Core
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
-            AchievementStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
+            AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; } }
         static void StepPlanet0(PState ps, float dt)

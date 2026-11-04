@@ -63,6 +63,9 @@ namespace LunarCleanup.Gameplay
                     Sfx.Play("pop", .8f, .8f); StartCoroutine(Shock(d, cs * 3.2f, col, .8f, .45f));
                     if (cells != null) foreach (int c in cells) { StartCoroutine(Foam(pd.cells[c].c.normalized, cs * .35f)); yield return new WaitForSeconds(.04f); }
                     break;
+                case "pylon":
+                    Sfx.Play("buy", 1f, .7f); StartCoroutine(Shock(d, Game.SUIT_NEAR, new Color(.43f, .95f, .82f), 1.2f, .5f)); EmitDust(d, new Color(.6f, 1f, .9f), 40);
+                    break;
                 case "wave":
                     Sfx.Play("bad", .7f, .8f); StartCoroutine(Shock(d, cs * 2.2f, new Color(.55f, .4f, .25f), 1.1f, .6f));
                     if (cells != null) foreach (int c in cells) { var cd = pd.cells[c].c.normalized; EmitDust(cd, new Color(.45f, .35f, .25f), 60); yield return new WaitForSeconds(.15f); }
@@ -121,6 +124,34 @@ namespace LunarCleanup.Gameplay
             int wc = Game.Hard && ps != null ? Game.WaveCell(ps) : -1;
             if (wc != waveFor) { if (waveMark) Destroy(waveMark); if (waveMat) Destroy(waveMat); waveMark = null; waveFor = wc; if (wc >= 0) { var d = pd.cells[wc].c.normalized; waveMark = FxQuad(d, .5f, FxRingTex(), new Color(.75f, .5f, .3f), out waveMat); } }
             if (waveMark) { float k = .5f + .5f * Mathf.Sin(Time.time * 4); waveMark.transform.localScale = Vector3.one * CellSize(pd.cells[wc].c.normalized) * (1.4f + .25f * k); waveMat.SetColor("_BaseColor", new Color(.8f, .5f, .25f, .35f + .35f * k)); }
+        }
+        /// <summary>Fund: kleine leuchtende Kiste springt aus der Parzelle (weiß = häufig, blau = selten, gold = sehr selten).</summary>
+        public void DropFx(Vector3 d, int tier) { if (pd == null || MapMode) return; StartCoroutine(DropCo(d.normalized, tier)); }
+        IEnumerator DropCo(Vector3 d, int tier)
+        {
+            var c = tier == 2 ? new Color(1f, .8f, .3f) : tier == 1 ? new Color(.4f, .7f, 1f) : new Color(.9f, .95f, 1f);
+            Sfx.Play(tier >= 1 ? "discover" : "find", 1f, .6f); EmitDust(d, c, tier == 2 ? 70 : 35);
+            var box = MeshKit.Part(transform, MeshKit.Cube, MeshKit.Glow(c, tier == 2 ? 3f : 2f), Vector3.zero, Vector3.one); NoShadow(box);
+            var m = box.GetComponent<MeshRenderer>().material; var rot = Quaternion.FromToRotation(Vector3.up, d); float t = 0, dur = 1.3f, s0 = tier == 2 ? 1.1f : .8f;
+            while (t < dur) { t += Time.deltaTime; float e = t / dur, h = Mathf.Sin(Mathf.Min(1, e * 1.4f) * Mathf.PI) * 3f + e * 2;
+                box.transform.position = pd.Surf(d, .5f + h); box.transform.rotation = rot * Quaternion.Euler(e * 400, e * 520, 0); box.transform.localScale = Vector3.one * s0 * (e < .15f ? e / .15f : e > .8f ? (1 - e) / .2f : 1); yield return null; }
+            Destroy(box); Destroy(m);
+        }
+        /* Ladesäulen: schlanker Mast mit leuchtendem Ring, darum ein schwacher Kreis für die Spar-Reichweite */
+        readonly List<GameObject> pylonGos = new List<GameObject>(); int pylonVer = -1; string pylonFor;
+        public void SyncPylons()
+        {
+            if (pd == null) return; bool show = Game.Hard; if (pylonFor == ps.pid && pylonVer == ps.baseVersion && (pylonGos.Count > 0) == (show && ps.sv.pylons != null && ps.sv.pylons.Count > 0)) return;
+            foreach (var g in pylonGos) if (g) Destroy(g); pylonGos.Clear(); pylonFor = ps.pid; pylonVer = ps.baseVersion; if (!show || ps.sv.pylons == null) return;
+            var mastM = MeshKit.Mat(new Color(.82f, .85f, .9f), .3f, .6f); var glowM = MeshKit.Glow(new Color(.43f, .95f, .82f), 2.5f);
+            foreach (int c in ps.sv.pylons)
+            {
+                var d = pd.cells[c].c.normalized; var g = new GameObject("Ladesäule " + c); g.transform.SetParent(transform, false); g.transform.position = pd.Surf(d, 0); g.transform.rotation = Quaternion.FromToRotation(Vector3.up, d);
+                MeshKit.Cyl(g.transform, mastM, new Vector3(0, 1.6f, 0), .12f, .2f, 3.2f, 10); var ring = MeshKit.Cyl(g.transform, glowM, new Vector3(0, 3.3f, 0), .45f, .45f, .12f, 16); NoShadow(ring);
+                MeshKit.Cyl(g.transform, mastM, new Vector3(0, .1f, 0), .6f, .7f, .2f, 16);
+                var area = FxQuad(d, .35f, FxRingTex(), new Color(.43f, .95f, .82f), out var am); am.SetColor("_BaseColor", new Color(.43f, .95f, .82f, .12f)); area.transform.localScale = Vector3.one * Game.SUIT_NEAR * 2; area.transform.SetParent(g.transform, true);
+                pylonGos.Add(g);
+            }
         }
         IEnumerator ScreenFlash() { LunarCleanup.UI.Hud.I?.Flash(new Color(1, .97f, .85f), .9f); yield break; }
     }
