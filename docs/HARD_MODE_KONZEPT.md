@@ -78,10 +78,46 @@ Legende: ✅ fertig und veröffentlicht · 🟡 geschrieben, noch nicht kompilie
 
 ---
 
+## D. Klassen im Hard Mode ⬜ (Vorschlag 04.11.)
+Wahl beim Start (kostenlos), Wechsel im Inventar („Klasse“) gegen Geld (≈ 2× Reisekosten zum nächsten Planeten). Level und Talente bleiben.
+1. **Techniker** – Anzug +40 %, Ladesäulen −30 % · wischt −10 % · „Notstrom“: leer → einmal je Minute sofort 30 %.
+2. **Putzprofi** – Wischkraft +30 %, Kombo +5 s · Anzug −20 % · „Rausch“: ab Kombo ×5 10 s ohne Energieverbrauch.
+3. **Schatzsucher** – Funde ×2, seltene +50 % · Behälter −25 % · „Spürsinn“: Kisten/Wracks/Splitter leuchten durch den Dreck.
+4. **Sprengmeister** – Bombe/Kärcher +60 % Parzellen, Ulti +25 % schneller · Hand −15 %, Funde seltener · „Kettenreaktion“: 20 % Chance auf eine zweite Bombe.
+5. **Logistiker** – Behälter +50 %, Shuttle +40 % und doppelt so groß · Pinsel −10 % · „Rohrpost“: alle 20 s geht ein Teil des Behälters von selbst ins Lager.
+6. **Crew-Chef** – +1 Helfer, Helfer +30 % · Anzug −15 %, Hand −10 % · „Antreiben“: wischst du neben einem Helfer, arbeitet er doppelt so schnell.
+
+## E. Kristalle mit echtem Nutzen ⬜ (beide Modi)
+Problem: Kristallsplitter sind nur ein Rohstoff (Wert 6, kaum mehr als Staub) – viele lassen sie stehen.
+- Kristalle werden eine **eigene Währung** (Zähler oben neben dem Geld), nicht mehr verkaufbar. Bestehende Kristalle im Lager werden umgebucht.
+- Ernten bleibt: antippen (Hand) oder Fahrzeuge; ab sofort mit Glitzer, Klang und „+3 Kristalle“.
+- **Normaler Modus – Kristalle ausgeben für:**
+  - Kristall-Schub: 5 Kristalle = alle Fahrzeuge und Maschinen 5 min +50 %.
+  - Sofort fertig: Forschung, Reparatur oder Wiederaufbau nach dem Riesenmeteor sofort abschließen (Preis nach Restzeit).
+  - Top-Stufen von Upgrades (letzte 2 Stufen) und Terraforming brauchen Kristalle.
+  - Müllberg-Bonus (siehe F): Kristalle als Hauptbelohnung.
+- **Hard Mode – Kristalle für:**
+  - Antippen beim Wischen: +25 Anzug-Energie sofort und +3 % Ulti → Grund, sie auf weiten Wegen mitzunehmen.
+  - Recycler: seltene Perks herstellen (z. B. 8 Kristalle = Kärcher, 20 = Tornado).
+  - Ladesäulen-Upgrade (Reichweite +10 m) und Klassenwechsel günstiger.
+- Kristall-Arten (gibt es schon: verschiedene Typen mit Multiplikator) zeigen ihren Wert sichtbar: kleine/große/seltene Kristalle.
+
+## F. Riesen-Müllberg zum Teamwork ⬜ (normaler Modus, Ausbau des bestehenden Ereignisses)
+Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen) und sieht nur wie eine dreckige Parzelle aus.
+- **Sichtbarer 3D-Müllberg** über 3–7 Parzellen, der beim Abtragen sichtbar schrumpft; Fortschrittsbalken oben.
+- **Fester Termin statt Zufall**: je Planet bei 30 % und 70 % sauber, danach alle ~45 min; 30 s Ankündigung mit Kamera-Flug.
+- **Alle zusammen**: Fahrzeuge fahren von selbst hin (Mindestzahl 3, je mehr desto schneller), Drohnen tragen ab, du wischst mit (deine Hand zählt wie 1 Fahrzeug).
+- **Belohnung**: Geld + 10–30 Kristalle + 1 Sternenstaub + seltener Fund; Bonus, wenn in unter 5 min geschafft.
+- **Hard Mode-Variante**: „Müllmonster“ – du und deine Crew/Helfer gegen den Berg, Kisten fallen beim Abtragen heraus.
+
+---
+
 ## Reihenfolge zum Bauen
 1. Build 54: A1–A3 kompilieren, testen, veröffentlichen.
-2. A4 Werkstatt-Basis (Hard).
-3. C1 Sterne (beide Modi) + A5 Sprungkern.
-4. A5 Astronauten-Crew + A6 Talente.
-5. B1 Belohnungen messen und anpassen.
-6. C2 Planeten-Eigenheiten, ein Planet nach dem anderen.
+2. E Kristalle mit Nutzen (beide Modi) + F Riesen-Müllberg.
+3. D Klassen (Hard).
+4. A4 Werkstatt-Basis (Hard).
+5. C1 Sterne (beide Modi) + A5 Sprungkern.
+6. A5 Astronauten-Crew + A6 Talente.
+7. B1 Belohnungen messen und anpassen.
+8. C2 Planeten-Eigenheiten, ein Planet nach dem anderen.
