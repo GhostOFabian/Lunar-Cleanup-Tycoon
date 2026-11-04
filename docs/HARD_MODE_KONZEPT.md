@@ -10,18 +10,18 @@ Legende: ✅ fertig und veröffentlicht · 🟡 geschrieben, noch nicht kompilie
 
 ## A. Hard Mode
 
-### A1 Balance 🟡 (Code auf GitHub, Build 54)
+### A1 Balance ✅ (Build 54)
 - Verkauf ×1 statt ×3.
 - Ziele, Erfolge, Aufträge, Tagesbonus, Herausforderungen: 10 % Geld (`GoalF`).
 - Hard-Ziele: Erfahrung + Perks statt Geld.
 
-### A2 Perks nur als Funde 🟡
+### A2 Perks nur als Funde ✅
 - Nur beim Selbstwischen: 6 % je Parzelle, Pech-Schutz +1,2 % je Parzelle nach 12 ohne Fund.
 - 70 % häufig (Bombe, Turbo, Breiter Pinsel, Magnet) · 26 % selten (Schaum, Kärcher, Espresso, Goldener Mopp, Rohrpost) · 4 % sehr selten (Tornado). Nuke nur über die Ulti-Leiste.
 - Leuchtende Kiste springt aus der Parzelle (weiß/blau/gold). Über der Tragegrenze: +3 Erfahrung.
 - Shop → „Inventar“ mit Reitern Inventar / Talente / Crew (Putzhelfer vorerst kaufbar).
 
-### A3 Anzug-Energie und Ladesäulen 🟡
+### A3 Anzug-Energie und Ladesäulen ✅
 - Energie 100. Wischen: 1,2/s bis 20 m von Hauptgebäude oder Ladesäule, danach +1 je 30 m. Ohne Wischen +8/s.
 - Ladesäulen auf sauberen Parzellen (antippen): 30 E Rohstoffe, +35 % je weitere, höchstens 2 + 2 × Basisstufe.
 - Leiste „Anzug %“ über der Perk-Leiste; Säule mit Reichweiten-Kreis.
@@ -113,7 +113,7 @@ Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen)
 ---
 
 ## Reihenfolge zum Bauen
-1. Build 54: A1–A3 kompilieren, testen, veröffentlichen.
+1. ✅ Build 54: A1–A3 + Aufräumen.
 2. E Kristalle mit Nutzen (beide Modi) + F Riesen-Müllberg.
 3. D Klassen (Hard).
 4. A4 Werkstatt-Basis (Hard).
@@ -124,7 +124,7 @@ Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen)
 
 ---
 
-## G. Aufräumen: weniger Gedränge, schönere Menüs 🟡 (04.11.: Code geschrieben – fehlt noch: Bildschirmfoto-Durchgang aller Fenster und schmalere Kopfanzeigen)
+## G. Aufräumen: weniger Gedränge, schönere Menüs ✅ (Build 54; Fenster per Bildschirmfoto geprüft)
 
 ### Im Bild
 - „Erste Schritte“-Karte: im Hard Mode ausblenden (dort gibt es die Hard-Ziele), sonst nach den 10 Schritten ganz weg (ist schon so).

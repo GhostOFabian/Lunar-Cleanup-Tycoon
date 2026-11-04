@@ -294,7 +294,7 @@ namespace LunarCleanup.UI
             bool on = Game.SuitActive && pbGo && pbGo.activeSelf; if (!on) { if (suitGo && suitGo.activeSelf) suitGo.SetActive(false); return; }
             if (!suitGo)
             {
-                var g = UiKit.Glass(root, "Anzug-Energie", new Color(.05f, .08f, .15f, .85f), 6); suitGo = g.gameObject; g.raycastTarget = false; g.rectTransform.Anchor(0, 0, 1, 0, 128, 134, 78, -150);
+                var g = UiKit.Glass(root, "Anzug-Energie", new Color(.05f, .08f, .15f, .85f), 6); suitGo = g.gameObject; g.raycastTarget = false; g.rectTransform.Anchor(0, 0, 1, 0, 128, 130, 78, -143); /* 04.11.: unter die Fracht-Sprechblase */
                 UiKit.Bar(g.transform, "Balken", Pal.Clean, out suitFill, 4).Anchor(0, 0, 1, 1, 70, 5, 6, 5); suitFillImg = suitFill.GetComponent<Image>();
                 suitTxt = UiKit.Text(g.transform, "Text", "Anzug", 9, Pal.Ink, true, FontStyles.Bold); suitTxt.rectTransform.Anchor(0, 0, 0, 1, 6, 0, -68, 0); suitTxt.alignment = TextAlignmentOptions.MidlineLeft; suitTxt.raycastTarget = false;
             }
@@ -339,7 +339,7 @@ namespace LunarCleanup.UI
             rocketTxt = UiKit.Text(rb.transform, "Wert", "", 12, Pal.Ink, true, FontStyles.Bold); rocketTxt.rectTransform.Anchor(0, .45f, 1, 1, 42, 0, 8, 6); rocketTxt.alignment = TextAlignmentOptions.MidlineLeft; rocketTxt.enableAutoSizing = true; rocketTxt.fontSizeMin = 8; rocketTxt.fontSizeMax = 12; rocketTxt.textWrappingMode = TextWrappingModes.NoWrap;
             UiKit.Bar(rb.transform, "Balken", Pal.Credit, out rocketFill, 5).Anchor(0, 0, 1, 0, 42, 12, 12, -17);
             /* Fabian 03.11.: Sprechblase neben der Rakete, solange im Anfangsbereich Ware von Hand geladen werden muss */
-            var cb = UiKit.Glass(root, "Fracht-Hinweis", new Color(.35f, .27f, .06f, .96f), 12); cargoTip = cb.gameObject; cb.raycastTarget = true; ((RectTransform)cb.transform).Anchor(0, 0, 1, 0, 136, 142, 76, -194);
+            var cb = UiKit.Glass(root, "Fracht-Hinweis", new Color(.35f, .27f, .06f, .96f), 12); cargoTip = cb.gameObject; cb.raycastTarget = true; ((RectTransform)cb.transform).Anchor(0, 0, 1, 0, 136, 147, 76, -196);
             var cbb = cb.gameObject.AddComponent<Button>(); cbb.onClick.AddListener(() => Game.LoadAllCargo()); cargoTipImg = cb;
             var ct = UiKit.Text(cb.transform, "Text", "Ware im Lager! Tippe hier oder auf die Rakete, um sie einzuladen", 13, Pal.Ink, true, FontStyles.Bold); ct.rectTransform.Anchor(0, 0, 1, 1, 10, 4, 10, 4); ct.alignment = TextAlignmentOptions.MidlineLeft; ct.enableAutoSizing = true; ct.fontSizeMin = 9; ct.fontSizeMax = 13;
             cargoTip.SetActive(false);
@@ -585,7 +585,7 @@ namespace LunarCleanup.UI
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
             foreach (var m in meters) { m.v.text = m.val(); UiKit.SetFill(m.fill, m.f()); }
-            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdatePerkFx(); UpdateSuit(); UpdateHardMenu(); { bool show = Game.Icp == null; foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
+            foreach (var a in liveLabels) a(); lowWarn?.Invoke(); UpdateWarn(ps); UpdateBeltEdit(); UpdateMovePanel(); UpdatePerkBar(); UpdatePerkFx(); UpdateSuit(); UpdateHardMenu(); { bool show = Game.Icp == null && !SheetOpen; /* 04.11.: unter offenen Fenstern nichts durchscheinen lassen */ foreach (var g in bottomBtns) if (g && g.activeSelf != show) g.SetActive(show); }
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
