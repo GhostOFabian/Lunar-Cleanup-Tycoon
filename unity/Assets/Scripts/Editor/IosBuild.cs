@@ -15,7 +15,7 @@ namespace LunarCleanup.EditorTools
         const string BundleId = "com.fabian.lunarcleanup";
         const string OutDir = "Builds/iOS";
         const string IconPath = "Assets/Icons/AppIcon.png"; // 1024 × 1024, ohne Transparenz – iOS rundet die Ecken selbst
-        internal const string Version = "0.22"; // Fabian 01.11.: Builds 14–16 brachten so viel Neues, dass 0.21 nicht mehr passt
+        internal const string Version = "0.5"; // Fabian 04.11.: einheitlich überall (iPhone, Browser, Webseite); 0.5 = Hard Mode, Planetenkassen, Perks (ab Build 53). Buildnummer zählt bei jedem iPhone-Build hoch
         internal const string TeamKey = "LunarCleanup.AppleTeamId";
 
         [MenuItem("Lunar Cleanup/iPhone-Version bauen und aufs iPhone")]
@@ -57,7 +57,7 @@ namespace LunarCleanup.EditorTools
 
         /// <summary>Alle iOS-Einstellungen an einer Stelle. Mehrfach ausführen ist ungefährlich.</summary>
         [MenuItem("Lunar Cleanup/iPhone: nur Einstellungen setzen")]
-        /// <summary>Build-Nummer ins Spiel schreiben (Resources/Data/build.txt), damit Einstellungen und Startmenü „Version 0.22 · Build 17“ zeigen.</summary>
+        /// <summary>Build-Nummer ins Spiel schreiben (Resources/Data/build.txt), damit Einstellungen und Startmenü „Version 0.5 · Build 53“ zeigen.</summary>
         internal static void WriteBuildInfo()
         {
             File.WriteAllText("Assets/Resources/Data/build.txt", PlayerSettings.iOS.buildNumber); AssetDatabase.ImportAsset("Assets/Resources/Data/build.txt");

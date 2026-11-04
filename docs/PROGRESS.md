@@ -273,3 +273,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 03.11. 22:36: Build 50 (iPhone-Paket + Browser v44): Hard Mode überarbeitet (Ultimate-Leiste, Hard-Ziele, Putz-Level & Talente, Perk-Funde, Schmutzwellen), Perk-Shop sortiert. Im Editor getestet (Level-Aufstieg, Ziel abholen, Ultimate gefüllt und gezündet, Welle gewarnt und ausgelöst).
 - 04.11. 06:18: Build 51 (iPhone-Paket + Browser v45): Perk-Shop mit Reitern und Putz-Level oben, Perk-Texte zum Ein-Tipp-Einsatz angepasst. Im Editor per Bildschirmfoto geprüft.
 - 04.11. 06:41: Build 52 (iPhone-Paket + Browser v46): direkteres Wischen, weichere Kamera mit Schwung, aufklappbare Perk-Leiste. Wischgefühl und Kamera nur im Editor kompiliert/angesehen, auf dem Handy noch ungetestet.
+- 04.11. 06:48: Build 53 (iPhone-Paket + Browser v47): Version 0.5 · Build 53 überall (Spiel, iPhone, Browser, Webseite).
