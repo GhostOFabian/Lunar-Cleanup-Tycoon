@@ -87,7 +87,7 @@ Wahl beim Start (kostenlos), Wechsel im Inventar („Klasse“) gegen Geld (≈ 
 5. **Logistiker** – Behälter +50 %, Shuttle +40 % und doppelt so groß · Pinsel −10 % · „Rohrpost“: alle 20 s geht ein Teil des Behälters von selbst ins Lager.
 6. **Crew-Chef** – +1 Helfer, Helfer +30 % · Anzug −15 %, Hand −10 % · „Antreiben“: wischst du neben einem Helfer, arbeitet er doppelt so schnell.
 
-## E. Kristalle mit echtem Nutzen ⬜ (beide Modi)
+## E. Kristalle mit echtem Nutzen ✅ (Build 55) (beide Modi)
 Problem: Kristallsplitter sind nur ein Rohstoff (Wert 6, kaum mehr als Staub) – viele lassen sie stehen.
 - Kristalle werden eine **eigene Währung** (Zähler oben neben dem Geld), nicht mehr verkaufbar. Bestehende Kristalle im Lager werden umgebucht.
 - Ernten bleibt: antippen (Hand) oder Fahrzeuge; ab sofort mit Glitzer, Klang und „+3 Kristalle“.
@@ -102,7 +102,7 @@ Problem: Kristallsplitter sind nur ein Rohstoff (Wert 6, kaum mehr als Staub) �
   - Ladesäulen-Upgrade (Reichweite +10 m) und Klassenwechsel günstiger.
 - Kristall-Arten (gibt es schon: verschiedene Typen mit Multiplikator) zeigen ihren Wert sichtbar: kleine/große/seltene Kristalle.
 
-## F. Riesen-Müllberg zum Teamwork ⬜ (normaler Modus, Ausbau des bestehenden Ereignisses)
+## F. Riesen-Müllberg zum Teamwork ✅ (Build 55) (normaler Modus, Ausbau des bestehenden Ereignisses)
 Ist seit Build 29 drin, aber selten (zufälliges Ereignis, erst ab 3 Fahrzeugen) und sieht nur wie eine dreckige Parzelle aus.
 - **Sichtbarer 3D-Müllberg** über 3–7 Parzellen, der beim Abtragen sichtbar schrumpft; Fortschrittsbalken oben.
 - **Fester Termin statt Zufall**: je Planet bei 30 % und 70 % sauber, danach alle ~45 min; 30 s Ankündigung mit Kamera-Flug.

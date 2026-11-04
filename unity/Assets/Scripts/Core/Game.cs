@@ -447,7 +447,7 @@ namespace LunarCleanup.Core
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
                 float k = 1 - Mathf.Exp(-.35f * Uv("power") * PowerF * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
-                if (IsPile(ps, sc)) k = Mathf.Min(k, PileK(ps, sc, null, dt));
+                if (IsPile(ps, sc)) { pileHandT = Time.realtimeSinceStartup; pileHandCell = sc; k = Mathf.Min(k, PileK(ps, sc, null, dt)); }
                 float got = CleanAt(ps, a, l.x, l.y, r, k); /* Pinsel wieder wie bis Build 21 (Fabian: Build 22 war schlechter) */
                 if (got <= 0) continue;
                 float amt = Mathf.Min(got / a.cl.nIn * a.amt, HandCap() - HandSum()); if (amt <= 0) break;
@@ -829,9 +829,7 @@ namespace LunarCleanup.Core
         {
             var ps = Cur; var c = ps.sv.crystals.Find(x => x.id == id); if (c == null) return false;
             if (c.g < .35f) { Toast(CrystalTypes[c.t].name + " wächst noch (" + Mathf.RoundToInt(c.g * 100) + " %)"); return false; }
-            float room = HandCap() - Sum(ps.sv.hand); if (room < .5f) { Toast("Behälter voll – erst entladen", "bad"); return false; }
-            float amt = Mathf.Min(CrystalYield(c), room); ps.sv.hand[GameData.MatIx["kristall"]] += amt; ps.sv.crystals.Remove(c); S.stats.crystals++;
-            FloatTxt(CrystalDir(ps, c), "+" + Mathf.RoundToInt(amt) + " " + CrystalTypes[c.t].name, "good"); return true;
+            GiveCrystals(ps, c, true); ps.sv.crystals.Remove(c); Attend(); return true; /* 04.11.: eigene Währung statt Rohstoff im Behälter */
         }
         static float Spread(PState ps, VehSave v, int cell)
         {
@@ -957,8 +955,7 @@ namespace LunarCleanup.Core
                     {
                         var cr = ps.sv.crystals.Find(x => x.id == v.cr); if (cr == null) { v.cr = -1; v.mode = "seek"; break; }
                         v.busy = true; v.crT += dt; if (v.crT < 3.5f) break;
-                        float amt = Mathf.Min(CrystalYield(cr), cap - tank); v.tank[GameData.MatIx["kristall"]] += Mathf.Max(0, amt); ps.sv.crystals.Remove(cr); v.cr = -1; S.stats.crystals++;
-                        /* 04.11.: Fahrzeug-Kristallernte ohne Schwebezahl */ v.mode = tank + amt >= cap * .9f ? "toUnload" : "seek"; break;
+                        GiveCrystals(ps, cr, false); ps.sv.crystals.Remove(cr); v.cr = -1; /* 04.11.: Kristalle als Währung */ v.mode = tank >= cap * .9f ? "toUnload" : "seek"; break;
                     }
                 case "toRig": { var r = ps.sv.rigs.Find(x => x.cell == v.rig); if (r == null || r.claim != v.id) { v.rig = -1; v.mode = "seek"; break; } v.busy = true; BattUse(ps, v, dt); if (NavMove(ps, v, RigDock(ps, r), spd * dt, v.id)) v.mode = "rigload"; break; }
                 case "rigload":
@@ -1745,7 +1742,7 @@ namespace LunarCleanup.Core
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
             if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); WaveStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
-            ps.sv.careT += dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps); /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
+            ps.sv.careT += dt; if (ps.sv.boostT > 0) ps.sv.boostT -= dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps) * (ps.sv.boostT > 0 ? 1.5f : 1f); /* 04.11.: Kristall-Schub */ /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }

@@ -17,12 +17,15 @@ namespace LunarCleanup.Core
         /// <summary>Wie zäh eine Parzelle ist: der Müllberg ist 9× zäher, mit weniger als 3 Fahrzeugen fast unbeweglich.</summary>
         static float PileHard(PState ps, int cell, VehSave v = null)
         {
-            if (!IsPile(ps, cell)) return 1; if (v == null) return PILE_HARD * 6; // von Hand: kaum ein Kratzer
-            int n = 1; foreach (var o in ps.sv.veh) if (o != v && o.cell == cell && o.mode == "clean") n++;
+            if (!IsPile(ps, cell)) return 1; int n = PileTeam(ps, cell, v); /* 04.11.: deine Hand zählt wie ein Fahrzeug */
             return n >= PILE_TEAM ? PILE_HARD : PILE_HARD * 8;
         }
         /// <summary>Höchster Abtrag je Schritt am Müllberg: mit 3+ Fahrzeugen 1,5 %/s je Rasterfeld unter der Bürste, sonst kaum etwas, von Hand fast nichts.</summary>
-        static float PileK(PState ps, int cell, VehSave v, float dt) { if (v == null) return dt * .0015f; int n = 1; foreach (var o in ps.sv.veh) if (o != v && o.cell == cell && o.mode == "clean") n++; return dt * (n >= PILE_TEAM ? .015f : .002f); }
+        static float PileK(PState ps, int cell, VehSave v, float dt) { int n = PileTeam(ps, cell, v); return dt * (n >= PILE_TEAM ? .015f * (1 + .1f * (n - PILE_TEAM)) : .002f); } /* 04.11.: je mehr mitmachen, desto schneller */
+        static float pileHandT = -99; static int pileHandCell = -1;
+        static bool HandAtPile(int cell) => pileHandCell == cell && Time.realtimeSinceStartup - pileHandT < 1.2f;
+        /// <summary>Wie viele gerade am Müllberg arbeiten: Fahrzeuge plus deine Hand.</summary>
+        static int PileTeam(PState ps, int cell, VehSave v) { int n = v != null ? 1 : 0; foreach (var o in ps.sv.veh) if (o != v && o.cell == cell && o.mode == "clean") n++; if (v == null || HandAtPile(cell)) n++; return n; }
         public static int PileCrew(PState ps) { if (!EvOn(ps, "pile")) return 0; int c = ps.sv.ev.cell, n = 0; foreach (var o in ps.sv.veh) if (o.cell == c && (o.mode == "clean" || o.mode == "drive")) n++; return n; }
         public static float PileLeft(PState ps) { if (!EvOn(ps, "pile") || !ps.act.TryGetValue(ps.sv.ev.cell, out var a)) return 0; return Mathf.Clamp01(a.sum / Mathf.Max(1, ps.sv.ev.amt0)); }
         public static double PileReward(PState ps) => Math.Round(4000 * Math.Pow(ps.P.diff, .95) * (1 + ps.sv.stage) * (1 + .5 * ps.sv.veh.Count / 10.0));
@@ -38,8 +41,9 @@ namespace LunarCleanup.Core
         }
         static void PileDone(PState ps, int id)
         {
-            if (!IsPile(ps, id)) return; double r = PileReward(ps); Earn(r); S.stardust += 1;
-            if (!Offline && ps.pid == S.planet) { Toast("Müllberg geschafft! +" + Fmt(r) + " Cr und 1 Sternenstaub", "good"); FloatTxt(ps.pd.cells[id].c, "+" + Fmt(r) + " Cr", "big"); }
+            if (!IsPile(ps, id)) return; var E0 = EvDef("pile"); bool fast = E0 != null && ps.sv.ev.t > E0.dur - 300; /* unter 5 min */
+            double r = PileReward(ps) * (fast ? 1.5 : 1); Earn(r); S.stardust += 1; int kr = Mathf.Min(30, 10 + 4 * Gs(ps)) * (fast ? 2 : 1); S.lk += kr; /* 04.11.: Kristalle als Hauptbelohnung */
+            if (!Offline && ps.pid == S.planet) { Toast("Müllberg geschafft" + (fast ? " – in Rekordzeit!" : "!") + " +" + Fmt(r) + " Cr, " + kr + " Kristalle und 1 Sternenstaub", "good"); FloatTxt(ps.pd.cells[id].c, "+" + Fmt(r) + " Cr · +" + kr + " Kristalle", "big"); }
             EvEnd(ps, null);
         }
 

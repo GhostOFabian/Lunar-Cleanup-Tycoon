@@ -56,6 +56,13 @@ namespace LunarCleanup.Core
             }
             if (S.evNext < 0) S.evNext = Mathf.Lerp(FeatureData.EV_MIN, FeatureData.EV_MAX, (float)fr.NextDouble());
             if (ps.nClean < 8) return; // erst wenn der Planet etwas Fläche hat
+            /* Fabian 04.11.: Riesen-Müllberg zu festen Zeiten – bei 30 % und 70 % sauber, danach etwa alle 45 min (alle Fahrzeuge und du zusammen) */
+            if (!Hard && ps.sv.veh.Count >= PILE_TEAM)
+            {
+                float pc = CleanPct(ps); ps.sv.pileT += dt;
+                bool due = (pc >= .3f && !ps.sv.pile30) || (pc >= .7f && !ps.sv.pile70) || (pc >= .3f && pc < .999f && ps.sv.pileT >= 2700);
+                if (due && StartEvent(ps, "pile")) { ps.sv.pile30 = true; if (pc >= .7f) ps.sv.pile70 = true; ps.sv.pileT = 0; return; }
+            }
             S.evNext -= dt * (Sd("event") ? 1.2f : 1); if (S.evNext > 0) return;
             S.evNext = Mathf.Lerp(FeatureData.EV_MIN, FeatureData.EV_MAX, (float)fr.NextDouble());
             StartEvent(ps, null);

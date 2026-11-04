@@ -20,7 +20,7 @@ namespace LunarCleanup.Core
             new EventDef { key = "comet", name = "Kometenschweif", hint = "Ein Kometenschweif lässt Leuchtkristalle wachsen", dur = 180, w = 2 },
             new EventDef { key = "solar", name = "Sonnensturm", hint = "Sonnensturm: Solarstrom doppelt, Fahrzeuge etwas langsamer", dur = 300, w = 2 },
             new EventDef { key = "vein", name = "Erzader", hint = "Eine Erzader: Bohrturm und Bagger fördern doppelt", dur = 600, w = 1.5f },
-            new EventDef { key = "pile", name = "Riesiger Müllberg", hint = "Ein riesiger Müllberg ist abgeladen worden – nur mindestens 3 Fahrzeuge zusammen schaffen ihn. Große Belohnung!", dur = 900, w = 1.5f },
+            new EventDef { key = "pile", name = "Riesiger Müllberg", hint = "Ein riesiger Müllberg ist abgeladen worden – nur zusammen schafft ihr ihn: mindestens 3 Fahrzeuge, du zählst beim Mitwischen wie eins. Je mehr, desto schneller. Belohnung: Geld, Kristalle, Sternenstaub – in unter 5 min doppelt so viele Kristalle!", dur = 900, w = 1.5f },
             new EventDef { key = "trader", name = "Händlerschiff", hint = "Ein Händler ist gelandet und zahlt 3 Minuten lang das Dreifache – tippe auf die Meldung oben", dur = 180, w = 1.5f },
             new EventDef { key = "freighter", name = "Frachter in Not", hint = "Ein Frachter zahlt beim nächsten vollen Raketenstart 50 % mehr", dur = 300, w = 1.5f },
         };

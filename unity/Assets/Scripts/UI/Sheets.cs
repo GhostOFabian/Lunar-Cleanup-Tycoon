@@ -33,6 +33,7 @@ namespace LunarCleanup.UI
                 case "settings": title = "Einstellungen"; Settings(h); break;
                 case "perks": title = Game.Hard ? "Inventar" : "Perks"; PerkShop(h); break;
                 case "hard": title = "Hard Mode"; HardSheet(h); break;
+                case "crystals": title = "Kristalle"; CrystalSheet(h); break;
                 case "pylon": { int pc = int.TryParse(arg, out var q2) ? q2 : -1; bool has = ps.sv.pylons != null && ps.sv.pylons.Contains(pc); title = has ? "Ladesäule" : "Saubere Parzelle"; PylonSheet(h, pc, has); break; }
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -63,6 +64,20 @@ namespace LunarCleanup.UI
             h.Note("Wischen kostet Anzug-Energie. Im Umkreis von " + Mathf.RoundToInt(Game.SUIT_NEAR) + " m um das Hauptgebäude oder eine Ladesäule verbrauchst du am wenigsten, je weiter weg, desto mehr. Hier gerade: " + Game.SuitDrain(ps, d).ToString("0.0").Replace('.', ',') + " je Sekunde (Abstand " + Mathf.RoundToInt(Game.ChargeDist(ps, d)) + " m).");
             if (has) { h.Row("Ladesäule", () => "Steht hier · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " Ladesäulen auf " + ps.P.name, () => "Abbauen", () => true, () => { Game.RemovePylon(c); h.CloseSheet(); }, false); return; }
             h.Row("Ladesäule bauen", () => "Kostet " + Game.Fmt(Game.PylonCost(ps)) + " E Rohstoffe aus dem Lager · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " gebaut", () => "Bauen", () => Game.PylonWhy(ps, c) == "", () => { if (Game.BuildPylon(c)) h.CloseSheet(); }, true, null, true, () => Game.PylonWhy(ps, c));
+        }
+        /// <summary>Fabian 04.11.: Kristalle ausgeben.</summary>
+        static void CrystalSheet(Hud h)
+        {
+            h.Row(Game.Kristalle + " Kristalle", () => "Leuchtkristalle wachsen auf sauberen Parzellen. Antippen oder von Fahrzeugen ernten lassen – größere und seltenere Kristalle bringen mehr." + (Game.Hard ? " Im Hard Mode gibt jeder selbst geernteter Kristall +25 Anzug-Energie und +3 % Ulti." : ""), titleLive: () => Game.Kristalle + " Kristalle");
+            h.Section("Ausgeben");
+            h.Row("Kristall-Schub", () => "Alle Fahrzeuge, Bänder und Maschinen auf " + ps.P.name + " 5 min lang 50 % schneller" + (Game.BoostLeft(ps) > 0 ? " · läuft noch " + Mathf.CeilToInt(Game.BoostLeft(ps) / 60f) + " min (verlängert sich)" : ""), () => Game.BOOST_COST + " Kristalle", () => Game.Kristalle >= Game.BOOST_COST, () => Game.CrystalBoost(), true, null, true, () => "Es fehlen Kristalle – " + Game.BOOST_COST + " nötig");
+            if (Game.ResActive != null) h.Row("Forschung sofort fertig", () => Game.ResActive.name, () => Game.ResInstantCost() + " Kristalle", () => Game.Kristalle >= Game.ResInstantCost(), () => Game.ResInstant(), true, null, true, () => "Es fehlen Kristalle – " + Game.ResInstantCost() + " nötig");
+            if (Game.S.ruin != "" && Game.Ruined(Game.S.ruin)) h.Row("Wiederaufbau sofort", () => GameData.Planets[Game.S.ruin].name + " ist sofort wieder bereit", () => Game.RuinInstantCost() + " Kristalle", () => Game.Kristalle >= Game.RuinInstantCost(), () => Game.RuinInstant(), true, null, true, () => "Es fehlen Kristalle – " + Game.RuinInstantCost() + " nötig");
+            if (Game.Hard)
+            {
+                h.Row("Anzug sofort voll", () => "Volle Anzug-Energie, auch weit draußen", () => "2 Kristalle", () => Game.Kristalle >= 2, () => Game.SuitFill(), true, null, true, () => "Es fehlen Kristalle – 2 nötig");
+                h.Row("Ulti +20 %", () => "Lädt die Ultimate-Leiste um ein Fünftel", () => "5 Kristalle", () => Game.Kristalle >= 5 && Game.Ult < 1, () => Game.UltBoost(), true, null, true, () => Game.Ult >= 1 ? "Die Ulti ist schon voll" : "Es fehlen Kristalle – 5 nötig");
+            }
         }
         static string Rarity(string id) => id == "tornado" ? "sehr selten" : id == "nuke" ? "nur über die Ulti-Leiste" : new[] { "foam", "kaercher", "espresso", "goldmop", "rohrpost" }.Contains(id) ? "selten" : "häufig";
         /// <summary>Fabian 04.11.: im Hard Mode gibt es nichts mehr zu kaufen – Perks findest du beim Selbstwischen. Das Fenster ist dein Inventar.</summary>

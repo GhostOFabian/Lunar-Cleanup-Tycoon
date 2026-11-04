@@ -96,7 +96,8 @@ namespace LunarCleanup.UI
             var cr = UiKit.Glass(top, "Credits"); cr.rectTransform.Anchor(0, 0, .42f, 1);
             UiKit.Img(cr.transform, "Münze", UiKit.Circle(Pal.C("#fff2c4"), Pal.C("#c77d12")), Color.white).rectTransform.Anchor(0, .5f, 0, .5f, 12, -11, -34, -11);
             credits = UiKit.Text(cr.transform, "Wert", "0", 22, Pal.Credit, true, FontStyles.Bold); credits.rectTransform.Anchor(0, .3f, 1, 1, 42, 0, 8, 4); credits.textWrappingMode = TextWrappingModes.NoWrap;
-            rate = UiKit.Text(cr.transform, "Rate", "", 11, Pal.Clean); rate.rectTransform.Anchor(0, 0, 1, .38f, 42, 4, 8, 0);
+            rate = UiKit.Text(cr.transform, "Rate", "", 11, Pal.Clean); rate.rectTransform.Anchor(0, 0, 1, .38f, 42, 4, 8, 0); rate.color = new Color(.75f, .6f, 1f); rate.raycastTarget = false;
+            cr.raycastTarget = true; cr.gameObject.AddComponent<Button>().onClick.AddListener(() => OpenSheet("crystals")); /* 04.11.: Geld-Kachel antippen = Kristalle ausgeben */
             var pc = UiKit.Btn(top, "Planet", () => OpenSheet("planets"), Pal.Glass, 16); ((RectTransform)pc.transform).Anchor(.43f, 0, .78f, 1, 4, 0, 4, 0);
             pdot = UiKit.Img(pc.transform, "Kugel", UiKit.Circle(Color.white, Color.gray), Color.white); pdot.rectTransform.Anchor(0, .5f, 0, .5f, 10, -12, -34, -12);
             pname = UiKit.Text(pc.transform, "Name", "MOND", 14, Pal.Ink, true, FontStyles.Bold | FontStyles.UpperCase); pname.rectTransform.Anchor(0, .45f, 1, 1, 40, 0, 6, 6); pname.textWrappingMode = TextWrappingModes.NoWrap; pname.characterSpacing = 6;
@@ -580,7 +581,7 @@ namespace LunarCleanup.UI
             /* Fabian 02.11.: beim Abfangen Meldungen nach unten, damit sie keine Brocken verdecken */
             bool icpLow = Game.Icp != null; if (icpLow != toastLow) { toastLow = icpLow; if (icpLow) toastBox.Anchor(0, 0, 1, 0, 24, 40, 24, -170); else toastBox.Anchor(0, 1, 1, 1, 24, -330, 24, 196); }
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;
-            credits.text = Game.Fmt(credShown);
+            credits.text = Game.Fmt(credShown); { int kk = Game.Kristalle; float bl = Game.BoostLeft(Game.Cur); rate.text = (kk > 0 ? kk + " Kristall" + (kk == 1 ? "" : "e") : "") + (bl > 0 ? (kk > 0 ? " · " : "") + "Schub " + Mathf.CeilToInt(bl / 60f) + " min" : ""); }
             pname.text = P.name; pname.fontSize = P.name.Length > 9 ? 11 : P.name.Length > 7 ? 12.5f : 14;
             int c = ps.nClean; if (totFor != ps.pd) { totFor = ps.pd; totCells = ps.pd.cells.Count(x => !x.IsBase); } int tot = totCells; /* Fabian 03.11.: nicht jedes Bild alle Parzellen zählen */ pprog.text = c + "/" + tot + " sauber · Stufe " + ps.sv.stage;
             pdot.sprite = UiKit.Circle(P.col0, P.col1);
