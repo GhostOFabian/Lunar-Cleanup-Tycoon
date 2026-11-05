@@ -55,6 +55,7 @@ namespace LunarCleanup.Core
             var land = P.Values.Where(q => Gs(q) >= 2 && OrderSrcOk(q.pid)).ToList(); if (land.Count == 0) return;
             var r = Rng; var lp = land[r.Next(land.Count)]; var srcs = P.Values.Where(q => OrderSrcOk(q.pid) && Gs(q) >= 1).ToList(); /* 05.11.: nur Planeten, die du wirklich hast */
             var o = new VisitOrder { id = ++S.voNext, who = Visitors[r.Next(Visitors.Length)], pid = lp.pid, until = Now() + (long)(3600 * (1.5 + r.NextDouble() * 2.5)) };
+            float hours = (o.until - Now()) / 3600f;
             int k = 1 + r.Next(3); double val = 0;
             for (int i = 0; i < k; i++)
             {
@@ -63,13 +64,26 @@ namespace LunarCleanup.Core
                 var sp = r.NextDouble() < .6 || srcs.Count == 1 ? lp : srcs[r.Next(srcs.Count)];
                 var mats = Producible(sp).Where(m => !o.items.Any(x => x.m == m && x.src == sp.pid)).ToList(); if (mats.Count == 0) continue;
                 int mm = mats[r.Next(mats.Count)]; bool raw = GameData.Mats[mm].raw;
-                float cap = raw ? RohCap(sp) : ProdCap(sp); float nn = Mathf.Max(5, Mathf.Round(cap * (.08f + .12f * (float)r.NextDouble()) / 5) * 5);
+                float cap = raw ? RohCap(sp) : ProdCap(sp); float want = cap * (raw ? .04f + .06f * (float)r.NextDouble() : .08f + .12f * (float)r.NextDouble());
+                if (!raw) { float rh = ProdRateH(sp, mm); if (rh > 0) want = Mathf.Min(want, rh * hours * .3f); } /* 05.11.: nur so viel, wie die Maschinen in knapp einem Drittel der Zeit schaffen */
+                float nn = Mathf.Max(5, Mathf.Round(want / 5) * 5);
                 o.items.Add(new OrderItem { src = sp.pid, m = mm, n = nn }); val += nn * MatValue(mm, sp);
             }
             if (o.items.Count == 0) return;
             o.reward = Math.Round(val * (2.2 + r.NextDouble())); o.sd = o.items.Count;
             VO.Add(o); OnOrderNew?.Invoke(o);
             Toast("Neue Bestellung: " + o.who + " auf " + GameData.Planets[o.pid].name + " möchte " + string.Join(", ", o.items.Select(x => Fmt(x.n) + " " + ItemName(x))) + " · Ziele → Bestellungen", "good");
+        }
+        /// <summary>Wie viel von Produkt m die Maschinen auf Planet sp höchstens pro Stunde schaffen (ohne Engpässe bei Rohstoffen).</summary>
+        static float ProdRateH(PState sp, int m)
+        {
+            float best = 0;
+            foreach (var id in new[] { "presse", "schmelze", "raff" })
+            {
+                if (!sp.bld.Contains(id)) continue;
+                foreach (var c in sp.line.Of(id)) if (c.outp == m && PlanOn(sp, c.plan) && c.t > 0) best = Mathf.Max(best, c.k * MachBatch(sp, id) * Uv("mspeed", sp) * sp.mm / c.t * 3600f);
+            }
+            return best;
         }
         public static float OrderProgress(VisitOrder o) { float n = 0, g = 0; foreach (var it in o.items) { n += it.n; g += Mathf.Min(it.n, it.got); } return n > 0 ? g / n : 0; }
         /// <summary>Je Schritt (live und offline): neue Besucher, Waren aus den Lagern zurücklegen, fertige Bestellungen bezahlen, abgelaufene verabschieden.</summary>

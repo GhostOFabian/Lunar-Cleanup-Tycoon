@@ -77,7 +77,7 @@ namespace LunarCleanup.EditorTools
                         if (c == "oldsave") /* Spielstand wie aus Build 19: alle neueren Felder entfernen, dann neu laden */
                         {
                             if (!EditorApplication.isPlaying || LunarCleanup.Core.Game.S == null) { Write("fehler oldsave: nur im Play-Modus"); break; }
-                            string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); string j = PlayerPrefs.GetString(k, "");
+                            string k = "lunar-cleanup-tycoon-unity-v1" + (LunarCleanup.Core.Game.TestMode ? "-test" : ""); LunarCleanup.Core.Game.Save(); string j = LunarCleanup.Core.Game.Unpack(PlayerPrefs.GetString(k, ""));
                             if (!PlayerPrefs.HasKey(k + "-claudebak")) PlayerPrefs.SetString(k + "-claudebak", j);
                             int n0 = j.Length; foreach (var key in new[] { "flags", "flagsInit", "tFirst", "tDoneAt", "tPlay", "tDone", "prize", "debt", "lineCol", "comboMax", "meteors", "salvage", "storms", "geysers", "nightMin", "achievements", /* Build 29 */ "putzi", "ruin", "ruinUntil", "doomNext", "doomT", "doomPid", "incH", "incHour", "chal", "cellD", "cellDay", "sellRate", "amt0", /* Build 34 */ "msLv", "flakLv", "msCool", "terra", "terraHp", "gAcc", "upAcc", "hitT", "supOk", "bRoutes", "goods", "doomN", "doomHits", /* Build 38 */ "vorders", "voT", "voLv", "voNext", "offPend", /* 02.11. spät */ "xport", "xEarn", "rest", "restRate", "restEarn", "rateEma" }) j = StripKey(j, key);
                             j = j.Replace("\"cart\":{\"owned\":false", "\"cart\":{\"owned\":true");

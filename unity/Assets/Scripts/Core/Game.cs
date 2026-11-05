@@ -174,10 +174,33 @@ namespace LunarCleanup.Core
             S.upg = GUpg.Select(k => new KV { k = k.Key, v = k.Value }).ToList();
             S.lastActive = Now();
             string json = JsonUtility.ToJson(S);
-            string old = PlayerPrefs.GetString(Key, "");
-            if (!string.IsNullOrEmpty(old)) PlayerPrefs.SetString(Key + "-bak", old);
-            PlayerPrefs.SetString(Key, json); PlayerPrefs.Save();
+            string old = PlayerPrefs.GetString(Key, ""), packed = Pack(json);
+            /* Fabian 05.11.: Im Browser darf PlayerPrefs nur ~1 MB groß sein – große Spielstände ließen sich nicht mehr speichern.
+               Jetzt gezippt (ca. 1/10), und wenn es trotzdem nicht passt, wird zuerst die Sicherung geopfert statt des Spielstands. */
+            try { if (!string.IsNullOrEmpty(old)) PlayerPrefs.SetString(Key + "-bak", old); }
+            catch (Exception) { PlayerPrefs.DeleteKey(Key + "-bak"); }
+            try { PlayerPrefs.SetString(Key, packed); }
+            catch (Exception) { PlayerPrefs.DeleteKey(Key + "-bak"); PlayerPrefs.DeleteKey(Key + "-vorImport"); try { PlayerPrefs.SetString(Key, packed); } catch (Exception e2) { Debug.LogWarning("Lunar Cleanup: Speichern fehlgeschlagen: " + e2.Message); } }
+            PlayerPrefs.Save();
             if (!TestMode) Platform.MaybeUpload(json, S.lastActive); // Konto-Speicher (Google Play Spiele / Game Center), sobald verbunden
+        }
+
+        const string PackPrefix = "LCZ1:";
+        /// <summary>Spielstand gezippt als Text (wie der Spielstand-Code). Alte, ungezippte Stände lassen sich weiter lesen.</summary>
+        static string Pack(string json)
+        {
+            try
+            {
+                var raw = System.Text.Encoding.UTF8.GetBytes(json);
+                using (var ms = new System.IO.MemoryStream()) { using (var gz = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress)) gz.Write(raw, 0, raw.Length); return PackPrefix + Convert.ToBase64String(ms.ToArray()); }
+            }
+            catch (Exception) { return json; }
+        }
+        public static string Unpack(string s)
+        {
+            if (string.IsNullOrEmpty(s) || !s.StartsWith(PackPrefix)) return s;
+            var bytes = Convert.FromBase64String(s.Substring(PackPrefix.Length));
+            using (var ms = new System.IO.MemoryStream(bytes)) using (var gz = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Decompress)) using (var rd = new System.IO.StreamReader(gz)) return rd.ReadToEnd();
         }
 
         static SaveData Load()
@@ -186,7 +209,7 @@ namespace LunarCleanup.Core
             foreach (var k in new[] { Key, Key + "-bak" })
             {
                 string j = PlayerPrefs.GetString(k, ""); if (string.IsNullOrEmpty(j)) continue;
-                try { var s = JsonUtility.FromJson<SaveData>(j); if (s != null && s.saveVersion >= 1 && s.planets != null && s.planets.Any(p => p.pid == "moon")) { if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid)); return s; } }
+                try { j = Unpack(j); var s = JsonUtility.FromJson<SaveData>(j); if (s != null && s.saveVersion >= 1 && s.planets != null && s.planets.Any(p => p.pid == "moon")) { if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid)); return s; } }
                 catch (Exception e) { Debug.LogWarning("Lunar Cleanup: Spielstand " + k + " nicht lesbar: " + e.Message); }
             }
             return null;
@@ -197,7 +220,7 @@ namespace LunarCleanup.Core
         /// <summary>Ganzer Spielstand als Text (gezippt, Base64) – zum Kopieren in Notizen/Nachrichten.</summary>
         public static string ExportCode()
         {
-            Save(); var raw = System.Text.Encoding.UTF8.GetBytes(PlayerPrefs.GetString(Key, ""));
+            Save(); var raw = System.Text.Encoding.UTF8.GetBytes(Unpack(PlayerPrefs.GetString(Key, "")));
             using (var ms = new System.IO.MemoryStream()) { using (var gz = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionMode.Compress)) gz.Write(raw, 0, raw.Length); return CodePrefix + Convert.ToBase64String(ms.ToArray()); }
         }
         /// <summary>Lädt einen Spielstand-Code. Der bisherige Stand bleibt als Sicherung erhalten. Rückgabe: Fehlertext oder "".</summary>
