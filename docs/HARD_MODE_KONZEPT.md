@@ -78,7 +78,11 @@ Legende: ✅ fertig und veröffentlicht · 🟡 geschrieben, noch nicht kompilie
 
 ---
 
-## D. Klassen im Hard Mode ⬜ (Vorschlag 04.11.)
+## D. Klassen im Hard Mode ✅ geschrieben 05.11. (Build 56, ungetestet)
+Umgesetzt: Pflichtwahl (auch alte Hard-Stände), Wechsel kostet 12 Bomben-Preise + halbe Ulti-Leiste. Jede Klasse hat eine eigene Ulti
+(Überlast, Wischsturm, Schatzkarte, Bombenteppich, Großtransport, Großeinsatz). Die Putz-Nuke ist nur noch ein teurer Spezial-Perk zum Kaufen.
+Noch nicht umgesetzt: die Sonderfähigkeiten (Notstrom, Rausch, Spürsinn, Kettenreaktion, Rohrpost-Automatik, Antreiben).
+Ursprünglicher Vorschlag (04.11.):
 Wahl beim Start (kostenlos), Wechsel im Inventar („Klasse“) gegen Geld (≈ 2× Reisekosten zum nächsten Planeten). Level und Talente bleiben.
 1. **Techniker** – Anzug +40 %, Ladesäulen −30 % · wischt −10 % · „Notstrom“: leer → einmal je Minute sofort 30 %.
 2. **Putzprofi** – Wischkraft +30 %, Kombo +5 s · Anzug −20 % · „Rausch“: ab Kombo ×5 10 s ohne Energieverbrauch.

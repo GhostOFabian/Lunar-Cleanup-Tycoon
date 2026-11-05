@@ -20,7 +20,7 @@ namespace LunarCleanup.Core
             // Kombo: nur eigene Handreinigung
             if (live && strokeCells.Contains(id))
             {
-                float now = Time.realtimeSinceStartup; ComboN = now - comboLast <= FeatureData.COMBO_WINDOW ? Mathf.Min(FeatureData.COMBO_MAX, ComboN + 1) : 1; if (ComboN > S.stats.comboMax) S.stats.comboMax = ComboN; comboLast = now;
+                float now = Time.realtimeSinceStartup; ComboN = now - comboLast <= FeatureData.COMBO_WINDOW + ClCombo ? Mathf.Min(FeatureData.COMBO_MAX, ComboN + 1) : 1; if (ComboN > S.stats.comboMax) S.stats.comboMax = ComboN; comboLast = now;
                 if (ComboN > 1) { double extra = bonus * FeatureData.COMBO_STEP * (ComboN - 1); Earn(extra); FloatTxt(ps.pd.cells[id].c, "Kombo ×" + ComboN + " · +" + Fmt(extra), "good"); }
                 HardHandCell(ps, id, ComboN); /* 03.11.: Hard Mode – Erfahrung, Ultimate, Perk-Funde */
             }
@@ -38,7 +38,7 @@ namespace LunarCleanup.Core
         public static int FindsOn(string pid) => S == null ? 0 : S.finds.Count(f => f.StartsWith(pid + ":"));
         public static bool HasFind(string pid, int i) => S != null && S.finds.Contains(pid + ":" + i);
         static double AlbumBonus(string pid) => FeatureData.Finds.TryGetValue(pid, out var a) && FindsOn(pid) >= a.Length ? FeatureData.ALBUM_BONUS : 0;
-        public static float ComboLeft() => ComboN > 1 ? Mathf.Max(0, FeatureData.COMBO_WINDOW - (Time.realtimeSinceStartup - comboLast)) : 0;
+        public static float ComboLeft() => ComboN > 1 ? Mathf.Max(0, FeatureData.COMBO_WINDOW + ClCombo - (Time.realtimeSinceStartup - comboLast)) : 0;
 
         // ---------- Ereignisse ----------
         public static bool EvOn(PState ps, string key) => ps.sv.ev != null && ps.sv.ev.key == key && ps.sv.ev.t > 0;

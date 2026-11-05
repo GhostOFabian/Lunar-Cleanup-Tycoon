@@ -40,10 +40,11 @@ namespace LunarCleanup.Gameplay
         IEnumerator PerkFxCo(string id, Vector3 d, List<int> cells)
         {
             var P = Game.Perk(id); var col = PerkColor(id); float cs = CellSize(d);
-            if (P != null && P.kind == 1) { LunarCleanup.UI.Hud.I?.BuffPop(P.name, col, P.dur); Sfx.Play("pop", 1.4f, .8f); StartCoroutine(Shock(d, cs * 1.6f, col, .9f, .4f)); EmitDust(d, col, 60); yield break; }
+            if (P != null && (P.kind == 1 || (P.kind == 3 && P.dur > 0))) { LunarCleanup.UI.Hud.I?.BuffPop(P.name, col, P.dur); Sfx.Play("pop", 1.4f, .8f); StartCoroutine(Shock(d, cs * 1.6f, col, .9f, .4f)); EmitDust(d, col, 60); yield break; }
             yield return new WaitForSeconds(.25f); /* Kamera fliegt kurz hin */
             switch (id)
             {
+                case "carpet": /* 05.11.: Ulti des Sprengmeisters */
                 case "bomb":
                     Sfx.Play("boom", 1.1f, .8f); Shake = Mathf.Max(Shake, .9f);
                     StartCoroutine(Fireball(d, cs * .55f, col, .8f)); StartCoroutine(Shock(d, cs * 2.6f, col, .9f, .55f));

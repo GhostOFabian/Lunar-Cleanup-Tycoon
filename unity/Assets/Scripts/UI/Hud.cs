@@ -242,7 +242,7 @@ namespace LunarCleanup.UI
         /// <summary>Einen Perk auslösen (Leiste oder Aufklapp-Feld).</summary>
         void UsePerkId(string id)
         {
-            if (id == "ult") { if (Game.Ult >= 1) PerkReq = "ult"; else Game.Toast("Ultimate lädt: " + Mathf.FloorToInt(Game.Ult * 100) + " % – wische selbst, Kombos laden schneller. Voll = Gratis-Nuke", ""); return; }
+            if (id == "ult") { if (Game.Ult >= 1) PerkReq = "ult"; else Game.Toast("Ultimate lädt: " + Mathf.FloorToInt(Game.Ult * 100) + " % – wische selbst, Kombos laden schneller. Voll = " + (Game.Klasse != null ? Game.Klasse.ult : "Klassen-Ulti"), ""); return; }
             var P = Game.Perk(id); if (P == null) return; if (Game.PerkN(id) <= 0) { if (P.kind == 1 && Game.BuffLeft(id) > 0) Game.Toast(P.name + " läuft noch " + Mathf.CeilToInt(Game.BuffLeft(id)) + " s", ""); else OpenSheet("perks"); return; }
             if (P.kind == 0) { ArmedTool = null; PerkReq = id; } else Game.UseBuff(id);
         }
@@ -275,7 +275,7 @@ namespace LunarCleanup.UI
             if (buffBan) { float e = (Time.unscaledTime - buffBanT) / 1.8f; bool on = e < 1; if (buffBanCg.gameObject.activeSelf != on) buffBanCg.gameObject.SetActive(on); if (on) { buffBanCg.alpha = e < .15f ? e / .15f : e > .7f ? (1 - e) / .3f : 1; buffBanCg.transform.localScale = Vector3.one * (e < .15f ? Mathf.Lerp(.6f, 1.08f, e / .15f) : Mathf.Lerp(1.08f, 1f, Mathf.Min(1, (e - .15f) * 4))); } }
             if (flashImg && flashImg.gameObject.activeSelf) { float e = (Time.unscaledTime - flashT) / flashDur; if (e >= 1) flashImg.gameObject.SetActive(false); else { var c = flashImg.color; c.a = .9f * (1 - e) * (1 - e); flashImg.color = c; } }
             /* Leuchtrand: solange ein Buff läuft, in seiner Farbe */
-            string act = null; if (Game.S != null && Game.Hard) foreach (var P in Game.Perks) if (P.kind == 1 && Game.BuffLeft(P.id) > 0) { act = P.id; break; }
+            string act = null; if (Game.S != null && Game.Hard) foreach (var P in Game.Perks) if ((P.kind == 1 || P.kind == 3) && Game.BuffLeft(P.id) > 0) { act = P.id; break; }
             if (act == null) { foreach (var e0 in edges) if (e0 && e0.gameObject.activeSelf) e0.gameObject.SetActive(false); return; }
             if (!edges[0])
             {
@@ -308,7 +308,7 @@ namespace LunarCleanup.UI
         {
             bool on = Game.PerksOpen && !SheetOpen && !MenuOpen && Game.Icp == null; if (on && !pbGo) BuildPerkBar(); if (!pbGo) return; if (pbGo.activeSelf != on) pbGo.SetActive(on); if (!on) { ArmedTool = null; if (pbPop && pbPop.activeSelf) pbPop.SetActive(false); return; }
             /* Fabian 03.11.: die Leiste zeigt nur, was du hast (oder was gerade läuft) – höchstens 6, dahinter der Shop */
-            var own = Game.Perks.Where(x => x.kind != 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Select(x => x.id).ToList();
+            var own = Game.Perks.Where(x => x.kind < 2 && (Game.PerkN(x.id) > 0 || Game.BuffLeft(x.id) > 0)).Select(x => x.id).ToList();
             /* 04.11.: Ulti + bis zu 4 Perks; sind es mehr, zeigt Platz 4 „Mehr“ und der Rest klappt nach oben auf */
             var have = new List<string> { "ult" }; bool more = own.Count > 4; have.AddRange(own.Take(more ? 3 : 4)); if (more) have.Add("more");
             popIds.Clear(); if (more) popIds.AddRange(own.Skip(3)); if (!more && pbPop && pbPop.activeSelf) pbPop.SetActive(false);
@@ -394,7 +394,7 @@ namespace LunarCleanup.UI
             if (kind == "clean") { CloseSheet(); return; }
             sheetKind = kind; sheetArg = arg; lastKind = null; sheetGo.SetActive(true); Rebuild();
         }
-        public void CloseSheet() { sheetGo.SetActive(false); sheetKind = null; lastKind = null; binders.Clear(); }
+        public void CloseSheet() { if (sheetKind == "class" && Game.NeedClass) { Game.Toast("Wähle erst deine Klasse", ""); return; } sheetGo.SetActive(false); sheetKind = null; lastKind = null; binders.Clear(); }
         string lastKind, lastArg;
         public void Rebuild()
         {
@@ -578,6 +578,7 @@ namespace LunarCleanup.UI
         void Update()
         {
             if (Game.S == null) return; var ps = Game.Cur; var P = ps.P;
+            if (Game.NeedClass && !MenuOpen && sheetKind != "class") OpenSheet("class"); /* 05.11.: Klasse wählen ist Pflicht – auch in alten Hard-Spielständen */
             /* Fabian 02.11.: beim Abfangen Meldungen nach unten, damit sie keine Brocken verdecken */
             bool icpLow = Game.Icp != null; if (icpLow != toastLow) { toastLow = icpLow; if (icpLow) toastBox.Anchor(0, 0, 1, 0, 24, 40, 24, -170); else toastBox.Anchor(0, 1, 1, 1, 24, -330, 24, 196); }
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;

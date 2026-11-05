@@ -16,7 +16,7 @@ namespace LunarCleanup.Core
         public static readonly List<PerkDef> Perks = new List<PerkDef>
         {
             new PerkDef { id = "bomb", name = "Putzbombe", icon = "B", kind = 0, desc = "Reinigt bis zu 5 Parzellen auf einmal an der nächsten dreckigen Stelle" },
-            new PerkDef { id = "nuke", name = "Putz-Nuke", icon = "N", kind = 0, desc = "ULTIMATE: reinigt auf einen Schlag bis zu 60 Parzellen im großen Umkreis – sehr teuer, du trägst nur eine" },
+            new PerkDef { id = "nuke", name = "Putz-Nuke", icon = "N", kind = 0, desc = "SPEZIAL: reinigt auf einen Schlag bis zu 60 Parzellen im großen Umkreis – nur kaufbar, sehr teuer, du trägst nur eine" },
             new PerkDef { id = "kaercher", name = "Hochdruck-Kärcher", icon = "K", kind = 0, desc = "Eine Schneise: reinigt bis zu 8 Parzellen hintereinander, von der nächsten dreckigen Stelle aus weg von der Basis" },
             new PerkDef { id = "foam", name = "Schaumkanone", icon = "S", kind = 0, desc = "Weicht im Umkreis von 15 m allen Schmutz ein – danach wischst du ihn mit einem Streich weg (70 % schon gelöst)" },
             new PerkDef { id = "tornado", name = "Staubsauger-Tornado", icon = "W", kind = 0, desc = "Ein kleiner Wirbelsturm saust 25 Sekunden über den Planeten und saugt Parzelle um Parzelle weg" },
@@ -26,9 +26,13 @@ namespace LunarCleanup.Core
             new PerkDef { id = "espresso", name = "Espresso für die Helfer", icon = "E", kind = 1, dur = 120, desc = "2 Minuten lang laufen und fegen deine Putzhelfer dreimal so schnell" },
             new PerkDef { id = "goldmop", name = "Goldener Mopp", icon = "G", kind = 1, dur = 90, desc = "90 s lang bringt jede fertige Parzelle den dreifachen Bonus" },
             new PerkDef { id = "rohrpost", name = "Rohrpost", icon = "R", kind = 1, dur = 120, desc = "2 Minuten lang saugt eine Rohrpost deinen Behälter alle 3 Sekunden leer – direkt ins Rohstofflager, ganz ohne Sammelwagen" },
+            /* 05.11.: Klassen-Ulti-Effekte (kind 3 – nicht im Inventar, nicht als Fund) */
+            new PerkDef { id = "carpet", name = "Bombenteppich", icon = "B", kind = 3, desc = "Ulti des Sprengmeisters" },
+            new PerkDef { id = "overload", name = "Überlast", icon = "T", kind = 3, dur = 60, desc = "Ulti des Technikers: Anzug ohne Verbrauch" },
+            new PerkDef { id = "storm", name = "Wischsturm", icon = "P", kind = 3, dur = 30, desc = "Ulti des Putzprofis: dreifache Kraft, doppelter Pinsel" },
             new PerkDef { id = "helper", name = "Putzhelfer", icon = "H", kind = 2, desc = "Ein kleiner Helfer mit Besen putzt dauerhaft Parzelle für Parzelle auf diesem Planeten – auch wenn du offline bist (bis zu 8 je Planet)" },
         };
-        public const int HELPER_MAX = 8;
+        public const int HELPER_MAX = 8; public static int HelperMax => HELPER_MAX + ClHelperMax;
         public static PerkDef Perk(string id) => Perks.FirstOrDefault(p => p.id == id);
         public static bool PerksOpen => Hard;
         public static int PerkN(string id) { var e = S.perkN.Find(x => x.k == id); return e == null ? 0 : e.v; }
@@ -36,7 +40,7 @@ namespace LunarCleanup.Core
         public static float BuffLeft(string id) { var e = S.buffT.Find(x => x.k == id); return e == null ? 0 : e.v; }
         static float BuffF(string id, float f) => Hard && BuffLeft(id) > 0 ? f : 1;
         public static float GoldF => BuffF("goldmop", 3f); public static float EspressoF => BuffF("espresso", 3f);
-        public static float PowerF => BuffF("turbo", 2.5f) * TalPower; public static float RadiusF => BuffF("wide", 1.7f) * TalRadius; public static float HandF => BuffF("magnet", 3f) * TalHand; /* 03.11.: × Talente */
+        public static float PowerF => BuffF("turbo", 2.5f) * BuffF("storm", 3f) * TalPower * ClPower; public static float RadiusF => BuffF("wide", 1.7f) * BuffF("storm", 2f) * TalRadius; public static float HandF => BuffF("magnet", 3f) * TalHand * ClHand; /* 05.11.: × Klasse */ /* 03.11.: × Talente */
         /// <summary>Preis: wächst mit Schwierigkeit und Basisstufe des aktuellen Planeten (Hard-Mode-Einnahmen ×3 sind eingerechnet).</summary>
         /* Fabian 03.11.: Perks dürfen das Spiel später nicht billig machen. Drei Bremsen:
            1. Grundpreis wächst mit Planet (Schwierigkeit × 1,35 je Planet in der Reihe) und Basisstufe.
@@ -45,7 +49,7 @@ namespace LunarCleanup.Core
            Dazu: man trägt nur wenige Ladungen (Nuke 2). */
         static readonly Dictionary<string, (double f, int cap)> PerkVal = new Dictionary<string, (double, int)>
         {
-            { "bomb", (1, 10) }, { "nuke", (60, 1) } /* Fabian 03.11.: Ultimate – sehr teuer, nur eine Ladung */, { "kaercher", (2, 5) }, { "foam", (1.2, 8) }, { "tornado", (4, 3) },
+            { "bomb", (1, 10) }, { "nuke", (100, 1) } /* 05.11.: nur noch kaufbar, Spezial */ /* Fabian 03.11.: Ultimate – sehr teuer, nur eine Ladung */, { "kaercher", (2, 5) }, { "foam", (1.2, 8) }, { "tornado", (4, 3) },
             { "turbo", (.8, 6) }, { "wide", (.8, 6) }, { "magnet", (.6, 6) }, { "espresso", (1.5, 4) }, { "goldmop", (2.5, 4) }, { "rohrpost", (1, 6) }, { "helper", (6, 99) },
         };
         const double PERK_INC_MIN = 2; /* Faktor 1 = 2 min Einkommen */ const float HEAT_DECAY = 600;
@@ -71,8 +75,8 @@ namespace LunarCleanup.Core
         }
         public static string PerkWhy(string id)
         {
-            if (!Hard) return "Nur im Hard Mode"; if (id != "helper") return "Perks findest du beim Selbstwischen – kaufen geht nicht mehr";
-            if (id == "helper" && Cur.sv.helpers.Count(x => x.life <= 0) >= HELPER_MAX) return "Höchstens " + HELPER_MAX + " Helfer je Planet";
+            if (!Hard) return "Nur im Hard Mode"; if (id != "helper" && id != "nuke") return "Perks findest du beim Selbstwischen – kaufen geht nicht mehr"; /* 05.11.: Nuke = Spezial-Perk zum Kaufen */
+            if (id == "helper" && Cur.sv.helpers.Count(x => x.life <= 0) >= HelperMax) return "Höchstens " + HelperMax + " Helfer je Planet";
             if (id != "helper" && PerkN(id) >= PerkCap(id)) return "Du trägst schon " + PerkCap(id) + " – erst einsetzen";
             return S.credits < PerkCost(id) ? Lacks(PerkCost(id)) : "";
         }
@@ -97,7 +101,7 @@ namespace LunarCleanup.Core
             if (id == "foam") return Foam(ps, d);
             if (id == "tornado") { { int sc = SnapWork(ps, d); if (sc >= 0) d = pd.cells[sc].c.normalized; } var t0 = new HelperSave { id = ++ps.sv.helperNext, d = d.normalized, life = 25 }; ps.sv.helpers.Add(t0); PerkAdd(id, -1); PerkFx(id, d, null); Toast("Staubsauger-Tornado losgelassen – 25 Sekunden Chaos!", "good"); Save(); return 1; }
             if (id == "kaercher") return Kaercher(ps, d);
-            int max = id == "nuke" ? 60 : 5; float reach = id == "nuke" ? 45f : 12f; int c0 = SnapWork(ps, d); if (c0 < 0) { Toast("Hier gibt es nichts zu reinigen – der Planet ist schon sauber", "bad"); return 0; } d = pd.cells[c0].c.normalized; { float nd = 0; int nn = 0; foreach (int b in pd.cells[c0].nb) { nd += pd.Arc(pd.cells[b].c, d); nn++; } if (nn > 0) { nd /= nn; reach = Mathf.Max(reach, nd * (id == "nuke" ? 6.5f : 2.3f)); } } /* Reichweite nach Parzellengröße – auf großen Parzellen reichten 12 m nicht bis zum Nachbarn */ /* Fabian 03.11.: Tipp muss nicht genau sitzen – es geht an der nächsten reinigbaren Parzelle los */
+            int max = id == "nuke" ? 60 : id == "carpet" ? 30 : Mathf.RoundToInt(5 * ClBlast); float reach = id == "nuke" ? 45f : id == "carpet" ? 30f : 12f * Mathf.Sqrt(ClBlast); int c0 = SnapWork(ps, d); if (c0 < 0) { Toast("Hier gibt es nichts zu reinigen – der Planet ist schon sauber", "bad"); return 0; } d = pd.cells[c0].c.normalized; { float nd = 0; int nn = 0; foreach (int b in pd.cells[c0].nb) { nd += pd.Arc(pd.cells[b].c, d); nn++; } if (nn > 0) { nd /= nn; reach = Mathf.Max(reach, nd * (id == "nuke" ? 6.5f : 2.3f)); } } /* Reichweite nach Parzellengröße – auf großen Parzellen reichten 12 m nicht bis zum Nachbarn */ /* Fabian 03.11.: Tipp muss nicht genau sitzen – es geht an der nächsten reinigbaren Parzelle los */
             /* Ausbreitung vom Ziel aus über reinigbare Parzellen (jede fertige macht ihre Nachbarn reinigbar) */
             var q = new List<int> { c0 }; var seen = new HashSet<int> { c0 }; int done = 0; float got = 0; var fx = new List<int>();
             while (q.Count > 0 && done < max)
@@ -155,7 +159,7 @@ namespace LunarCleanup.Core
             var b0 = pd.cells[pd.baseCell].c.normalized; Vector3 Tan(Vector3 from, Vector3 to) { var f = from.normalized; return Vector3.ProjectOnPlane(to.normalized - f, f).normalized; }
             var dir = Tan(b0, pd.cells[cur].c); if (dir.sqrMagnitude < .5f) dir = Tan(pd.cells[cur].c, pd.cells[pd.cells[cur].nb[0]].c);
             int done = 0; var fxk = new List<int>();
-            while (cur >= 0 && done < 8)
+            while (cur >= 0 && done < Mathf.RoundToInt(8 * ClBlast))
             {
                 var a = EnsureAct(ps, cur); float frac = a != null ? a.sum / Mathf.Max(1, a.cl.nIn) : 1; int m = GameData.Dirt[pd.cells[cur].type].mat;
                 float add = Mathf.Min(HandCap() - HandSum(), ParcelYield(pd.cells[cur]) * frac); if (add > 0) ps.sv.hand[m] += add; FinishCell(ps, cur); fxk.Add(cur); done++;
@@ -178,7 +182,7 @@ namespace LunarCleanup.Core
             ps.sv.helpers.RemoveAll(x => x.life > 0 && (x.life -= dt) <= 0); /* Tornado vorbei */
             foreach (var h in ps.sv.helpers)
             {
-                bool tor = h.life > 0; float spd = tor ? 7f : 2.2f * EspressoF * TalHelper, sweepF = tor ? 9f : EspressoF * TalHelper;
+                bool tor = h.life > 0; float spd = tor ? 7f : 2.2f * EspressoF * TalHelper * ClHelper, sweepF = tor ? 9f : EspressoF * TalHelper * ClHelper;
                 if (h.cell >= 0 && (ps.clean[h.cell] || !Workable(ps, h.cell))) h.cell = -1;
                 if (h.cell < 0)
                 {

@@ -34,6 +34,7 @@ namespace LunarCleanup.UI
                 case "perks": title = Game.Hard ? "Inventar" : "Perks"; PerkShop(h); break;
                 case "hard": title = "Hard Mode"; HardSheet(h); break;
                 case "crystals": title = "Kristalle"; CrystalSheet(h); break;
+                case "class": title = Game.NeedClass ? "Wähle deine Klasse" : "Klasse"; ClassSheet(h); break;
                 case "pylon": { int pc = int.TryParse(arg, out var q2) ? q2 : -1; bool has = ps.sv.pylons != null && ps.sv.pylons.Contains(pc); title = has ? "Ladesäule" : "Saubere Parzelle"; PylonSheet(h, pc, has); break; }
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
             }
@@ -79,13 +80,14 @@ namespace LunarCleanup.UI
                 h.Row("Ulti +20 %", () => "Lädt die Ultimate-Leiste um ein Fünftel", () => "5 Kristalle", () => Game.Kristalle >= 5 && Game.Ult < 1, () => Game.UltBoost(), true, null, true, () => Game.Ult >= 1 ? "Die Ulti ist schon voll" : "Es fehlen Kristalle – 5 nötig");
             }
         }
-        static string Rarity(string id) => id == "tornado" ? "sehr selten" : id == "nuke" ? "nur über die Ulti-Leiste" : new[] { "foam", "kaercher", "espresso", "goldmop", "rohrpost" }.Contains(id) ? "selten" : "häufig";
+        static string Rarity(string id) => id == "tornado" ? "sehr selten" : id == "nuke" ? "Spezial – nur kaufbar" : new[] { "foam", "kaercher", "espresso", "goldmop", "rohrpost" }.Contains(id) ? "selten" : "häufig";
         /// <summary>Fabian 04.11.: im Hard Mode gibt es nichts mehr zu kaufen – Perks findest du beim Selbstwischen. Das Fenster ist dein Inventar.</summary>
         static void PerkShop(Hud h)
         {
             if (!Game.Hard) { h.Note("Perks gibt es im Hard Mode (Einstellungen → Spielmodus)."); return; }
             h.Row("Putz-Level " + Game.HardLevel, () => { var nx = Game.Talents.FirstOrDefault(t => t.lv > Game.HardLevel); return Mathf.FloorToInt(Game.LevelXp) + " / " + Mathf.FloorToInt(Game.LevelNeed(Game.HardLevel)) + " Erfahrung bis Level " + (Game.HardLevel + 1) + (nx != null ? " · nächstes Talent: " + nx.name + " (" + nx.desc + ")" : "") + " · Ultimate " + Mathf.FloorToInt(Game.Ult * 100) + " %"; }, titleLive: () => "Putz-Level " + Game.HardLevel);
-            h.Tabs("Inventar", "Talente", "Crew"); int tab = h.Tab;
+            h.Tabs("Inventar", "Talente", "Crew", "Klasse"); int tab = h.Tab;
+            if (tab == 3) { ClassSheet(h); return; }
             if (tab == 1)
             {
                 h.Note("Selbst wischen gibt Erfahrung (1 je Parzelle, Kombos mehr). Jedes Level schaltet ein Talent frei – es wirkt sofort.");
@@ -95,15 +97,31 @@ namespace LunarCleanup.UI
             if (tab == 2)
             {
                 h.Note("Putzhelfer laufen mit einem Besen über den Planeten und fegen Parzelle für Parzelle – auch wenn du nicht da bist.");
-                foreach (var P in Game.Perks.Where(x => x.kind == 2)) { var pp = P; h.Row(P.name, () => pp.desc + " · auf " + ps.P.name + ": " + ps.sv.helpers.Count(x => x.life <= 0) + "/" + Game.HELPER_MAX, () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
+                foreach (var P in Game.Perks.Where(x => x.kind == 2)) { var pp = P; h.Row(P.name, () => pp.desc + " · auf " + ps.P.name + ": " + ps.sv.helpers.Count(x => x.life <= 0) + "/" + Game.HelperMax, () => Cr(Game.PerkCost(pp.id)), () => Game.PerkWhy(pp.id) == "", () => Game.BuyPerk(pp.id), true, null, true, () => Game.PerkWhy(pp.id)); }
                 return;
             }
-            h.Note("Perks findest du nur beim Selbstwischen – manchmal springt eine Kiste aus der Parzelle. Häufig: Bombe, Turbo, Breiter Pinsel, Magnet · selten: Schaum, Kärcher, Espresso, Goldener Mopp, Rohrpost · sehr selten: Tornado. Die Nuke lädst du über die Ulti-Leiste.");
-            foreach (var P in Game.Perks.Where(x => x.kind != 2))
+            h.Note("Perks findest du nur beim Selbstwischen – manchmal springt eine Kiste aus der Parzelle. Häufig: Bombe, Turbo, Breiter Pinsel, Magnet · selten: Schaum, Kärcher, Espresso, Goldener Mopp, Rohrpost · sehr selten: Tornado. Die volle Ulti-Leiste löst die Ulti deiner Klasse aus.");
+            h.Section("Spezial"); { var nk = Game.Perk("nuke"); h.Row(nk.name, () => nk.desc + " · dabei: " + Game.PerkN("nuke") + "/" + Game.PerkCap("nuke"), () => Cr(Game.PerkCost("nuke")), () => Game.PerkWhy("nuke") == "", () => Game.BuyPerk("nuke"), true, null, true, () => Game.PerkWhy("nuke")); }
+            h.Section("Dabei");
+            foreach (var P in Game.Perks.Where(x => x.kind < 2))
             {
                 var pp = P;
                 h.Row(P.name, () => pp.desc + " · " + Rarity(pp.id) + " · dabei: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id) + (pp.kind == 1 && Game.BuffLeft(pp.id) > 0 ? " · läuft noch " + Mathf.CeilToInt(Game.BuffLeft(pp.id)) + " s" : ""),
-                    () => Game.PerkN(pp.id) > 0 ? "Einsetzen" : "–", () => Game.PerkN(pp.id) > 0, () => { if (pp.kind == 0) { Hud.PerkReq = pp.id; h.CloseSheet(); } else Game.UseBuff(pp.id); }, false, null, true, () => pp.id == "nuke" ? "Die Nuke bekommst du, wenn die Ulti-Leiste voll ist" : "Noch nicht gefunden – wisch weiter selbst, " + Rarity(pp.id) + "er Fund");
+                    () => Game.PerkN(pp.id) > 0 ? "Einsetzen" : "–", () => Game.PerkN(pp.id) > 0, () => { if (pp.kind == 0) { Hud.PerkReq = pp.id; h.CloseSheet(); } else Game.UseBuff(pp.id); }, false, null, true, () => pp.id == "nuke" ? "Kaufen oben unter Spezial" : "Noch nicht gefunden – wisch weiter selbst, " + Rarity(pp.id) + "er Fund");
+            }
+        }
+        /// <summary>Fabian 05.11.: Klassen im Hard Mode – Pflichtwahl, Wechsel kostet Geld.</summary>
+        static void ClassSheet(Hud h)
+        {
+            if (!Game.Hard) { h.Note("Klassen gibt es im Hard Mode."); return; }
+            h.Note(Game.NeedClass ? "Bevor es losgeht: Wähle deine Klasse. Jede hat Stärken, eine Schwäche und ihre eigene Ulti. Die erste Wahl ist gratis, wechseln kannst du später im Inventar gegen Geld."
+                                  : "Du bist " + Game.Klasse.name + ". Ein Wechsel kostet " + Cr(Game.ClassCost()) + " und die halbe Ulti-Leiste. Level und Talente bleiben.");
+            foreach (var C in Game.Classes)
+            {
+                var cc = C;
+                h.Row(cc.name, () => "+ " + cc.plus + " · − " + cc.minus + " · Ulti „" + cc.ult + "“: " + cc.ultDesc,
+                    () => Game.S.hClass == cc.id ? "Gewählt" : Game.NeedClass ? "Wählen" : Cr(Game.ClassCost()), () => Game.ClassWhy(cc.id) == "",
+                    () => { if (Game.PickClass(cc.id)) h.CloseSheet(); }, true, null, true, () => Game.ClassWhy(cc.id));
             }
         }
         static void UpRow(Hud h, string id)

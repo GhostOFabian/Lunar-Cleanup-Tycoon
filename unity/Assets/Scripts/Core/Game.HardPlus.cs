@@ -49,13 +49,13 @@ namespace LunarCleanup.Core
         // ---------- Ultimate ----------
         public const float ULT_CELL = 1f / 30;
         public static float Ult => S == null ? 0 : Mathf.Clamp01(S.ult);
-        static void AddUlt(float x) { if (S.ult >= 1) return; S.ult = Mathf.Min(1, S.ult + x * TalUlt); if (S.ult >= 1) { S.ultFulls++; Toast("ULTIMATE BEREIT – tippe links in der Perk-Leiste auf „Ulti“", "good"); } }
+        static void AddUlt(float x) { if (S.ult >= 1) return; S.ult = Mathf.Min(1, S.ult + x * TalUlt * ClUlt); if (S.ult >= 1) { S.ultFulls++; Toast("ULTIMATE BEREIT – tippe links in der Perk-Leiste auf „Ulti“" + (Klasse != null ? " (" + Klasse.ult + ")" : "") + "", "good"); } }
         /// <summary>Gratis-Nuke aus der vollen Leiste.</summary>
         public static int UseUlt(Vector3 d)
         {
             if (S.ult < 1) { Fail("Ultimate lädt noch (" + Mathf.FloorToInt(Ult * 100) + " %) – wische selbst, Kombos laden schneller"); return 0; }
-            if (SnapWork(Cur, d) < 0) return UltShine(Cur, d); /* 05.11.: Planet schon sauber – die Ulti geht trotzdem */
-            PerkAdd("nuke", 1); int n = UseTool("nuke", d); if (n > 0) S.ult = 0; else PerkAdd("nuke", -1); return n;
+            if (NeedClass) { Fail("Wähle erst eine Klasse"); return 0; }
+            int n = ClassUlt(Cur, d); if (n > 0) S.ult = 0; return n; /* 05.11.: jede Klasse hat ihre eigene Ulti – die Nuke ist ein Spezial-Perk zum Kaufen */
         }
         /// <summary>Fabian 05.11.: Ulti auf einem sauberen Planeten – erntet alle Leuchtkristalle, bringt Rohstoffe und Geld wie 30 Parzellen und 5 min Kristall-Schub.</summary>
         static int UltShine(PState ps, Vector3 d)
@@ -79,7 +79,7 @@ namespace LunarCleanup.Core
             if (!Hard) return; S.hHand++; S.hNoPerk++; if (S.hNoPerk > S.hNoPerkBest) S.hNoPerkBest = S.hNoPerk;
             AddXp(1 + .5f * Mathf.Max(0, combo - 1)); AddUlt(ULT_CELL + .005f * Mathf.Max(0, combo - 1));
             /* 04.11.: Perks gibt es im Hard Mode nur noch als Fund – häufig, selten, sehr selten; nach langer Durststrecke steigt die Chance */
-            float ch = (.06f + .012f * Mathf.Max(0, S.dropDry - 12)) * TalFind;
+            float ch = (.06f + .012f * Mathf.Max(0, S.dropDry - 12)) * TalFind * ClFind;
             if (fr.NextDouble() < ch)
             {
                 S.dropDry = 0; double roll = fr.NextDouble(); string[] pool = roll < .04 ? DropVeryRare : roll < .3 ? DropRare : DropCommon; int tier = roll < .04 ? 2 : roll < .3 ? 1 : 0;
@@ -139,7 +139,7 @@ namespace LunarCleanup.Core
             if (ps.sv.pylons != null) foreach (int c in ps.sv.pylons) best = Mathf.Min(best, pd.Arc(d, pd.cells[c].c)); return best;
         }
         /// <summary>Verbrauch je Sekunde Wischen an dieser Stelle.</summary>
-        public static float SuitDrain(PState ps, Vector3 d) => SUIT_BASE * (1 + Mathf.Max(0, ChargeDist(ps, d) - SUIT_NEAR) / SUIT_FALL);
+        public static float SuitDrain(PState ps, Vector3 d) => (BuffLeft("overload") > 0 ? 0 : ClSuit) * SUIT_BASE * (1 + Mathf.Max(0, ChargeDist(ps, d) - SUIT_NEAR) / SUIT_FALL);
         static bool SuitUse(PState ps, Vector3 d, float dt)
         {
             if (!Hard) return true; if (S.suit < 0) S.suit = SUIT_MAX; suitLast = Time.realtimeSinceStartup;
@@ -148,7 +148,7 @@ namespace LunarCleanup.Core
         }
         static void SuitStep(float dt) { if (!Hard || Offline || S == null) return; if (S.suit < 0) S.suit = SUIT_MAX; if (Time.realtimeSinceStartup - suitLast > .6f) S.suit = Mathf.Min(SUIT_MAX, S.suit + SUIT_RECHARGE * dt); }
         public static int PylonMax(PState ps) => 2 + 2 * Gs(ps);
-        public static float PylonCost(PState ps) => 30 * (1 + .35f * (ps.sv.pylons?.Count ?? 0));
+        public static float PylonCost(PState ps) => 30 * ClPylon * (1 + .35f * (ps.sv.pylons?.Count ?? 0));
         public static string PylonWhy(PState ps, int c)
         {
             if (!Hard) return "Nur im Hard Mode"; var pd = ps.pd; if (c < 0 || !ps.clean[c] || pd.cells[c].IsBase) return "Nur auf sauberen Parzellen außerhalb der Basis";

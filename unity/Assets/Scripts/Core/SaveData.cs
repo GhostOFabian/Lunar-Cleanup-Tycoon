@@ -97,7 +97,7 @@ namespace LunarCleanup.Core
     [Serializable]
     public class SaveData
     {
-        public int saveVersion = 1;
+        public int saveVersion = 1; public string hClass = ""; /* 05.11.: Hard-Mode-Klasse (leer = noch nicht gewählt) */
         public double credits;
         public string planet = "moon";
         public List<KV> upg = new List<KV>();
