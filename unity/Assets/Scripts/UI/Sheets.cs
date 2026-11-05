@@ -62,14 +62,14 @@ namespace LunarCleanup.UI
         static void PylonSheet(Hud h, int c, bool has)
         {
             var d = ps.pd.cells[c].c.normalized;
-            h.Note("Wischen kostet Anzug-Energie. Im Umkreis von " + Mathf.RoundToInt(Game.SUIT_NEAR) + " m um das Hauptgebäude oder eine Ladesäule verbrauchst du am wenigsten, je weiter weg, desto mehr. Hier gerade: " + Game.SuitDrain(ps, d).ToString("0.0").Replace('.', ',') + " je Sekunde (Abstand " + Mathf.RoundToInt(Game.ChargeDist(ps, d)) + " m).");
+            h.Note("Wischen kostet Anzug-Energie, von selbst lädt er nicht auf. Im Ladebereich (" + Mathf.RoundToInt(Game.SUIT_NEAR) + " m um das Hauptgebäude oder eine Ladesäule) lädt Wischen den Anzug auf, je weiter weg, desto mehr verbrauchst du. Leuchtkristalle geben +25. Hier gerade: " + (Game.InChargeZone(ps, d) ? "Ladebereich" : Game.SuitDrain(ps, d).ToString("0.0").Replace('.', ',') + " je Sekunde") + " (Abstand " + Mathf.RoundToInt(Game.ChargeDist(ps, d)) + " m).");
             if (has) { h.Row("Ladesäule", () => "Steht hier · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " Ladesäulen auf " + ps.P.name, () => "Abbauen", () => true, () => { Game.RemovePylon(c); h.CloseSheet(); }, false); return; }
             h.Row("Ladesäule bauen", () => "Kostet " + Game.Fmt(Game.PylonCost(ps)) + " E Rohstoffe aus dem Lager · " + (ps.sv.pylons?.Count ?? 0) + "/" + Game.PylonMax(ps) + " gebaut", () => "Bauen", () => Game.PylonWhy(ps, c) == "", () => { if (Game.BuildPylon(c)) h.CloseSheet(); }, true, null, true, () => Game.PylonWhy(ps, c));
         }
         /// <summary>Fabian 04.11.: Kristalle ausgeben.</summary>
         static void CrystalSheet(Hud h)
         {
-            h.Row(Game.Kristalle + " Kristalle", () => "Leuchtkristalle wachsen auf sauberen Parzellen. Antippen oder von Fahrzeugen ernten lassen – größere und seltenere Kristalle bringen mehr." + (Game.Hard ? " Im Hard Mode gibt jeder selbst geernteter Kristall +25 Anzug-Energie und +3 % Ulti." : ""), titleLive: () => Game.Kristalle + " Kristalle");
+            h.Row(Game.Kristalle + " Kristalle", () => "Leuchtkristalle wachsen überall auf dem Planeten, auch mitten im Dreck. Antippen oder (auf sauberen Parzellen) von Fahrzeugen ernten lassen – größere und seltenere Kristalle bringen mehr." + (Game.Hard ? " Im Hard Mode gibt jeder selbst geernteter Kristall +25 Anzug-Energie und +3 % Ulti." : ""), titleLive: () => Game.Kristalle + " Kristalle");
             h.Section("Ausgeben");
             h.Row("Kristall-Schub", () => "Alle Fahrzeuge, Bänder und Maschinen auf " + ps.P.name + " 5 min lang 50 % schneller" + (Game.BoostLeft(ps) > 0 ? " · läuft noch " + Mathf.CeilToInt(Game.BoostLeft(ps) / 60f) + " min (verlängert sich)" : ""), () => Game.BOOST_COST + " Kristalle", () => Game.Kristalle >= Game.BOOST_COST, () => Game.CrystalBoost(), true, null, true, () => "Es fehlen Kristalle – " + Game.BOOST_COST + " nötig");
             if (Game.ResActive != null) h.Row("Forschung sofort fertig", () => Game.ResActive.name, () => Game.ResInstantCost() + " Kristalle", () => Game.Kristalle >= Game.ResInstantCost(), () => Game.ResInstant(), true, null, true, () => "Es fehlen Kristalle – " + Game.ResInstantCost() + " nötig");

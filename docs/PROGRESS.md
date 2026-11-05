@@ -280,3 +280,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 04.11. 18:50: Build 55 (iPhone-Paket + Browser v49): Kristalle als Währung mit Kristall-Fenster (E) und Riesen-Müllberg zum Teamwork (F). Im Editor getestet: Kristall-Schub zieht 5 ab, Fenster, Müllberg mit 8 Fahrzeugen in ~4,5 min geschafft inkl. Schnell-Bonus. Fahrzeug-Ernte nach Test auf 1/5 gesenkt. Nächstes: D Klassen (Fabian wählt aus 6 Vorschlägen), A4 Werkstatt-Basis.
 - 05.11. 07:10: Für Build 56 geschrieben (noch nicht kompiliert, Mac aus): Bestellungen nur von eigenen Planeten + Vorrang in der Produktion, neu verdreckte Stellen geben wieder alle Belohnungen, Ulti geht immer (auch auf sauberen Planeten).
 - 05.11. 07:40: Klassen im Hard Mode mit eigenen Ultis geschrieben (Build 56, ungetestet). Nuke ist jetzt Spezial-Perk zum Kaufen.
+- 05.11. 07:55: Anzug ohne Selbstaufladung (Ladebereich + Kristalle), Kristalle überall auf dem Planeten (Build 56, ungetestet).

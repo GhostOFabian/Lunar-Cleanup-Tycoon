@@ -126,7 +126,8 @@ namespace LunarCleanup.Core
         }
 
         // ---------- 04.11.: Anzug-Energie und Ladesäulen ----------
-        // Wischen kostet Energie – je weiter von der Basis oder einer Ladesäule, desto mehr. Ohne Wischen lädt der Anzug wieder auf.
+        // Wischen kostet Energie – je weiter von der Basis oder einer Ladesäule, desto mehr. Fabian 05.11.: kein Aufladen von selbst mehr –
+        // Energie gibt es nur im Ladebereich (bis SUIT_NEAR um Hauptgebäude oder Ladesäule: dort lädt Wischen den Anzug auf) und durch Kristalle.
         // Ladesäulen baust du auf sauberen Parzellen (Rohstoffe), damit drückst du die Reichweite immer weiter hinaus.
         public const float SUIT_MAX = 100, SUIT_NEAR = 20, SUIT_FALL = 30, SUIT_BASE = 1.2f, SUIT_RECHARGE = 8;
         public static float Suit => S == null ? SUIT_MAX : S.suit < 0 ? SUIT_MAX : S.suit;
@@ -139,14 +140,16 @@ namespace LunarCleanup.Core
             if (ps.sv.pylons != null) foreach (int c in ps.sv.pylons) best = Mathf.Min(best, pd.Arc(d, pd.cells[c].c)); return best;
         }
         /// <summary>Verbrauch je Sekunde Wischen an dieser Stelle.</summary>
-        public static float SuitDrain(PState ps, Vector3 d) => (BuffLeft("overload") > 0 ? 0 : ClSuit) * SUIT_BASE * (1 + Mathf.Max(0, ChargeDist(ps, d) - SUIT_NEAR) / SUIT_FALL);
+        public static float SuitDrain(PState ps, Vector3 d) { float cd = ChargeDist(ps, d); if (cd <= SUIT_NEAR) return 0; return (BuffLeft("overload") > 0 ? 0 : ClSuit) * SUIT_BASE * (1 + (cd - SUIT_NEAR) / SUIT_FALL); }
+        public static bool InChargeZone(PState ps, Vector3 d) => ChargeDist(ps, d) <= SUIT_NEAR;
         static bool SuitUse(PState ps, Vector3 d, float dt)
         {
             if (!Hard) return true; if (S.suit < 0) S.suit = SUIT_MAX; suitLast = Time.realtimeSinceStartup;
-            if (S.suit <= 0) { if (Time.realtimeSinceStartup - suitWarnT > 3) { suitWarnT = Time.realtimeSinceStartup; Toast("Anzug leer – kurz Pause, er lädt gleich wieder auf. Näher an einer Ladesäule wischt du länger", "bad"); } return false; }
+            if (InChargeZone(ps, d)) { S.suit = Mathf.Min(SUIT_MAX, S.suit + SUIT_RECHARGE * dt); return true; } /* 05.11.: im Ladebereich lädt Wischen den Anzug */
+            if (S.suit <= 0) { if (Time.realtimeSinceStartup - suitWarnT > 3) { suitWarnT = Time.realtimeSinceStartup; Toast("Anzug leer – wisch im Ladebereich einer Ladesäule oder des Hauptgebäudes, oder ernte Leuchtkristalle (+25)", "bad"); } return false; }
             S.suit = Mathf.Max(0, S.suit - SuitDrain(ps, d) * dt); return true;
         }
-        static void SuitStep(float dt) { if (!Hard || Offline || S == null) return; if (S.suit < 0) S.suit = SUIT_MAX; if (Time.realtimeSinceStartup - suitLast > .6f) S.suit = Mathf.Min(SUIT_MAX, S.suit + SUIT_RECHARGE * dt); }
+        static void SuitStep(float dt) { if (!Hard || Offline || S == null) return; if (S.suit < 0) S.suit = SUIT_MAX; /* 05.11.: kein automatisches Aufladen mehr */ }
         public static int PylonMax(PState ps) => 2 + 2 * Gs(ps);
         public static float PylonCost(PState ps) => 30 * ClPylon * (1 + .35f * (ps.sv.pylons?.Count ?? 0));
         public static string PylonWhy(PState ps, int c)

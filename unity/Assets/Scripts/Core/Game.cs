@@ -802,6 +802,7 @@ namespace LunarCleanup.Core
         public static readonly (string name, string col, float mul, float w)[] CrystalTypes =
             { ("Lumenkristall", "#5ff0ff", 1f, .38f), ("Glutkristall", "#ff8a3a", 1.3f, .24f), ("Amethyst", "#b07bff", 1.7f, .18f), ("Smaragd", "#3fe58a", 2.3f, .13f), ("Goldkristall", "#ffd23f", 3.5f, .07f) };
         public const float CR_GROW = 240, CR_EVERY = 45;
+        /* 05.11.: Kristalle wachsen überall auf dem Planeten, auch im Dreck – nicht nur auf sauberen Parzellen */
         public static int CrystalMax(PState ps) => Mathf.Clamp(ps.pd.N / 22, 6, 80);
         public static float CrystalYield(CrystalSave c) => 10 * CrystalTypes[c.t].mul * (.3f + .7f * c.g);
         public static Vector3 CrystalDir(PState ps, CrystalSave c) => ps.pd.ToDir(ps.pd.cells[c.cell], c.x, c.y);
@@ -813,7 +814,7 @@ namespace LunarCleanup.Core
             for (int tr = 0; tr < 40; tr++)
             {
                 int id = rnd.Next(pd.N); var cl = pd.cells[id];
-                if (cl.IsBase || cl.ring < 3 || cl.Wet || !ps.clean[id] || sv.rigs.Any(r => r.cell == id) || sv.outposts.Any(o => o.cell == id) || sv.crystals.Any(c => c.cell == id)) continue;
+                if (cl.IsBase || cl.ring < 2 || cl.Wet ||  sv.rigs.Any(r => r.cell == id) || sv.outposts.Any(o => o.cell == id) || sv.crystals.Any(c => c.cell == id)) continue;
                 double r = rnd.NextDouble(); int t = 0; for (float acc = 0; t < CrystalTypes.Length - 1; t++) { acc += CrystalTypes[t].w; if (r < acc) break; }
                 float a = (float)rnd.NextDouble() * 6.283f, rr = (float)rnd.NextDouble() * cl.H * .5f;
                 sv.crystals.Add(new CrystalSave { id = ++sv.crN, cell = id, t = t, x = Mathf.Cos(a) * rr, y = Mathf.Sin(a) * rr, g = 0 }); if (TestMode && !Offline) Debug.Log("Lunar Cleanup: Kristall gewachsen auf " + ps.pid + " – jetzt " + sv.crystals.Count); return;
@@ -823,7 +824,7 @@ namespace LunarCleanup.Core
         static bool PickCrystal(PState ps, VehSave v, float maxDist = 1e9f)
         {
             float room = TankCap(ps, v) - Sum(v.tank); if (room < 3) return false; CrystalSave best = null; float bs = 1e9f;
-            foreach (var c in ps.sv.crystals) { if (c.claim >= 0 && ps.sv.veh.Any(o => o.id == c.claim && o.cr == c.id) || c.g < 1f) continue; if (!GameData.Veh[v.type].fly && ps.pd.cells[c.cell].Wet) continue; float d = ps.pd.Arc(v.d, CrystalDir(ps, c)) - c.g * 10; if (d + c.g * 10 > maxDist) continue; if (d < bs) { bs = d; best = c; } }
+            foreach (var c in ps.sv.crystals) { if (!ps.clean[c.cell]) continue; /* 05.11.: Kristalle im Dreck nur von Hand */ if (c.claim >= 0 && ps.sv.veh.Any(o => o.id == c.claim && o.cr == c.id) || c.g < 1f) continue; if (!GameData.Veh[v.type].fly && ps.pd.cells[c.cell].Wet) continue; float d = ps.pd.Arc(v.d, CrystalDir(ps, c)) - c.g * 10; if (d + c.g * 10 > maxDist) continue; if (d < bs) { bs = d; best = c; } }
             if (best == null) return false; best.claim = v.id; v.cr = best.id; v.mode = "toCrystal"; return true;
         }
         /// <summary>Kristall von Hand ernten (antippen).</summary>
