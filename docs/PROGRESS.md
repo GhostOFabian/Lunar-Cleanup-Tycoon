@@ -281,3 +281,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 05.11. 07:10: Für Build 56 geschrieben (noch nicht kompiliert, Mac aus): Bestellungen nur von eigenen Planeten + Vorrang in der Produktion, neu verdreckte Stellen geben wieder alle Belohnungen, Ulti geht immer (auch auf sauberen Planeten).
 - 05.11. 07:40: Klassen im Hard Mode mit eigenen Ultis geschrieben (Build 56, ungetestet). Nuke ist jetzt Spezial-Perk zum Kaufen.
 - 05.11. 07:55: Anzug ohne Selbstaufladung (Ladebereich + Kristalle), Kristalle überall auf dem Planeten (Build 56, ungetestet).
+- 05.11. 17:10: FEHLER gefunden: Im Browser (WebGL) scheitert das Speichern großer Spielstände (PlayerPrefsException „Could not store preference value“, Grenze ca. 1 MB). Folge: Spielstand wird nicht gesichert, Wechsel in den Hard Mode bricht ab. Lösung geplant: Spielstand komprimieren oder als Datei in IndexedDB statt PlayerPrefs.
