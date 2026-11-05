@@ -26,25 +26,39 @@ namespace LunarCleanup.Core
         static List<int> Producible(PState ps)
         {
             var l = new List<int>();
-            foreach (var t in ps.P.types) { int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m)) l.Add(m); }
+            foreach (var t in ps.P.types) { if (t.Value <= 0) continue; int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m)) l.Add(m); }
             /* nur Rezepte, die wirklich laufen können: Plan freigeschaltet und Zutat vorhanden (2 Runden für Ketten) */
             void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach) || (mach == "raff" && !PlanOn(ps, "refine"))) return; foreach (var r in rs) if (PlanOn(ps, r.plan) && l.Contains(r.inp) && !l.Contains(r.outp)) l.Add(r.outp); }
             for (int round = 0; round < 2; round++) { Add("presse", ps.line.presse); Add("schmelze", ps.line.schmelze); Add("raff", ps.line.raff); }
             return l;
         }
+        /// <summary>Fabian 05.11.: Wie viel von Ware m die Besucher bei Planet ps noch brauchen (nur Waren dieses Planeten).</summary>
+        public static float OrderNeed(PState ps, int m)
+        {
+            if (S == null || S.vorders == null || m < 0) return 0; float n = 0;
+            foreach (var o in S.vorders) foreach (var it in o.items) if (it.g == "" && it.m == m && it.src == ps.pid) n += Mathf.Max(0, it.n - it.got);
+            return n;
+        }
+        /// <summary>Bestellte Ware fehlt noch im Produktlager – dann hat sie in der Produktion Vorrang.</summary>
+        static bool OrderWants(PState ps, int m) => m >= 0 && OrderNeed(ps, m) > ps.sv.prod[m] + .5f;
+        /// <summary>Zutat m wird für eine bestellte Folge-Ware gebraucht (z. B. Metall-Brick für bestellte Barren).</summary>
+        static bool ChainWants(PState ps, int m) { foreach (var r in ps.line.schmelze) if (r.inp == m && PlanOn(ps, r.plan) && OrderWants(ps, r.outp)) return true; return false; }
+        static bool WantsOut(PState ps, int outp) => OrderWants(ps, outp) || ChainWants(ps, outp);
+        /// <summary>Darf Planet q Waren für Bestellungen liefern? Nur freigeschaltete, nicht zerstörte Planeten.</summary>
+        static bool OrderSrcOk(string pid) => P.ContainsKey(pid) && !Ruined(pid) && S.planets.Any(x => x.pid == pid);
         public static double GoodValue(string gid) { int i = Array.IndexOf(GameData.POrder, gid); return 150 * Math.Pow(2.4, Math.Max(0, i)); }
         public static string ItemName(OrderItem it) => it.g != "" ? Good(it.g).name : GameData.Mats[it.m].name;
         public static string ItemFrom(OrderItem it) => GameData.Planets.ContainsKey(it.src) ? GameData.Planets[it.src].name : "";
 
         static void NewVisitOrder()
         {
-            var land = P.Values.Where(q => Gs(q) >= 2 && !Ruined(q.pid)).ToList(); if (land.Count == 0) return;
-            var r = Rng; var lp = land[r.Next(land.Count)]; var srcs = P.Values.Where(q => !Ruined(q.pid) && Gs(q) >= 1).ToList();
+            var land = P.Values.Where(q => Gs(q) >= 2 && OrderSrcOk(q.pid)).ToList(); if (land.Count == 0) return;
+            var r = Rng; var lp = land[r.Next(land.Count)]; var srcs = P.Values.Where(q => OrderSrcOk(q.pid) && Gs(q) >= 1).ToList(); /* 05.11.: nur Planeten, die du wirklich hast */
             var o = new VisitOrder { id = ++S.voNext, who = Visitors[r.Next(Visitors.Length)], pid = lp.pid, until = Now() + (long)(3600 * (1.5 + r.NextDouble() * 2.5)) };
             int k = 1 + r.Next(3); double val = 0;
             for (int i = 0; i < k; i++)
             {
-                var doneG = Goods.Where(g => P.ContainsKey(g.pid) && GoodRate(P[g.pid]) > 0 && !o.items.Any(x => x.g == g.id)).ToList();
+                var doneG = Goods.Where(g => OrderSrcOk(g.pid) && GoodRate(P[g.pid]) > 0 && !o.items.Any(x => x.g == g.id)).ToList();
                 if (doneG.Count > 0 && r.NextDouble() < .2) { var g = doneG[r.Next(doneG.Count)]; float n = 10 + 5 * r.Next(5); o.items.Add(new OrderItem { src = g.pid, g = g.id, n = n }); val += n * GoodValue(g.id); continue; }
                 var sp = r.NextDouble() < .6 || srcs.Count == 1 ? lp : srcs[r.Next(srcs.Count)];
                 var mats = Producible(sp).Where(m => !o.items.Any(x => x.m == m && x.src == sp.pid)).ToList(); if (mats.Count == 0) continue;
@@ -69,6 +83,8 @@ namespace LunarCleanup.Core
             for (int i = VO.Count - 1; i >= 0; i--)
             {
                 var o = VO[i];
+                int bad = o.items.RemoveAll(it => !P.ContainsKey(it.g == "" ? it.src : Good(it.g).pid)); /* 05.11.: alte Bestellungen mit Waren von nicht freigeschalteten Planeten bereinigen */
+                if (bad > 0 && o.items.Count == 0) { VO.RemoveAt(i); continue; }
                 if (now > o.until) { double back = OrderRefund(o); VO.RemoveAt(i); Toast(o.who + " ist abgereist – die Bestellung kam nicht rechtzeitig zusammen" + (back > 0 ? ". Zurückgelegtes verkauft: +" + Fmt(back) + " Cr" : ""), "bad"); continue; }
                 bool all = true;
                 foreach (var it in o.items)

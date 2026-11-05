@@ -104,10 +104,10 @@ namespace LunarCleanup.Core
             {
                 q.Sort((a, b) => pd.Arc(pd.cells[a].c, d).CompareTo(pd.Arc(pd.cells[b].c, d))); int c = q[0]; q.RemoveAt(0);
                 if (pd.Arc(pd.cells[c].c, d) > reach) continue;
-                if (!ps.clean[c] && Workable(ps, c) && !pd.cells[c].IsBase)
+                if (ToolDirty(ps, c))
                 {
-                    var a = EnsureAct(ps, c); float frac = a != null ? a.sum / Mathf.Max(1, a.cl.nIn) : 1; got += ParcelYield(pd.cells[c]) * frac;
-                    int m = GameData.Dirt[pd.cells[c].type].mat; float room = HandCap() - HandSum(); float add = Mathf.Min(room, ParcelYield(pd.cells[c]) * frac); if (add > 0) ps.sv.hand[m] += add; /* der Schmutz landet im Behälter, so weit er passt */
+                    var a = EnsureAct(ps, c); float frac = a != null ? a.sum / Mathf.Max(1, a.cl.nIn) : 1; float yl = a != null ? a.amt : ParcelYield(pd.cells[c]); got += yl * frac;
+                    int m = a != null ? a.D.mat : GameData.Dirt[pd.cells[c].type].mat; float room = HandCap() - HandSum(); float add = Mathf.Min(room, yl * frac); if (add > 0) ps.sv.hand[m] += add; /* der Schmutz landet im Behälter, so weit er passt */
                     FinishCell(ps, c); done++; fx.Add(c);
                 }
                 if (ps.clean[c] || c == c0) foreach (int b in pd.cells[c].nb) if (seen.Add(b)) q.Add(b);
@@ -116,11 +116,13 @@ namespace LunarCleanup.Core
             PerkAdd(id, -1); PerkFx(id, d, fx); Toast(Perk(id).name + ": " + done + " Parzellen auf einen Schlag sauber!", "good"); Save(); return done;
         }
         /// <summary>Nächste reinigbare (dreckige, angrenzende) Parzelle zur Stelle d – so muss man nicht genau treffen.</summary>
+        /// <summary>Dreckige Parzelle, die ein Werkzeug treffen kann: Grenze des Sauberen oder neu verdreckt (Meteor, Welle) – 05.11.: auch auf fertigen Planeten.</summary>
+        static bool ToolDirty(PState ps, int c) => !ps.pd.cells[c].IsBase && (ps.clean[c] ? ps.act.TryGetValue(c, out var a) && a.sum > a.cl.nIn * GameData.DONE : Workable(ps, c));
         static int SnapWork(PState ps, Vector3 d)
         {
-            var pd = ps.pd; int c0 = pd.CellOf(d); if (c0 >= 0 && !ps.clean[c0] && Workable(ps, c0) && !pd.cells[c0].IsBase) return c0;
+            var pd = ps.pd; int c0 = pd.CellOf(d); if (c0 >= 0 && ToolDirty(ps, c0)) return c0;
             int best = -1; float bd = float.MaxValue;
-            for (int c = 0; c < pd.N; c++) { if (ps.clean[c] || pd.cells[c].IsBase || !Workable(ps, c)) continue; float a = pd.Arc(pd.cells[c].c, d); if (a < bd) { bd = a; best = c; } }
+            for (int c = 0; c < pd.N; c++) { if (!ToolDirty(ps, c)) continue; float a = pd.Arc(pd.cells[c].c, d); if (a < bd) { bd = a; best = c; } }
             return best;
         }
         /// <summary>Fabian 03.11.: Effekt-Ereignis für die Ansicht – welcher Perk, wo, welche Parzellen.</summary>
@@ -158,7 +160,7 @@ namespace LunarCleanup.Core
                 var a = EnsureAct(ps, cur); float frac = a != null ? a.sum / Mathf.Max(1, a.cl.nIn) : 1; int m = GameData.Dirt[pd.cells[cur].type].mat;
                 float add = Mathf.Min(HandCap() - HandSum(), ParcelYield(pd.cells[cur]) * frac); if (add > 0) ps.sv.hand[m] += add; FinishCell(ps, cur); fxk.Add(cur); done++;
                 var cp = pd.cells[cur].c; int best = -1; float bd = -.2f;
-                foreach (int b in pd.cells[cur].nb) { if (ps.clean[b] || pd.cells[b].IsBase) continue; float dt = Vector3.Dot(Tan(cp, pd.cells[b].c), dir); if (dt > bd) { bd = dt; best = b; } }
+                foreach (int b in pd.cells[cur].nb) { if (!ToolDirty(ps, b) || fxk.Contains(b)) continue; float dt = Vector3.Dot(Tan(cp, pd.cells[b].c), dir); if (dt > bd) { bd = dt; best = b; } }
                 if (best >= 0) { var nd = Tan(cp, pd.cells[best].c); dir = Vector3.ProjectOnPlane(dir, pd.cells[best].c.normalized).normalized * .6f + nd * .4f; dir.Normalize(); }
                 cur = best;
             }

@@ -402,11 +402,12 @@ namespace LunarCleanup.Core
         static void FinishCell(PState ps, int id)
         {
             var cl = ps.pd.cells[id];
+            bool redo = ps.clean[id] && ps.paid[id] && ps.act.ContainsKey(id) && !IsPile(ps, id); /* 05.11.: neu verdreckt (Meteor, Welle) – gibt beim Reinigen wieder alles */
             if (!ps.clean[id]) { ps.nClean++; if (!Offline && ps.pid == S.planet) OnCellFlash?.Invoke(id); }
             PileDone(ps, id); /* Müllberg-Belohnung auch auf schon bezahlten Parzellen */
             ps.clean[id] = true; ps.act.Remove(id); ps.dirtyCells.Add(id);
             foreach (var v in ps.sv.veh) if (v.cell == id && (v.mode == "drive" || v.mode == "clean")) { v.mode = "seek"; v.cell = -1; }
-            if (!ps.paid[id])
+            if (!ps.paid[id] || redo)
             {
                 ps.paid[id] = true;
                 double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff * (ps.pid == S.planet ? GoldF : 1); Earn(bonus); /* 03.11.: Goldener Mopp */
@@ -625,12 +626,12 @@ namespace LunarCleanup.Core
                 float tot = 0; foreach (int x in keys) tot += buf[x]; return tot > 0 && tot < 1 && Pick(buf, keys, 1e-6f, P0, false, out m, out a);
             }
             if (b.from == "roh" && (b.to == "sell" || b.to == "prod")) { /* Fabian 02.11.: Verkaufs-Rohstoffe gehen erst ins Produktlager */ bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, out m, out a); /* nur freigegebene Rohstoffe */ }
-            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0 && (GameData.Mats[x].raw || SellOn(ps, x))), 1, PB, true, out m, out a); } /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
+            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0 && (GameData.Mats[x].raw || SellOn(ps, x)) && OrderNeed(ps, x) <= 0), 1, PB, true, out m, out a); } /* 05.11.: Bestelltes wird nicht verkauft */ /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
             if (b.from == "roh")
             {
                 List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine")) return false;
                 var M = ps.mach[b.to]; int best = -1; float bs = -1;
-                foreach (var r in rl) { if (!PlanOn(ps, r.plan)) continue; float x = sv.roh[r.inp]; if (x < 1) continue; float sc = x / (1 + M.inp[r.inp]); if (sc > bs) { bs = sc; best = r.inp; } }
+                foreach (var r in rl) { if (!PlanOn(ps, r.plan)) continue; float x = sv.roh[r.inp]; if (x < 1) continue; float sc = x / (1 + M.inp[r.inp]) * (WantsOut(ps, r.outp) ? 1000 : 1); /* 05.11.: Bestellungen zuerst */ if (sc > bs) { bs = sc; best = r.inp; } }
                 return best >= 0 && Pick(sv.roh, new[] { best }, 1, P0, false, out m, out a);
             }
             if (ps.mach.ContainsKey(b.from))
@@ -639,8 +640,8 @@ namespace LunarCleanup.Core
                 if (b.from == "presse")
                 {
                     var smIns = ps.line.schmelze.Select(r => r.inp).ToList();
-                    if (b.to == "schmelze") return SmeltOn(ps) && Pick(o, outs.Where(x => smIns.Contains(x)), 1, PB, true, out m, out a);
-                    return Pick(o, outs.Where(x => !(SmeltOn(ps) && smIns.Contains(x))), 1, PB, true, out m, out a);
+                    if (b.to == "schmelze") return SmeltOn(ps) && Pick(o, outs.Where(x => smIns.Contains(x) && !OrderWants(ps, x)), 1, PB, true, out m, out a);
+                    return Pick(o, outs.Where(x => !(SmeltOn(ps) && smIns.Contains(x)) || OrderWants(ps, x)), 1, PB, true, out m, out a); /* 05.11.: bestellte Bricks gehen ins Produktlager statt in die Schmelze */
                 }
                 return Pick(o, outs, 1, PB, true, out m, out a);
             }
@@ -684,9 +685,10 @@ namespace LunarCleanup.Core
             float outSum = Sum(M.outp);
             if (M.cur < 0)
             {
-                for (int r = 0; r < rec.Count; r++)
+                for (int r0 = 0; r0 < rec.Count * 2; r0++)
                 {
-                    var rc = rec[r]; if (!PlanOn(ps, rc.plan)) continue;
+                    int r = r0 % rec.Count; var rc = rec[r]; if (!PlanOn(ps, rc.plan)) continue;
+                    if (r0 < rec.Count && !WantsOut(ps, rc.outp)) continue; /* 05.11.: erste Runde nur bestellte Waren */
                     if (M.inp[rc.inp] >= rc.n - 1e-6f && outSum + rc.k <= MachOutCap(ps, id))
                     {
                         M.cur = r; M.prog = 0;

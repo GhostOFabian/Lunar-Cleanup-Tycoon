@@ -54,7 +54,23 @@ namespace LunarCleanup.Core
         public static int UseUlt(Vector3 d)
         {
             if (S.ult < 1) { Fail("Ultimate lädt noch (" + Mathf.FloorToInt(Ult * 100) + " %) – wische selbst, Kombos laden schneller"); return 0; }
+            if (SnapWork(Cur, d) < 0) return UltShine(Cur, d); /* 05.11.: Planet schon sauber – die Ulti geht trotzdem */
             PerkAdd("nuke", 1); int n = UseTool("nuke", d); if (n > 0) S.ult = 0; else PerkAdd("nuke", -1); return n;
+        }
+        /// <summary>Fabian 05.11.: Ulti auf einem sauberen Planeten – erntet alle Leuchtkristalle, bringt Rohstoffe und Geld wie 30 Parzellen und 5 min Kristall-Schub.</summary>
+        static int UltShine(PState ps, Vector3 d)
+        {
+            int nc = 0, kr = 0; foreach (var c in ps.sv.crystals.ToList()) { kr += CrystalGain(c); nc++; S.stats.crystals++; ps.sv.crystals.Remove(c); } S.lk += kr;
+            float tot = 0; foreach (var t in ps.P.types) tot += Mathf.Max(0, t.Value); double cash = 0; float room = RohCap(ps) - RohSum(ps), got = 0;
+            if (tot > 0) foreach (var t in ps.P.types)
+            {
+                if (t.Value <= 0) continue; var D = GameData.Dirt[t.Key]; float amt = 30 * D.amt * t.Value / tot; if (D.mat < 0) continue;
+                float x = Mathf.Min(amt, room - got); if (x > 0) { ps.sv.roh[D.mat] += x; got += x; }
+                cash += amt * GameData.Mats[D.mat].v * .3 * Uv("bonus", ps) * ps.P.diff;
+            }
+            Earn(cash); ps.sv.boostT = Mathf.Max(0, ps.sv.boostT) + BOOST_T; S.ult = 0;
+            PerkFx("nuke", d, new List<int>()); { int fc = ps.pd.CellOf(d); FloatTxt(fc >= 0 ? ps.pd.cells[fc].c : d, "+" + Fmt(cash) + " Cr" + (kr > 0 ? " · +" + kr + " Kristalle" : ""), "big"); }
+            Toast("Ulti auf sauberem Planeten: " + (nc > 0 ? nc + " Leuchtkristalle geerntet (+" + kr + "), " : "") + Fmt(got) + " Rohstoffe, +" + Fmt(cash) + " Cr und 5 min Kristall-Schub", "good"); Save(); return 1;
         }
 
         // ---------- eine selbst gewischte Parzelle (live, aus OnCellDone) ----------
