@@ -72,7 +72,7 @@ namespace LunarCleanup.Core
         static void DepotStep(PState ps, float dt)
         {
             if (ps.sv.depot == null) return; float tot = Sum(ps.sv.depot); if (tot < .01f) return; float free = RohCap(ps) - RohSum(ps); if (free <= .01f) return;
-            float amt = Mathf.Min(tot, free, 20 * dt), k = amt / tot; for (int m = 0; m < NM; m++) { float x = ps.sv.depot[m] * k; ps.sv.depot[m] -= x; ps.sv.roh[m] += x; }
+            float amt = Mathf.Min(tot, free, 20 * dt), k = amt / tot; for (int m = 0; m < NM; m++) { float x = ps.sv.depot[m] * k; ps.sv.depot[m] -= x; { ps.sv.roh[m] += x; RohIn(ps, m, x); } }
         }
         /// <summary>Hard Mode: jeder Planet hat seinen Sammelwagen (kostenlos).</summary>
         static void HardCart(PState ps) { if (!Hard) return; var c = ps.sv.cart; if (!c.owned) { c.owned = true; c.d = ps.pd.PlanDir(ps.lay.start); c.mode = "park"; } }

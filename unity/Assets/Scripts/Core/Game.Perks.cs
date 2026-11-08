@@ -137,7 +137,7 @@ namespace LunarCleanup.Core
         static void PipeHand(PState ps)
         {
             float tot = HandSum(), free = RohCap(ps) - RohSum(ps); if (tot < .05f || free < .05f) return; float amt = Mathf.Min(tot, free), k = amt / tot;
-            for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; ps.sv.roh[m] += x; } FloatAmt(ps.pd.PlanDir(ps.lay.pos["roh"]), amt, "Rohrpost");
+            for (int m = 0; m < NM; m++) { float x = ps.sv.hand[m] * k; ps.sv.hand[m] -= x; { ps.sv.roh[m] += x; RohIn(ps, m, x); } } FloatAmt(ps.pd.PlanDir(ps.lay.pos["roh"]), amt, "Rohrpost");
         }
         /// <summary>Schaumkanone: Schmutz im Umkreis zu 70 % lösen.</summary>
         static int Foam(PState ps, Vector3 d)
@@ -194,7 +194,7 @@ namespace LunarCleanup.Core
                 if (dist > 1.5f) { h.d = Vector3.Slerp(h.d, tgt, Mathf.Min(1, spd * dt / Mathf.Max(.01f, dist))).normalized; continue; } /* läuft hin, 2,2 m/s (Tornado 7) */
                 var cl = pd.cells[h.cell]; float need = 18f * Mathf.Max(.6f, cl.H / 4f) * GameData.Dirt[cl.type].hard * GameData.Kinds[cl.kind].hard;
                 h.t += dt * sweepF; if (h.t < need) continue;
-                int m = GameData.Dirt[cl.type].mat; float room = RohCap(ps) - RohSum(ps); if (room > 0) ps.sv.roh[m] += Mathf.Min(room, ParcelYield(cl) * .6f); /* trägt den Schmutz zur Basis (etwas geht verloren) */
+                int m = GameData.Dirt[cl.type].mat; float room = RohCap(ps) - RohSum(ps); if (room > 0) { ps.sv.roh[m] += Mathf.Min(room, ParcelYield(cl) * .6f); RohIn(ps, m, Mathf.Min(room, ParcelYield(cl) * .6f)); } /* trägt den Schmutz zur Basis (etwas geht verloren) */
                 FinishCell(ps, h.cell); h.cell = -1; h.t = 0;
             }
         }

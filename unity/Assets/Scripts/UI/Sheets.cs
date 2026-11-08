@@ -34,7 +34,7 @@ namespace LunarCleanup.UI
                 case "perks": title = Game.Hard ? "Inventar" : "Perks"; PerkShop(h); break;
                 case "hard": title = "Hard Mode"; HardSheet(h); break;
                 case "crystals": title = "Kristalle"; CrystalSheet(h); break;
-                case "secret": title = "Geheimnis des Mondes"; SecretSheet(h); break;
+                case "secret": title = "Geheimnis · " + Game.Cur.P.name; SecretSheet(h); break;
                 case "class": title = Game.NeedClass ? "Wähle deine Klasse" : "Klasse"; ClassSheet(h); break;
                 case "pylon": { int pc = int.TryParse(arg, out var q2) ? q2 : -1; bool has = ps.sv.pylons != null && ps.sv.pylons.Contains(pc); title = has ? "Ladesäule" : "Saubere Parzelle"; PylonSheet(h, pc, has); break; }
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
@@ -115,17 +115,20 @@ namespace LunarCleanup.UI
         static void SecretSheet(Hud h)
         {
             var ps = Game.Cur; if (!Game.SecretKnown(ps)) { h.Note("Hier gibt es noch nichts zu sehen."); return; }
-            h.Note("Unter dem Mondstaub liegt etwas, das jemand versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
-            h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
+            h.Note("Unter dem Staub liegt etwas, das jemand versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
+            h.Row(Game.GlyphName(ps), () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
             h.Section("Sterne · " + Game.StarCount(ps) + "/3");
             for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Bisher " + Mathf.FloorToInt(ps.sv.secretT / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
             h.Section("Logbuch");
-            for (int i = 0; i < Game.MoonLog.Length; i++)
+            var log = Game.SecretLog(ps);
+            for (int i = 0; i < log.Length; i++)
             {
-                var L = Game.MoonLog[i];
+                var L = log[i];
                 if (i < ps.sv.secretBeat) h.Row(L.title, () => L.text);
                 else { h.Row("Noch verborgen", () => "Wisch weiter, um mehr zu erfahren"); break; }
             }
+            int known = 0; foreach (var q in Game.P.Values) if (Game.SecretKnown(q)) known++;
+            if (known > 1) h.Note("Zeichen gefunden: " + known + " von " + Game.Glyphs.Count + " Planeten · Sterne gesamt: " + Game.P.Values.Sum(q => Game.StarCount(q)));
         }
         /// <summary>Fabian 05.11.: Klassen im Hard Mode – Pflichtwahl, Wechsel kostet Geld.</summary>
         static void ClassSheet(Hud h)
@@ -671,7 +674,7 @@ namespace LunarCleanup.UI
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { OrdersSheet(h); return; }
             if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
-            if (Game.SecretKnown(Game.Cur)) { h.Section("Geheimnis des Mondes"); var sp = Game.Cur; h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.MoonLog.Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
+            if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);

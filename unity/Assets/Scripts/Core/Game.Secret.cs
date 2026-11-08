@@ -14,7 +14,7 @@ namespace LunarCleanup.Core
     public static partial class Game
     {
         public const float GOO_T = 45f, GOO_SEED_T = 150f, STAR_TIME = 2700f; public const int GOO_MAX = 14, GOO_CR = 2;
-        public static bool SecretOn(PState ps) => ps != null && ps.pid == "moon";
+        public static bool SecretOn(PState ps) => ps != null && Glyphs.ContainsKey(ps.pid) && Logs.ContainsKey(ps.pid); /* 08.11.: alle Planeten */
         /// <summary>08.11.: Das Geheimnis zeigt sich erst, wenn du die ersten Linien selbst freigelegt hast – vorher kein Hinweis.</summary>
         public static bool SecretKnown(PState ps) => SecretOn(ps) && ps.sv.secretBeat > 0;
         public static bool IsGoo(PState ps, int c) => ps.sv.goo != null && ps.sv.goo.Contains(c);
@@ -25,13 +25,8 @@ namespace LunarCleanup.Core
             foreach (int c in g) if (ps.clean[c] && !IsGoo(ps, c) && !ps.act.ContainsKey(c)) n++;
             return n / (float)g.Count;
         }
-        public static readonly (float at, string title, string text)[] MoonLog =
-        {
-            (.1f, "Linien im Staub", "Unter dem Mondstaub leuchten Linien. Zu gerade für Zufall – jemand hat sie in den Boden gezogen. Und auf genau diesen Linien liegt dieser schwarze Schleim."),
-            (.4f, "Ein Kreis mit sechs Strahlen", "Es ist ein großer Kreis mit sechs Strahlen, an jedem Ende ein Punkt. Die Punkte stehen genau so, wie du von hier aus die Planeten siehst."),
-            (.7f, "Der Dreck war Absicht", "Im Schleim steckt dieselbe Leuchtfarbe wie in den Linien. Der Dreck kam nicht zufällig – er sollte das hier verdecken. Die Frage ist nur: vor wem?"),
-            (1f, "Die Sternkarte", "Die Karte ist frei. Ein Strahl leuchtet heller als die anderen – er zeigt zum Mars. Wer immer das gebaut hat, war vor dir dort. Und hat dort vielleicht noch mehr hinterlassen."),
-        };
+        public static (string title, string text)[] SecretLog(PState ps) => Logs.TryGetValue(ps.pid, out var l) ? l : new (string, string)[0];
+        public static string GlyphName(PState ps) => Glyphs.TryGetValue(ps.pid, out var g) ? g.name : "Zeichen";
         public static int StarCount(PState ps) { int s = ps.sv.stars; return (s & 1) + ((s >> 1) & 1) + ((s >> 2) & 1); }
         public static string StarText(PState ps) { string r = ""; for (int i = 0; i < 3; i++) r += (ps.sv.stars & (1 << i)) != 0 ? "★" : "☆"; return r; }
         public static readonly string[] StarNames = { "Planet komplett sauber", "Geheimnis freigelegt", "Geheimnis in unter 45 min freigelegt" };
@@ -72,10 +67,11 @@ namespace LunarCleanup.Core
                 if (grown > 0 && !Offline && ps.pid == S.planet && Time.realtimeSinceStartup - gooToastT > 240) { gooToastT = Time.realtimeSinceStartup; Toast("Der schwarze Schleim breitet sich aus – nur du kannst ihn wegwischen", "bad"); }
             }
             // Logbuch
-            while (sv.secretBeat < MoonLog.Length && prog >= MoonLog[sv.secretBeat].at - 1e-4f)
+            var log = SecretLog(ps);
+            while (sv.secretBeat < log.Length && sv.secretBeat < LogAt.Length && prog >= LogAt[sv.secretBeat] - 1e-4f)
             {
-                sv.secretBeat++; StoryNew = true;
-                if (!Offline) { Toast("Logbuch: " + MoonLog[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
+                sv.secretBeat++; if (ps.pid == S.planet) StoryNew = true;
+                if (!Offline && ps.pid == S.planet) { Toast("Logbuch " + ps.P.name + ": " + log[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
             }
             // Sterne (erst, wenn das Geheimnis bekannt ist)
             if (sv.secretBeat == 0) return;

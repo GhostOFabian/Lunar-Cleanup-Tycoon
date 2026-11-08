@@ -118,7 +118,7 @@ namespace LunarCleanup.Core
             ApplyMoves(ps); /* 03.11.: verschobene Gebäude */
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
-            if (sv.cart.owned && !Hard) { for (int m = 0; m < NM; m++) sv.roh[m] += sv.cart.tank[m]; Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
+            if (sv.cart.owned && !Hard) { for (int m = 0; m < NM; m++) { sv.roh[m] += sv.cart.tank[m]; RohIn(ps, m, sv.cart.tank[m]); } Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
             foreach (var b in sv.bld) ps.bld.Add(b);
             foreach (var kv in sv.upg) ps.upg[kv.k] = kv.v;
             int N = ps.pd.N; ps.clean = new bool[N]; ps.paid = new bool[N];
@@ -378,7 +378,7 @@ namespace LunarCleanup.Core
         {
             var ps = Cur; var a = EnsureAct(ps, id); if (a == null) return;
             float got = 0; for (int k = 0; k < a.grid.Length; k++) { got += a.grid[k]; a.grid[k] = 0; }
-            a.sum = 0; ps.dirtyCells.Add(id); int m = a.D.mat; float room = RohCap(ps) - RohSum(ps); if (room > 0) ps.sv.roh[m] += Mathf.Min(room, a.amt);
+            a.sum = 0; ps.dirtyCells.Add(id); int m = a.D.mat; float room = RohCap(ps) - RohSum(ps); if (room > 0) { ps.sv.roh[m] += Mathf.Min(room, a.amt); RohIn(ps, m, Mathf.Min(room, a.amt)); }
         }
         /// <summary>Nur für Tests im Editor: reinigt Welle für Welle die Grenze, bis der Anteil erreicht ist.</summary>
         /// <summary>Testmodus: aktuellen Planeten komplett ausbauen – Basisstufe, alle Gebäude, alle Upgrades, alle Forschungen, alle Außenlager, Fahrzeuge bis zum Platzlimit.</summary>
@@ -434,7 +434,7 @@ namespace LunarCleanup.Core
             {
                 ps.paid[id] = true;
                 double bonus = ParcelYield(cl) * GameData.Mats[GameData.Dirt[cl.type].mat].v * .3 * Uv("bonus", ps) * ps.P.diff * (ps.pid == S.planet ? GoldF : 1); Earn(bonus); /* 03.11.: Goldener Mopp */
-                if (GameData.Kinds[cl.kind].key == "rich") { int m = GameData.Dirt[cl.type].mat; float x = Mathf.Min(ParcelYield(cl) * .2f, RohCap(ps) - RohSum(ps)); if (x > 0) ps.sv.roh[m] += x; }
+                if (GameData.Kinds[cl.kind].key == "rich") { int m = GameData.Dirt[cl.type].mat; float x = Mathf.Min(ParcelYield(cl) * .2f, RohCap(ps) - RohSum(ps)); if (x > 0) { ps.sv.roh[m] += x; RohIn(ps, m, x); } }
                 if (strokeCells.Contains(id)) FloatTxt(ps.pd.cells[id].c, "+" + Fmt(bonus) + " Cr", "big"); /* 04.11.: nur für selbst geputzte Parzellen */
                 OnCellDone(ps, id, bonus);
             }
@@ -680,7 +680,7 @@ namespace LunarCleanup.Core
         static bool BeltAccept(PState ps, BeltDef b, int m, float a)
         {
             var sv = ps.sv;
-            if (b.to == "roh") { if (RohSum(ps) + a > RohCap(ps) + 1e-6f) return false; sv.roh[m] += a; return true; }
+            if (b.to == "roh") { if (RohSum(ps) + a > RohCap(ps) + 1e-6f) return false; { sv.roh[m] += a; RohIn(ps, m, a); } return true; }
             if (b.to == "prod") { if (ProdSum(ps) + a > ProdCap(ps) + 1e-6f) return false; sv.prod[m] += a; return true; }
             if (b.to == "sell") { if (Sum(sv.sellBuf) + a > SellCap(ps) + 1e-6f) return false; sv.sellBuf[m] += a; return true; }
             if (ps.mach.ContainsKey(b.to))
@@ -1010,7 +1010,7 @@ namespace LunarCleanup.Core
                         float free = RohCap(ps) - RohSum(ps); if (T.batt > 0) { float bc = BattCap(ps, v), b0 = Bat(ps, v); if (b0 < bc) { v.bat = Mathf.Min(bc, b0 + bc / 30 * Mathf.Max(.25f, f) * dt); v.charging = true; } }
                         if (tank < .01f) { Array.Clear(v.tank, 0, NM); if (!v.charging || Bat(ps, v) >= BattCap(ps, v) * .97f) { /* 04.11.: keine Schwebezahl mehr bei jeder Fahrzeug-Entladung */ v.coll = 0; v.mode = "seek"; } break; }
                         if (free <= .01f) { v.fullT += dt; break; } v.fullT = 0;
-                        float amt = Mathf.Min(10 * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = amt / tank; for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; ps.sv.roh[m] += x; }
+                        float amt = Mathf.Min(10 * Uv("urate", ps) * dt, Mathf.Min(free, tank)), f0 = amt / tank; for (int m = 0; m < NM; m++) { float x = v.tank[m] * f0; v.tank[m] -= x; { ps.sv.roh[m] += x; RohIn(ps, m, x); } }
                         break;
                     }
                 case "fieldRepair":
@@ -1232,7 +1232,7 @@ namespace LunarCleanup.Core
         {
             float b = Sum(o.buf); o.busy = false; if (b <= .001f) return; float fr = RohCap(ps) - RohSum(ps); if (fr <= .01f) return;
             float amt = Mathf.Min(b, Mathf.Min(fr, PipeRate(ps, o) * Mathf.Max(.25f, f) * ps.bm * dt)), k = amt / b;
-            for (int m = 0; m < NM; m++) { float x = o.buf[m] * k; o.buf[m] -= x; ps.sv.roh[m] += x; } o.busy = true;
+            for (int m = 0; m < NM; m++) { float x = o.buf[m] * k; o.buf[m] -= x; { ps.sv.roh[m] += x; RohIn(ps, m, x); } } o.busy = true;
         }
         public static string OutpostStatus(PState ps, StSave o) => Sum(o.buf) <= .001f ? "Bereit" : RohCap(ps) - RohSum(ps) <= .01f ? "Rohstofflager voll" : "Pumpt zur Basis";
 
@@ -1369,7 +1369,7 @@ namespace LunarCleanup.Core
                 case "drop":
                     {
                         if (load < .05f) { Array.Clear(dr.tank, 0, NM); dr.mode = "idle"; break; } float fr = RohCap(ps) - RohSum(ps); if (fr <= .01f) { dr.wt += dt; if (dr.wt > 4) { dr.wt = 0; var alt = DroneStation(ps, null); if (alt != null) { dr.sid = alt; dr.mode = "toSt"; } } break; } /* Lager voll: Ladung zur Entladeanlage bringen statt zu warten */
-                        float amt = Mathf.Min(load, Mathf.Min(fr, GameData.DroneRate * dt)), k = amt / load; for (int m = 0; m < NM; m++) { float x = dr.tank[m] * k; dr.tank[m] -= x; ps.sv.roh[m] += x; }
+                        float amt = Mathf.Min(load, Mathf.Min(fr, GameData.DroneRate * dt)), k = amt / load; for (int m = 0; m < NM; m++) { float x = dr.tank[m] * k; dr.tank[m] -= x; { ps.sv.roh[m] += x; RohIn(ps, m, x); } }
                         break;
                     }
                 default: dr.mode = "idle"; break;
@@ -1768,7 +1768,7 @@ namespace LunarCleanup.Core
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
             AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
-        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; } }
+        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
         static void StepPlanet0(PState ps, float dt)
         {
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */

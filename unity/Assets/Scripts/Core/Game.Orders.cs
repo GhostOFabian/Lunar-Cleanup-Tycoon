@@ -26,7 +26,7 @@ namespace LunarCleanup.Core
         static List<int> Producible(PState ps)
         {
             var l = new List<int>();
-            foreach (var t in ps.P.types) { if (t.Value <= 0) continue; int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m)) l.Add(m); }
+            foreach (var t in ps.P.types) { if (t.Value <= 0) continue; int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m) && (RohRateH(ps, m) > .5f || ps.sv.roh[m] > 5 || !IsDone(ps.pid))) l.Add(m); } /* 08.11.: auf sauberen Planeten nur, was wirklich noch hereinkommt */
             /* nur Rezepte, die wirklich laufen können: Plan freigeschaltet und Zutat vorhanden (2 Runden für Ketten) */
             void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach) || (mach == "raff" && !PlanOn(ps, "refine"))) return; foreach (var r in rs) if (PlanOn(ps, r.plan) && l.Contains(r.inp) && !l.Contains(r.outp)) l.Add(r.outp); }
             for (int round = 0; round < 2; round++) { Add("presse", ps.line.presse); Add("schmelze", ps.line.schmelze); Add("raff", ps.line.raff); }
@@ -65,6 +65,7 @@ namespace LunarCleanup.Core
                 var mats = Producible(sp).Where(m => !o.items.Any(x => x.m == m && x.src == sp.pid)).ToList(); if (mats.Count == 0) continue;
                 int mm = mats[r.Next(mats.Count)]; bool raw = GameData.Mats[mm].raw;
                 float cap = raw ? RohCap(sp) : ProdCap(sp); float want = cap * (raw ? .04f + .06f * (float)r.NextDouble() : .08f + .12f * (float)r.NextDouble());
+                if (raw) { float rh = RohRateH(sp, mm); want = Mathf.Min(want, rh > .5f ? rh * hours * .3f : 20 + sp.sv.roh[mm] * .5f); } /* 08.11.: nur so viel, wie wirklich hereinkommt */
                 if (!raw) { float rh = ProdRateH(sp, mm); if (rh > 0) want = Mathf.Min(want, rh * hours * .3f); } /* 05.11.: nur so viel, wie die Maschinen in knapp einem Drittel der Zeit schaffen */
                 float nn = Mathf.Max(5, Mathf.Round(want / 5) * 5);
                 o.items.Add(new OrderItem { src = sp.pid, m = mm, n = nn }); val += nn * MatValue(mm, sp);
@@ -74,6 +75,17 @@ namespace LunarCleanup.Core
             VO.Add(o); OnOrderNew?.Invoke(o);
             Toast("Neue Bestellung: " + o.who + " auf " + GameData.Planets[o.pid].name + " möchte " + string.Join(", ", o.items.Select(x => Fmt(x.n) + " " + ItemName(x))) + " · Ziele → Bestellungen", "good");
         }
+        // ---------- 08.11.: Rohstoff-Zufluss messen (wie viel kommt wirklich ins Lager) ----------
+        static readonly Dictionary<PState, float[]> rohAcc = new Dictionary<PState, float[]>();
+        static void RohIn(PState ps, int m, float x) { if (ps == null || m < 0 || m >= NM || x <= 0) return; if (!rohAcc.TryGetValue(ps, out var a)) rohAcc[ps] = a = new float[NM]; a[m] += x; }
+        static void RohTrack(PState ps, float dt)
+        {
+            if (dt <= 0) return; var sv = ps.sv; if (sv.rohRate == null || sv.rohRate.Length != NM) { var r = new float[NM]; if (sv.rohRate != null) Array.Copy(sv.rohRate, r, Math.Min(NM, sv.rohRate.Length)); sv.rohRate = r; }
+            rohAcc.TryGetValue(ps, out var a); float k = 1 - Mathf.Exp(-dt / 1800f);
+            for (int m = 0; m < NM; m++) { float x = a != null ? a[m] / dt : 0; sv.rohRate[m] += (x - sv.rohRate[m]) * k; if (a != null) a[m] = 0; }
+        }
+        /// <summary>Rohstoff m kommt auf Planet sp pro Stunde ins Lager (gemessen).</summary>
+        public static float RohRateH(PState sp, int m) => sp.sv.rohRate != null && m >= 0 && m < sp.sv.rohRate.Length ? sp.sv.rohRate[m] * 3600f : 0;
         /// <summary>Wie viel von Produkt m die Maschinen auf Planet sp höchstens pro Stunde schaffen (ohne Engpässe bei Rohstoffen).</summary>
         static float ProdRateH(PState sp, int m)
         {
@@ -92,6 +104,12 @@ namespace LunarCleanup.Core
         static void OrdersStep(float dt)
         {
             if (!OrdersOpen) return;
+            if (S.ordFix < 1 && S.vorders != null) /* 08.11.: alte, kaum machbare Bestellungen einmal verkleinern – Belohnung bleibt */
+            {
+                S.ordFix = 1; bool any = false;
+                foreach (var o in S.vorders) foreach (var it in o.items) { if (it.g != "") continue; float left = it.n - it.got; if (left <= 0) continue; float nn = Mathf.Ceil(it.got + left * (GameData.Mats[it.m].raw ? .3f : .5f)); if (nn < it.n) { it.n = Mathf.Max(it.got, nn); any = true; } }
+                if (any && !Offline) Toast("Die Besucher haben ihre Bestellungen verkleinert – zahlen aber dasselbe", "good");
+            }
             S.voT -= dt; if (S.voT <= 0) { S.voT = UnityEngine.Random.Range(600f, 1500f); if (VO.Count < OrderMax()) NewVisitOrder(); }
             long now = Now();
             for (int i = VO.Count - 1; i >= 0; i--)
