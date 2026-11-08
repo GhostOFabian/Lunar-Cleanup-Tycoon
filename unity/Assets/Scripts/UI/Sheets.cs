@@ -114,8 +114,8 @@ namespace LunarCleanup.UI
         /// <summary>Fabian 08.11.: Mond-Geheimnis – Logbuch, Sterne, Schleim.</summary>
         static void SecretSheet(Hud h)
         {
-            var ps = Game.Cur; if (!Game.SecretOn(ps)) { h.Note("Das Geheimnis liegt auf dem Mond."); return; }
-            h.Note("Unter dem Mondstaub liegt etwas, das jemand absichtlich versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
+            var ps = Game.Cur; if (!Game.SecretKnown(ps)) { h.Note("Hier gibt es noch nichts zu sehen."); return; }
+            h.Note("Unter dem Mondstaub liegt etwas, das jemand versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
             h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
             h.Section("Sterne · " + Game.StarCount(ps) + "/3");
             for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Bisher " + Mathf.FloorToInt(ps.sv.secretT / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
@@ -124,7 +124,7 @@ namespace LunarCleanup.UI
             {
                 var L = Game.MoonLog[i];
                 if (i < ps.sv.secretBeat) h.Row(L.title, () => L.text);
-                else { h.Row("Noch verborgen", () => "Ab " + Mathf.RoundToInt(L.at * 100) + " % freigelegter Sternkarte"); break; }
+                else { h.Row("Noch verborgen", () => "Wisch weiter, um mehr zu erfahren"); break; }
             }
         }
         /// <summary>Fabian 05.11.: Klassen im Hard Mode – Pflichtwahl, Wechsel kostet Geld.</summary>
@@ -367,7 +367,7 @@ namespace LunarCleanup.UI
             var sv = ps.sv; string pn = ps.P.name;
             h.Section("Riesenmeteor");
             h.Note("Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis schwer verwüstet (Krater, kaputte Fahrzeuge, gedrosselte Produktion) – gebaut bleibt alles. Keine Abwehr hält immer.", () => Game.DoomActive ? "RIESENMETEOR im Anflug auf " + GameData.Planets[Game.S.doomPid].name + " – Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" : "Ab und zu trifft ein Riesenmeteor einen deiner Planeten. Ohne Abwehr wird die Basis schwer verwüstet (Krater, kaputte Fahrzeuge, gedrosselte Produktion) – gebaut bleibt alles. Keine Abwehr hält immer. Bisher: " + Game.S.doomN + " Riesenmeteore, " + Game.S.doomHits + " Brocken abgefangen.");
-            h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Meteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab. Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + (Game.MsGoods(ps).Length > 0 ? Game.GoodsTxt(Game.MsGoods(ps)) : "nur Credits") : ""),
+            h.Row("Meteorschild", () => "Stufe " + sv.msLv + "/" + Game.MS_MAX + " · " + Game.ShieldState(ps) + " · lenkt den Riesenmeteor mit bis zu " + Pc(Game.ShieldMax(ps)) + " ab und wehrt " + Pc(Game.ShowerBlockChance(ps)) + " der Meteoritenschauer ab (je Abwehr " + Mathf.RoundToInt(Game.ShowerBlockCost(ps)) + " Energie). Schwächer bei Sturm, wenig Energie und fehlenden Lieferungen, aus bei leeren Batterien. Nach jedem abgelenkten Meteor 30 min Nachladen. Kostet " + Dec(.5f * sv.msLv, 1) + " Energie/s" + (sv.msLv < Game.MS_MAX ? " · nächste Stufe (" + Pc(.85f * (sv.msLv + 1) / Game.MS_MAX) + "): " + (Game.MsGoods(ps).Length > 0 ? Game.GoodsTxt(Game.MsGoods(ps)) : "nur Credits") : ""),
                 () => sv.msLv >= Game.MS_MAX ? "Max" : Cr(Game.MsCost(ps)), () => Game.MsWhy(ps) == "", () => Game.BuyShield(), why: () => Game.Steps(Game.MsWhy(ps).StartsWith("Dir fehlen") ? "" : Game.MsWhy(ps), Game.MsCost(ps)));
             h.Row("Abwehrraketen", () => "Stufe " + sv.flakLv + "/" + Game.FLAK_MAX + " · " + Game.FlakRockets(ps) + " Raketen je Riesenmeteor. Hält der Schild nicht, zerbricht der Meteor in 4–8 Brocken: Tippe auf jeden Brocken, wenn sein Ring ihn genau umschließt. Daneben kostet eine Rakete. Nur wenn du vor Ort bist – sonst zählt nur der Schild." + (sv.flakLv < Game.FLAK_MAX && Game.FlakGoods(ps).Length > 0 ? " · nächste Stufe: " + Game.GoodsTxt(Game.FlakGoods(ps)) : ""),
                 () => sv.flakLv >= Game.FLAK_MAX ? "Max" : Cr(Game.FlakCost(ps)), () => Game.FlakWhy(ps) == "", () => Game.BuyFlak(), why: () => Game.Steps(Game.FlakWhy(ps).StartsWith("Dir fehlen") ? "" : Game.FlakWhy(ps), Game.FlakCost(ps)));
@@ -671,7 +671,7 @@ namespace LunarCleanup.UI
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { OrdersSheet(h); return; }
             if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
-            if (Game.SecretOn(Game.Cur)) { h.Section("Geheimnis des Mondes"); var sp = Game.Cur; h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.MoonLog.Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
+            if (Game.SecretKnown(Game.Cur)) { h.Section("Geheimnis des Mondes"); var sp = Game.Cur; h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.MoonLog.Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);

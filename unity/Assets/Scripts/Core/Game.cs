@@ -447,7 +447,7 @@ namespace LunarCleanup.Core
         public static float HandSum() => Sum(Cur.sv.hand);
         static int lastCell = -1; static float fullWarnT;
         /// <summary>Ein Wisch darf bis zu zwei Parzellen gleichzeitig reinigen (die erste und eine benachbarte, auf die der Pinsel hinüberstreicht).</summary>
-        static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 2; public static bool InStroke(int id) => strokeCells.Contains(id); /* 04.11.: Ansicht lädt diese Stellen sofort hoch */
+        static readonly List<int> strokeCells = new List<int>(); const int StrokeMax = 3; public static bool InStroke(int id) => strokeCells.Contains(id); /* 04.11.: Ansicht lädt diese Stellen sofort hoch */
         public static void BeginStroke() { strokeCells.Clear(); Attend(); }
         public static bool CanClean(Vector3 d) { var ps = Cur; int c = ps.pd.CellOf(d, lastCell); return Workable(ps, c); }
         /// <summary>Wischen an der Stelle d (Einheitsvektor). Liefert die aufgenommene Menge.</summary>
@@ -462,7 +462,13 @@ namespace LunarCleanup.Core
             if (!SuitUse(ps, d, dt)) return 0; /* 04.11.: Hard Mode – Anzug-Energie */
             int c0 = pd.CellOf(d, lastCell); lastCell = c0;
             strokeCells.RemoveAll(c => !Workable(ps, c));
-            if (Workable(ps, c0) && !strokeCells.Contains(c0) && strokeCells.Count < StrokeMax) strokeCells.Add(c0);
+            /* Fabian 08.11.: „Ich will den Finger nicht hochheben müssen“ – bisher nahm ein Wischzug nur 2 Parzellen an, jede weitere blieb liegen.
+               Jetzt wandert der Pinsel mit: kommt eine neue Parzelle dazu, fällt die am weitesten entfernte heraus. */
+            if (Workable(ps, c0) && !strokeCells.Contains(c0))
+            {
+                if (strokeCells.Count >= StrokeMax) { int far = -1; float fd = -1; foreach (int sc in strokeCells) { float ad = pd.Arc(d, pd.cells[sc].c); if (ad > fd) { fd = ad; far = sc; } } strokeCells.Remove(far); }
+                strokeCells.Add(c0);
+            }
             if (strokeCells.Count == 0) return 0;
             float r = Uv("radius") * RadiusF, total = 0; /* 03.11.: Breiter Pinsel */
             foreach (int sc in strokeCells)

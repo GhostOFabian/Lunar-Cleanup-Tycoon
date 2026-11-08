@@ -144,7 +144,7 @@ namespace LunarCleanup.Core
         // Ein Schauer bedeckt eine saubere Parzelle und 1–3 Nachbarn (auf fertigen Planeten 3–6) fast ganz mit Staub.
         // Die Parzellen bleiben „sauber“ (Fortschritt sinkt nicht), haben aber wieder Schmutz zum Abbauen – Arbeit für die Flotte.
         public const float DoneMeteorAmt = 3f;
-        public static float MeteorEvery(PState ps) => (Hard ? 3f : 1f) /* Fabian 03.11.: im Hard Mode dreimal seltener – du putzt ja alles selbst */ * (IsDone(ps.pid) ? Mathf.Max(90, 1200 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(150, 3000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean)))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
+        public static float MeteorEvery(PState ps) => (Hard ? 3f : 1f) /* Fabian 03.11.: im Hard Mode dreimal seltener – du putzt ja alles selbst */ * (IsDone(ps.pid) ? Mathf.Max(360, 3600 / Mathf.Sqrt(Mathf.Max(1, ps.nClean))) : Mathf.Max(300, 6000 / Mathf.Sqrt(Mathf.Max(1, ps.nClean)))); /* Fabian 01.11.: etwa 3× seltener als im Browser (Handy vibrierte ständig) */
         static void MeteorStep(PState ps, float dt)
         {
             if (ps.nClean < 3) return; ps.sv.met += dt; float iv = MeteorEvery(ps); int guard = 0;
@@ -155,8 +155,24 @@ namespace LunarCleanup.Core
             if (fr.NextDouble() < .45) return ps.P.start; float tot = 0; foreach (var t in ps.P.types) if (t.Key != ps.P.start) tot += t.Value;
             float r = (float)fr.NextDouble() * tot; foreach (var t in ps.P.types) { if (t.Key == ps.P.start) continue; r -= t.Value; if (r <= 0) return t.Key; } return ps.P.start;
         }
+        /// <summary>Fabian 08.11.: Der Meteorschild (Basis → Schutz) wehrt auch normale Schauer ab – nicht alle, und nur mit Energie.</summary>
+        public static float ShowerBlockChance(PState ps)
+        {
+            var sv = ps.sv; if (sv.msLv <= 0 || sv.energy < ShowerBlockCost(ps)) return 0;
+            float c = ShieldMax(ps) * .9f; if (ps.ef < 1) c *= .6f + .4f * Mathf.Max(0, ps.ef); if (sv.msCool > 0) c *= .5f; return Mathf.Clamp(c, 0, .75f);
+        }
+        public static float ShowerBlockCost(PState ps) => Mathf.Max(8, EnergyCap(ps) * .05f);
+        static float msTipT = -999;
         public static void Meteor(PState ps)
         {
+            float bc = ShowerBlockChance(ps);
+            if (bc > 0 && fr.NextDouble() < bc)
+            {
+                ps.sv.energy -= ShowerBlockCost(ps);
+                if (!Offline && ps.pid == S.planet) { Toast("Der Meteorschild hat einen Meteoritenschauer abgewehrt (−" + Mathf.RoundToInt(ShowerBlockCost(ps)) + " Energie)", "good"); OnDoomBlocked?.Invoke(ps.pid); }
+                return;
+            }
+            if (!Offline && ps.pid == S.planet && ps.sv.msLv <= 0 && !Hard && Time.realtimeSinceStartup - msTipT > 1800) { msTipT = Time.realtimeSinceStartup; Toast("Tipp: Ein Meteorschild (Basis → Schutz) wehrt viele Schauer ab – er braucht Energie", ""); }
             var pd = ps.pd; bool Ok(int i) => ps.clean[i] && !pd.cells[i].IsBase && !pd.cells[i].Wet && !(ps.act.TryGetValue(i, out var a) && a.sum > pd.cells[i].nIn * .5f);
             var c = new List<int>(); for (int i = 0; i < pd.N; i++) if (Ok(i)) c.Add(i); if (c.Count == 0) return;
             int id = c[fr.Next(c.Count)]; bool done = IsDone(ps.pid);
