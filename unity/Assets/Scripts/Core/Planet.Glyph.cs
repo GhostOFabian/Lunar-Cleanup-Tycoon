@@ -45,7 +45,7 @@ namespace LunarCleanup.Core
             }
             line *= Mathf.Clamp01((1.02f - r) / .05f);
             k = line * .95f; c = Color.Lerp(f.col2, f.col, .5f + .5f * n1); c = Color.Lerp(c, Hx("#ffe9a0"), bright * .7f);
-            g = (Color.Lerp(f.glow, Hx("#ffcc55"), bright) * (line * (1.2f + bright * 1.2f)));
+            g = (Color.Lerp(f.glow, Hx("#ffcc55"), bright) * (line * (.75f + bright * .8f)) * (r < .07f ? .6f : 1f));
         }
     }
 }

@@ -32,7 +32,7 @@ namespace LunarCleanup.Core
         };
         public static int StarCount(PState ps) { int s = ps.sv.stars; return (s & 1) + ((s >> 1) & 1) + ((s >> 2) & 1); }
         public static string StarText(PState ps) { string r = ""; for (int i = 0; i < 3; i++) r += (ps.sv.stars & (1 << i)) != 0 ? "★" : "☆"; return r; }
-        public static readonly string[] StarNames = { "Planet komplett sauber", "Geheimnis freigelegt", "Sauber in unter 45 min Spielzeit" };
+        public static readonly string[] StarNames = { "Planet komplett sauber", "Geheimnis freigelegt", "Geheimnis in unter 45 min freigelegt" };
         public static event Action<PState> OnStory; public static bool StoryNew; static float gooToastT = -999;
 
         /// <summary>Je Schritt (live und offline gleich): Schleim säen und ausbreiten, Logbuch und Sterne prüfen.</summary>
@@ -42,6 +42,7 @@ namespace LunarCleanup.Core
             var glyph = ps.pd.GlyphCells; if (glyph.Count == 0) return;
             sv.goo.RemoveAll(c => c < 0 || c >= ps.pd.N || (ps.clean[c] && !ps.act.ContainsKey(c)));
             float prog = SecretProgress(ps);
+            if (prog < 1 && ps.pid == S.planet) sv.secretT += dt; /* Uhr für den dritten Stern: läuft, solange du auf dem Mond bist und die Karte noch nicht frei ist */
             // säen: solange die Karte noch nicht frei ist, liegt immer etwas Schleim auf ihr
             if (prog < 1)
             {
@@ -75,10 +76,10 @@ namespace LunarCleanup.Core
                 if (!Offline) { Toast("Logbuch: " + MoonLog[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
             }
             // Sterne
-            bool done = IsDone(ps.pid);
+            bool done = ps.nClean >= NonBase(ps) && ps.act.Count == 0; /* jetzt wirklich sauber – nicht „früher einmal geschafft“ (Neustart) */
             if (done) GiveStar(ps, 0);
             if (prog >= 1) GiveStar(ps, 1);
-            if (done && sv.tPlay <= STAR_TIME) GiveStar(ps, 2);
+            if (prog >= 1 && sv.secretT <= STAR_TIME) GiveStar(ps, 2);
         }
         static void GiveStar(PState ps, int i)
         {
@@ -98,6 +99,21 @@ namespace LunarCleanup.Core
             if (ps.sv.goo == null || !ps.sv.goo.Remove(id)) return;
             S.lk += GOO_CR; if (!Offline) FloatTxt(ps.pd.cells[id].c, "+" + GOO_CR + " Kristalle", "good");
         }
+        /// <summary>Test: n Parzellen der Sternkarte mit Schleim bedecken (auch saubere).</summary>
+        public static int DevGoo(int n)
+        {
+            var ps = Cur; if (!SecretOn(ps)) return 0; if (ps.sv.goo == null) ps.sv.goo = new List<int>(); int k = 0;
+            foreach (int c in ps.pd.GlyphCells.OrderBy(_ => fr.Next())) { if (k >= n) break; if (IsGoo(ps, c)) continue; if (ps.clean[c]) GooCover(ps, c); ps.sv.goo.Add(c); ps.dirtyCells.Add(c); k++; }
+            ps.sv.secretBeat = 0; return k;
+        }
+        public static int GlyphCount() => Cur.pd.GlyphCells.Count;
+        /// <summary>Test: allen Schleim wegputzen wie von Hand (über FinishCell).</summary>
+        public static int DevClearGoo() { var ps = Cur; int n = 0; foreach (int c in ps.sv.goo.ToList()) { ps.act.Remove(c); FinishCell(ps, c); n++; } return n; }
+        /// <summary>Test: Anteil der Sternkarte sofort sauber machen.</summary>
+        public static int DevRevealGlyph(float frac) { var ps = Cur; int k = 0, n = Mathf.RoundToInt(ps.pd.GlyphCells.Count * frac); foreach (int c in ps.pd.GlyphCells) { if (k >= n) break; if (IsGoo(ps, c)) continue; if (!ps.clean[c] || ps.act.ContainsKey(c)) { ps.act.Remove(c); FinishCell(ps, c); } k++; } return k; }
+        public static void DevSecretReset() { var ps = Cur; ps.sv.stars = 0; ps.sv.secretBeat = 0; ps.sv.secretT = 0; ps.sv.goo?.Clear(); }
+        static readonly Dictionary<PlanetData, int> nbCount = new Dictionary<PlanetData, int>();
+        static int NonBase(PState ps) { if (!nbCount.TryGetValue(ps.pd, out int n)) nbCount[ps.pd] = n = ps.pd.cells.Count(x => !x.IsBase); return n; }
         /// <summary>Mitte der Sternkarte (für „Hinsehen“).</summary>
         public static Vector3 GlyphCenter(PState ps) { var f = ps.pd.feats.FirstOrDefault(x => x.kind == 6); return f != null ? f.d : ps.pd.cells[ps.pd.baseCell].c.normalized; }
     }

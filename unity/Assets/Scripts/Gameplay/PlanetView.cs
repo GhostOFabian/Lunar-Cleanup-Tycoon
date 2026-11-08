@@ -302,6 +302,7 @@ namespace LunarCleanup.Gameplay
                         if (!cl.Wet) { float rh = Relief(crs, x, y, ed, edgeW); col *= 1 + Mathf.Clamp(rh * 1.8f, -.16f, .1f); } // Kraterböden dunkler, Ränder heller
                         float ea = EdgeA(ed, edgeW); float fa0 = 0;
                         if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { float hide = glyph ? Mathf.Pow(1 - g, 3) : 1 - g * .55f; /* 08.11.: Sternkarte nur sauber sichtbar */ col = Color.Lerp(col, fc, fa * hide); fGlow = fg * (glyph ? hide : 1 - g * .7f); fa0 = glyph ? 0 : fa; } else fGlow = Color.black;
+                        if (goo) fGlow += new Color(.42f, .12f, .62f) * (Mathf.Clamp01((nz2 - .58f) * 2.6f) * g); /* Schleim schimmert lila */
                         ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
                         /* Fabian 03.11.: umgedreht – saubere Parzellen ohne Rand (man sieht, wie schön der Planet ist), nur was noch dreckig ist, leuchtet umrandet */
                         bool lined = !(clean && act == null);

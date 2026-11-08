@@ -118,7 +118,7 @@ namespace LunarCleanup.UI
             h.Note("Unter dem Mondstaub liegt etwas, das jemand absichtlich versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
             h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
             h.Section("Sterne · " + Game.StarCount(ps) + "/3");
-            for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Spielzeit auf dem Mond: " + Mathf.FloorToInt(ps.sv.tPlay / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
+            for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Bisher " + Mathf.FloorToInt(ps.sv.secretT / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
             h.Section("Logbuch");
             for (int i = 0; i < Game.MoonLog.Length; i++)
             {
