@@ -425,7 +425,7 @@ namespace LunarCleanup.Core
         static void FinishCell(PState ps, int id)
         {
             var cl = ps.pd.cells[id];
-            bool redo = ps.clean[id] && ps.paid[id] && ps.act.ContainsKey(id) && !IsPile(ps, id); /* 05.11.: neu verdreckt (Meteor, Welle) – gibt beim Reinigen wieder alles */
+            bool redo = ps.clean[id] && ps.paid[id] && ps.act.ContainsKey(id) && !IsPile(ps, id); GooCleared(ps, id); /* 05.11.: neu verdreckt (Meteor, Welle) – gibt beim Reinigen wieder alles */
             if (!ps.clean[id]) { ps.nClean++; if (!Offline && ps.pid == S.planet) OnCellFlash?.Invoke(id); }
             PileDone(ps, id); /* Müllberg-Belohnung auch auf schon bezahlten Parzellen */
             ps.clean[id] = true; ps.act.Remove(id); ps.dirtyCells.Add(id);
@@ -810,12 +810,13 @@ namespace LunarCleanup.Core
                 bool pile = IsPile(ps, kv.Key); if (crowd >= (pile ? 8 : a.K.tier > 0 ? 4 : 3)) continue;
                 float left = a.sum / a.cl.nIn, team = crowd > 0 && left > .35f ? -6 * Math.Min(crowd, 2) - (a.K.hard > 1.3f ? 6 : 0) : crowd * 14;
                 if (kv.Key == v.skipCell && v.skipT > 0) continue;
+                if (IsGoo(ps, kv.Key)) continue; /* 08.11.: Schleim nur von Hand */
                 float sc = pd.Arc(v.d, a.cl.c) + team - (v.last == kv.Key ? 8 : 0) + Spread(ps, v, kv.Key) - (pile ? 400 : 0); /* Müllberg: alle hin */ if (sc < bs) { bs = sc; best = kv.Key; }
             }
             foreach (int id in ps.front)
             {
                 if (ps.act.ContainsKey(id)) continue; var cl = pd.cells[id]; if (GameData.Kinds[cl.kind].tier > T.tier || (cl.Wet && !T.fly) || !ZoneOk(v, cl)) continue;
-                if (id == v.skipCell && v.skipT > 0) continue;
+                if (id == v.skipCell && v.skipT > 0) continue; if (IsGoo(ps, id)) continue;
                 float sc = pd.Arc(v.d, cl.c) + 6 - (GameData.Kinds[cl.kind].key == "rich" ? 6 : 0) + Spread(ps, v, id); if (sc < bs) { bs = sc; best = id; }
             }
             return best;
@@ -922,7 +923,7 @@ namespace LunarCleanup.Core
                 case "drive":
                 case "clean":
                     {
-                        if (!ps.act.TryGetValue(v.cell, out var a) || a.sum < a.cl.nIn * GameData.DONE) { v.mode = "seek"; v.cell = -1; break; }
+                        if (!ps.act.TryGetValue(v.cell, out var a) || a.sum < a.cl.nIn * GameData.DONE || IsGoo(ps, v.cell)) { v.mode = "seek"; v.cell = -1; break; }
                         if (tank >= cap || BattLow(ps, v)) { v.mode = "toUnload"; break; }
                         v.busy = true; BattUse(ps, v, dt);
                         if (v.ti < 0 || a.grid[v.ti] < .05f) { v.ti = PickGridTarget(ps, a, v); if (v.ti < 0) { v.mode = "seek"; break; } }
@@ -1767,7 +1768,8 @@ namespace LunarCleanup.Core
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
-            if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); WaveStep(ps, dt); } /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
+            if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); WaveStep(ps, dt); }
+            SecretStep(ps, dt); /* 08.11.: Mond-Geheimnis, beide Modi */ /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
             ps.sv.careT += dt; if (ps.sv.boostT > 0) ps.sv.boostT -= dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps) * (ps.sv.boostT > 0 ? 1.5f : 1f); /* 04.11.: Kristall-Schub */ /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }

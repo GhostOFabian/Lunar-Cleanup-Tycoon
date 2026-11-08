@@ -1,0 +1,104 @@
+// Fabian 08.11.: „Das Spiel ist nicht innovativ, es hält mich nicht.“ – Experiment auf dem Mond (beide Modi):
+// 1. Unter dem Dreck liegt ein Geheimnis: eine leuchtende Sternkarte im Boden, die nur sauber zu sehen ist. Beim Freilegen
+//    schaltet das Logbuch Stück für Stück eine Geschichte frei.
+// 2. Dreck, der sich wehrt: schwarzer Schleim liegt auf der Karte, breitet sich aus und lässt sich nur von Hand wegwischen –
+//    Fahrzeuge meiden ihn. Dafür gibt er Kristalle.
+// 3. Ein klares Ende: 3 Sterne (sauber · Geheimnis · unter 45 min Spielzeit auf dem Planeten).
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+namespace LunarCleanup.Core
+{
+    public static partial class Game
+    {
+        public const float GOO_T = 45f, GOO_SEED_T = 150f, STAR_TIME = 2700f; public const int GOO_MAX = 14, GOO_CR = 2;
+        public static bool SecretOn(PState ps) => ps != null && ps.pid == "moon";
+        public static bool IsGoo(PState ps, int c) => ps.sv.goo != null && ps.sv.goo.Contains(c);
+        /// <summary>Anteil der Sternkarte, der sauber und schleimfrei ist (0..1).</summary>
+        public static float SecretProgress(PState ps)
+        {
+            if (!SecretOn(ps)) return 0; var g = ps.pd.GlyphCells; if (g.Count == 0) return 0; int n = 0;
+            foreach (int c in g) if (ps.clean[c] && !IsGoo(ps, c) && !ps.act.ContainsKey(c)) n++;
+            return n / (float)g.Count;
+        }
+        public static readonly (float at, string title, string text)[] MoonLog =
+        {
+            (.25f, "Linien im Staub", "Unter dem Mondstaub leuchten Linien. Zu gerade für Zufall – jemand hat sie in den Boden gezogen. Und auf genau diesen Linien liegt dieser schwarze Schleim."),
+            (.5f, "Ein Kreis mit sechs Strahlen", "Es ist ein großer Kreis mit sechs Strahlen, an jedem Ende ein Punkt. Die Punkte stehen genau so, wie du von hier aus die Planeten siehst."),
+            (.75f, "Der Dreck war Absicht", "Im Schleim steckt dieselbe Leuchtfarbe wie in den Linien. Der Dreck kam nicht zufällig – er sollte das hier verdecken. Die Frage ist nur: vor wem?"),
+            (1f, "Die Sternkarte", "Die Karte ist frei. Ein Strahl leuchtet heller als die anderen – er zeigt zum Mars. Wer immer das gebaut hat, war vor dir dort. Und hat dort vielleicht noch mehr hinterlassen."),
+        };
+        public static int StarCount(PState ps) { int s = ps.sv.stars; return (s & 1) + ((s >> 1) & 1) + ((s >> 2) & 1); }
+        public static string StarText(PState ps) { string r = ""; for (int i = 0; i < 3; i++) r += (ps.sv.stars & (1 << i)) != 0 ? "★" : "☆"; return r; }
+        public static readonly string[] StarNames = { "Planet komplett sauber", "Geheimnis freigelegt", "Sauber in unter 45 min Spielzeit" };
+        public static event Action<PState> OnStory; public static bool StoryNew; static float gooToastT = -999;
+
+        /// <summary>Je Schritt (live und offline gleich): Schleim säen und ausbreiten, Logbuch und Sterne prüfen.</summary>
+        static void SecretStep(PState ps, float dt)
+        {
+            if (!SecretOn(ps)) return; var sv = ps.sv; if (sv.goo == null) sv.goo = new List<int>();
+            var glyph = ps.pd.GlyphCells; if (glyph.Count == 0) return;
+            sv.goo.RemoveAll(c => c < 0 || c >= ps.pd.N || (ps.clean[c] && !ps.act.ContainsKey(c)));
+            float prog = SecretProgress(ps);
+            // säen: solange die Karte noch nicht frei ist, liegt immer etwas Schleim auf ihr
+            if (prog < 1)
+            {
+                sv.gooSeedT += dt;
+                if (sv.goo.Count < 3 && (sv.gooSeedT >= GOO_SEED_T || sv.goo.Count == 0))
+                {
+                    sv.gooSeedT = 0; var cand = glyph.Where(c => !ps.clean[c] && !IsGoo(ps, c) && !ps.pd.cells[c].IsBase).ToList();
+                    if (cand.Count > 0 && !Offline && PlayerPrefs.GetInt("LunarCleanup.GooTip", 0) == 0 && ps.pid == S.planet) { PlayerPrefs.SetInt("LunarCleanup.GooTip", 1); Toast("Schwarzer Schleim auf dem Mond! Er breitet sich aus, Fahrzeuge meiden ihn – wisch ihn selbst weg, er gibt Kristalle. Darunter liegt etwas …", "bad"); }
+                    if (cand.Count > 0) { int n = sv.goo.Count == 0 ? Mathf.Min(3, cand.Count) : 1; for (int i = 0; i < n; i++) { int c = cand[fr.Next(cand.Count)]; if (!sv.goo.Contains(c)) { sv.goo.Add(c); ps.dirtyCells.Add(c); } } }
+                }
+            }
+            // ausbreiten
+            sv.gooT += dt;
+            if (sv.gooT >= GOO_T)
+            {
+                sv.gooT = 0; int grown = 0;
+                foreach (int c in sv.goo.ToList())
+                {
+                    if (sv.goo.Count >= GOO_MAX || fr.NextDouble() > .5) continue;
+                    var nb = ps.pd.cells[c].nb.Where(b => !ps.pd.cells[b].IsBase && !ps.pd.cells[b].Wet && !IsGoo(ps, b)).OrderByDescending(b => glyph.Contains(b) ? 1 : 0).ThenBy(_ => fr.Next()).DefaultIfEmpty(-1).First();
+                    if (nb < 0) continue;
+                    if (ps.clean[nb]) GooCover(ps, nb);
+                    sv.goo.Add(nb); ps.dirtyCells.Add(nb); grown++;
+                }
+                if (grown > 0 && !Offline && ps.pid == S.planet && Time.realtimeSinceStartup - gooToastT > 240) { gooToastT = Time.realtimeSinceStartup; Toast("Der schwarze Schleim breitet sich aus – nur du kannst ihn wegwischen", "bad"); }
+            }
+            // Logbuch
+            while (sv.secretBeat < MoonLog.Length && prog >= MoonLog[sv.secretBeat].at - 1e-4f)
+            {
+                sv.secretBeat++; StoryNew = true;
+                if (!Offline) { Toast("Logbuch: " + MoonLog[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
+            }
+            // Sterne
+            bool done = IsDone(ps.pid);
+            if (done) GiveStar(ps, 0);
+            if (prog >= 1) GiveStar(ps, 1);
+            if (done && sv.tPlay <= STAR_TIME) GiveStar(ps, 2);
+        }
+        static void GiveStar(PState ps, int i)
+        {
+            if ((ps.sv.stars & (1 << i)) != 0) return; ps.sv.stars |= 1 << i; S.lk += 5;
+            if (!Offline) Toast("Stern " + StarCount(ps) + "/3 auf " + ps.P.name + ": " + StarNames[i] + " · +5 Kristalle", "good");
+        }
+        /// <summary>Saubere Parzelle wird vom Schleim überzogen (wie Meteorstaub: wieder putzbar, gibt beim Putzen wieder alles).</summary>
+        static void GooCover(PState ps, int cid)
+        {
+            var cl = ps.pd.cells[cid]; var D = GameData.Dirt[cl.type]; int G = GameData.GRID;
+            if (!ps.act.TryGetValue(cid, out var a)) { a = new Act { cl = cl, grid = new float[G * G], sum = 0, amt = D.amt * GameData.Kinds[cl.kind].amt, D = D, K = GameData.Kinds[cl.kind] }; ps.act[cid] = a; }
+            float s = 0; for (int i = 0; i < G * G; i++) if (cl.inside[i]) { a.grid[i] = 1; s += 1; } a.sum = s;
+        }
+        /// <summary>Aus FinishCell: Schleim weggewischt.</summary>
+        static void GooCleared(PState ps, int id)
+        {
+            if (ps.sv.goo == null || !ps.sv.goo.Remove(id)) return;
+            S.lk += GOO_CR; if (!Offline) FloatTxt(ps.pd.cells[id].c, "+" + GOO_CR + " Kristalle", "good");
+        }
+        /// <summary>Mitte der Sternkarte (für „Hinsehen“).</summary>
+        public static Vector3 GlyphCenter(PState ps) { var f = ps.pd.feats.FirstOrDefault(x => x.kind == 6); return f != null ? f.d : ps.pd.cells[ps.pd.baseCell].c.normalized; }
+    }
+}

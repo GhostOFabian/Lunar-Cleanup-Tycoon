@@ -34,6 +34,7 @@ namespace LunarCleanup.UI
                 case "perks": title = Game.Hard ? "Inventar" : "Perks"; PerkShop(h); break;
                 case "hard": title = "Hard Mode"; HardSheet(h); break;
                 case "crystals": title = "Kristalle"; CrystalSheet(h); break;
+                case "secret": title = "Geheimnis des Mondes"; SecretSheet(h); break;
                 case "class": title = Game.NeedClass ? "Wähle deine Klasse" : "Klasse"; ClassSheet(h); break;
                 case "pylon": { int pc = int.TryParse(arg, out var q2) ? q2 : -1; bool has = ps.sv.pylons != null && ps.sv.pylons.Contains(pc); title = has ? "Ladesäule" : "Saubere Parzelle"; PylonSheet(h, pc, has); break; }
                 case "building": title = GameData.Bld[arg].id == "presse" || GameData.Bld[arg].id == "schmelze" || GameData.Bld[arg].id == "raff" ? GameData.MachName(ps.pid, arg) : GameData.Bld[arg].name; Building(h, arg); break;
@@ -108,6 +109,22 @@ namespace LunarCleanup.UI
                 var pp = P;
                 h.Row(P.name, () => pp.desc + " · " + Rarity(pp.id) + " · dabei: " + Game.PerkN(pp.id) + "/" + Game.PerkCap(pp.id) + (pp.kind == 1 && Game.BuffLeft(pp.id) > 0 ? " · läuft noch " + Mathf.CeilToInt(Game.BuffLeft(pp.id)) + " s" : ""),
                     () => Game.PerkN(pp.id) > 0 ? "Einsetzen" : "–", () => Game.PerkN(pp.id) > 0, () => { if (pp.kind == 0) { Hud.PerkReq = pp.id; h.CloseSheet(); } else Game.UseBuff(pp.id); }, false, null, true, () => pp.id == "nuke" ? "Kaufen oben unter Spezial" : "Noch nicht gefunden – wisch weiter selbst, " + Rarity(pp.id) + "er Fund");
+            }
+        }
+        /// <summary>Fabian 08.11.: Mond-Geheimnis – Logbuch, Sterne, Schleim.</summary>
+        static void SecretSheet(Hud h)
+        {
+            var ps = Game.Cur; if (!Game.SecretOn(ps)) { h.Note("Das Geheimnis liegt auf dem Mond."); return; }
+            h.Note("Unter dem Mondstaub liegt etwas, das jemand absichtlich versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
+            h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
+            h.Section("Sterne · " + Game.StarCount(ps) + "/3");
+            for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Spielzeit auf dem Mond: " + Mathf.FloorToInt(ps.sv.tPlay / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
+            h.Section("Logbuch");
+            for (int i = 0; i < Game.MoonLog.Length; i++)
+            {
+                var L = Game.MoonLog[i];
+                if (i < ps.sv.secretBeat) h.Row(L.title, () => L.text);
+                else { h.Row("Noch verborgen", () => "Ab " + Mathf.RoundToInt(L.at * 100) + " % freigelegter Sternkarte"); break; }
             }
         }
         /// <summary>Fabian 05.11.: Klassen im Hard Mode – Pflichtwahl, Wechsel kostet Geld.</summary>
@@ -654,6 +671,7 @@ namespace LunarCleanup.UI
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { OrdersSheet(h); return; }
             if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
+            if (Game.SecretOn(Game.Cur)) { h.Section("Geheimnis des Mondes"); var sp = Game.Cur; h.Row("Sternkarte", () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.MoonLog.Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);

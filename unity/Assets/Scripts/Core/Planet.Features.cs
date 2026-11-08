@@ -39,6 +39,7 @@ namespace LunarCleanup.Core
         /// <summary>Alle Geländeformen des Planeten anlegen (einmal, beim ersten Height-Aufruf).</summary>
         void PlaceFeatures()
         {
+            try { PlaceGlyph(); } catch (Exception) { } /* 08.11.: Mond-Sternkarte */
             int wc = -1; try { wc = WonderCell(); } catch (Exception) { }
             if (wc >= 0)
             {
@@ -155,6 +156,7 @@ namespace LunarCleanup.Core
                             float line = 0; for (int s = 0; s < 4; s++) { float off = (s - 1.5f) * 2.4f, yy = ly - off - Mathf.Sin(lx * .35f + s) * .6f; line = Mathf.Max(line, Mathf.Clamp01(1 - Mathf.Abs(yy) / .35f)); }
                             line *= Mathf.Clamp01((1 - x) / .3f); k = line * .9f; c = Color.Lerp(f.col2, Hx("#1a3a5a"), .5f); g = f.glow * line * 1.6f; break;
                         }
+                    case 6: GlyphPaint(f, lx, ly, n1, out c, out k, out g); break;
                     default: continue;
                 }
                 if (k <= 0) continue; any = true; col = Color.Lerp(col, c, a <= 0 ? 1 : k); a = Mathf.Max(a, k); glow += g;

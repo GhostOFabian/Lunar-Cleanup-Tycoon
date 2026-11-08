@@ -246,6 +246,7 @@ namespace LunarCleanup.Gameplay
         }
 
 
+        static readonly Color GooDark = new Color(.05f, .02f, .07f), GooMid = new Color(.16f, .05f, .22f), GooShine = new Color(.62f, .25f, .85f);
         public void PaintCell(int id)
         {
             var cl = pd.cells[id]; var ch = chunks[cl.chunk]; if (ch == null) return; if (LunarCleanup.Core.Game.InStroke(id)) ch.hot = true; /* Fabian 04.11.: unter dem Finger sofort sichtbar */
@@ -253,6 +254,7 @@ namespace LunarCleanup.Gameplay
             bool clean = ps.clean[id], isBase = cl.IsBase, front = ps.front.Contains(id);
             ps.act.TryGetValue(id, out var act);
             var D = GameData.Dirt[cl.type]; var K = GameData.Kinds[cl.kind];
+            bool glyph = pd.GlyphAt(id), goo = LunarCleanup.Core.Game.IsGoo(ps, id); /* 08.11.: Mond-Geheimnis */
             Color c0 = th.clean.Length > 0 ? th.clean[0] : Color.gray, c1 = th.clean.Length > 1 ? th.clean[1] : c0, c2 = th.clean.Length > 2 ? th.clean[2] : c0;
             Color b0 = th.baseC.Length > 0 ? th.baseC[0] : Color.gray, b1 = th.baseC.Length > 1 ? th.baseC[1] : b0;
             Color kindTint = K.key == "rich" ? new Color(1.08f, 1.02f, .85f) : K.key == "industrial" ? new Color(.82f, .82f, .86f) : K.key == "anomaly" ? new Color(.95f, .85f, 1.12f) : Color.white;
@@ -286,7 +288,8 @@ namespace LunarCleanup.Gameplay
                         float nz = Noise(x * .9f + id, y * .9f, 11), nz2 = Noise(x * 2.7f, y * 2.7f + id, 5);
                         Color cleanC = style != null ? CleanCol(style, cl.c * pd.R + cl.e1 * x + cl.e2 * y, nz, nz2) : Color.Lerp(Color.Lerp(c1, c0, .5f + .5f * nz), c2, Mathf.Clamp01(nz2 - .55f) * 1.5f);
                         Color dirtC = Color.Lerp(D.darkC, D.baseC, .5f + .5f * nz); if (nz2 > .45f) dirtC = Color.Lerp(dirtC, D.lightC, (nz2 - .45f) * 1.6f);
-                        dirtC *= kindTint; dirtC *= .93f + .14f * Noise(x * 2.1f, y * 2.1f, 3); /* weiche Körnung statt Pixelrauschen */
+                        dirtC *= kindTint; dirtC *= .93f + .14f * Noise(x * 2.1f, y * 2.1f, 3);
+                        if (goo) { float sh = Noise(x * 1.3f + id, y * 1.3f, 21); dirtC = Color.Lerp(GooDark, GooMid, sh); if (nz2 > .7f) dirtC = Color.Lerp(dirtC, GooShine, (nz2 - .7f) * 3f); } /* schwarzer, glänzender Schleim */ /* weiche Körnung statt Pixelrauschen */
                         if (cl.Wet)
                         {
                             // See: Wellenmuster in der Farbe der Flüssigkeit, hellerer Uferstreifen, Schmutz schwimmt als Film darauf
@@ -298,7 +301,7 @@ namespace LunarCleanup.Gameplay
                         col = Color.Lerp(cleanC, dirtC, g);
                         if (!cl.Wet) { float rh = Relief(crs, x, y, ed, edgeW); col *= 1 + Mathf.Clamp(rh * 1.8f, -.16f, .1f); } // Kraterböden dunkler, Ränder heller
                         float ea = EdgeA(ed, edgeW); float fa0 = 0;
-                        if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { col = Color.Lerp(col, fc, fa * (1 - g * .55f)); fGlow = fg * (1 - g * .7f); fa0 = fa; } else fGlow = Color.black;
+                        if (hasF && pd.FeaturePaint(id, pd.ToDir(cl, x, y), out var fc, out var fa, out var fg)) { float hide = glyph ? Mathf.Pow(1 - g, 3) : 1 - g * .55f; /* 08.11.: Sternkarte nur sauber sichtbar */ col = Color.Lerp(col, fc, fa * hide); fGlow = fg * (glyph ? hide : 1 - g * .7f); fa0 = glyph ? 0 : fa; } else fGlow = Color.black;
                         ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
                         /* Fabian 03.11.: umgedreht – saubere Parzellen ohne Rand (man sieht, wie schön der Planet ist), nur was noch dreckig ist, leuchtet umrandet */
                         bool lined = !(clean && act == null);
