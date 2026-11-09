@@ -118,6 +118,17 @@ namespace LunarCleanup.Core
                     line = Mathf.Max(Ring(r, .8f, w * .6f), Ring(r, .28f, w)); if (r < .06f) line = 1;
                     for (int s = 0; s < n; s++) { float a = s * 2 * Mathf.PI / n + A0; float m = Dot(hx, hy, Mathf.Cos(a) * .8f, Mathf.Sin(a) * .8f, .085f); line = Mathf.Max(line, m); if (s == 0) bright = Mathf.Max(bright, m); }
                     break;
+                case 8: // Doppelsichel: zwei Sicheln, Rücken an Rücken zur Mitte, goldener Punkt dazwischen
+                    for (int s = 0; s < 2; s++)
+                    {
+                        float sg = s == 0 ? -1 : 1, ax = sg * .44f, bx = ax + sg * .17f; /* Kreise überlappen die Mitte nicht */
+                        float ro = Mathf.Sqrt((hx - ax) * (hx - ax) + hy * hy), ri = Mathf.Sqrt((hx - bx) * (hx - bx) + hy * hy);
+                        bool inA = ro < .4f, outB = ri > .33f;
+                        if (outB) line = Mathf.Max(line, Ring(ro, .4f, w)); /* äußerer Bogen */
+                        if (inA) line = Mathf.Max(line, Ring(ri, .33f, w * .8f)); /* innerer Bogen */
+                    }
+                    line = Mathf.Max(line, Ring(r, .93f, w * .7f)); { float dm = Dot(hx, hy, 0, 0, .07f); line = Mathf.Max(line, dm); bright = dm; }
+                    break;
                 default: // 7 Puls: Ringe und zwei Strahlen quer
                     for (int s = 1; s <= n; s++) line = Mathf.Max(line, Ring(r, s * .93f / n, w * (s == n ? 1 : .8f))); if (r < .07f) line = 1;
                     { float m = Mathf.Max(Seg(hx, hy, -.93f * ux0, -.93f * uy0, .93f * ux0, .93f * uy0, w * .9f), Seg(hx, hy, -.93f * uy0, .93f * ux0, .93f * uy0, -.93f * ux0, w * .6f)); line = Mathf.Max(line, m); bright = Mathf.Max(bright, m * Mathf.Clamp01((hx * ux0 + hy * uy0) * 3)); }

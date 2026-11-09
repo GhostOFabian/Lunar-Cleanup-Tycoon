@@ -21,9 +21,8 @@ namespace LunarCleanup.Core
         /// <summary>Anteil der Sternkarte, der sauber und schleimfrei ist (0..1).</summary>
         public static float SecretProgress(PState ps)
         {
-            if (!SecretOn(ps)) return 0; var g = ps.pd.GlyphCells; if (g.Count == 0) return 0; int n = 0;
-            foreach (int c in g) if (ps.clean[c] && !IsGoo(ps, c) && !ps.act.ContainsKey(c)) n++;
-            return n / (float)g.Count;
+            if (!SecretOn(ps)) return 0; var g = ps.pd.GlyphCells; if (g.Count == 0) return 0;
+            return PiecesFound(ps) / (float)g.Count;
         }
         public static (string title, string text)[] SecretLog(PState ps) => Logs.TryGetValue(ps.pid, out var l) ? l : new (string, string)[0];
         public static string GlyphName(PState ps) => Glyphs.TryGetValue(ps.pid, out var g) ? g.name : "Zeichen";
@@ -38,7 +37,7 @@ namespace LunarCleanup.Core
             if (!SecretOn(ps)) return; var sv = ps.sv; if (sv.goo == null) sv.goo = new List<int>();
             var glyph = ps.pd.GlyphCells; if (glyph.Count == 0) return;
             sv.goo.RemoveAll(c => c < 0 || c >= ps.pd.N || (ps.clean[c] && !ps.act.ContainsKey(c)));
-            float prog = SecretProgress(ps);
+            PieceCheck(ps); float prog = SecretProgress(ps);
             if (prog < 1 && ps.pid == S.planet) sv.secretT += dt; /* Uhr für den dritten Stern: läuft, solange du auf dem Mond bist und die Karte noch nicht frei ist */
             // säen: solange die Karte noch nicht frei ist, liegt immer etwas Schleim auf ihr
             if (prog < 1)
@@ -46,7 +45,7 @@ namespace LunarCleanup.Core
                 sv.gooSeedT += dt;
                 if (sv.goo.Count < 3 && (sv.gooSeedT >= GOO_SEED_T || sv.goo.Count == 0))
                 {
-                    sv.gooSeedT = 0; var cand = glyph.Where(c => !ps.clean[c] && !IsGoo(ps, c) && !ps.pd.cells[c].IsBase).ToList();
+                    sv.gooSeedT = 0; var cand = glyph.Where(c => !ps.clean[c] && !IsGoo(ps, c) && !ps.pd.cells[c].IsBase && (ps.sv.pieceMask & (1 << ps.pd.PieceOf(c))) == 0).ToList();
                     if (cand.Count > 0 && !Offline && PlayerPrefs.GetInt("LunarCleanup.GooTip", 0) == 0 && ps.pid == S.planet) { PlayerPrefs.SetInt("LunarCleanup.GooTip", 1); Toast("Schwarzer Schleim! Er breitet sich aus und Fahrzeuge meiden ihn – wisch ihn selbst weg, er gibt Kristalle", "bad"); }
                     if (cand.Count > 0) { int n = sv.goo.Count == 0 ? Mathf.Min(3, cand.Count) : 1; for (int i = 0; i < n; i++) { int c = cand[fr.Next(cand.Count)]; if (!sv.goo.Contains(c)) { sv.goo.Add(c); ps.dirtyCells.Add(c); } } }
                 }
@@ -99,7 +98,18 @@ namespace LunarCleanup.Core
             if (!Offline) Toast("Stern " + StarCount(ps) + "/3 auf " + ps.P.name + ": " + StarNames[i] + " · +5 Kristalle", "good"); StoryAchCheck();
         }
         public static event Action<PState, List<int>> OnPuzzle;
-        public static int PiecesFound(PState ps) { int n = 0; foreach (int c in ps.pd.GlyphCells) if (ps.clean[c] && !IsGoo(ps, c) && !ps.act.ContainsKey(c)) n++; return n; }
+        public static int PiecesFound(PState ps) { int n = 0, m = ps.sv.pieceMask; for (int k = 0; k < ps.pd.GlyphCells.Count; k++) if ((m & (1 << k)) != 0) n++; return n; }
+        /// <summary>Teile, die gerade sauber und schleimfrei liegen, gelten ab jetzt als gefunden – Schleim oder Meteore nehmen sie nicht wieder weg.</summary>
+        static void PieceCheck(PState ps)
+        {
+            var g = ps.pd.GlyphCells;
+            for (int k = 0; k < g.Count && k < 31; k++)
+            {
+                if ((ps.sv.pieceMask & (1 << k)) != 0) continue; int c = g[k]; if (!ps.clean[c] || IsGoo(ps, c) || ps.act.ContainsKey(c)) continue;
+                ps.sv.pieceMask |= 1 << k; ps.dirtyCells.Add(c);
+                if (!Offline && ps.pid == S.planet && PiecesFound(ps) < g.Count) { Toast("Puzzleteil gefunden · " + PiecesFound(ps) + " von " + g.Count, "good"); OnDrop?.Invoke(ps.pd.cells[c].c, 1); }
+            }
+        }
         /// <summary>Fabian 09.11.: Alle Teile frei – sie fliegen zusammen, das Zeichen erscheint riesig auf der Rückseite, der nächste Planet ist entschlüsselt.</summary>
         static void PuzzleDone(PState ps)
         {
@@ -136,7 +146,7 @@ namespace LunarCleanup.Core
         public static int DevClearGoo() { var ps = Cur; int n = 0; foreach (int c in ps.sv.goo.ToList()) { ps.act.Remove(c); FinishCell(ps, c); n++; } return n; }
         /// <summary>Test: Anteil der Sternkarte sofort sauber machen.</summary>
         public static int DevRevealGlyph(float frac) { var ps = Cur; int k = 0, n = Mathf.RoundToInt(ps.pd.GlyphCells.Count * frac); foreach (int c in ps.pd.GlyphCells) { if (k >= n) break; if (IsGoo(ps, c)) continue; if (!ps.clean[c] || ps.act.ContainsKey(c)) { ps.act.Remove(c); FinishCell(ps, c); } k++; } return k; }
-        public static void DevSecretReset() { var ps = Cur; ps.sv.stars = 0; ps.sv.secretBeat = 0; ps.sv.secretT = 0; ps.sv.goo?.Clear(); }
+        public static void DevSecretReset() { var ps = Cur; ps.sv.stars = 0; ps.sv.secretBeat = 0; ps.sv.secretT = 0; ps.sv.puzzleDone = false; ps.sv.pieceMask = 0; foreach (var c in ps.pd.cells) ps.dirtyCells.Add(c.id); ps.sv.goo?.Clear(); }
         static readonly Dictionary<PlanetData, int> nbCount = new Dictionary<PlanetData, int>();
         static int NonBase(PState ps) { if (!nbCount.TryGetValue(ps.pd, out int n)) nbCount[ps.pd] = n = ps.pd.cells.Count(x => !x.IsBase); return n; }
         /// <summary>Mitte der Sternkarte (für „Hinsehen“).</summary>

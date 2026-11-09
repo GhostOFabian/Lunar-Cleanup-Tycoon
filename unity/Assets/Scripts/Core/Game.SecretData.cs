@@ -10,7 +10,7 @@ namespace LunarCleanup.Core
 
     public static partial class Game
     {
-        // style: 0 Sternkarte (n Strahlen), 1 Dreieck, 2 Wellen, 3 Spirale, 4 Auge, 5 Sechseck, 6 Perlenkreis (n Punkte), 7 Puls
+        // style: 0 Sternkarte (n Strahlen), 1 Dreieck, 2 Wellen, 3 Spirale, 4 Auge, 5 Sechseck, 6 Perlenkreis (n Punkte), 7 Puls, 8 Doppelsichel
         public static readonly Dictionary<string, GlyphStyle> Glyphs = new Dictionary<string, GlyphStyle>
         {
             { "moon",       new GlyphStyle { style = 0, n = 6, col = "#9ff6ff", col2 = "#55c8ff", glow = "#38e8ff", name = "Sternkarte" } },
@@ -25,7 +25,7 @@ namespace LunarCleanup.Core
             { "pluto",      new GlyphStyle { style = 4, n = 2, col = "#ffe6d6", col2 = "#ffb898", glow = "#ffa080", name = "Doppelauge" } },
             { "eris",       new GlyphStyle { style = 5, n = 6, col = "#e8e8ff", col2 = "#b0b0ff", glow = "#a0a0ff", name = "Kältesiegel" } },
             { "sedna",      new GlyphStyle { style = 1, n = 3, col = "#ffc8c0", col2 = "#ff8070", glow = "#ff6050", name = "Rotes Dreieck" } },
-            { "proxima",    new GlyphStyle { style = 0, n = 5, col = "#ffd8b0", col2 = "#ff9a60", glow = "#ff7a40", name = "Fünfstern" } },
+            { "proxima",    new GlyphStyle { style = 8, n = 2, col = "#ffd8b0", col2 = "#ff9a60", glow = "#ff7a40", name = "Doppelsichel" } }, /* 09.11.: kein Stern – Fabian mag das Symbol nicht */
             { "trappist",   new GlyphStyle { style = 6, n = 7, col = "#b0fff0", col2 = "#50e8c8", glow = "#30ffd0", name = "Kreis der Sieben" } },
             { "kepler",     new GlyphStyle { style = 2, n = 5, col = "#c0ffd0", col2 = "#70e890", glow = "#50ff80", name = "Regenschrift" } },
             { "cancri",     new GlyphStyle { style = 5, n = 6, col = "#ffffff", col2 = "#c8f0ff", glow = "#e0f8ff", name = "Diamantsiegel" } },
@@ -97,10 +97,10 @@ namespace LunarCleanup.Core
                 ("Sie gingen trotzdem", "Unter dem Schleim: dieselben dreizehigen Abdrücke wie auf dem Mars, und sie führen aus dem Dreieck hinaus."),
                 ("Zu einem anderen Stern", "Die Spitze zeigt nicht mehr auf einen Planeten unserer Sonne. Sie zeigt auf Proxima Centauri. Die Wanderer haben das Sonnensystem verlassen.") } },
             { "proxima", new[] {
-                ("Ein Fünfstern", "Unter einer roten Sonne: eine Sternkarte mit fünf Strahlen. Die erste Spur der Wanderer bei einem fremden Stern."),
-                ("Die Karte geht weiter", "Die fünf Strahlen zeigen auf Sterne, nicht auf Planeten. Die Route führt von Welt zu Welt, immer weiter."),
+                ("Zwei Sicheln", "Unter einer roten Sonne: zwei Sicheln, die sich den Rücken zukehren. Die erste Spur der Wanderer bei einem fremden Stern."),
+                ("Zwei Sonnen", "Die Sicheln stehen für zwei Sonnen – Proxima und ihre großen Geschwister Alpha Centauri. Die Route führt von Stern zu Stern, immer weiter."),
                 ("Der Schleim war schneller", "Selbst hier liegt Schleim, obwohl kein Mensch je hier war. Die Verhüller sind den Wanderern gefolgt – oder vorausgeeilt."),
-                ("Sieben Geschwister", "Der goldene Strahl zeigt zu Trappist-1, wo sieben Planeten eng beieinander kreisen.") } },
+                ("Sieben Geschwister", "Der goldene Punkt zwischen den Sicheln zeigt zu Trappist-1, wo sieben Planeten eng beieinander kreisen.") } },
             { "trappist", new[] {
                 ("Ein Kreis aus Perlen", "Sieben leuchtende Punkte im Kreis, einer für jeden Planeten von Trappist-1. Die Wanderer kannten jeden einzelnen."),
                 ("Eine Heimat?", "In der Mitte ein Ring, wie auf dem Mond: „bewahren“. Die Funker vermuten, dass die Wanderer hier zu Hause waren."),
