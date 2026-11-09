@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace LunarCleanup.Core
 {
-    public class Feature { public Vector3 d, e1, e2; public float rad, h, crat, crD; public int kind; public Color col, col2, glow; public float seed; }
+    public class Feature { public Vector3 d, e1, e2; public float rad, h, crat, crD; public int kind; public Color col, col2, glow; public float seed; public int piece = -1, pieces; }
     // kind: 0 Vulkan, 1 Schlothügel (Geysir), 2 Berg/Grat/Eisnadel, 3 Herz (nur Farbe), 4 Becken (leicht vertieft, leuchtet), 5 Leuchtrisse (nur Farbe)
 
     public partial class PlanetData
@@ -104,6 +104,7 @@ namespace LunarCleanup.Core
             if (!cellFeats.TryGetValue(cell, out var l)) return 0; float h = 0;
             foreach (var f in l)
             {
+                if (f.kind >= 6) continue; /* Zeichen/Puzzleteile malt GlyphPaintCell */
                 float cd = Vector3.Dot(dir, f.d); if (cd < .5f) continue; float x = Mathf.Acos(Mathf.Min(1, cd)) * R / f.rad; if (x >= 1.15f) continue;
                 float n = Noise2(Vector3.Dot(dir, f.e1) * R * .35f + f.seed, Vector3.Dot(dir, f.e2) * R * .35f); // unregelmäßige Hänge (Rauschen statt Zacken)
                 switch (f.kind)
@@ -156,7 +157,6 @@ namespace LunarCleanup.Core
                             float line = 0; for (int s = 0; s < 4; s++) { float off = (s - 1.5f) * 2.4f, yy = ly - off - Mathf.Sin(lx * .35f + s) * .6f; line = Mathf.Max(line, Mathf.Clamp01(1 - Mathf.Abs(yy) / .35f)); }
                             line *= Mathf.Clamp01((1 - x) / .3f); k = line * .9f; c = Color.Lerp(f.col2, Hx("#1a3a5a"), .5f); g = f.glow * line * 1.6f; break;
                         }
-                    case 6: GlyphPaint(f, lx, ly, n1, out c, out k, out g); break;
                     default: continue;
                 }
                 if (k <= 0) continue; any = true; col = Color.Lerp(col, c, a <= 0 ? 1 : k); a = Mathf.Max(a, k); glow += g;

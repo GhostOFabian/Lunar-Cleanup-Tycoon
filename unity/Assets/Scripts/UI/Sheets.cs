@@ -115,8 +115,8 @@ namespace LunarCleanup.UI
         static void SecretSheet(Hud h)
         {
             var ps = Game.Cur; if (!Game.SecretKnown(ps)) { h.Note("Hier gibt es noch nichts zu sehen."); return; }
-            h.Note("Unter dem Staub liegt etwas, das jemand versteckt hat. Wisch es frei – Stück für Stück erfährst du mehr. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
-            h.Row(Game.GlyphName(ps), () => Mathf.FloorToInt(Game.SecretProgress(ps) * 100) + " % freigelegt · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => "Hinsehen", () => true, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
+            h.Note("Unter dem Staub liegen Puzzleteile eines Zeichens, verstreut über den ganzen Planeten. Wisch sie frei – sind alle gefunden, fügt sich das Zeichen zusammen und verrät, wohin die Reise geht. Der schwarze Schleim breitet sich aus und lässt sich nur von Hand wegwischen, Fahrzeuge meiden ihn. Jeder weggewischte Schleim gibt " + Game.GOO_CR + " Kristalle.");
+            h.Row(Game.GlyphName(ps), () => (ps.sv.puzzleDone ? "Zusammengesetzt – das Zeichen leuchtet auf der Rückseite" : "Puzzleteile gefunden: " + Game.PiecesFound(ps) + " von " + ps.pd.GlyphCells.Count) + " · Schleim auf " + (ps.sv.goo?.Count ?? 0) + " Parzellen", () => ps.sv.puzzleDone ? "Hinsehen" : "Noch verborgen", () => ps.sv.puzzleDone, () => { LunarCleanup.Gameplay.GameRoot.FocusReq = Game.GlyphCenter(ps); h.CloseSheet(); }, false);
             h.Section("Sterne · " + Game.StarCount(ps) + "/3");
             for (int i = 0; i < 3; i++) { int k = i; h.Row(((ps.sv.stars & (1 << k)) != 0 ? "Geschafft: " : "Offen: ") + Game.StarNames[k], () => k == 2 ? "Bisher " + Mathf.FloorToInt(ps.sv.secretT / 60) + " von " + Mathf.FloorToInt(Game.STAR_TIME / 60) + " min · je Stern +5 Kristalle" : "je Stern +5 Kristalle"); }
             h.Section("Logbuch");
@@ -674,7 +674,7 @@ namespace LunarCleanup.UI
             if (gtab == 1) { Achievements(h); return; }
             if (gtab == 2) { OrdersSheet(h); return; }
             if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
-            if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => Mathf.FloorToInt(Game.SecretProgress(sp) * 100) + " % freigelegt · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
+            if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => (sp.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(sp) + "/" + sp.pd.GlyphCells.Count) + " · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);

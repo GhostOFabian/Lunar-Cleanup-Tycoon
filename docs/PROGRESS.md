@@ -287,3 +287,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 08.11. 22:50: Build 58: Wischen ohne Hängenbleiben, Meteorschild gegen Schauer, Schauer halb so oft, Geheimnis erst nach dem ersten Fund sichtbar. Im Editor: Schild Stufe 6 wehrt 75 % ab, Meteore alle ~9 min auf dem Mond.
 - 08.11. 23:15: Build 59: Zeichen und Geschichten auf allen Planeten (im Editor auf Mars, Io, Trappist, Venus, Europa, Poltergeist gesehen), machbare Bestellungen, alte Bestellungen verkleinert.
 - 09.11. 10:30: Für Build 60 geschrieben (Mac aus, ungetestet): Bestellungen nach Bezahlung mit Reservierung und Vorrang-Produktion, Verlängerung bei 60 %; App-Store-Vorbereitung (Game Center, Erfolge, Bestenlisten, Konto-Speicher, Apple-Anmeldung) ausgeschaltet hinter LC_STORE.
+- 09.11. 11:00: Puzzle-Zeichen geschrieben (Build 60, ungetestet): verstreute Teile, Zusammenflug-Animation, großes Zeichen auf der Rückseite, nächster Planet kostenlos.

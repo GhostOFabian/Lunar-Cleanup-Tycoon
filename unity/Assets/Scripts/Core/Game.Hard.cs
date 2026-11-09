@@ -42,7 +42,7 @@ namespace LunarCleanup.Core
         /// <summary>Fabian 03.11.: im Hard Mode verdienst du weniger nebenbei – Reisen zum nächsten Planeten kostet nur 40 %.</summary>
         /// <summary>Fabian 04.11.: im Hard Mode bringen Ziele, Erfolge, Aufträge kaum Geld (10 %) – man soll nicht durch Abholen die Basis ausbauen.</summary>
         public static double GoalF => Hard ? .1 : 1;
-        public static double UnlockCost(string pid) => Math.Round(GameData.Planets[pid].unlockCost * (Hard ? .4 : 1));
+        public static double UnlockCost(string pid) => S != null && S.freeUnlock.Contains(pid) ? 0 : Math.Round(GameData.Planets[pid].unlockCost * (Hard ? .4 : 1)); /* 09.11.: fertiges Puzzle = Koordinaten = kostenlose Reise */
         public static string CartName => Hard ? "Sammelshuttle" : "Sammelwagen";
         /// <summary>Sammelshuttle fliegt geradeaus über alles hinweg (1,4× schneller), der Sammelwagen fährt über die Wege.</summary>
         static bool CartMove(PState ps, CartSave c, Vector3 to, float step, int x)

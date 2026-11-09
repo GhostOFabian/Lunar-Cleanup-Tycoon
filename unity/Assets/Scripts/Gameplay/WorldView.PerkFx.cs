@@ -154,6 +154,34 @@ namespace LunarCleanup.Gameplay
                 pylonGos.Add(g);
             }
         }
+        /// <summary>Fabian 09.11.: Puzzle fertig – die Teile steigen auf, fliegen in einem Bogen zur Rückseite und verschmelzen; dann leuchtet das große Zeichen auf.</summary>
+        public void PuzzleFx(List<int> cells, Vector3 center, Color col) { if (pd == null || MapMode) return; StartCoroutine(PuzzleCo(cells, center.normalized, col)); }
+        IEnumerator PuzzleCo(List<int> cells, Vector3 center, Color col)
+        {
+            LunarCleanup.Gameplay.GameRoot.FocusReq = center; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 1.6f; Sfx.Play("discover", 1f, .9f);
+            var parts = new List<(GameObject go, Material m, Vector3 from)>();
+            foreach (int c in cells)
+            {
+                var d = pd.cells[c].c.normalized; EmitDust(d, col, 40);
+                var go = MeshKit.Part(transform, MeshKit.Cube, MeshKit.Glow(col, 3f), Vector3.zero, Vector3.one); NoShadow(go); parts.Add((go, go.GetComponent<MeshRenderer>().material, d));
+            }
+            float t = 0, dur = 3.2f;
+            while (t < dur)
+            {
+                t += Time.deltaTime; float e = Mathf.Clamp01(t / dur), ee = e * e * (3 - 2 * e);
+                foreach (var p in parts)
+                {
+                    var d = Vector3.Slerp(p.from, center, ee).normalized; float h = Mathf.Sin(e * Mathf.PI) * pd.R * .35f + (1 - e) * 1.5f;
+                    p.go.transform.position = pd.Surf(d, h); p.go.transform.rotation = Quaternion.Euler(e * 360, e * 540, e * 200); p.go.transform.localScale = Vector3.one * (1.6f + 1.4f * Mathf.Sin(e * Mathf.PI));
+                }
+                yield return null;
+            }
+            foreach (var p in parts) { Destroy(p.go); Destroy(p.m); }
+            EmitDust(center, col, 160); Sfx.Play("discover", 1.2f, 1f);
+            var ring = FxQuad(center, 1f, FxRingTex(), col, out var rm); float t2 = 0;
+            while (t2 < 1.4f) { t2 += Time.deltaTime; float e = t2 / 1.4f; ring.transform.localScale = Vector3.one * pd.R * 1.6f * e; rm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, 1 - e)); yield return null; }
+            Destroy(ring); Destroy(rm); LunarCleanup.UI.Hud.I?.Flash(col, .6f);
+        }
         IEnumerator ScreenFlash() { LunarCleanup.UI.Hud.I?.Flash(new Color(1, .97f, .85f), .9f); yield break; }
     }
 }

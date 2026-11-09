@@ -1,5 +1,6 @@
-// Fabian 08.11.: Mond-Geheimnis – eine leuchtende Sternkarte im Boden (Geländeform kind 6, nur Farbe und Leuchten,
-// unter Dreck unsichtbar). Liegt gegenüber der Entdeckung, mitten im Dreck, gut sichtbar groß.
+// Fabian 09.11.: Zeichen als Puzzle. Die Teile liegen verstreut auf dem Planeten (je Teil eine Parzelle, nur sauber sichtbar).
+// Das letzte Teil liegt erst bei etwa 80 % Reinigung (nach Ringen sortiert) – wer woanders putzt, findet es später.
+// Sind alle Teile frei, fliegen sie zusammen und das Zeichen erscheint riesig auf der Rückseite des Planeten (gegenüber der Basis).
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -8,28 +9,65 @@ namespace LunarCleanup.Core
 {
     public partial class PlanetData
     {
-        List<int> glyphCells;
-        /// <summary>Parzellen, auf denen die Sternkarte liegt (ohne Basis und Wasser).</summary>
-        public List<int> GlyphCells
-        {
-            get
-            {
-                if (glyphCells != null) return glyphCells; if (hk == null) InitTerrain(); glyphCells = new List<int>();
-                var f = feats.FirstOrDefault(x => x.kind == 6); if (f == null) return glyphCells;
-                foreach (var c in cells) { if (c.IsBase || c.Wet) continue; float d = Mathf.Acos(Mathf.Clamp(Vector3.Dot(c.c.normalized, f.d), -1, 1)) * R; if (d < f.rad * .97f) glyphCells.Add(c.id); }
-                return glyphCells;
-            }
-        }
+        List<int> pieceCells; Feature bigGlyph;
+        /// <summary>Parzellen mit Puzzleteilen, in Fundreihenfolge (nach Ring sortiert).</summary>
+        public List<int> GlyphCells { get { if (hk == null) InitTerrain(); return pieceCells ?? (pieceCells = new List<int>()); } }
         public bool GlyphAt(int cell) => GlyphCells.Contains(cell);
+        public Feature BigGlyph { get { if (hk == null) InitTerrain(); return bigGlyph; } }
+        public int PieceOf(int cell) => GlyphCells.IndexOf(cell);
         void PlaceGlyph()
         {
-            if (!Game.Glyphs.TryGetValue(pid, out var gs)) return;
-            var bc = cells[baseCell]; var away = -(bc.e1 * .8f + bc.e2 * .6f).normalized; int maxRing = cells.Max(c => c.ring);
-            int best = -1; float bs = -1e9f; int want = Mathf.Clamp(maxRing / 2, 3, 6);
-            for (int tries = 0; tries < 3 && best < 0; tries++, want--)
-                foreach (var c in cells) { if (c.IsBase || c.Wet || c.ring != want || cellFeats.ContainsKey(c.id)) continue; float sc = Vector3.Dot(c.c - bc.c, away); if (sc > bs) { bs = sc; best = c.id; } }
-            if (best < 0) return; var cl = cells[best];
-            AddFeature(new Feature { kind = 6, d = cl.c, e1 = cl.e1, e2 = cl.e2, rad = cl.H * 2f * 3.1f, col = Hx(gs.col), col2 = Hx(gs.col2), glow = Hx(gs.glow), crat = gs.style, crD = gs.n, seed = 7 });
+            if (!Game.Glyphs.TryGetValue(pid, out var gs)) return; pieceCells = new List<int>();
+            var bc = cells[baseCell]; var back = -bc.c.normalized;
+            // großes Zeichen auf der Rückseite
+            var ac = cells.OrderByDescending(c => Vector3.Dot(c.c.normalized, back)).First();
+            bigGlyph = new Feature { kind = 6, d = back, e1 = ac.e1, e2 = ac.e2, rad = R * .8f, col = Hx(gs.col), col2 = Hx(gs.col2), glow = Hx(gs.glow), crat = gs.style, crD = gs.n, seed = 7, piece = -1 };
+            AddFeature(bigGlyph);
+            // Teile: nach Ring sortiert verteilt, das letzte bei ~80 %
+            var pool = cells.Where(c => !c.IsBase && !c.Wet).OrderBy(c => c.ring).ThenBy(c => c.id).ToList(); if (pool.Count < 10) return;
+            int N = Mathf.Clamp(pool.Count / 40, 6, 10); var rnd = new System.Random(pid.GetHashCode() ^ 0x5eed);
+            for (int k = 0; k < N; k++)
+            {
+                float pct = .08f + (.80f - .08f) * k / (N - 1); int ring = pool[Mathf.Clamp(Mathf.RoundToInt(pct * (pool.Count - 1)), 0, pool.Count - 1)].ring;
+                var cand = pool.Where(c => c.ring == ring && !pieceCells.Contains(c.id) && !pieceCells.Any(o => cells[o].nb.Contains(c.id))).ToList();
+                if (cand.Count == 0) cand = pool.Where(c => !pieceCells.Contains(c.id) && Mathf.Abs(c.ring - ring) <= 1).ToList(); if (cand.Count == 0) continue;
+                var cl = cand[rnd.Next(cand.Count)]; pieceCells.Add(cl.id);
+                AddFeature(new Feature { kind = 8, d = cl.c.normalized, e1 = cl.e1, e2 = cl.e2, rad = cl.H * .95f, col = Hx(gs.col), col2 = Hx(gs.col2), glow = Hx(gs.glow), crat = gs.style, crD = gs.n, seed = k, piece = k, pieces = N });
+            }
+        }
+        /// <summary>Zeichen und Puzzleteile malen. done = Puzzle fertig (großes Zeichen sichtbar). piece = Pixel gehört zu einem Teil (nur sauber sichtbar).</summary>
+        public bool GlyphPaintCell(int cell, Vector3 dir, bool done, out Color col, out float a, out Color glow, out bool piece)
+        {
+            col = Color.black; a = 0; glow = Color.black; piece = false; if (hk == null) InitTerrain(); if (!cellFeats.TryGetValue(cell, out var l)) return false; bool any = false;
+            foreach (var f in l)
+            {
+                if (f.kind != 6 && f.kind != 8) continue; if (f.kind == 6 && !done) continue; if (f.kind == 8 && done) continue;
+                float cd = Vector3.Dot(dir, f.d); if (cd < .3f) continue; float dist = Mathf.Acos(Mathf.Min(1, cd)) * R; if (dist / f.rad >= 1.1f) continue;
+                float lx = Vector3.Dot(dir - f.d * cd, f.e1) * R, ly = Vector3.Dot(dir - f.d * cd, f.e2) * R, n1 = Noise2(lx * .7f + f.seed, ly * .7f);
+                float hx = lx / f.rad, hy = ly / f.rad, k; Color c, g;
+                if (f.kind == 6) { GlyphLine(Mathf.RoundToInt(f.crat), Mathf.RoundToInt(f.crD), hx, hy, out float line, out float bright); Shade(f, line, bright, Mathf.Sqrt(hx * hx + hy * hy), n1, out c, out k, out g); }
+                else
+                {
+                    // Teil k zeigt den Ausschnitt k des Zeichens (Tortenstück mit Puzzle-Rand)
+                    float th = (f.piece + .5f) * 2 * Mathf.PI / f.pieces, half = Mathf.PI / f.pieces;
+                    float qx = Mathf.Cos(th) * .55f + hx * .5f, qy = Mathf.Sin(th) * .55f + hy * .5f, qr = Mathf.Sqrt(qx * qx + qy * qy), qa = Mathf.Atan2(qy, qx);
+                    float da = Mathf.Abs(Mathf.DeltaAngle(qa * Mathf.Rad2Deg, th * Mathf.Rad2Deg)) * Mathf.Deg2Rad;
+                    float wob = .06f * Mathf.Sin(qr * 18f + f.piece) , edge = half + wob - da; float inside = Mathf.Clamp01(edge * 30f) * Mathf.Clamp01((1.02f - qr) * 25f) * Mathf.Clamp01((qr - .02f) * 25f);
+                    if (inside <= 0 || hx * hx + hy * hy > 1) continue;
+                    GlyphLine(Mathf.RoundToInt(f.crat), Mathf.RoundToInt(f.crD), qx, qy, out float line, out float bright);
+                    float rim = Mathf.Clamp01(1 - Mathf.Abs(edge) * 40f) * .5f; /* Puzzle-Kante leuchtet leicht */
+                    Shade(f, Mathf.Max(line, rim) * inside, bright * inside, qr, n1, out c, out k, out g); k = Mathf.Max(k, .28f * inside); /* Teil hebt sich als Fläche ab */
+                    c = Color.Lerp(Color.Lerp(f.col2, Color.black, .55f), c, Mathf.Clamp01(line * 1.5f + rim)); piece = true;
+                }
+                if (k <= 0) continue; if (!any || k > a) { col = c; a = k; } glow += g; any = true;
+            }
+            return any;
+        }
+        static void Shade(Feature f, float line, float bright, float r, float n1, out Color c, out float k, out Color g)
+        {
+            line *= Mathf.Clamp01((1.02f - r) / .05f); bright *= line > 0 ? 1 : 0;
+            k = line * .95f; c = Color.Lerp(f.col2, f.col, .5f + .5f * n1); c = Color.Lerp(c, Hx("#ffe9a0"), bright * .7f);
+            g = Color.Lerp(f.glow, Hx("#ffcc55"), bright) * (line * (.75f + bright * .8f)) * (r < .07f ? .6f : 1f);
         }
         static float Ring(float r, float r0, float w) => Mathf.Clamp01(1 - Mathf.Abs(r - r0) / w);
         static float Seg(float x, float y, float ax, float ay, float bx, float by, float w)
@@ -39,10 +77,11 @@ namespace LunarCleanup.Core
         }
         static float Dot(float x, float y, float cx, float cy, float rad) { float dx = x - cx, dy = y - cy; return Mathf.Clamp01(1 - (Mathf.Sqrt(dx * dx + dy * dy) - rad) / .02f); }
         /// <summary>Zeichen je Planet (Stil in crat, Anzahl in crD). „bright“ = der Teil, der zum nächsten Planeten zeigt (golden).</summary>
-        static void GlyphPaint(Feature f, float lx, float ly, float n1, out Color c, out float k, out Color g)
+        /// <summary>Linien des Zeichens im Einheitskreis (Stil st, Anzahl n). bright = der Teil, der zum nächsten Planeten zeigt.</summary>
+        static void GlyphLine(int st, int n, float hx, float hy, out float line, out float bright)
         {
-            float hx = lx / f.rad, hy = ly / f.rad, r = Mathf.Sqrt(hx * hx + hy * hy), w = .028f; int st = Mathf.RoundToInt(f.crat), n = Mathf.Max(1, Mathf.RoundToInt(f.crD));
-            float line = 0, bright = 0; const float A0 = .35f; float ux0 = Mathf.Cos(A0), uy0 = Mathf.Sin(A0);
+            float r = Mathf.Sqrt(hx * hx + hy * hy), w = .028f; n = Mathf.Max(1, n);
+            line = 0; bright = 0; const float A0 = .35f; float ux0 = Mathf.Cos(A0), uy0 = Mathf.Sin(A0);
             switch (st)
             {
                 case 0: // Sternkarte: Ringe, n Strahlen mit Punkten
@@ -84,9 +123,6 @@ namespace LunarCleanup.Core
                     { float m = Mathf.Max(Seg(hx, hy, -.93f * ux0, -.93f * uy0, .93f * ux0, .93f * uy0, w * .9f), Seg(hx, hy, -.93f * uy0, .93f * ux0, .93f * uy0, -.93f * ux0, w * .6f)); line = Mathf.Max(line, m); bright = Mathf.Max(bright, m * Mathf.Clamp01((hx * ux0 + hy * uy0) * 3)); }
                     break;
             }
-            line *= Mathf.Clamp01((1.02f - r) / .05f); bright *= line > 0 ? 1 : 0;
-            k = line * .95f; c = Color.Lerp(f.col2, f.col, .5f + .5f * n1); c = Color.Lerp(c, Hx("#ffe9a0"), bright * .7f);
-            g = Color.Lerp(f.glow, Hx("#ffcc55"), bright) * (line * (.75f + bright * .8f)) * (r < .07f ? .6f : 1f);
         }
     }
 }

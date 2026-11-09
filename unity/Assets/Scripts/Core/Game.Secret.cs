@@ -13,7 +13,7 @@ namespace LunarCleanup.Core
 {
     public static partial class Game
     {
-        public const float GOO_T = 45f, GOO_SEED_T = 150f, STAR_TIME = 2700f; public const int GOO_MAX = 14, GOO_CR = 2;
+        public const float GOO_T = 45f, GOO_SEED_T = 150f, STAR_TIME = 3600f; public const int GOO_MAX = 14, GOO_CR = 2;
         public static bool SecretOn(PState ps) => ps != null && Glyphs.ContainsKey(ps.pid) && Logs.ContainsKey(ps.pid); /* 08.11.: alle Planeten */
         /// <summary>08.11.: Das Geheimnis zeigt sich erst, wenn du die ersten Linien selbst freigelegt hast – vorher kein Hinweis.</summary>
         public static bool SecretKnown(PState ps) => SecretOn(ps) && ps.sv.secretBeat > 0;
@@ -29,7 +29,7 @@ namespace LunarCleanup.Core
         public static string GlyphName(PState ps) => Glyphs.TryGetValue(ps.pid, out var g) ? g.name : "Zeichen";
         public static int StarCount(PState ps) { int s = ps.sv.stars; return (s & 1) + ((s >> 1) & 1) + ((s >> 2) & 1); }
         public static string StarText(PState ps) { string r = ""; for (int i = 0; i < 3; i++) r += (ps.sv.stars & (1 << i)) != 0 ? "★" : "☆"; return r; }
-        public static readonly string[] StarNames = { "Planet komplett sauber", "Geheimnis freigelegt", "Geheimnis in unter 45 min freigelegt" };
+        public static readonly string[] StarNames = { "Planet komplett sauber", "Puzzle zusammengesetzt", "Puzzle in unter 60 min zusammengesetzt" };
         public static event Action<PState> OnStory; public static bool StoryNew; static float gooToastT = -999;
 
         /// <summary>Je Schritt (live und offline gleich): Schleim säen und ausbreiten, Logbuch und Sterne prüfen.</summary>
@@ -66,6 +66,7 @@ namespace LunarCleanup.Core
                 }
                 if (grown > 0 && !Offline && ps.pid == S.planet && Time.realtimeSinceStartup - gooToastT > 240) { gooToastT = Time.realtimeSinceStartup; Toast("Der schwarze Schleim breitet sich aus – nur du kannst ihn wegwischen", "bad"); }
             }
+            if (prog >= 1 && !sv.puzzleDone) PuzzleDone(ps);
             // Logbuch
             var log = SecretLog(ps);
             while (sv.secretBeat < log.Length && sv.secretBeat < LogAt.Length && prog >= LogAt[sv.secretBeat] - 1e-4f)
@@ -97,6 +98,19 @@ namespace LunarCleanup.Core
             if ((ps.sv.stars & (1 << i)) != 0) return; ps.sv.stars |= 1 << i; S.lk += 5;
             if (!Offline) Toast("Stern " + StarCount(ps) + "/3 auf " + ps.P.name + ": " + StarNames[i] + " · +5 Kristalle", "good"); StoryAchCheck();
         }
+        public static event Action<PState, List<int>> OnPuzzle;
+        public static int PiecesFound(PState ps) { int n = 0; foreach (int c in ps.pd.GlyphCells) if (ps.clean[c] && !IsGoo(ps, c) && !ps.act.ContainsKey(c)) n++; return n; }
+        /// <summary>Fabian 09.11.: Alle Teile frei – sie fliegen zusammen, das Zeichen erscheint riesig auf der Rückseite, der nächste Planet ist entschlüsselt.</summary>
+        static void PuzzleDone(PState ps)
+        {
+            ps.sv.puzzleDone = true; var f = ps.pd.BigGlyph;
+            if (f != null) { float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / ps.pd.R + .05f)); foreach (var c in ps.pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) ps.dirtyCells.Add(c.id); }
+            foreach (int c in ps.pd.GlyphCells) ps.dirtyCells.Add(c);
+            string next = NextPid(ps.pid), nn = next != null ? GameData.Planets[next].name : null;
+            if (next != null && !P.ContainsKey(next) && !S.freeUnlock.Contains(next)) S.freeUnlock.Add(next);
+            if (!Offline && ps.pid == S.planet) { OnPuzzle?.Invoke(ps, new List<int>(ps.pd.GlyphCells)); Toast(GlyphName(ps) + " ist vollständig!" + (nn != null ? " Die Koordinaten von " + nn + " sind entschlüsselt – die Reise dorthin ist kostenlos." : ""), "good"); }
+        }
+        public static string NextPid(string pid) { var o = GameData.POrder; if (o == null) return null; int i = Array.IndexOf(o, pid); return i >= 0 && i + 1 < o.Length ? o[i + 1] : null; }
         /// <summary>Saubere Parzelle wird vom Schleim überzogen (wie Meteorstaub: wieder putzbar, gibt beim Putzen wieder alles).</summary>
         static void GooCover(PState ps, int cid)
         {
