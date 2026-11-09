@@ -3,6 +3,7 @@
 // Voraussetzungen: Unity-Modul „iOS Build Support“ (Unity Hub), Xcode, eine Apple-ID in Xcode (Einstellungen > Accounts).
 // Mit kostenloser Apple-ID läuft die App 7 Tage auf dem eigenen iPhone; TestFlight/App Store/Game Center brauchen das Apple Developer Program.
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -151,6 +152,24 @@ namespace LunarCleanup.EditorTools
             var plist = new UnityEditor.iOS.Xcode.PlistDocument(); plist.ReadFromFile(plistPath);
             plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
             plist.WriteToFile(plistPath);
+            StoreCapabilities(path);
+        }
+        /// <summary>Fabian 09.11.: App-Store-Dienste vorbereitet. Nur wenn „LC_STORE“ in den iOS-Scripting-Defines steht:
+        /// Game Center, iCloud (für den Spielstand im Konto) und „Mit Apple anmelden“ ins Xcode-Projekt eintragen.</summary>
+        static void StoreCapabilities(string path)
+        {
+            var defs = PlayerSettings.GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.iOS);
+            if (!defs.Split(';').Contains("LC_STORE")) return;
+            string proj = UnityEditor.iOS.Xcode.PBXProject.GetPBXProjectPath(path);
+            var pbx = new UnityEditor.iOS.Xcode.PBXProject(); pbx.ReadFromFile(proj);
+            string main = pbx.GetUnityMainTargetGuid(), fw = pbx.GetUnityFrameworkTargetGuid();
+            pbx.AddFrameworkToProject(fw, "GameKit.framework", false); pbx.AddFrameworkToProject(fw, "AuthenticationServices.framework", true);
+            pbx.WriteToFile(proj);
+            var cap = new UnityEditor.iOS.Xcode.ProjectCapabilityManager(proj, "Unity-iPhone/lunarcleanup.entitlements", null, main);
+            cap.AddGameCenter(); cap.AddSignInWithApple();
+            cap.AddiCloud(true, true, false, true, new string[0]); /* Schlüssel-Wert-Speicher + Dokumente für GKSavedGame */
+            cap.WriteToFile();
+            Debug.Log("Lunar Cleanup: App-Store-Dienste ins Xcode-Projekt eingetragen (Game Center, iCloud, Mit Apple anmelden).");
         }
     }
 #endif

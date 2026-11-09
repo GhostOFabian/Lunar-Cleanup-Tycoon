@@ -9,7 +9,7 @@ using UnityEngine;
 namespace LunarCleanup.Core
 {
     [Serializable] public class OrderItem { public string src = ""; public int m = -1; public string g = ""; public float n, got; } // src = Herkunftsplanet; m = Ware oder g = Spezialgut
-    [Serializable] public class VisitOrder { public int id; public string who = "", pid = ""; public List<OrderItem> items = new List<OrderItem>(); public long until; public double reward; public int sd; }
+    [Serializable] public class VisitOrder { public int id; public string who = "", pid = ""; public List<OrderItem> items = new List<OrderItem>(); public long until; public double reward; public int sd; public int ext; } // ext = 09.11.: schon einmal verlängert
 
     public static partial class Game
     {
@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
             var l = new List<int>();
             foreach (var t in ps.P.types) { if (t.Value <= 0) continue; int m = GameData.Dirt[t.Key].mat; if (m >= 0 && !l.Contains(m) && (RohRateH(ps, m) > .5f || ps.sv.roh[m] > 5 || !IsDone(ps.pid))) l.Add(m); } /* 08.11.: auf sauberen Planeten nur, was wirklich noch hereinkommt */
             /* nur Rezepte, die wirklich laufen können: Plan freigeschaltet und Zutat vorhanden (2 Runden für Ketten) */
-            void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach) || (mach == "raff" && !PlanOn(ps, "refine"))) return; foreach (var r in rs) if (PlanOn(ps, r.plan) && l.Contains(r.inp) && !l.Contains(r.outp)) l.Add(r.outp); }
+            void Add(string mach, List<Recipe> rs) { if (!ps.bld.Contains(mach)) return; foreach (var r in rs) if (l.Contains(r.inp) && !l.Contains(r.outp)) l.Add(r.outp); } /* 09.11.: was die Maschinen können, wird für Bestellungen auch gemacht */
             for (int round = 0; round < 2; round++) { Add("presse", ps.line.presse); Add("schmelze", ps.line.schmelze); Add("raff", ps.line.raff); }
             return l;
         }
@@ -42,7 +42,7 @@ namespace LunarCleanup.Core
         /// <summary>Bestellte Ware fehlt noch im Produktlager – dann hat sie in der Produktion Vorrang.</summary>
         static bool OrderWants(PState ps, int m) => m >= 0 && OrderNeed(ps, m) > ps.sv.prod[m] + .5f;
         /// <summary>Zutat m wird für eine bestellte Folge-Ware gebraucht (z. B. Metall-Brick für bestellte Barren).</summary>
-        static bool ChainWants(PState ps, int m) { foreach (var r in ps.line.schmelze) if (r.inp == m && PlanOn(ps, r.plan) && OrderWants(ps, r.outp)) return true; return false; }
+        static bool ChainWants(PState ps, int m) { foreach (var r in ps.line.schmelze) if (r.inp == m && OrderWants(ps, r.outp)) return true; return false; }
         static bool WantsOut(PState ps, int outp) => OrderWants(ps, outp) || ChainWants(ps, outp);
         /// <summary>Darf Planet q Waren für Bestellungen liefern? Nur freigeschaltete, nicht zerstörte Planeten.</summary>
         static bool OrderSrcOk(string pid) => P.ContainsKey(pid) && !Ruined(pid) && S.planets.Any(x => x.pid == pid);
@@ -66,7 +66,7 @@ namespace LunarCleanup.Core
                 int mm = mats[r.Next(mats.Count)]; bool raw = GameData.Mats[mm].raw;
                 float cap = raw ? RohCap(sp) : ProdCap(sp); float want = cap * (raw ? .04f + .06f * (float)r.NextDouble() : .08f + .12f * (float)r.NextDouble());
                 if (raw) { float rh = RohRateH(sp, mm); want = Mathf.Min(want, rh > .5f ? rh * hours * .3f : 20 + sp.sv.roh[mm] * .5f); } /* 08.11.: nur so viel, wie wirklich hereinkommt */
-                if (!raw) { float rh = ProdRateH(sp, mm); if (rh > 0) want = Mathf.Min(want, rh * hours * .3f); } /* 05.11.: nur so viel, wie die Maschinen in knapp einem Drittel der Zeit schaffen */
+                if (!raw) { float rh = SupplyH(sp, mm); want = Mathf.Min(want, rh > .5f ? rh * hours * .3f : 10 + sp.sv.prod[mm] * .5f); } /* 09.11.: Maschine und Nachschub zählen */ /* 05.11.: nur so viel, wie die Maschinen in knapp einem Drittel der Zeit schaffen */
                 float nn = Mathf.Max(5, Mathf.Round(want / 5) * 5);
                 o.items.Add(new OrderItem { src = sp.pid, m = mm, n = nn }); val += nn * MatValue(mm, sp);
             }
@@ -86,6 +86,23 @@ namespace LunarCleanup.Core
         }
         /// <summary>Rohstoff m kommt auf Planet sp pro Stunde ins Lager (gemessen).</summary>
         public static float RohRateH(PState sp, int m) => sp.sv.rohRate != null && m >= 0 && m < sp.sv.rohRate.Length ? sp.sv.rohRate[m] * 3600f : 0;
+        /// <summary>09.11.: Wie viel von m pro Stunde wirklich entstehen kann – Maschine UND Nachschub der Zutat (Rohstoff-Zufluss bzw. Vorprodukt).</summary>
+        static float SupplyH(PState sp, int m, int depth = 0)
+        {
+            if (m < 0 || depth > 3) return 0; if (GameData.Mats[m].raw) return RohRateH(sp, m);
+            float best = 0;
+            foreach (var id in new[] { "presse", "schmelze", "raff" })
+            {
+                if (!sp.bld.Contains(id)) continue;
+                foreach (var c in sp.line.Of(id))
+                {
+                    if (c.outp != m || c.t <= 0 || c.n <= 0) continue;
+                    float mach = c.k * MachBatch(sp, id) * Uv("mspeed", sp) * sp.mm / c.t * 3600f, inH = SupplyH(sp, c.inp, depth + 1) * c.k / c.n;
+                    best = Mathf.Max(best, Mathf.Min(mach, inH));
+                }
+            }
+            return best;
+        }
         /// <summary>Wie viel von Produkt m die Maschinen auf Planet sp höchstens pro Stunde schaffen (ohne Engpässe bei Rohstoffen).</summary>
         static float ProdRateH(PState sp, int m)
         {
@@ -96,6 +113,21 @@ namespace LunarCleanup.Core
                 foreach (var c in sp.line.Of(id)) if (c.outp == m && PlanOn(sp, c.plan) && c.t > 0) best = Mathf.Max(best, c.k * MachBatch(sp, id) * Uv("mspeed", sp) * sp.mm / c.t * 3600f);
             }
             return best;
+        }
+        static readonly Dictionary<string, float> reserved = new Dictionary<string, float>();
+        /// <summary>Höchste Bezahlung einer offenen Bestellung, die Ware m von Planet ps noch braucht (direkt oder als Zutat für bestellte Barren).</summary>
+        static double OrderPay(PState ps, int m)
+        {
+            if (S == null || S.vorders == null || m < 0) return 0; double best = 0;
+            foreach (var o in S.vorders) foreach (var it in o.items) if (it.g == "" && it.src == ps.pid && it.got < it.n - 1e-4f && (it.m == m || ps.line.schmelze.Any(r => r.inp == m && r.outp == it.m))) best = Math.Max(best, o.reward);
+            return best;
+        }
+        static readonly List<int> ordIxBuf = new List<int>();
+        static List<int> OrderIdx(PState ps, List<Recipe> rec)
+        {
+            ordIxBuf.Clear(); for (int i = 0; i < rec.Count; i++) ordIxBuf.Add(i);
+            if (S?.vorders != null && S.vorders.Count > 0) ordIxBuf.Sort((a, b) => OrderPay(ps, rec[b].outp).CompareTo(OrderPay(ps, rec[a].outp)));
+            return ordIxBuf;
         }
         public static float OrderProgress(VisitOrder o) { float n = 0, g = 0; foreach (var it in o.items) { n += it.n; g += Mathf.Min(it.n, it.got); } return n > 0 ? g / n : 0; }
         /// <summary>Je Schritt (live und offline): neue Besucher, Waren aus den Lagern zurücklegen, fertige Bestellungen bezahlen, abgelaufene verabschieden.</summary>
@@ -112,26 +144,33 @@ namespace LunarCleanup.Core
             }
             S.voT -= dt; if (S.voT <= 0) { S.voT = UnityEngine.Random.Range(600f, 1500f); if (VO.Count < OrderMax()) NewVisitOrder(); }
             long now = Now();
-            for (int i = VO.Count - 1; i >= 0; i--)
+            /* Fabian 09.11.: Bestellungen mit der besten Bezahlung zuerst. Eine schlechter bezahlte nimmt eine Ware erst, wenn alle besser bezahlten sie nicht mehr brauchen –
+               sonst teilen sich alle die Lager und keine wird je fertig. */
+            VO.Sort((x, y) => y.reward.CompareTo(x.reward)); reserved.Clear();
+            for (int i = 0; i < VO.Count; i++)
             {
                 var o = VO[i];
                 int bad = o.items.RemoveAll(it => !P.ContainsKey(it.g == "" ? it.src : Good(it.g).pid)); /* 05.11.: alte Bestellungen mit Waren von nicht freigeschalteten Planeten bereinigen */
                 if (bad > 0 && o.items.Count == 0) { VO.RemoveAt(i); continue; }
-                if (now > o.until) { double back = OrderRefund(o); VO.RemoveAt(i); Toast(o.who + " ist abgereist – die Bestellung kam nicht rechtzeitig zusammen" + (back > 0 ? ". Zurückgelegtes verkauft: +" + Fmt(back) + " Cr" : ""), "bad"); continue; }
+                if (now > o.until && o.ext == 0 && OrderProgress(o) >= .6f) { o.ext = 1; o.until = now + 2700; if (!Offline) Toast(o.who + " wartet noch 45 min – die Bestellung ist fast fertig", "good"); } /* 09.11.: knapp dran = Verlängerung */
+                if (now > o.until) { double back = OrderRefund(o); VO.RemoveAt(i); i--; Toast(o.who + " ist abgereist – die Bestellung kam nicht rechtzeitig zusammen" + (back > 0 ? ". Zurückgelegtes verkauft: +" + Fmt(back) + " Cr" : ""), "bad"); continue; }
                 bool all = true;
                 foreach (var it in o.items)
                 {
                     if (it.got >= it.n - 1e-4f) continue; float rate = Mathf.Max(1f, it.n / 300f) * dt, need = it.n - it.got;
-                    if (it.g != "") { float t = Mathf.Min(need, Mathf.Min(GoodAmt(it.g), rate)); if (t > 0 && TakeGood(it.g, t)) it.got += t; }
+                    /* besser bezahlte Bestellungen haben ihren Rest schon „reserviert“ – hier gibt es nur, was darüber hinaus im Lager liegt */
+                    string rk = it.g != "" ? "g:" + it.g : it.src + ":" + it.m; reserved.TryGetValue(rk, out float resv);
+                    if (it.g != "") { float t = Mathf.Min(need, Mathf.Min(GoodAmt(it.g) - resv, rate)); if (t > 0 && TakeGood(it.g, t)) it.got += t; }
                     else if (P.ContainsKey(it.src) && !Ruined(it.src))
                     {
-                        var sv = P[it.src].sv; bool raw = GameData.Mats[it.m].raw;
-                        float a = sv.prod[it.m], t = Mathf.Min(need, Mathf.Min(a, rate)); if (t > 0) { sv.prod[it.m] -= t; it.got += t; } /* zuerst aus dem Produktlager (dort liegen auch Verkaufs-Rohstoffe) */
-                        need = it.n - it.got; if (raw && need > 0) { float b = Mathf.Min(need, Mathf.Min(sv.roh[it.m], rate)); if (b > 0) { sv.roh[it.m] -= b; it.got += b; } }
+                        var sv = P[it.src].sv; bool raw = GameData.Mats[it.m].raw; float freeP = sv.prod[it.m] - resv, freeR = raw ? sv.roh[it.m] - Mathf.Max(0, resv - sv.prod[it.m]) : 0;
+                        float t = Mathf.Min(need, Mathf.Min(freeP, rate)); if (t > 0) { sv.prod[it.m] -= t; it.got += t; } /* zuerst aus dem Produktlager (dort liegen auch Verkaufs-Rohstoffe) */
+                        need = it.n - it.got; if (raw && need > 0) { float b = Mathf.Min(need, Mathf.Min(freeR, rate)); if (b > 0) { sv.roh[it.m] -= b; it.got += b; } }
                     }
+                    reserved[rk] = resv + Mathf.Max(0, it.n - it.got);
                     if (it.got < it.n - 1e-4f) all = false;
                 }
-                if (all) { VO.RemoveAt(i); Earn(o.reward); S.stardust += o.sd; OnOrderDone?.Invoke(o); Toast(o.who + " ist zufrieden! Bestellung abgeholt · +" + Fmt(o.reward) + " Cr · +" + o.sd + " Sternenstaub", "good"); }
+                if (all) { VO.RemoveAt(i); i--; Earn(o.reward); S.stardust += o.sd; OnOrderDone?.Invoke(o); Toast(o.who + " ist zufrieden! Bestellung abgeholt · +" + Fmt(o.reward) + " Cr · +" + o.sd + " Sternenstaub", "good"); }
             }
         }
         static double OrderRefund(VisitOrder o) { double c = 0; foreach (var it in o.items) { if (it.got <= 0) continue; c += it.g != "" ? it.got * GoodValue(it.g) * .5 : it.got * MatValue(it.m, P.ContainsKey(it.src) ? P[it.src] : Cur); } if (c > 0) Earn(c); return c; }

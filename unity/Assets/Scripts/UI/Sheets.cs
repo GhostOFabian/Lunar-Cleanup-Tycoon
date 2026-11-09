@@ -595,7 +595,7 @@ namespace LunarCleanup.UI
                     return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % zurückgelegt";
                 }, () => "Absagen", () => true, () => Game.CancelOrder(oo.id), false);
             }
-            h.Note("Tipp: Fehlt eine Ware, schau, ob der Planet sie herstellt (Produktion → Plan) und ob genug ins Lager kommt. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
+            h.Note("Die am besten bezahlte Bestellung wird zuerst beliefert, und die Maschinen stellen Bestelltes vorrangig her – auch ausgeschaltete Rezepte. Ist eine Bestellung kurz vor Ablauf zu 60 % fertig, wartet der Besucher 45 min länger. Fehlt eine Ware, schau, ob genug ins Lager kommt. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
         }
         static void Achievements(Hud h)
         {
@@ -909,6 +909,12 @@ namespace LunarCleanup.UI
             h.Section("Konto-Speicher");
             h.Row(Platform.Cloud.Name, () => Platform.Cloud.SignedIn ? "Verbunden – dein Spielstand wird zusätzlich in deinem Konto gesichert." : "Noch nicht verbunden. Auf dem Handy sicherst du hier deinen Spielstand in deinem " + Platform.Cloud.Name + "-Konto.",
                 () => Platform.Cloud.SignedIn ? "Verbunden" : "Anmelden", () => !Platform.Cloud.SignedIn, () => Platform.Cloud.SignIn(ok => Game.Toast(ok ? "Angemeldet – Spielstand wird gesichert" : "Anmeldung kommt mit der Handy-Version", ok ? "good" : "")), false);
+            if (AppleServices.Enabled) /* 09.11.: nur sichtbar, wenn die Apple-Dienste eingeschaltet sind (LC_STORE) */
+            {
+                h.Row("Erfolge in Game Center", () => "Deine Erfolge und Sterne auch in Game Center", () => "Öffnen", () => AppleServices.SignedIn, () => AppleServices.ShowDashboard(1), false);
+                h.Row("Bestenlisten", () => "Sterne, gereinigte Parzellen und Putz-Level im Vergleich", () => "Öffnen", () => AppleServices.SignedIn, () => AppleServices.ShowDashboard(2), false);
+                h.Row("Mit Apple anmelden", () => PlayerPrefs.GetString("LunarCleanup.AppleUser", "") != "" ? "Angemeldet mit deiner Apple-ID" : "Optional – verknüpft dein Spiel mit deiner Apple-ID", () => PlayerPrefs.GetString("LunarCleanup.AppleUser", "") != "" ? "Angemeldet" : "Anmelden", () => PlayerPrefs.GetString("LunarCleanup.AppleUser", "") == "", () => AppleServices.SignInWithApple(), false);
+            }
             } if (stab == 4) {
             h.Section("Shop (Vorschau)");
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");

@@ -1,0 +1,117 @@
+// Lunar Cleanup – Apple-Dienste (Game Center, Erfolge, Bestenlisten, Spielstand in iCloud, „Mit Apple anmelden“).
+// VORBEREITET, NOCH NICHT AKTIV: Diese Datei endet auf .txt, damit Xcode sie nicht mitbaut.
+// Aktivieren (siehe docs/APPSTORE.md): Datei in LCAppleServices.mm umbenennen und in Unity
+// Player Settings → iOS → Scripting Define Symbols „LC_STORE“ eintragen.
+// Rückmeldungen gehen per UnitySendMessage an das GameObject „LCApple“ (LunarCleanup.Core.AppleBridge).
+
+#import <Foundation/Foundation.h>
+#import <GameKit/GameKit.h>
+#import <AuthenticationServices/AuthenticationServices.h>
+#import <UIKit/UIKit.h>
+
+extern UIViewController* UnityGetGLViewController(void);
+extern void UnitySendMessage(const char* obj, const char* method, const char* msg);
+
+static NSString* LCStr(const char* s) { return s ? [NSString stringWithUTF8String:s] : @""; }
+static void LCSend(const char* method, NSString* msg) { UnitySendMessage("LCApple", method, (msg ?: @"").UTF8String); }
+static const NSString* kSaveName = @"lunar-cleanup";
+
+// ---------------- Game Center: Anmeldung ----------------
+extern "C" void LC_GCAuthenticate(void)
+{
+    GKLocalPlayer* lp = [GKLocalPlayer localPlayer];
+    lp.authenticateHandler = ^(UIViewController* vc, NSError* err) {
+        if (vc != nil) { [UnityGetGLViewController() presentViewController:vc animated:YES completion:nil]; return; }
+        if (lp.isAuthenticated) LCSend("OnAuth", [NSString stringWithFormat:@"1|%@", lp.displayName ?: @""]);
+        else LCSend("OnAuth", [NSString stringWithFormat:@"0|%@", err.localizedDescription ?: @""]);
+    };
+}
+extern "C" bool LC_GCIsAuthenticated(void) { return [GKLocalPlayer localPlayer].isAuthenticated; }
+
+// ---------------- Erfolge ----------------
+extern "C" void LC_GCReportAchievement(const char* ident, double percent)
+{
+    if (![GKLocalPlayer localPlayer].isAuthenticated) return;
+    GKAchievement* a = [[GKAchievement alloc] initWithIdentifier:LCStr(ident)];
+    a.percentComplete = percent; a.showsCompletionBanner = YES;
+    [GKAchievement reportAchievements:@[a] withCompletionHandler:^(NSError* e) { if (e) NSLog(@"LC achievement %@: %@", LCStr(ident), e); }];
+}
+@interface LCGCDelegate : NSObject <GKGameCenterControllerDelegate>
+@end
+@implementation LCGCDelegate
+- (void)gameCenterViewControllerDidFinish:(GKGameCenterViewController*)vc { [vc dismissViewControllerAnimated:YES completion:nil]; }
+@end
+static LCGCDelegate* gGCDel = nil;
+extern "C" void LC_GCShowDashboard(int state) // 0 = Übersicht, 1 = Erfolge, 2 = Bestenlisten
+{
+    if (@available(iOS 14.0, *)) {
+        GKGameCenterViewControllerState st = state == 1 ? GKGameCenterViewControllerStateAchievements : state == 2 ? GKGameCenterViewControllerStateLeaderboards : GKGameCenterViewControllerStateDashboard;
+        GKGameCenterViewController* vc = [[GKGameCenterViewController alloc] initWithState:st];
+        if (!gGCDel) gGCDel = [LCGCDelegate new]; vc.gameCenterDelegate = gGCDel;
+        [UnityGetGLViewController() presentViewController:vc animated:YES completion:nil];
+    }
+}
+
+// ---------------- Bestenlisten ----------------
+extern "C" void LC_GCReportScore(const char* board, long long value)
+{
+    if (![GKLocalPlayer localPlayer].isAuthenticated) return;
+    if (@available(iOS 14.0, *)) {
+        [GKLeaderboard submitScore:(NSInteger)value context:0 player:[GKLocalPlayer localPlayer] leaderboardIDs:@[LCStr(board)] completionHandler:^(NSError* e) { if (e) NSLog(@"LC score: %@", e); }];
+    }
+}
+
+// ---------------- Spielstand in iCloud (GKSavedGame) ----------------
+extern "C" void LC_GCSaveGame(const char* data)
+{
+    if (![GKLocalPlayer localPlayer].isAuthenticated) return;
+    NSData* d = [LCStr(data) dataUsingEncoding:NSUTF8StringEncoding];
+    [[GKLocalPlayer localPlayer] saveGameData:d withName:(NSString*)kSaveName completionHandler:^(GKSavedGame* g, NSError* e) {
+        LCSend("OnSaved", e ? [NSString stringWithFormat:@"0|%@", e.localizedDescription] : @"1|");
+    }];
+}
+extern "C" void LC_GCLoadGame(void)
+{
+    if (![GKLocalPlayer localPlayer].isAuthenticated) { LCSend("OnLoaded", @""); return; }
+    [[GKLocalPlayer localPlayer] fetchSavedGamesWithCompletionHandler:^(NSArray<GKSavedGame*>* games, NSError* e) {
+        GKSavedGame* best = nil;
+        for (GKSavedGame* g in games) if ([g.name isEqualToString:(NSString*)kSaveName] && (!best || [g.modificationDate compare:best.modificationDate] == NSOrderedDescending)) best = g;
+        if (!best) { LCSend("OnLoaded", @""); return; }
+        [best loadDataWithCompletionHandler:^(NSData* d, NSError* e2) {
+            NSString* s = d ? [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] : @"";
+            LCSend("OnLoaded", s ?: @"");
+        }];
+    }];
+}
+
+// ---------------- Mit Apple anmelden ----------------
+@interface LCAppleSignIn : NSObject <ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding>
+@end
+@implementation LCAppleSignIn
+- (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthorizationController*)c API_AVAILABLE(ios(13.0)) { return UnityGetGLViewController().view.window; }
+- (void)authorizationController:(ASAuthorizationController*)c didCompleteWithAuthorization:(ASAuthorization*)a API_AVAILABLE(ios(13.0))
+{
+    if ([a.credential isKindOfClass:[ASAuthorizationAppleIDCredential class]]) {
+        ASAuthorizationAppleIDCredential* cr = (ASAuthorizationAppleIDCredential*)a.credential;
+        LCSend("OnAppleId", [NSString stringWithFormat:@"1|%@|%@", cr.user ?: @"", cr.fullName.givenName ?: @""]);
+    } else LCSend("OnAppleId", @"0|unbekannt");
+}
+- (void)authorizationController:(ASAuthorizationController*)c didCompleteWithError:(NSError*)e API_AVAILABLE(ios(13.0)) { LCSend("OnAppleId", [NSString stringWithFormat:@"0|%@", e.localizedDescription]); }
+@end
+static LCAppleSignIn* gSignIn = nil;
+extern "C" void LC_AppleSignIn(void)
+{
+    if (@available(iOS 13.0, *)) {
+        if (!gSignIn) gSignIn = [LCAppleSignIn new];
+        ASAuthorizationAppleIDRequest* r = [[ASAuthorizationAppleIDProvider new] createRequest]; r.requestedScopes = @[ASAuthorizationScopeFullName];
+        ASAuthorizationController* c = [[ASAuthorizationController alloc] initWithAuthorizationRequests:@[r]]; c.delegate = gSignIn; c.presentationContextProvider = gSignIn; [c performRequests];
+    } else LCSend("OnAppleId", @"0|iOS zu alt");
+}
+extern "C" void LC_AppleCheckState(const char* user)
+{
+    if (@available(iOS 13.0, *)) {
+        [[ASAuthorizationAppleIDProvider new] getCredentialStateForUserID:LCStr(user) completion:^(ASAuthorizationAppleIDProviderCredentialState st, NSError* e) {
+            LCSend("OnAppleState", st == ASAuthorizationAppleIDProviderCredentialAuthorized ? @"1" : @"0");
+        }];
+    }
+}

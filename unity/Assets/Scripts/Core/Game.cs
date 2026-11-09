@@ -621,8 +621,10 @@ namespace LunarCleanup.Core
         public static bool BeltLive(PState ps, BeltDef b) => ps.bld.Contains(b.from) && ps.bld.Contains(b.to) && (b.stage == 0 || Gs(ps) >= b.stage);
         static float Packet(PState ps) => 8 * Uv("bcap", ps);
         static float BeltSpeed(PState ps) => 2.4f * Uv("bspeed", ps);
-        public static bool Pressable(PState ps, int m) => ps.line.presse.Any(r => r.inp == m && PlanOn(ps, r.plan));
-        static bool SmeltOn(PState ps) => ps.bld.Contains("schmelze") && PlanOn(ps, "smelt");
+        public static bool Pressable(PState ps, int m) => ps.line.presse.Any(r => r.inp == m && RecOn(ps, r));
+        /// <summary>09.11.: Rezept läuft, wenn es eingeschaltet ist – oder wenn ein Besucher die Ware bestellt hat (Bestellungen gehen vor).</summary>
+        static bool RecOn(PState ps, Recipe r) => PlanOn(ps, r.plan) || WantsOut(ps, r.outp);
+        static bool SmeltOn(PState ps) => ps.bld.Contains("schmelze") && (PlanOn(ps, "smelt") || ps.line.schmelze.Any(r => OrderWants(ps, r.outp)));
         static bool RawRoute(PState ps, int m) => (ps.bld.Contains("presse") && Pressable(ps, m)) || (ps.bld.Contains("raff") && PlanOn(ps, "refine") && ps.line.raff.Any(r => r.inp == m));
         static int MachBatch(PState ps, string id) => id == "presse" ? (int)Uv("pvol", ps) : 1;
         public static float MachInCap(PState ps, string id) => GameData.Mach[id].y * Uv("mcap", ps) * BlF(ps, id) * MachBatch(ps, id);
@@ -658,9 +660,9 @@ namespace LunarCleanup.Core
             if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0 && (GameData.Mats[x].raw || SellOn(ps, x)) && OrderNeed(ps, x) <= 0), 1, PB, true, out m, out a); } /* 05.11.: Bestelltes wird nicht verkauft */ /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
             if (b.from == "roh")
             {
-                List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine")) return false;
+                List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine") && !ps.line.raff.Any(r => OrderWants(ps, r.outp))) return false;
                 var M = ps.mach[b.to]; int best = -1; float bs = -1;
-                foreach (var r in rl) { if (!PlanOn(ps, r.plan)) continue; float x = sv.roh[r.inp]; if (x < 1) continue; float sc = x / (1 + M.inp[r.inp]) * (WantsOut(ps, r.outp) ? 1000 : 1); /* 05.11.: Bestellungen zuerst */ if (sc > bs) { bs = sc; best = r.inp; } }
+                foreach (var r in rl) { if (!RecOn(ps, r)) continue; float x = sv.roh[r.inp]; if (x < 1) continue; float sc = x / (1 + M.inp[r.inp]) * (WantsOut(ps, r.outp) ? 1000 + (float)Math.Min(1e6, OrderPay(ps, r.outp) / 1000) : 1); /* 05.11.: Bestellungen zuerst */ if (sc > bs) { bs = sc; best = r.inp; } }
                 return best >= 0 && Pick(sv.roh, new[] { best }, 1, P0, false, out m, out a);
             }
             if (ps.mach.ContainsKey(b.from))
@@ -714,9 +716,10 @@ namespace LunarCleanup.Core
             float outSum = Sum(M.outp);
             if (M.cur < 0)
             {
+                var ordIx = OrderIdx(ps, rec); /* 09.11.: bestellte Waren nach Bezahlung sortiert */
                 for (int r0 = 0; r0 < rec.Count * 2; r0++)
                 {
-                    int r = r0 % rec.Count; var rc = rec[r]; if (!PlanOn(ps, rc.plan)) continue;
+                    int r = r0 < rec.Count ? ordIx[r0] : r0 % rec.Count; var rc = rec[r]; if (!RecOn(ps, rc)) continue;
                     if (r0 < rec.Count && !WantsOut(ps, rc.outp)) continue; /* 05.11.: erste Runde nur bestellte Waren */
                     if (M.inp[rc.inp] >= rc.n - 1e-6f && outSum + rc.k <= MachOutCap(ps, id))
                     {

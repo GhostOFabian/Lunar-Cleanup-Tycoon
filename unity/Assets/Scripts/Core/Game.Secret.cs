@@ -72,6 +72,7 @@ namespace LunarCleanup.Core
             {
                 sv.secretBeat++; if (ps.pid == S.planet) StoryNew = true;
                 if (!Offline && ps.pid == S.planet) { Toast("Logbuch " + ps.P.name + ": " + log[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
+                StoryAchCheck();
             }
             // Sterne (erst, wenn das Geheimnis bekannt ist)
             if (sv.secretBeat == 0) return;
@@ -80,10 +81,21 @@ namespace LunarCleanup.Core
             if (prog >= 1) GiveStar(ps, 1);
             if (prog >= 1 && sv.secretT <= STAR_TIME) GiveStar(ps, 2);
         }
+        /// <summary>09.11.: Geschichts-Erfolge für Game Center (nur mit LC_STORE wirksam).</summary>
+        public static void StoryAchCheck()
+        {
+            if (!AppleServices.Enabled || S == null || Hard) return;
+            int known = 0, full = 0, stars = 0; foreach (var q in P.Values) { if (SecretKnown(q)) known++; if (q.sv.secretBeat >= LogAt.Length) full++; stars += StarCount(q); }
+            if (known >= 1) AppleServices.ReportAchievement(AppleIds.Story("first"));
+            if (P.TryGetValue("moon", out var mp) && mp.sv.secretBeat >= LogAt.Length) AppleServices.ReportAchievement(AppleIds.Story("moon"));
+            if (full >= 9) AppleServices.ReportAchievement(AppleIds.Story("half"));
+            if (full >= Glyphs.Count) AppleServices.ReportAchievement(AppleIds.Story("all"));
+            if (stars >= Glyphs.Count * 3) AppleServices.ReportAchievement(AppleIds.Story("stars"));
+        }
         static void GiveStar(PState ps, int i)
         {
             if ((ps.sv.stars & (1 << i)) != 0) return; ps.sv.stars |= 1 << i; S.lk += 5;
-            if (!Offline) Toast("Stern " + StarCount(ps) + "/3 auf " + ps.P.name + ": " + StarNames[i] + " · +5 Kristalle", "good");
+            if (!Offline) Toast("Stern " + StarCount(ps) + "/3 auf " + ps.P.name + ": " + StarNames[i] + " · +5 Kristalle", "good"); StoryAchCheck();
         }
         /// <summary>Saubere Parzelle wird vom Schleim überzogen (wie Meteorstaub: wieder putzbar, gibt beim Putzen wieder alles).</summary>
         static void GooCover(PState ps, int cid)

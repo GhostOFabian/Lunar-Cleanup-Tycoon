@@ -43,12 +43,14 @@ namespace LunarCleanup.Core
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics() { cloud = null; lastUp = 0; }
         static ICloudSave cloud; static float lastUp;
-        public static ICloudSave Cloud => cloud ??= new NoCloud();
+        public static ICloudSave Cloud => cloud ??= AppleServices.Enabled ? new GameCenterCloud() : (ICloudSave)new NoCloud();
+        /// <summary>09.11.: Beim Start bei Game Center anmelden (nur mit LC_STORE).</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] static void StoreInit() { if (!AppleServices.Enabled) return; AppleServices.Authenticate(); AppleServices.CheckAppleId(); }
 
         /// <summary>Höchstens alle 2 Minuten hochladen (Akku, Datenvolumen).</summary>
         public static void MaybeUpload(string json, long stamp, bool force = false)
         {
-            if (!Cloud.SignedIn) return; if (!force && Time.unscaledTime - lastUp < 120) return; lastUp = Time.unscaledTime; Cloud.Upload(json, stamp);
+            if (!Cloud.SignedIn) return; if (!force && Time.unscaledTime - lastUp < 120) return; lastUp = Time.unscaledTime; Cloud.Upload(json, stamp); AppleServices.ReportScores();
         }
 
         /// <summary>Fabian 03.11.: Angebote, die zum Spiel passen – Komfort, Zeit, Schutz und Aussehen. Keine zusätzlichen Fahrzeuge, keine Geld-Pakete.
