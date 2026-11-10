@@ -198,7 +198,8 @@ namespace LunarCleanup.UI
         void UpdateWarn(PState ps)
         {
             string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
-            if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
+            if (Game.PuzzleAnim) { } /* 10.11.: während der Puzzle-Animation keine Warnleiste */
+            else if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
             else if (Game.DoomActive && Game.S.doomPid != Game.S.planet) { var dp = Game.P[Game.S.doomPid]; t = "RIESENMETEOR auf " + dp.P.name + " in " + Mathf.CeilToInt(Game.S.doomT) + " s · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" + (dp.sv.flakLv > 0 ? " · Tippen: hinfliegen und abfangen" : " · Tippen: hinfliegen"); warnTarget = "doomgo"; }
             else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit – Brocken antippen, wenn der Ring GRÜN ist" : "") + (dp.sv.msLv == 0 && dp.sv.flakLv == 0 ? " · keine Abwehr! Tippen: Schild und Raketen kaufen" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
             else if (Game.EvOn(ps, "trader")) { t = "Händler kauft " + GameData.Mats[ps.sv.ev.mat].name + " ×3 · " + Game.Fmt(Game.TraderStock(ps)) + " E = " + Game.Fmt(Game.TraderValue(ps)) + " Cr · noch " + Mathf.CeilToInt(ps.sv.ev.t) + " s · antippen"; warnTarget = "trader"; }

@@ -79,7 +79,7 @@ namespace LunarCleanup.Core
             }
             // Sterne (erst, wenn das Geheimnis bekannt ist)
             if (sv.secretBeat == 0) return;
-            bool done = ps.nClean >= NonBase(ps) && ps.act.Count == 0; /* jetzt wirklich sauber – nicht „früher einmal geschafft“ (Neustart) */
+            bool done = ps.nClean >= NonBase(ps); /* 10.11.: Meteorstaub zählt nicht gegen „komplett sauber“ */ /* jetzt wirklich sauber – nicht „früher einmal geschafft“ (Neustart) */
             if (done) GiveStar(ps, 0);
             if (prog >= 1) GiveStar(ps, 1); /* Sterne 2 und 3: alle Teile gefunden (das Zeichen erscheint erst bei 100 %) */
             if (prog >= 1 && sv.secretT <= STAR_TIME) GiveStar(ps, 2);
@@ -131,7 +131,7 @@ namespace LunarCleanup.Core
             if (PuzzleAnimPid == ps.pid) PuzzleAnimPid = null; if (ps.sv.puzzleDone) return; ps.sv.puzzleDone = true; var f = ps.pd.BigGlyph;
             if (f != null) { float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / ps.pd.R + .05f)); foreach (var c in ps.pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) ps.dirtyCells.Add(c.id); }
             foreach (int c in ps.pd.GlyphCells) ps.dirtyCells.Add(c);
-            if (ps.pid == S.planet && !Offline) { StoryNew = true; StoryAfter = Time.realtimeSinceStartup + 3.5f; }
+            if (ps.pid == S.planet && !Offline) { StoryNew = true; StoryAfter = Time.realtimeSinceStartup + 7f; /* erst das Zeichen bestaunen */ }
             Save();
         }
         public static float StoryAfter;
@@ -157,6 +157,21 @@ namespace LunarCleanup.Core
             ps.sv.secretBeat = 0; return k;
         }
         public static int GlyphCount() => Cur.pd.GlyphCells.Count;
+        /// <summary>Test-Modus (Fabian 10.11.): Planet auf 99 % – Puzzle zurückgesetzt, alles sauber außer den letzten zwei Puzzleteilen.
+        /// Die wischst du selbst frei: erst die Fund-Animation, beim letzten die große Zusammensetz-Animation. Gibt die Richtung zum ersten Teil zurück.</summary>
+        public static Vector3 DevPuzzle99()
+        {
+            var ps = Cur; var pd = ps.pd; var sv = ps.sv; if (!SecretOn(ps) || pd.GlyphCells.Count == 0) { Toast("Hier gibt es kein Puzzle", "bad"); return Vector3.zero; }
+            var g = pd.GlyphCells; var keep = new HashSet<int>(g.Skip(Math.Max(0, g.Count - 2)));
+            PuzzleAnimPid = null; sv.puzzleDone = false; sv.stars = 0; sv.secretT = 0; sv.goo?.Clear(); sv.gooT = -900; sv.gooSeedT = -900; /* 15 min kein Ausbreiten */ sv.pieceN = g.Count; sv.pieceMask = 0;
+            for (int k = 0; k < g.Count; k++) if (!keep.Contains(g[k])) sv.pieceMask |= 1 << k; /* die anderen gelten als gefunden – keine Meldungsflut */
+            sv.secretBeat = Math.Max(0, SecretLog(ps).Length - 1);
+            for (int i = 0; i < pd.N; i++) { if (pd.cells[i].IsBase || keep.Contains(i)) continue; if (!ps.clean[i] || ps.act.ContainsKey(i)) { ps.act.Remove(i); FinishCell(ps, i); } }
+            foreach (int id in keep) { if (ps.clean[id]) { ps.clean[id] = false; ps.nClean = Mathf.Max(0, ps.nClean - 1); ps.paid[id] = false; } ps.act.Remove(id); if (sv.goo == null) sv.goo = new List<int>(); sv.goo.Add(id); } /* als Schleim: Fahrzeuge lassen sie liegen, du wischst selbst */
+            CalcFront(ps); for (int i = 0; i < pd.N; i++) ps.dirtyCells.Add(i);
+            Toast("Test: Planet auf 99 % – wisch die zwei letzten Puzzleteile frei", "good"); Save();
+            return pd.cells[keep.First()].c.normalized;
+        }
         /// <summary>Test: allen Schleim wegputzen wie von Hand (über FinishCell).</summary>
         public static int DevClearGoo() { var ps = Cur; int n = 0; foreach (int c in ps.sv.goo.ToList()) { ps.act.Remove(c); FinishCell(ps, c); n++; } return n; }
         /// <summary>Test: Anteil der Sternkarte sofort sauber machen.</summary>
