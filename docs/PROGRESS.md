@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 66 (10.11.):** Waren der Zweigbänder laufen über das Y bis ins Produktlager weiter (Länge des Hauptband-Rests wurde vorher nicht angehängt). `call DevBeltInfo` zeigt Länge und Warenstand je Band.
 - **Build 65 (10.11.):** Y-Stücke mit Banden nur außen (Lücke in der Bande des Hauptbandes, Zweig-Banden enden an dessen Kante, keine Endrolle). Im Editor geprüft.
 - **Build 64 (10.11.):** Fabrik-Planer: Gebäude, Anschlüsse, Bänder und Y-Stücke werden gemeinsam geplant – keine Kreuzungen, keine Brücken, eine Höhe, echte Bandlängen in der Simulation. 49/49 Layouts gültig, Basis-Prüfung 0 Befunde. Band-Editor entfernt. Auf dem Handy noch nicht gesehen.
 - **Build 63 (10.11.):** Puzzle-Ende: Linien bauen sich von der Mitte aus auf, dann leuchtet das Zeichen. Spielstand 17× kleiner (Meteoritenstaub kompakt), Speichern dadurch viel schneller. Im Editor geprüft; auf dem Handy noch offen.

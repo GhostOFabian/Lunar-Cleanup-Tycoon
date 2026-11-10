@@ -31,6 +31,12 @@ namespace LunarCleanup.Core
         {
             var P = Cur?.plan; if (P == null) return "kein Plan"; return (P.ok ? "ok" : "FEHLER") + " " + P.key + " " + P.ms + " ms, Lage " + P.rot + "/" + P.mir + " " + P.shift + ", Bänder " + P.cells.Count + ", Y " + P.merge.Count + (P.errors.Count > 0 ? " | " + string.Join(" | ", P.errors.Take(6)) : "");
         }
+        public static string DevBeltInfo()
+        {
+            var ps = Cur; var sb = new System.Text.StringBuilder();
+            foreach (var b in ps.lay.belts) { if (ps.plan == null || !ps.plan.cells.ContainsKey(b.id)) continue; ps.belts.TryGetValue(b.id, out var its); sb.Append(b.id).Append(ps.plan.merge.ContainsKey(b.id) ? "(Y)" : "").Append(" L ").Append(b.L.ToString("0.0")).Append(" rp ").Append(Len(b.rp).ToString("0.0")).Append(" live ").Append(BeltLive(ps, b) ? 1 : 0).Append(" n ").Append(its?.Count ?? 0).Append(" max ").Append(its != null && its.Count > 0 ? its.Max(i => i.s).ToString("0.0") : "-").Append(" | "); }
+            return sb.ToString();
+        }
         public static System.Func<string> FootprintHook;
         public static string DevFootprints() => FootprintHook != null ? FootprintHook() : "keine Ansicht";
         /// <summary>Editor/Test: alle 49 Layouts planen und prüfen.</summary>
@@ -87,8 +93,10 @@ namespace LunarCleanup.Core
         /// <summary>Hauptband ab dem Y-Punkt m bis zum Ende (ohne m selbst).</summary>
         static IEnumerable<Vector2> TailFrom(Vector2[] tr, Vector2Int m)
         {
-            Vector2 mp = m; int best = 0; float bd = 1e9f; for (int i = 0; i < tr.Length; i++) { float d = (tr[i] - mp).sqrMagnitude; if (d < bd) { bd = d; best = i; } }
-            for (int i = best + 1; i < tr.Length; i++) yield return tr[i];
+            /* 10.11.: nächster Abschnitt (nicht Punkt) – gerade Hauptbänder haben nach dem Glätten nur Anfangs- und Endpunkt */
+            Vector2 mp = m; int best = 1; float bd = 1e9f;
+            for (int i = 1; i < tr.Length; i++) { var a = tr[i - 1]; var d = tr[i] - a; float l2 = d.sqrMagnitude; float t = l2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(mp - a, d) / l2) : 0; float dd = (a + d * t - mp).sqrMagnitude; if (dd < bd) { bd = dd; best = i; } }
+            for (int i = best; i < tr.Length; i++) yield return tr[i];
         }
         static float Len(Vector2[] p) { float s = 0; for (int i = 1; i < p.Length; i++) s += (p[i] - p[i - 1]).magnitude; return s; }
         static Vector2 FreePoint(FactoryPlan P, Vector2 q)
