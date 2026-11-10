@@ -198,7 +198,7 @@ namespace LunarCleanup.UI
         void UpdateWarn(PState ps)
         {
             string t = null; var st = ps.P.storm; string tt = Game.TeamText(ps);
-            if (Game.PuzzleAnim) { } /* 10.11.: während der Puzzle-Animation keine Warnleiste */
+            if (Game.PuzzleQuiet) { } /* 10.11.: während der Puzzle-Animation keine Warnleiste */
             else if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
             else if (Game.DoomActive && Game.S.doomPid != Game.S.planet) { var dp = Game.P[Game.S.doomPid]; t = "RIESENMETEOR auf " + dp.P.name + " in " + Mathf.CeilToInt(Game.S.doomT) + " s · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" + (dp.sv.flakLv > 0 ? " · Tippen: hinfliegen und abfangen" : " · Tippen: hinfliegen"); warnTarget = "doomgo"; }
             else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit – Brocken antippen, wenn der Ring GRÜN ist" : "") + (dp.sv.msLv == 0 && dp.sv.flakLv == 0 ? " · keine Abwehr! Tippen: Schild und Raketen kaufen" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
@@ -580,7 +580,7 @@ namespace LunarCleanup.UI
         {
             if (Game.S == null) return; var ps = Game.Cur; var P = ps.P;
             if (Game.NeedClass && !MenuOpen && sheetKind != "class") OpenSheet("class");
-            if (Game.StoryNew && !MenuOpen && !SheetOpen && !Game.PuzzleAnim && Time.realtimeSinceStartup >= Game.StoryAfter) { Game.StoryNew = false; if (Game.SecretKnown(Game.Cur)) OpenSheet("secret"); } /* 08.11.: neuer Logbuch-Eintrag */ /* 05.11.: Klasse wählen ist Pflicht – auch in alten Hard-Spielständen */
+            if (Game.StoryNew && !MenuOpen && !SheetOpen && !Game.PuzzleQuiet && !Game.ToastBusy && Time.realtimeSinceStartup >= Game.StoryAfter) { Game.StoryNew = false; if (Game.SecretKnown(Game.Cur)) OpenSheet("secret"); } /* 08.11.: neuer Logbuch-Eintrag */ /* 05.11.: Klasse wählen ist Pflicht – auch in alten Hard-Spielständen */
             /* Fabian 02.11.: beim Abfangen Meldungen nach unten, damit sie keine Brocken verdecken */
             bool icpLow = Game.Icp != null; if (icpLow != toastLow) { toastLow = icpLow; if (icpLow) toastBox.Anchor(0, 0, 1, 0, 24, 40, 24, -170); else toastBox.Anchor(0, 1, 1, 1, 24, -330, 24, 196); }
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;

@@ -307,11 +307,14 @@ namespace LunarCleanup.Core
         /* Fabian 02.11.: ruhigerer Bildschirm. Alles landet im Protokoll (Ziele → Statistik); Kleinkram erscheint nur, wenn gerade wenig los ist. */
         public static readonly List<(string t, string k, long at)> Log = new List<(string, string, long)>();
         static readonly List<float> toastT = new List<float>();
+        static readonly List<(string t, string k)> toastWait = new List<(string, string)>(); static float toastWaitT;
+        public static bool ToastBusy => toastWait.Count > 0 || Time.realtimeSinceStartup < toastWaitT + 2.4f;
+        static void ToastFlush() { if (toastWait.Count == 0 || PuzzleQuiet || Time.realtimeSinceStartup < toastWaitT) return; var w = toastWait[0]; toastWait.RemoveAt(0); toastWaitT = Time.realtimeSinceStartup + 1.6f; toastT.Add(Time.realtimeSinceStartup); OnToast?.Invoke(w.t, w.k); }
         public static void Toast(string t, string k = "") => Toast(t, k, false);
         public static void Toast(string t, string k, bool minor)
         {
             if (Offline) return; Log.Add((t, k, Now())); if (Log.Count > 80) Log.RemoveAt(0);
-            if (PuzzleAnim) return; /* 10.11.: die Puzzle-Animation wird von nichts verdeckt */
+            if (PuzzleQuiet) { if (!minor && k != "" && toastWait.Count < 6) toastWait.Add((t, k)); return; } /* 10.11.: nichts verdeckt die Puzzle-Animation – wichtige Meldungen kommen danach */
             float now = Time.realtimeSinceStartup; toastT.RemoveAll(x => now - x > 4f);
             if ((minor || k == "") && toastT.Count >= 2) return; /* schon zwei Meldungen sichtbar: Nebensächliches nur ins Protokoll */
             toastT.Add(now); OnToast?.Invoke(t, k);
@@ -1770,7 +1773,7 @@ namespace LunarCleanup.Core
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
-            AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
+            AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); ToastFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
         static void StepPlanet0(PState ps, float dt)

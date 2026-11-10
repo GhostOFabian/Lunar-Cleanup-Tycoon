@@ -127,7 +127,7 @@ namespace LunarCleanup.Gameplay
             hud.BeltInfo = () => !world || !world.Editing ? "" : world.DrawMode ? "Zeichnen: Zieh mit dem Finger den ganzen Weg von " + world.BeltName(world.EditBelt).Replace(" → ", " bis ") + " – loslassen, fertig. Kreuzt er ein Band, wird er automatisch angehoben." : (world.EditWhy != "" ? "Rot: " + world.EditWhy + ". " : "") + (world.SelPt >= WorldView.END0 ? "Orange Griff: um das Gebäude ziehen, um den " + (world.SelPt == WorldView.END0 ? "Ausgang" : "Eingang") + " zu verlegen. " : world.SelPt >= 0 ? "Punkt gewählt · Höhe " + world.EditHeight.ToString("0.0") + " m – blauen Knopf ziehen oder „Höher“/„Tiefer“. " : "Weiße Punkte ziehen = Weg, aufs Band tippen = neuer Punkt, orange Griffe = Aus- und Eingang verlegen. „Höher“/„Tiefer“ ohne Auswahl hebt das ganze Band.");
             hud.BeltBtn = k => { if (!world || !world.Editing) return; switch (k) { case "draw": world.DrawMode = !world.DrawMode; break; case "add": world.AddPoint(); break; case "up": world.NudgeHeight(.5f); break; case "down": world.NudgeHeight(-.5f); break; case "del": world.DeletePoint(); break; case "reset": world.ResetEdit(); break; case "cancel": world.EndEdit(); break; case "ok": world.CommitEdit(); break; } };
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { if (!world) return; world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => { if (world) world.LaunchRocket(); }; Game.OnMeteors += cells => { if (world) world.MeteorShower(cells); }; Game.OnCellFlash += id => { if (world) world.FlashCell(id); }; Game.OnPerk += (id, d, cells) => { if (world) world.PerkFx(id, d, cells); }; /* 05.11.: im Editor bleiben alte Abos nach Stop/Play hängen */ Game.OnDrop += (d, t) => { if (world) world.DropFx(d, t); };
-            Game.OnPuzzle += (p, cells) => { if (world) world.PuzzleFx(p); else Game.PuzzleReveal(p); }; /* 09.11.: Puzzle fügt sich zusammen */ Game.OnLevelUp += (l, t) => { if (hud) hud.BuffPop("Putz-Level " + l, new Color(.55f, 1f, .7f), 0, t); };
+            Game.OnPuzzle += (p, cells) => { if (world) world.PuzzleFx(p); else Game.PuzzleReveal(p); }; /* 09.11.: Puzzle fügt sich zusammen */ Game.OnLevelUp += (l, t) => { if (Game.PuzzleQuiet) { Game.Toast("Putz-Level " + l + (string.IsNullOrEmpty(t) ? "" : " · " + t), "good"); return; } if (hud) hud.BuffPop("Putz-Level " + l, new Color(.55f, 1f, .7f), 0, t); };
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
             { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 4.5f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 16; brushLight.color = new Color(1f, .96f, .88f); brushLight.intensity = 0; brushLight.shadows = LightShadows.None; }
             BuildPlanet();
@@ -192,7 +192,7 @@ namespace LunarCleanup.Gameplay
               if ((kb0 != null && kb0.pKey.wasPressedThisFrame && preview == null) || (photo && tl)) { photo = !photo; hud.SetPhoto(photo); } }
             if (!dailyDone && !offlineRunning && Time.realtimeSinceStartup > 3) { dailyDone = true; var dtx = Game.DailyCheck(); if (dtx != null) Game.Toast(dtx, "good"); }
             bool menu = Hud.I.MenuOpen; if (menu) { Twist(4 * dt); } /* Startmenü: Kamera dreht sich langsam um die Basis, kein Wischen */
-            if (!menu) HandleInput(dt);
+            if (!menu && !Game.PuzzleQuiet) HandleInput(dt);
             var kbd = Keyboard.current; if (kbd != null && !Hud.I.SheetOpen && !menu) { float ps = Screen.height * .7f * dt; /* Pfeiltasten/WASD verschieben, auch während des Wischens */ if (kbd.leftArrowKey.isPressed || kbd.aKey.isPressed) Pan(new Vector2(ps, 0)); if (kbd.rightArrowKey.isPressed || kbd.dKey.isPressed) Pan(new Vector2(-ps, 0)); if (kbd.upArrowKey.isPressed || kbd.wKey.isPressed) Pan(new Vector2(0, -ps)); if (kbd.downArrowKey.isPressed || kbd.sKey.isPressed) Pan(new Vector2(0, ps)); }
             if (kbd != null) { if (kbd.qKey.isPressed) Twist(90 * dt); if (kbd.eKey.isPressed) Twist(-90 * dt); if (kbd.rKey.isPressed || kbd.numpadPlusKey.isPressed) Zoom(1 - 1.2f * dt); if (kbd.fKey.isPressed || kbd.numpadMinusKey.isPressed) Zoom(1 + 1.2f * dt); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -205,6 +205,7 @@ namespace LunarCleanup.Gameplay
             if (MoveReq != null) { var mr = MoveReq; MoveReq = null; if (world) { world.BeginMove(mr); if (Game.Cur.lay.pos.ContainsKey(mr)) { cd = Game.Cur.pd.PlanDir(Game.Cur.lay.pos[mr]); altGoal = Mathf.Clamp(altGoal, 30, 60); } } }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
+            if (Game.PuzzleQuiet && Game.Cur.pd.BigGlyph != null) { cd = Game.Cur.pd.BigGlyph.d; altGoal = Game.Cur.pd.R * 3f; } /* 10.11.: Kamera steht senkrecht mittig über dem Zeichen, weit genug draußen */
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(true); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
@@ -383,7 +384,7 @@ namespace LunarCleanup.Gameplay
         /// <summary>Kamera setzen. smooth: Fabian 04.11. – die sichtbare Kamera gleitet weich hinterher (kurze Wege schnell, weite Sprünge wie ein Flug).</summary>
         void ApplyCam(bool smooth = false)
         {
-            float R = VP.pd.R; float tilt = Mathf.Lerp(TILT, 0, Mathf.InverseLerp(60, R * 2f, alt));
+            float R = VP.pd.R; float tilt = Game.PuzzleQuiet ? 0 : Mathf.Lerp(TILT, 0, Mathf.InverseLerp(60, R * 2f, alt));
             north = (north - cd * Vector3.Dot(north, cd)).normalized;
             if (!smooth || !camS) { cdS = cd; northS = north; camS = true; }
             else { float ang = Vector3.Angle(cdS, cd), dt0 = Mathf.Min(Time.unscaledDeltaTime, .05f); float k = 1 - Mathf.Exp(-(ang > 6 ? 4.5f : 20f) * dt0); cdS = Vector3.Slerp(cdS, cd, k).normalized; northS = Vector3.Slerp(northS, north, k); northS = (northS - cdS * Vector3.Dot(northS, cdS)).normalized; if (northS.sqrMagnitude < .5f) northS = north; }

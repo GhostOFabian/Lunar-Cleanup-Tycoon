@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 62 (10.11.):** Puzzle-Animation: Kamera mittig und weit genug draußen, Erfolgsmeldungen verdecken nichts mehr (kommen danach). Im Editor geprüft.
 
 ## Fertig – Browser-Prototyp v6.3 (`prototype/index.html`)
 - **Unity 0.9 – Tiefenabbau:** Planet-Abschluss wird dauerhaft gemerkt (+10 % Preis, +1 Fahrzeugplatz, Meldung). Bohrtürme auf sauberen Parzellen fertiger Planeten (2 + 2 je Basisstufe), Vorkommen mager/gut/reich, 75/25-Mischung, Stufen 0–5 (+30 %), Umbau zum Erzbagger (×2,5, alle Rohstoffe), Störungen mit Techniker oder Sofort-Reparatur, Fahrzeuge und Drohnen holen ab, Strombedarf. Antippen einer sauberen Parzelle öffnet den Tiefenabbau; Basis-Fenster mit „Bauen auf bestem Vorkommen“. Testmodus im Editor (Menü Lunar Cleanup → Testmodus) mit eigenem Test-Spielstand – Test-Tasten wirken nur dort. Offene Liste: `docs/UNITY_TODO.md`.

@@ -160,7 +160,7 @@ namespace LunarCleanup.Gameplay
         IEnumerator PuzzleCo(PState p)
         {
             var f = pd.BigGlyph; var cells = new List<int>(pd.GlyphCells); int N = Mathf.Max(1, cells.Count); var col = f.glow;
-            LunarCleanup.UI.Hud.I?.CloseSheet(); LunarCleanup.Gameplay.GameRoot.FocusReq = f.d; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 1.7f;
+            LunarCleanup.UI.Hud.I?.CloseSheet(); LunarCleanup.Gameplay.GameRoot.FocusReq = f.d; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 3f;
             Sfx.Play("discover", .8f, .7f);
             yield return new WaitForSeconds(1.6f);
             // Ziel jedes Teils: die Mitte seines Ausschnitts im großen Zeichen
