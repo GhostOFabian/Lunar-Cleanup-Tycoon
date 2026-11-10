@@ -709,6 +709,13 @@ namespace LunarCleanup.Core
             return 0;
         }
 
+        /// <summary>10.11.: wie Pick, aber je Ware bleibt keep(m) im Lager liegen (reserviert für Bestellungen).</summary>
+        static bool PickSpare(float[] o, IEnumerable<int> keys, float min, float cap, bool whole, System.Func<int, float> keep, out int bm, out float ba)
+        {
+            bm = -1; ba = 0; float bs = 0; foreach (int m in keys) { float sp = o[m] - keep(m); if (sp >= min && (bm < 0 || sp > bs)) { bm = m; bs = sp; } }
+            if (bm < 0) return false; float a = Mathf.Min(cap, bs); if (whole) a = Mathf.Floor(a + 1e-6f); if (a < min) { bm = -1; return false; }
+            o[bm] -= a; if (o[bm] < 1e-6f) o[bm] = 0; ba = a; return true;
+        }
         static bool Pick(float[] o, IEnumerable<int> keys, float min, float cap, bool whole, out int bm, out float ba)
         {
             bm = -1; ba = 0; foreach (int m in keys) if (o[m] >= min && (bm < 0 || o[m] > o[bm])) bm = m;
@@ -726,14 +733,14 @@ namespace LunarCleanup.Core
                 if (Pick(buf, keys, Mathf.Min(1, P0), P0, false, out m, out a)) return true;
                 float tot = 0; foreach (int x in keys) tot += buf[x]; return tot > 0 && tot < 1 && Pick(buf, keys, 1e-6f, P0, false, out m, out a);
             }
-            if (b.from == "roh" && (b.to == "sell" || b.to == "prod")) { /* Fabian 02.11.: Verkaufs-Rohstoffe gehen erst ins Produktlager */ bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && Pick(sv.roh, new[] { om }, 1, P0, false, out m, out a)) return true; return Pick(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, out m, out a); /* nur freigegebene Rohstoffe */ }
-            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && Pick(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0 && (GameData.Mats[x].raw || SellOn(ps, x)) && OrderNeed(ps, x) <= 0), 1, PB, true, out m, out a); } /* 05.11.: Bestelltes wird nicht verkauft */ /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
+            if (b.from == "roh" && (b.to == "sell" || b.to == "prod")) { /* Fabian 02.11.: Verkaufs-Rohstoffe gehen erst ins Produktlager */ bool over = RohSum(ps) >= RohCap(ps) * .97f; int om = sv.order; System.Func<int, float> kr = x => KeepRoh(ps, x); if (sv.autoOrder && om >= 0 && GameData.Mats[om].raw && SellOn(ps, om) && sv.roh[om] >= 1 && PickSpare(sv.roh, new[] { om }, 1, P0, false, kr, out m, out a)) return true; return PickSpare(sv.roh, GameData.Raw.Where(x => SellOn(ps, x)), 1, P0, false, kr, out m, out a); /* Verkaufs-Rohstoffe, Bestelltes bleibt liegen */ }
+            if (b.from == "prod" && b.to == "sell") { return PB >= 1 && PickSpare(sv.prod, Enumerable.Range(0, NM).Where(x => sv.prod[x] > 0), 1, PB, true, x => KeepProd(ps, x), out m, out a); } /* 10.11.: alles fährt in den Frachter – außer was für Bestellungen bereitliegt */ /* 05.11.: Bestelltes wird nicht verkauft */ /* freigegebene Produkte und alle Verkaufs-Rohstoffe aus dem Produktlager */ /* nur freigegebene Produkte */
             if (b.from == "roh")
             {
                 List<Recipe> rl = b.to == "presse" ? ps.line.presse : b.to == "raff" ? ps.line.raff : null; if (rl == null) return false; if (b.to == "raff" && !PlanOn(ps, "refine") && !ps.line.raff.Any(r => OrderWants(ps, r.outp))) return false;
                 var M = ps.mach[b.to]; int best = -1; float bs = -1;
-                foreach (var r in rl) { if (!RecOn(ps, r)) continue; float x = sv.roh[r.inp]; if (x < 1) continue; float sc = x / (1 + M.inp[r.inp]) * (WantsOut(ps, r.outp) ? 1000 + (float)Math.Min(1e6, OrderPay(ps, r.outp) / 1000) : 1); /* 05.11.: Bestellungen zuerst */ if (sc > bs) { bs = sc; best = r.inp; } }
-                return best >= 0 && Pick(sv.roh, new[] { best }, 1, P0, false, out m, out a);
+                foreach (var r in rl) { if (!RecOn(ps, r)) continue; float x = sv.roh[r.inp] - KeepRoh(ps, r.inp); if (x < 1) continue; /* 10.11.: bestellter Rohstoff bleibt liegen */ float sc = x / (1 + M.inp[r.inp]) * (WantsOut(ps, r.outp) ? 1000 + (float)Math.Min(1e6, OrderPay(ps, r.outp) / 1000) : 1); /* 05.11.: Bestellungen zuerst */ if (sc > bs) { bs = sc; best = r.inp; } }
+                return best >= 0 && PickSpare(sv.roh, new[] { best }, 1, P0, false, x => KeepRoh(ps, x), out m, out a);
             }
             if (ps.mach.ContainsKey(b.from))
             {
@@ -753,7 +760,7 @@ namespace LunarCleanup.Core
         {
             var sv = ps.sv;
             if (b.to == "roh") { if (RohSum(ps) + a > RohCap(ps) + 1e-6f) return false; { sv.roh[m] += a; RohIn(ps, m, a); } return true; }
-            if (b.to == "prod") { if (ProdSum(ps) + a > ProdCap(ps) + 1e-6f) return false; sv.prod[m] += a; return true; }
+            if (b.to == "prod") { if (ProdSum(ps) + a > ProdCap(ps) + 1e-6f) return false; sv.prod[m] += a; ProdIn(ps, m, a); return true; }
             if (b.to == "sell") { if (Sum(sv.sellBuf) + a > SellCap(ps) + 1e-6f) return false; sv.sellBuf[m] += a; return true; }
             if (ps.mach.ContainsKey(b.to))
             {

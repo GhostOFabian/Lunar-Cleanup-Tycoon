@@ -13,7 +13,8 @@ namespace LunarCleanup.Core
         public static bool PlanOn(PState ps, string key) => string.IsNullOrEmpty(key) || !ps.sv.planOff.Contains(key);
         public static void TogglePlan(string key) { var sv = Cur.sv; if (sv.planOff.Contains(key)) sv.planOff.Remove(key); else sv.planOff.Add(key); Toast(PlanOn(Cur, key) ? "Rezept eingeschaltet" : "Rezept ausgeschaltet – die Ware bleibt roh"); }
         /// <summary>Ist die Ware zum Verkauf freigegeben? Standard: alle Produkte und Rohstoffe, die keine Maschine hier veredelt.</summary>
-        public static bool SellOn(PState ps, int m) => ps.sv.sellYes.Contains(m) || (!ps.sv.autoOff.Contains(m) && (!GameData.Mats[m].raw || m == KristallIx || !RawRoute(ps, m))); /* Fabian 01.11.: geerntete Kristalle werden standardmäßig mit verschickt */
+        /// <summary>10.11. (Fabian): alles ist freigegeben – Produkte immer, Rohstoffe, die hier keine Maschine braucht. Zurückgehalten wird nur, was für Bestellungen bereitliegt (KeepProd/KeepRoh).</summary>
+        public static bool SellOn(PState ps, int m) => !GameData.Mats[m].raw || m == KristallIx || !RawRoute(ps, m); /* Fabian 01.11.: geerntete Kristalle werden standardmäßig mit verschickt */
         static int KristallIx => GameData.MatIx.TryGetValue("kristall", out var k) ? k : -1;
         public static bool AutoOn(PState ps, int m) => SellOn(ps, m);
         public static void ToggleAuto(int m)
@@ -25,7 +26,7 @@ namespace LunarCleanup.Core
         public static bool CargoHint(PState ps)
         {
             if (Gs(ps) >= 2 || ps.sv.rk > 0 || SellCap(ps) - Sum(ps.sv.sellBuf) <= .5f) return false;
-            for (int m = 0; m < NM; m++) { bool raw = GameData.Mats[m].raw; if ((raw ? ps.sv.roh : ps.sv.prod)[m] >= (raw ? .5f : 1) && SellOn(ps, m)) return true; }
+            for (int m = 0; m < NM; m++) { bool raw = GameData.Mats[m].raw; if ((raw ? ps.sv.roh : ps.sv.prod)[m] - (raw ? KeepRoh(ps, m) : KeepProd(ps, m)) >= (raw ? .5f : 1) && SellOn(ps, m)) return true; }
             return false;
         }
         /// <summary>Alle freigegebenen Waren auf einmal in den Frachtraum (Anfangsbereich).</summary>
@@ -35,8 +36,8 @@ namespace LunarCleanup.Core
             float before = Sum(ps.sv.sellBuf);
             for (int m = 0; m < NM; m++)
             {
-                bool raw = GameData.Mats[m].raw; var store = raw ? ps.sv.roh : ps.sv.prod; if (!SellOn(ps, m) || store[m] < (raw ? .5f : 1)) continue;
-                float room = SellCap(ps) - Sum(ps.sv.sellBuf); if (room <= .01f) break; float u = Mathf.Min(store[m], room); if (!raw) u = Mathf.Floor(u + 1e-6f); if (u <= .01f) continue;
+                bool raw = GameData.Mats[m].raw; var store = raw ? ps.sv.roh : ps.sv.prod; float keep = raw ? KeepRoh(ps, m) : KeepProd(ps, m); if (!SellOn(ps, m) || store[m] - keep < (raw ? .5f : 1)) continue;
+                float room = SellCap(ps) - Sum(ps.sv.sellBuf); if (room <= .01f) break; float u = Mathf.Min(store[m] - keep, room); if (!raw) u = Mathf.Floor(u + 1e-6f); if (u <= .01f) continue;
                 store[m] -= u; ps.sv.sellBuf[m] += u;
             }
             float got = Sum(ps.sv.sellBuf) - before;
@@ -47,7 +48,7 @@ namespace LunarCleanup.Core
         public static void LoadRocket(int m)
         {
             var ps = Cur; var sv = ps.sv; if (!SellOn(ps, m)) { Fail("Erst zum Verkauf freigeben"); return; } if (sv.rk > 0) { Fail("Die Rakete ist unterwegs"); return; }
-            bool raw = GameData.Mats[m].raw; var store = raw ? sv.roh : sv.prod; float room = SellCap(ps) - Sum(sv.sellBuf); float u = Mathf.Min(store[m], room); if (!raw) u = Mathf.Floor(u + 1e-6f);
+            bool raw = GameData.Mats[m].raw; var store = raw ? sv.roh : sv.prod; float room = SellCap(ps) - Sum(sv.sellBuf); float u = Mathf.Min(store[m] - (raw ? KeepRoh(ps, m) : KeepProd(ps, m)), room); /* 10.11.: Bestelltes bleibt im Lager */ if (!raw) u = Mathf.Floor(u + 1e-6f);
             if (u <= .01f) { Fail(room <= .01f ? "Der Frachtraum ist voll – starte die Rakete" : "Nichts auf Lager"); return; }
             store[m] -= u; sv.sellBuf[m] += u; Toast(Fmt(u) + " " + GameData.Mats[m].name + " in den Frachtraum geladen", "good");
         }

@@ -223,11 +223,10 @@ namespace LunarCleanup.UI
 
         static void Production(Hud h)
         {
-            h.Tabs("Ampel", "Verkauf", "Plan", "Lieferketten"); /* 04.11.: Lieferketten aus dem Planeten-Fenster hierher */
+            h.Tabs("Ampel", "Verkauf", "Plan"); /* 10.11. (Fabian): Lieferketten-Reiter entfernt – Spezialgüter laufen automatisch */
             int tab = h.Tab;
             if (tab == 0) { ProductionOverview(h); return; }
             if (tab == 1) { Selling(h); return; }
-            if (tab == 3) { Supply(h); return; }
             if (!ps.bld.Contains("presse")) h.Note("Baue die Staubpresse (Basisstufe 2), um mit der Veredelung zu beginnen."); Plan(h);
         }
         static void ProductionOverview(Hud h)
@@ -238,6 +237,11 @@ namespace LunarCleanup.UI
             h.Section("Lager");
             h.Row(GameData.Bld["roh"].name, () => Game.Fmt(Game.RohSum(ps)) + " / " + Game.Fmt(Game.RohCap(ps)) + " E · " + Mats(ps.sv.roh));
             if (ps.bld.Contains("prod")) h.Row(GameData.Bld["prod"].name, () => Game.Fmt(Game.ProdSum(ps)) + " / " + Game.Fmt(Game.ProdCap(ps)) + " · " + Mats(ps.sv.prod));
+            if (Game.OrderReady(ps).Count > 0) /* 10.11. (Fabian): im Lager sehen, was für Bestellungen bereitliegt */
+            {
+                h.Section("Für Bestellungen im Lager");
+                h.Row("Bereit", () => string.Join(" · ", Game.OrderReady(ps).Select(r => r.name + " " + Game.Fmt(r.ready) + "/" + Game.Fmt(r.n))) + "\nBleibt im Lager, bis der Besucher abholt – nur der Überschuss fährt in den Frachter.");
+            }
             foreach (var s in GameData.Stations) if (ps.bld.Contains(s)) { var ss = s; h.Row(GameData.Bld[s].name, () => "Trichter " + Game.Fmt(Game.Sum(ps.st[ss].buf)) + " / " + Game.Fmt(Game.StBuf(ps, ss)) + " E"); }
             if (ps.bld.Contains("presse") || ps.bld.Contains("schmelze") || ps.bld.Contains("raff"))
             {
@@ -254,8 +258,8 @@ namespace LunarCleanup.UI
         {
             if (Game.Gs(ps) < 2)
             { /* Fabian 03.11.: im Anfangsbereich gut sichtbar, wie man Geld bekommt */
-                h.Callout("So bekommst du Geld", "1. Ware freigeben\n2. In die Rakete laden\n3. Rakete starten\nOhne Laden fliegt nichts weg – erst ab Basisstufe 2 bringt ein Band die Ware von selbst.");
-                h.Row("Alles in die Rakete laden", () => Game.CargoHint(ps) ? "Lädt alle freigegebenen Waren auf einmal ein" : ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Gerade nichts Freigegebenes auf Lager", () => "Alles laden", () => Game.CargoHint(ps), () => Game.LoadAllCargo(), true, null, false, () => ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Erst Ware reinigen, ins Lager bringen und freigeben");
+                h.Callout("So bekommst du Geld", "1. In die Rakete laden\n2. Rakete starten\nOhne Laden fliegt nichts weg – erst ab Basisstufe 2 bringt ein Band die Ware von selbst.");
+                h.Row("Alles in die Rakete laden", () => Game.CargoHint(ps) ? "Lädt alle Waren auf einmal ein (Bestelltes bleibt im Lager)" : ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Gerade nichts zum Verladen auf Lager", () => "Alles laden", () => Game.CargoHint(ps), () => Game.LoadAllCargo(), true, null, false, () => ps.sv.rk > 0 ? "Die Rakete ist unterwegs" : "Erst Ware reinigen, ins Lager bringen und freigeben");
             }
             h.Section("Rakete");
             h.Row("Frachtraum", () => ps.sv.rk > 0 ? "Unterwegs – zurück in " + Mathf.CeilToInt(ps.sv.rk) + " s" : Game.Fmt(Game.Sum(ps.sv.sellBuf)) + " / " + Game.Fmt(Game.SellCap(ps)) + " E · Wert " + Cr(Game.CargoValue(ps)) + " · startet von selbst ab " + Game.Fmt(Game.SellTarget(ps)) + " E",
@@ -264,16 +268,15 @@ namespace LunarCleanup.UI
             {
                 h.Row("Frachtauftrag", () => { if (ps.sv.order < 0) Game.NewOrder(ps); return ps.sv.order >= 0 ? GameData.Mats[ps.sv.order].name + " bringt +60 % – jede Rakete hat einen neuen Auftrag" : "–"; });
                 h.Row("Mischfracht und Betriebsbonus", () => { int k = Enumerable.Range(0, ps.sv.sellBuf.Length).Count(m => ps.sv.sellBuf[m] > 1e-6f); return k + " Warensorten · +" + Mathf.RoundToInt((Mathf.Min(1.4f, 1 + .08f * Mathf.Max(0, k - 1)) - 1) * 100) + " % · Betriebsbonus +" + Mathf.RoundToInt((float)(Game.FlowBonus(ps) - 1) * 100) + " %"; });
-                if (Game.Gs(ps) >= 2) h.Row("Frachtauftrag bevorzugen", () => "Ist der Auftrag eine freigegebene Rohware, schickt das Band sie zuerst.", () => ps.sv.autoOrder ? "An" : "Aus", () => true, () => ps.sv.autoOrder = !ps.sv.autoOrder, false);
+                if (Game.Gs(ps) >= 2) h.Row("Frachtauftrag bevorzugen", () => "Ist der Auftrag eine Rohware, schickt das Band sie zuerst.", () => ps.sv.autoOrder ? "An" : "Aus", () => true, () => ps.sv.autoOrder = !ps.sv.autoOrder, false);
                 if (Game.Gs(ps) >= 3) h.Row("Verkaufsautomat", () => "Sind die Lager zu 90 % voll, startet die Rakete schon halb beladen.", () => ps.sv.autoDump ? "An" : "Aus", () => true, () => Game.ToggleAutoDump(), false);
             }
             h.Section("Waren");
-            h.Note(Game.Gs(ps) < 2 ? "Gib eine Ware frei und lade sie in den Frachtraum. Verkauft wird beim Raketenstart. Ab Basisstufe 2 fahren freigegebene Waren übers Band von selbst hin." : "Nur freigegebene Waren fahren übers Band in den Frachtraum. Gesperrte bleiben im Lager – zum Beispiel, weil eine Maschine sie noch veredeln soll.");
+            h.Note(Game.Gs(ps) < 2 ? "Lade Ware in den Frachtraum und starte die Rakete – verkauft wird beim Start. Ab Basisstufe 2 fährt alles übers Band von selbst hin." : "Alles fährt von selbst in den Frachtraum. Nur was Besucher bestellt haben, bleibt im Lager liegen, bis sie es abholen. Rohstoffe, die deine Maschinen veredeln, bleiben für die Maschinen.");
             for (int i = 0; i < GameData.Mats.Count; i++)
             {
                 int m = i; var M = GameData.Mats[m]; var st = M.raw ? ps.sv.roh : ps.sv.prod; if (st[m] < (M.raw ? .5f : 1) && !Game.PlanetRaws(ps).Contains(m)) continue;
-                h.Row(M.name, () => Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr · " + (Game.SellOn(ps, m) ? "freigegeben" : "gesperrt"),
-                    () => Game.SellOn(ps, m) ? "Sperren" : "Freigeben", () => true, () => Game.ToggleAuto(m), false);
+                h.Row(M.name, () => { float keep = Game.OrderNeed(ps, m); return Game.Fmt((M.raw ? ps.sv.roh : ps.sv.prod)[m]) + " auf Lager · je " + Game.MatValue(m, ps).ToString(Game.MatValue(m, ps) < 10 ? "0.0" : "0") + " Cr" + (keep > 0 ? " · " + Game.Fmt(keep) + " für Bestellungen" : !Game.SellOn(ps, m) ? " · für die Maschinen" : ""); });
                 if (Game.Gs(ps) < 2) h.Row("   In die Rakete laden", () => "", () => "Laden", () => Game.SellOn(ps, m) && ps.sv.rk <= 0 && (M.raw ? ps.sv.roh : ps.sv.prod)[m] >= (M.raw ? .5f : 1), () => Game.LoadRocket(m), true);
             }
         }
@@ -391,7 +394,7 @@ namespace LunarCleanup.UI
                 () => sv.rest ? "Aufwecken" : "Ruhen lassen", () => sv.rest || Game.RestWhy(ps) == "", () => Game.SetRest(ps, !sv.rest), !sv.rest, null, true, () => Game.RestWhy(ps));
             h.Section("Lieferungen für " + pn);
             foreach (var q in Game.Needs(ps.pid)) { var g = Game.GoodOf(q); string qq = q; h.Row(g.name, () => "von " + GameData.Planets[qq].name + " · im Lager: " + Mathf.FloorToInt(Game.GoodAmt(g.id)) + (Game.P.ContainsKey(qq) && Game.IsDone(qq) ? " · wird hergestellt" : " · erst wenn " + GameData.Planets[qq].name + " 100 % sauber ist")); }
-            h.Note("Raketen bringen die Güter automatisch. Übersicht aller Planeten: Planeten → Lieferketten.");
+            h.Note("Raketen bringen die Güter automatisch.");
         }
         /// <summary>Fabian 02.11.: wer stellt was her, wer braucht was.</summary>
         static void Supply(Hud h)
@@ -416,7 +419,7 @@ namespace LunarCleanup.UI
             if (Game.Gs(ps) < 2) return; if (ps.sv.wo == null || ps.sv.wo.n <= 0) Game.NewWorkOrder(ps); var w = ps.sv.wo; if (w == null || w.m < 0) return;
             h.Section("Werksauftrag");
             h.Row("Liefere " + Game.Fmt(w.n) + " " + GameData.Mats[w.m].name + " per Rakete", () => Game.Fmt(Mathf.Min(ps.sv.wo.got, ps.sv.wo.n)) + " / " + Game.Fmt(ps.sv.wo.n) + " · Belohnung " + Cr(ps.sv.wo.r) + " · erfüllt: " + ps.sv.woDone + " (Ruf +" + Mathf.RoundToInt((float)(Game.WoRep(ps) - 1) * 100) + " % auf alle Preise hier)");
-            h.Note("Gib die Ware zum Verkauf frei und stell den Produktionsplan so ein, dass sie entsteht.");
+            h.Note("Stell den Produktionsplan so ein, dass die Ware entsteht – sie fährt dann von selbst in die Rakete.");
         }
         static void BaseMore(Hud h)
         {
@@ -580,7 +583,7 @@ namespace LunarCleanup.UI
         static void OrdersSheet(Hud h)
         {
             if (!Game.OrdersOpen) { h.Note("Sobald ein Planet Basisstufe 2 hat, kommen Besucher und bestellen Waren."); return; }
-            h.Note("Besucher landen auf deinen Planeten und bestellen Waren – auch von anderen Planeten. Sobald die Ware in einem Lager liegt, wird sie automatisch im Bestelllager zurückgelegt (die Rakete verkauft sie dann nicht). Ist alles da, holt der Besucher sie ab und zahlt deutlich mehr als die Rakete. Läuft auch offline. Ist die Zeit um, reist er ab – Zurückgelegtes wird normal verkauft.");
+            h.Note("Besucher bestellen Waren – auch von anderen Planeten. Deine Maschinen stellen Bestelltes zuerst her, und es bleibt im Lager liegen, statt in den Frachter zu fahren. Liegt alles bereit, holt der Besucher es ab und zahlt deutlich mehr als die Rakete. Läuft auch offline.");
             h.Section("Bestelllager");
             h.Row("Stufe " + Game.S.voLv + "/" + Game.ORDER_MAXLV, () => Game.Orders.Count + " von " + Game.OrderMax() + " Bestellungen gleichzeitig" + (Game.S.voLv < Game.ORDER_MAXLV ? " · nächste Stufe: +1 Platz" : ""),
                 () => Game.S.voLv >= Game.ORDER_MAXLV ? "Max" : Cr(Game.OrderLvCost()), () => Game.OrderLvWhy() == "", () => Game.BuyOrderLv(), why: () => Game.Steps("", Game.OrderLvCost()));
@@ -592,10 +595,10 @@ namespace LunarCleanup.UI
                 h.Row(o.who + " · " + GameData.Planets[o.pid].name, () =>
                 {
                     var parts = oo.items.Select(it => Game.ItemName(it) + " " + Game.Fmt(Mathf.Min(it.got, it.n)) + "/" + Game.Fmt(it.n) + (it.src != oo.pid || it.g != "" ? " (von " + Game.ItemFrom(it) + ")" : ""));
-                    return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % zurückgelegt";
+                    return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % liegt bereit";
                 }, () => "Absagen", () => true, () => Game.CancelOrder(oo.id), false);
             }
-            h.Note("Die am besten bezahlte Bestellung wird zuerst beliefert, und die Maschinen stellen Bestelltes vorrangig her – auch ausgeschaltete Rezepte. Ist eine Bestellung kurz vor Ablauf zu 60 % fertig, wartet der Besucher 45 min länger. Fehlt eine Ware, schau, ob genug ins Lager kommt. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
+            h.Note("Die am besten bezahlte Bestellung bekommt die Ware zuerst. Ist eine Bestellung kurz vor Ablauf zu 60 % bereit, wartet der Besucher 45 min länger. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
         }
         static void Achievements(Hud h)
         {
@@ -670,10 +673,10 @@ namespace LunarCleanup.UI
         static void Goals(Hud h)
         {
             /* Fabian 04.11.: kompakter – 4 statt 6 Reiter (Statistik und Abschluss stecken im Kodex), keine doppelten Abschnitte, Aufträge in einem Abschnitt */
-            int ap = Game.AchPending(); h.Tabs("Ziele", "Erfolge" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Kodex"); int gtab = h.Tab;
-            if (gtab == 1) { Achievements(h); return; }
-            if (gtab == 2) { OrdersSheet(h); return; }
-            if (gtab == 3) { Completion(h); Stats(h); Codex(h); return; }
+            /* 10.11. (Fabian): Ziele, Aufträge, Planetenziele und Erfolge in einem Reiter – alles, was man abholen kann, an einer Stelle */
+            int ap = Game.AchPending(); h.Tabs("Ziele" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Kodex"); int gtab = h.Tab;
+            if (gtab == 1) { OrdersSheet(h); return; }
+            if (gtab == 2) { Completion(h); Stats(h); Codex(h); return; }
             if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => (sp.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(sp) + "/" + sp.pd.GlyphCells.Count) + " · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
@@ -712,6 +715,7 @@ namespace LunarCleanup.UI
                 var E = Game.EvDef(ev.key); h.Section("Ereignis");
                 h.Row(E != null ? E.name : "Ereignis", () => (E != null ? E.hint : "") + " · noch " + Mathf.CeilToInt(Mathf.Max(0, ps.sv.ev.t) / 60f) + " min", () => ps.sv.ev.cell >= 0 ? "Hinfliegen" : "OK", () => true, () => { h.CloseSheet(); h.OnFocusEvent?.Invoke(); }, false);
             }
+            h.Section("Erfolge"); Achievements(h); /* 10.11.: Erfolge im selben Reiter */
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");

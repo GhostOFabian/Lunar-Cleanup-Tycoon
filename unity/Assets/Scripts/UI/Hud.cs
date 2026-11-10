@@ -352,7 +352,7 @@ namespace LunarCleanup.UI
             UiKit.Img(hm.transform, "Icon", UiKit.Icon("home"), Pal.Ink).rectTransform.Anchor(.5f, .5f, .5f, .5f, -13, -13, -13, -13);
             var nav = UiKit.Glass(root, "Leiste", Pal.GlassHi, 2); nav.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -66);
             var hl = nav.gameObject.AddComponent<HorizontalLayoutGroup>(); hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true; hl.padding = new RectOffset(4, 4, 6, 6); hl.spacing = 2;
-            foreach (var (k, lbl, ic) in new[] { ("clean", "Reinigen", "clean"), ("vehicles", "Fahrzeuge", "car"), ("production", "Produktion", "factory"), ("base", "Basis", "home"), ("upgrades", "Upgrades", "up"), ("planets", "Planeten", "planet") })
+            foreach (var (k, lbl, ic) in new[] { ("clean", "Reinigen", "clean"), ("vehicles", "Fahrzeuge", "car"), ("production", "Produktion", "factory"), ("base", "Basis", "home"), ("upgrades", "Upgrades", "up") }) /* 10.11. (Fabian): Planeten nur noch oben über die Planeten-Kachel */
             {
                 string key = k; var b = UiKit.Btn(nav.transform, lbl, () => OnNav?.Invoke(key), new Color(1, 1, 1, 0), 12);
                 var i = UiKit.Img(b.transform, "Icon", UiKit.Icon(ic), Pal.Ink2); i.rectTransform.Anchor(.5f, 1, .5f, 1, -12, -30, -12, 6); navIcons[key] = i;

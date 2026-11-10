@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 67 (10.11.):** Bestellungen neu: Ware bleibt reserviert im Lager, Abholung sobald alles bereit; realistische Mengen (gemessener Zufluss). Alles freigegeben, Lieferketten-Reiter weg, Erfolge im Ziele-Reiter, unten ohne Planeten. Im Editor: 2 Bestellungen in 1 h abgeschlossen.
 - **Build 66 (10.11.):** Waren der Zweigbänder laufen über das Y bis ins Produktlager weiter (Länge des Hauptband-Rests wurde vorher nicht angehängt). `call DevBeltInfo` zeigt Länge und Warenstand je Band.
 - **Build 65 (10.11.):** Y-Stücke mit Banden nur außen (Lücke in der Bande des Hauptbandes, Zweig-Banden enden an dessen Kante, keine Endrolle). Im Editor geprüft.
 - **Build 64 (10.11.):** Fabrik-Planer: Gebäude, Anschlüsse, Bänder und Y-Stücke werden gemeinsam geplant – keine Kreuzungen, keine Brücken, eine Höhe, echte Bandlängen in der Simulation. 49/49 Layouts gültig, Basis-Prüfung 0 Befunde. Band-Editor entfernt. Auf dem Handy noch nicht gesehen.
