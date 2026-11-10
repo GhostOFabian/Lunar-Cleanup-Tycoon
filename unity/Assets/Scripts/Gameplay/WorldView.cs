@@ -318,14 +318,16 @@ namespace LunarCleanup.Gameplay
             var rp = Densify(SubPath(rp0, cum0, s0, s1), .4f); int n = rp.Length; /* dichte Punkte: die Lauffläche folgt jeder Brückenrampe genau wie Stützen und Waren */ if (n < 2) return; var cum = new float[n]; for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + (rp[i] - rp[i - 1]).magnitude;
             float H = BeltDeck(b);
             // Lauffläche (Textur läuft mit)
-            var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H), new Vector2(BW, H) }, false, true, LF, s0);
+            float yLift = mergeEnd.ContainsKey(b.id) ? .006f : 0; /* Zweig liegt am Y minimal über dem Hauptband – kein Flimmern */
+            var deck = Extrude(rp, cum, new[] { new Vector2(-BW, H + yLift), new Vector2(BW, H + yLift) }, false, true, LF, s0);
             var go = new GameObject(b.id); go.transform.SetParent(beltRoot, false); go.AddComponent<MeshFilter>().sharedMesh = deck;
             var m = new Material(Shader.Find("Universal Render Pipeline/Lit")); m.SetTexture("_BaseMap", BeltTex()); m.SetFloat("_Smoothness", .3f); m.SetFloat("_Metallic", .2f);
             go.AddComponent<MeshRenderer>().sharedMaterial = m; beltMats.Add(m); bool lc = LcKit.HasBelt;
             var rail = lc ? LcKit.PalMat("LC_stahl", Color.white) : MeshKit.Mat(GameData.Hex("#59606c"), .7f, .5f); var gold = lc ? LcKit.PalMat("LC_akzent", GameData.Hex("#ffbf4d")) : MeshKit.Mat(GameData.Hex("#ffbf4d"), .25f, .45f); var frame = lc ? LcKit.PalMat("LC_dunkel", Color.white) : MeshKit.Mat(GameData.Hex("#2f3540"), .6f, .45f);
             // Seitenbanden: liegen genau an den Bandkanten und folgen jeder Kurve
-            AddPart(Extrude(rp, cum, Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande links");
-            AddPart(Extrude(rp, cum, Box2(BW, BW + .09f, H - .06f, H + .2f), true, false, LF, s0), gold, "Bande rechts");
+            /* 10.11.: an Y-Stücken nur Banden außen – wo eine Bande auf der Lauffläche eines verbundenen Bandes liegt, hat sie eine Lücke */
+            foreach (var (a0, a1) in RailRuns(b, rp, cum, -1)) AddPart(Extrude(Sub(rp, a0, a1), SubCum(cum, a0, a1), Box2(-BW - .09f, -BW, H - .06f, H + .2f), true, false, LF, s0 + cum[a0]), gold, "Bande links");
+            foreach (var (a0, a1) in RailRuns(b, rp, cum, 1)) AddPart(Extrude(Sub(rp, a0, a1), SubCum(cum, a0, a1), Box2(BW, BW + .09f, H - .06f, H + .2f), true, false, LF, s0 + cum[a0]), gold, "Bande rechts");
             // Rahmen unter dem Band
             AddPart(Extrude(rp, cum, Box2(-BW - .06f, BW + .06f, H - .32f, H - .02f), true, false, LF, s0), frame, "Rahmen");
             // Stützen: enden unter dem Rahmen, nie im Band
@@ -348,6 +350,7 @@ namespace LunarCleanup.Gameplay
             // Umlenkrollen an den Enden
             foreach (int e in new[] { 0, n - 1 })
             {
+                if (e == n - 1 && mergeEnd.ContainsKey(b.id)) continue; /* Y-Ende: keine Rolle quer auf dem Hauptband */
                 var tan = (e == 0 ? rp[1] - rp[0] : rp[n - 1] - rp[n - 2]).normalized; var d = pd.PlanDir(rp[e]);
                 var r = MeshKit.Cyl(beltRoot, rail, Vector3.zero, .16f, .16f, BW * 2 + .04f, 14); r.transform.position = d * (pd.R + H + LF(e == 0 ? s0 : s1) - .14f); r.transform.rotation = Quaternion.LookRotation(Tangent(d, tan), d) * Quaternion.Euler(0, 0, 90);
             }
@@ -685,6 +688,30 @@ namespace LunarCleanup.Gameplay
         static Vector2[] Box2(float x0, float x1, float y0, float y1) => new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y1), new Vector2(x0, y1) };
         void AddPart(Mesh mesh, Material mat, string name) { var g = new GameObject(name); g.transform.SetParent(beltRoot, false); g.AddComponent<MeshFilter>().sharedMesh = mesh; g.AddComponent<MeshRenderer>().sharedMaterial = mat; }
         /// <summary>Zieht ein Querschnitt-Profil (x = seitlich, y = Höhe) entlang der Bandlinie. closed = geschlossener Körper mit Endkappen.</summary>
+        /// <summary>10.11.: Abschnitte (Punkt-Indizes) einer Bande, die NICHT auf der Lauffläche eines über ein Y verbundenen Bandes liegen.</summary>
+        List<(int a, int b)> RailRuns(BeltDef b, Vector2[] rp, float[] cum, int side)
+        {
+            int n = rp.Length; var res = new List<(int, int)>();
+            var others = new List<Vector2[]>();
+            foreach (var kv in sharedEnd)
+            {
+                string o = kv.Key == b.id ? kv.Value : kv.Value == b.id ? kv.Key : null; if (o == null) continue;
+                var ob = ps.lay.belts.FirstOrDefault(x => x.id == o); if (ob == null) continue; var V = Vis(ob); float end = mergeEnd.TryGetValue(o, out var me) ? me + .45f : V.cum[V.cum.Length - 1];
+                others.Add(SubPath(V.rp, V.cum, 0, end));
+            }
+            if (others.Count == 0) { res.Add((0, n - 1)); return res; }
+            bool Gap(int i)
+            {
+                var t = (i < n - 1 ? rp[i + 1] - rp[i] : rp[i] - rp[i - 1]).normalized; var q = rp[i] + new Vector2(-t.y, t.x) * (BW + .045f) * side;
+                foreach (var o in others) for (int k = 1; k < o.Length; k++) if (SegDist(q, o[k - 1], o[k]) < BW - .02f) return true;
+                return false;
+            }
+            int st = -1;
+            for (int i = 0; i < n; i++) { bool g = Gap(i); if (!g && st < 0) st = i; if ((g || i == n - 1) && st >= 0) { int e = g ? i - 1 : i; if (e > st) res.Add((st, e)); st = -1; } }
+            return res;
+        }
+        static Vector2[] Sub(Vector2[] p, int a, int b) { var o = new Vector2[b - a + 1]; System.Array.Copy(p, a, o, 0, o.Length); return o; }
+        static float[] SubCum(float[] c, int a, int b) { var o = new float[b - a + 1]; for (int i = 0; i < o.Length; i++) o[i] = c[a + i] - c[a]; return o; }
         Mesh Extrude(Vector2[] rp, float[] cum, Vector2[] prof, bool closed, bool uvAlong, System.Func<float, float> lift = null, float sOff = 0)
         {
             int n = rp.Length, k = prof.Length; var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();

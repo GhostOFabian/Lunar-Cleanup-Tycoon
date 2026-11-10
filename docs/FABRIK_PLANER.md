@@ -50,6 +50,7 @@ Die Bänder werden nicht mehr nachträglich zwischen fertig platzierte Gebäude 
   - Je Band die sichtbare Linie (1,6 m im Gebäude, Kurven mit Radius 1 m) und `L` als echte Länge.
   - Zweigbänder: eigener Weg + Y-Stück + restliches Hauptband bis in den Eingang. Waren laufen sichtbar bis ins Gebäude, und die Laufzeit stimmt.
 - `WorldView.RouteBelts` übernimmt nur noch die Linien. `PlanBridges` bestimmt nur noch, wo ein Zweig sichtbar auf seinem Hauptband endet. Läuft ein Hauptband in einer Ausbaustufe noch nicht, übernimmt der vorderste Zweig seine Strecke.
+- Banden an Y-Stücken (Build 65): Wo eine Bande auf der Lauffläche eines verbundenen Bandes liegt, bekommt sie eine Lücke (`WorldView.RailRuns`). So laufen die Banden nur außen wie ein Trichter, und am Y-Ende fällt die Endrolle weg.
 - Band antippen zeigt nur den Namen. Der Band-Editor ist abgeschaltet, gespeicherte eigene Wege werden nicht mehr benutzt (sie bleiben im Spielstand, nichts geht verloren).
 - Produktionsgebäude lassen sich nicht mehr einzeln verschieben (sie gehören zum Modul). Nebengebäude schon, aber nicht auf Bänder oder die Zufahrt.
 

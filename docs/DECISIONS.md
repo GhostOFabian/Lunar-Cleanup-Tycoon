@@ -334,3 +334,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 10.11.: Die Simulation rechnet mit der echten Länge der verlegten Bänder (Zweig: eigener Weg + Y + Rest des Hauptbandes). Laufzeit und Kapazität einzelner Bänder ändern sich dadurch etwas.
 - 10.11.: Produktionsgebäude lassen sich nicht mehr einzeln verschieben (gehören zum Modul); Nebengebäude schon, aber nicht auf Bänder oder die Zufahrt. Gespeicherte eigene Bandwege (bRoutes) bleiben im Spielstand, werden aber nicht mehr benutzt.
 - 10.11.: Grundflächen der Gebäude aus den echten Modellen gemessen statt aus fp geschätzt; Nebengebäude werden mit 1 m Abstand nach größtem Kontakt gepackt (sonst fand das 15 m breite Kraftwerk keinen Platz).
+- 10.11.: Y-Stücke nur mit Banden außen: Eine Bande hat überall dort eine Lücke, wo sie auf der Lauffläche eines über ein Y verbundenen Bandes liegt; am Y-Ende keine Endrolle, die Zweig-Lauffläche liegt 6 mm höher (kein Flimmern).
