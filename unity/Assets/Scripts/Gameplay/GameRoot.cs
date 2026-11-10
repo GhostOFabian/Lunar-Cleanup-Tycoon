@@ -552,13 +552,28 @@ namespace LunarCleanup.Gameplay
             exploding = true; hud.CloseSheet(); altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.6f); yield return world.DoomDive(); yield return world.Implode(planet.transform); /* Fabian 02.11.: Implosion mit Explosion, ganzer Planet im Bild */
             Game.Devastate(pid, Game.DoomSev); yield return new WaitForSeconds(.5f); yield return world.Reform(); exploding = false; /* … dann setzt er sich verwüstet wieder zusammen – nichts Gebautes geht verloren */
         }
+        /// <summary>10.11.: liegt der Weltpunkt auf der zugewandten Seite des Planeten? (Rückseite wird sonst mitten in den Bildausschnitt projiziert)</summary>
+        bool Front(Vector3 wp) => Vector3.Dot(wp.normalized, (cam.transform.position - wp).normalized) > .05f;
+        /// <summary>10.11.: Trefferfläche aus der echten Größe im Bild (meters um wp), begrenzt auf minPx…maxPx.</summary>
+        float PxRad(Vector3 wp, float meters, float minPx, float maxPx)
+        {
+            var a = cam.WorldToScreenPoint(wp); var b = cam.WorldToScreenPoint(wp + cam.transform.right * meters); return Mathf.Clamp(((Vector2)b - (Vector2)a).magnitude, minPx, maxPx);
+        }
+        /// <summary>Editor/Test: wie viele Flaggen/Ampeln liegen im Bild, aber auf der Rückseite (früher antippbar)?</summary>
+        public string DevTapCheck()
+        {
+            int fIn = 0, fBack = 0, aIn = 0, aBack = 0;
+            foreach (var (f, wp) in world.FlagSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0 || sp.x < 0 || sp.y < 0 || sp.x > Screen.width || sp.y > Screen.height) continue; fIn++; if (!Front(wp)) fBack++; }
+            foreach (var (id, wp) in world.AmpelSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0 || sp.x < 0 || sp.y < 0 || sp.x > Screen.width || sp.y > Screen.height) continue; aIn++; if (!Front(wp)) aBack++; }
+            return "Flaggen im Bild " + fIn + ", davon Rückseite " + fBack + " · Ampeln im Bild " + aIn + ", davon Rückseite " + aBack;
+        }
         void Tap(Vector2 pos)
         {
             var ps = Game.Cur; Game.Attend(); /* 03.11.: Betreuung */
             if (Game.Icp != null && world.IcpTap(cam, pos, 110 * U)) return; /* Fabian 02.11.: Abfangen */
             if (world.Moving) { if (Hit(pos, out var dmv)) world.MoveTo(ps.pd.PlanLocal(dmv)); return; } /* Gebäude verschieben: Tipp = dorthin */
             if (Hud.ArmedTool != null) { var tool = Hud.ArmedTool; if (Hit(pos, out var dtool)) { int n = Game.UseTool(tool, dtool); if (n > 0) { Hud.ArmedTool = null; /* 03.11.: bleibt scharf, bis es wirklich gewirkt hat */ WorldView.Shake = Mathf.Max(WorldView.Shake, tool == "nuke" ? 2f : .8f); world.EmitDust(dtool, new Color(1f, .9f, .6f), tool == "nuke" ? 160 : 50); Sfx.Play("boom", tool == "nuke" ? .6f : 1.1f, .7f); } } return; } /* 03.11.: Perk-Werkzeug */
-            if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U) { world.PutziTalk(); return; } /* Putzi-7 antippen */
+            if (world.PutziScreen(cam, out var psp) && ((Vector2)psp - pos).magnitude < 55 * U && Front(cam.ScreenToWorldPoint(psp))) { world.PutziTalk(); return; } /* Putzi-7 antippen */
             /* Leuchtkristall antippen = ernten. Auswahl im Bild (nicht am Boden): der Kristall ragt hoch, schräg von oben trifft der Strahl sonst weit dahinter den Boden */
             {
                 CrystalSave bc = null; float bpx = Mathf.Max(44f, Screen.height * .045f);
@@ -575,17 +590,17 @@ namespace LunarCleanup.Gameplay
                 if (bc != null) { Game.HarvestCrystal(bc.id); return; }
             }
             /* Wrack oder Einschlag antippen: Stand des Suchtrupps zeigen */
-            { var ep = Game.EventPlace(ps); if (ep.HasValue) { var sp = cam.WorldToScreenPoint(ps.pd.Surf(ep.Value, 1)); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < 50 * U) { var tt = Game.TeamText(ps); if (tt != null) { Game.Toast(tt.Replace(" · Tippen: hinsehen", "")); return; } } } }
+            { var ep = Game.EventPlace(ps); if (ep.HasValue) { var ew = ps.pd.Surf(ep.Value, 1); var sp = cam.WorldToScreenPoint(ew); if (sp.z > 0 && Front(ew) && ((Vector2)sp - pos).magnitude < PxRad(ew, 4f, 24 * U, 50 * U)) { var tt = Game.TeamText(ps); if (tt != null) { Game.Toast(tt.Replace(" · Tippen: hinsehen", "")); return; } } } }
             /* Fabian 03.11.: Ampel antippen = Zustand dieses Gebäudes (großzügige Trefferfläche) */
             {
-                string ba = null; float bpx = 52f * U;
-                foreach (var (aid, wp) in world.AmpelSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0) continue; float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; ba = aid; } }
+                string ba = null; float bpx = 1e9f;
+                foreach (var (aid, wp) in world.AmpelSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0 || !Front(wp)) continue; float px = ((Vector2)sp - pos).magnitude; if (px < PxRad(wp, 1.4f, 22 * U, 52 * U) && px < bpx) { bpx = px; ba = aid; } }
                 if (ba != null) { hud.OpenSheet("building", ba); return; }
             }
             /* Flagge antippen: einsammeln, gefundene beschriften (Fabian 03.11.: größere Trefferfläche) */
             {
-                FlagSave bf = null; float bpx = 70f * U; int bi = -1, k = 0;
-                foreach (var (f, wp) in world.FlagSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) { float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bf = f; bi = ps.sv.flags.IndexOf(f); } } k++; }
+                FlagSave bf = null; float bpx = 1e9f; int bi = -1, k = 0;
+                foreach (var (f, wp) in world.FlagSpots()) { var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0 && Front(wp)) { float px = ((Vector2)sp - pos).magnitude; if (px < PxRad(wp, 1.8f, 24 * U, 60 * U) && px < bpx) { bpx = px; bf = f; bi = ps.sv.flags.IndexOf(f); } } k++; }
                 if (bf != null) { bool was = bf.got; Game.CollectFlag(ps, bf); if (was || bf.got) hud.OpenSheet("flag", bi.ToString()); return; } /* Fabian 01.11.: Truhe öffnen, dann gleich die Flagge beschriften */
             }
             /* Fabian 01.11.: Fahrzeug (oder Sammelwagen) antippen öffnet sein Fenster */
@@ -596,7 +611,7 @@ namespace LunarCleanup.Gameplay
                     if (v.mode == "boom") continue; var wp = ps.pd.Surf(v.d, .8f); var sp = cam.WorldToScreenPoint(wp); if (sp.z <= 0 || Vector3.Dot(v.d.normalized, (cam.transform.position - wp).normalized) < -.05f) continue;
                     float px = ((Vector2)sp - pos).magnitude; if (px < bpx) { bpx = px; bv = v; }
                 }
-                if (ps.sv.cart.owned) { var wp = ps.pd.Surf(ps.sv.cart.d, .8f); var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0 && ((Vector2)sp - pos).magnitude < bpx) { cartHit = true; } }
+                if (ps.sv.cart.owned) { var wp = ps.pd.Surf(ps.sv.cart.d, .8f); var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0 && Front(wp) && ((Vector2)sp - pos).magnitude < bpx) { cartHit = true; } }
                 if (cartHit) { hud.OpenSheet("vehicles", "1"); return; }
                 if (bv != null) { hud.OpenSheet("vehicle", bv.id.ToString()); return; }
             }
@@ -609,8 +624,8 @@ namespace LunarCleanup.Gameplay
                     var d0 = ps.pd.PlanDir(ps.lay.pos[id]); var d1 = ps.pd.PlanDir(ps.lay.pos[id] + new Vector2(fp, 0));
                     foreach (float h in new[] { .5f, 2f })
                     {
-                        var s0 = cam.WorldToScreenPoint(ps.pd.Surf(d0, h)); var s1 = cam.WorldToScreenPoint(ps.pd.Surf(d1, h)); if (s0.z <= 0) continue;
-                        float rad = Mathf.Max(30f * U, ((Vector2)s1 - (Vector2)s0).magnitude * 1.1f), dd = ((Vector2)s0 - pos).magnitude;
+                        var w0 = ps.pd.Surf(d0, h); var s0 = cam.WorldToScreenPoint(w0); var s1 = cam.WorldToScreenPoint(ps.pd.Surf(d1, h)); if (s0.z <= 0 || !Front(w0)) continue; /* 10.11.: nicht durch den Planeten hindurch */
+                        float rad = Mathf.Max(18f * U, ((Vector2)s1 - (Vector2)s0).magnitude * 1.1f), dd = ((Vector2)s0 - pos).magnitude;
                         if (dd < rad && dd / rad < bs) { bs = dd / rad; bb = id; }
                     }
                 }
