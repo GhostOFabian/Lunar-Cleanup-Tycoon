@@ -1,0 +1,584 @@
+Basis-Prüfung 10.11.2026 20:16
+
+== Mond: alles in Ordnung
+  · Fabrik-Planer 71 ms, Lage 2/0 (18, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Mars: alles in Ordnung
+  · Fabrik-Planer 52 ms, Lage 0/1 (-22, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Europa: alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (19, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Titan: alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/0 (-20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Io: alles in Ordnung
+  · Fabrik-Planer 287 ms, Lage 0/1 (-22, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus: alles in Ordnung
+  · Fabrik-Planer 69 ms, Lage 0/0 (-20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed: alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (22, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus: alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton: alles in Ordnung
+  · Fabrik-Planer 55 ms, Lage 2/1 (20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Pluto: alles in Ordnung
+  · Fabrik-Planer 52 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris: alles in Ordnung
+  · Fabrik-Planer 199 ms, Lage 0/1 (-22, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna: alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/1 (-21, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Proxima b: alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 0/1 (-22, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Trappist-1e: alles in Ordnung
+  · Fabrik-Planer 131 ms, Lage 2/0 (20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b: alles in Ordnung
+  · Fabrik-Planer 59 ms, Lage 2/0 (19, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e: alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/1 (20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b: alles in Ordnung
+  · Fabrik-Planer 75 ms, Lage 2/1 (21, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist: alles in Ordnung
+  · Fabrik-Planer 55 ms, Lage 2/1 (21, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Mars (alte Größe 7): alles in Ordnung
+  · Fabrik-Planer 39 ms, Lage 2/0 (18, -2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Europa (alte Größe 9): alles in Ordnung
+  · Fabrik-Planer 39 ms, Lage 0/0 (-20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Titan (alte Größe 10): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/0 (-20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Io (alte Größe 13): alles in Ordnung
+  · Fabrik-Planer 72 ms, Lage 2/1 (20, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Io (alte Größe 11): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/0 (-20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus (alte Größe 14): alles in Ordnung
+  · Fabrik-Planer 228 ms, Lage 0/0 (-23, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Venus (alte Größe 12): alles in Ordnung
+  · Fabrik-Planer 73 ms, Lage 0/0 (-20, -1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed (alte Größe 15): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (22, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Ganymed (alte Größe 13): alles in Ordnung
+  · Fabrik-Planer 57 ms, Lage 2/0 (21, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus (alte Größe 16): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (19, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Enceladus (alte Größe 14): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 2/0 (19, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton (alte Größe 17): alles in Ordnung
+  · Fabrik-Planer 230 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Triton (alte Größe 15): alles in Ordnung
+  · Fabrik-Planer 282 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Pluto (alte Größe 18): alles in Ordnung
+  · Fabrik-Planer 219 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Pluto (alte Größe 16): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/1 (-22, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris (alte Größe 15): alles in Ordnung
+  · Fabrik-Planer 211 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Eris (alte Größe 17): alles in Ordnung
+  · Fabrik-Planer 170 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna (alte Größe 14): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 0/1 (-22, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Sedna (alte Größe 18): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 0/1 (-22, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Proxima b (alte Größe 17): alles in Ordnung
+  · Fabrik-Planer 64 ms, Lage 0/1 (-22, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Proxima b (alte Größe 19): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 0/1 (-22, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Trappist-1e (alte Größe 16): alles in Ordnung
+  · Fabrik-Planer 54 ms, Lage 2/0 (19, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Trappist-1e (alte Größe 20): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (19, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b (alte Größe 19): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (19, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Kepler-22b (alte Größe 21): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/0 (19, 0)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e (alte Größe 15): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/1 (20, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== 55 Cancri e (alte Größe 22): alles in Ordnung
+  · Fabrik-Planer 37 ms, Lage 2/1 (20, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b (alte Größe 18): alles in Ordnung
+  · Fabrik-Planer 223 ms, Lage 0/1 (-22, 2)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_ps (presse→schmelze): Start über überdachten Zulauf mit presse verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_pp (presse→prod): Start über überdachten Zulauf mit presse verbunden
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Gliese 1214 b (alte Größe 23): alles in Ordnung
+  · Fabrik-Planer 51 ms, Lage 2/1 (20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist (alte Größe 16): alles in Ordnung
+  · Fabrik-Planer 38 ms, Lage 2/0 (19, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_prs (prod→sell): Start über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+== Poltergeist (alte Größe 24): alles in Ordnung
+  · Fabrik-Planer 57 ms, Lage 2/1 (20, 1)
+  · b_u1 (u1→roh): Start über überdachten Zulauf mit u1 verbunden
+  · b_rp (roh→presse): Start über überdachten Zulauf mit roh verbunden
+  · b_pp (presse→prod): mündet als Y in b_rs
+  · b_sp (schmelze→prod): mündet als Y in b_rs
+  · b_rr (roh→raff): Start über überdachten Zulauf mit roh verbunden
+  · b_rap (raff→prod): mündet als Y in b_rs
+  · b_rs (roh→prod): Ende über überdachten Zulauf mit prod verbunden
+  · b_prs (prod→sell): Ende über überdachten Zulauf mit sell verbunden
+
+Gesamt: 0 Befunde

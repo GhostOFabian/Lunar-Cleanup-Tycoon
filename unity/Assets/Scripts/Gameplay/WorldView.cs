@@ -30,7 +30,7 @@ namespace LunarCleanup.Gameplay
             ps = state; pd = ps.pd; builtFor = ps.pid;
             foreach (Transform c in transform) Destroy(c.gameObject);
             blds.Clear(); vehs.Clear(); drones.Clear(); droneAlt.Clear(); lifters.Clear(); liftAlt.Clear(); beltCum.Clear(); beltMats.Clear(); cartGo = null; crys.Clear(); crysFor = null; crew.Clear(); mets.Clear(); metRocks.Clear(); flashes.Clear(); /* Kristalle und Astronauten hingen sonst an gelöschten Objekten */
-            baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
+            Game.FootprintHook = FootprintDump; baseRoot = New("Basis"); beltRoot = New("Bänder"); vehRoot = New("Fahrzeuge"); skyRoot = New("Himmel");
             BuildSky(); BuildBase(); MakeDust(); MakeStorm(); debFor = null; crewFor = null; wonderFor = null; geyFor = null; flagFor = null; /* Bodenteile und Astronauten beim nächsten Bild neu */
             { var deco = New("Deko"); int dseed = ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff; if (!LcKit.Decorate(deco, pd, dseed, Mathf.Clamp(pd.N / 3, 40, 400))) Kit.Decorate(deco, pd, ps.pid.Aggregate(17, (h, ch) => h * 31 + ch) & 0x7fffffff, Mathf.Clamp(pd.N / 3, 40, 400), Color.gray); }
             itemMesh = MeshKit.Cube;
@@ -51,7 +51,6 @@ namespace LunarCleanup.Gameplay
         void BuildBase()
         {
             var swB = System.Diagnostics.Stopwatch.StartNew(); long tm0 = 0; string Tm(string n) { long e = swB.ElapsedMilliseconds; string r = n + " " + (e - tm0) + " · "; tm0 = e; return r; }
-            if (Editing) EndEdit(); /* Band-Editor: Basis wird neu gebaut */
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
             blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
@@ -78,7 +77,7 @@ namespace LunarCleanup.Gameplay
                 }
             }
             string tmLog = Tm("Gebäude");
-            RouteBelts(); ApplyCustomRoutes(); tmLog += Tm("Wege"); PlanBridges(); AddCustomLifts(); tmLog += Tm("Brücken"); ChooseRotations(); tmLog += Tm("Drehen"); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); tmLog += Tm("Bänder"); BuildLamps(acc); tmLog += Tm("Laternen"); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
+            RouteBelts(); tmLog += Tm("Wege"); PlanBridges(); tmLog += Tm("Y-Stücke"); ChooseRotations(); tmLog += Tm("Drehen"); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b)) BuildBelt(b); tmLog += Tm("Bänder"); BuildLamps(acc); tmLog += Tm("Laternen"); ps.visBelt.Clear(); foreach (var b in ps.lay.belts) if (Game.BeltLive(ps, b) && !Game.HiddenBelt(b)) ps.visBelt[b.id] = Vis(b).rp; ps.visVer++; /* Fahrzeuge weichen den sichtbaren Bändern aus */
             BuildOutposts(); BuildRigs(); tmLog += Tm("Außenlager"); Debug.Log("Lunar Cleanup: Basis-Zeiten (ms) " + tmLog);
             builtVersion = ps.baseVersion;
         }
@@ -368,6 +367,7 @@ namespace LunarCleanup.Gameplay
         public List<string> CheckBase()
         {
             var out_ = new List<string>(); Notes.Clear(); var ids = new List<string>(blds.Keys);
+            if (ps.plan == null) out_.Add("Kein Fabrik-Plan"); else { foreach (var e in ps.plan.errors) out_.Add("Planer: " + e); Notes.Add("Fabrik-Planer " + ps.plan.ms + " ms, Lage " + ps.plan.rot + "/" + ps.plan.mir + " " + ps.plan.shift); }
             foreach (var kv in beltInfo)
             {
                 var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value; string nm = kv.Key + " (" + b.from + "→" + b.to + ")";
@@ -484,6 +484,18 @@ namespace LunarCleanup.Gameplay
             var T = TrisOf(id); var c = ps.lay.pos[id]; float r = 0, fp = GameData.Bld[id].fp;
             for (int i = 0; i < T.Count; i += 3) { var v = T[i]; float h = v.magnitude - pd.R; if (h < .05f || h > 2f) continue; float d = (pd.PlanLocal(v.normalized) - c).magnitude; if (d < fp * 1.6f) r = Mathf.Max(r, d); }
             return r > .5f ? r + .55f : fp * .92f; // Säule (0,7 m tief) steht knapp vor dem äußersten Teil
+        }
+        /// <summary>10.11.: echte Ausdehnung jedes Modells in der Planebene (bis 3,5 m Höhe) – für die Grundflächen des Fabrik-Planers.</summary>
+        public string FootprintDump()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var id in blds.Keys.OrderBy(x => x))
+            {
+                var T = TrisOf(id); if (T.Count == 0 || !ps.lay.pos.ContainsKey(id)) continue; var c = ps.lay.pos[id]; float mx = 0, my = 0, r = 0, rl = 0;
+                foreach (var v in T) { float h = v.magnitude - pd.R; var q = pd.PlanLocal(v.normalized) - c; r = Mathf.Max(r, q.magnitude); if (h > 3.5f) continue; mx = Mathf.Max(mx, Mathf.Abs(q.x)); my = Mathf.Max(my, Mathf.Abs(q.y)); rl = Mathf.Max(rl, q.magnitude); }
+                sb.Append(id).Append(' ').Append(mx.ToString("0.0")).Append(' ').Append(my.ToString("0.0")).Append(" r ").Append(rl.ToString("0.0")).Append('/').Append(r.ToString("0.0")).Append(" fp ").Append(GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp.ToString("0.0") : "-").Append(" | ");
+            }
+            return sb.ToString();
         }
         List<Vector3> TrisOf(string id)
         {
@@ -612,72 +624,15 @@ namespace LunarCleanup.Gameplay
             v = (arr, c, c[c.Length - 1] / Mathf.Max(.01f, L0)); vis[b.id] = v; return v;
         }
         const float EndGuard = 4.8f; /* 1,6 m im Gebäude + 3 m Rampe + Rest: Bandenden bleiben am Boden */
+        /// <summary>10.11.: keine Brücken mehr (alle Bänder auf einer Höhe, der Planer verhindert Kreuzungen). Hier nur: wo endet ein Zweig sichtbar auf seinem Hauptband?</summary>
         void PlanBridges()
         {
-            bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear(); var live = ps.lay.belts.Where(x => Game.BeltLive(ps, x) && !Game.HiddenBelt(x)).ToList();
-            /* Fabian 02.11. (Merger): das Hauptband immer vor dem Band, das als Y hineinmündet – sonst wird der Y-Anschluss nicht erkannt */
-            { int Depth(string id, int g = 0) => g < 8 && sharedEnd.TryGetValue(id, out var t) ? 1 + Depth(t, g + 1) : 0; var order = live.Select((b, i) => (b, i)).OrderBy(x => Depth(x.b.id)).ThenBy(x => x.i).Select(x => x.b).ToList(); live = order; }
-            var smp = new Dictionary<string, List<(float s, Vector2 p)>>(); var len = new Dictionary<string, float>();
-            foreach (var b in live)
+            bridges.Clear(); mergeEnd.Clear(); mergeStart.Clear(); vis.Clear();
+            foreach (var kv in sharedEnd)
             {
-                var V = Vis(b); var l = new List<(float, Vector2)>(); var q = V.rp;
-                float zf = GameData.Bld[b.from].fp * .35f, zt = GameData.Bld[b.to].fp * .35f; var cf = ps.lay.pos[b.from]; var ct = ps.lay.pos[b.to];
-                for (int i = 1; i < q.Length; i++) { float sl = (q[i] - q[i - 1]).magnitude; for (float u = 0; u < sl; u += .3f) { var p = Vector2.Lerp(q[i - 1], q[i], u / sl); float su = V.cum[i - 1] + u; if (su < 2.0f || su > V.cum[V.cum.Length - 1] - 2.0f) continue; /* Stück im Gebäude */ if ((p - cf).magnitude > zf && (p - ct).magnitude > zt) l.Add((su, p)); } }
-                smp[b.id] = l; len[b.id] = V.cum[V.cum.Length - 1];
-            }
-            for (int j = 0; j < live.Count; j++)
-            {
-                var B = live[j]; float HB = BeltDeck(B); var marks = new List<(float u, float amt)>();
-                for (int i = 0; i < j; i++)
-                {
-                    var A = live[i]; float HA0 = BeltDeck(A); var mine = new List<(float u, float s)>();
-                    var LB = smp[B.id]; var LA = smp[A.id];
-                    for (int ib = 0; ib < LB.Count; ib++)
-                    {
-                        var (u, q) = LB[ib];
-                        for (int ia = 0; ia < LA.Count; ia++)
-                        {
-                            var (s, p) = LA[ia]; float dd = (p - q).magnitude;
-                            if (dd >= BW * 2 + .3f) continue; float HA = HA0 + Lift(A.id, s); if (Mathf.Abs(HA - HB) >= .62f) continue;
-                            /* Fabian 01.11.: parallel laufende Bänder nicht als Brücke anheben („fliegende Bänder“) – nur echte Kreuzungen oder echtes Überlappen */
-                            var tb = LB[Mathf.Min(ib + 1, LB.Count - 1)].p - LB[Mathf.Max(ib - 1, 0)].p; var ta = LA[Mathf.Min(ia + 1, LA.Count - 1)].p - LA[Mathf.Max(ia - 1, 0)].p;
-                            if (tb.sqrMagnitude > 1e-6f && ta.sqrMagnitude > 1e-6f && Mathf.Abs(Vector2.Dot(tb.normalized, ta.normalized)) > .9f && dd > BW * 2 + .06f) continue;
-                            mine.Add((u, s)); marks.Add((u, HA + 1.0f - HB)); break;
-                        }
-                    }
-                    if (mine.Count == 0) continue;
-                    float uMin = mine.Min(m => m.u), uMax = mine.Max(m => m.u);
-                    /* Kreuzung nah am Ende von B (dort darf B nicht hoch)? Dann hebt sich A, wenn A dort weit genug von seinen Enden ist */
-                    if (!(sharedEnd.TryGetValue(B.id, out var shw0) && shw0 == A.id) && (uMin < EndGuard || uMax > len[B.id] - EndGuard))
-                    {
-                        float sMin = mine.Min(m => m.s), sMax = mine.Max(m => m.s);
-                        if (sMin - .5f >= EndGuard && sMax + .5f <= len[A.id] - EndGuard)
-                        {
-                            if (!bridges.TryGetValue(A.id, out var ra)) { ra = new List<Vector3>(); bridges[A.id] = ra; }
-                            ra.Add(new Vector3(sMin - .5f, sMax + .5f, HB + 1.0f - HA0)); marks.RemoveAll(m => m.u >= uMin - .01f && m.u <= uMax + .01f); continue;
-                        }
-                    }
-                    // gleiches Ziel und Berührung erst kurz davor → Weiche
-                    if (sharedEnd.TryGetValue(B.id, out var shw) && shw == A.id) /* Y nur, wo der Router bewusst den Eingang teilt */
-                    {
-                        /* Fabian 02.11.: das Y-Band bis auf die Mitte des Hauptbandes führen (vorher endete es schon bei der ersten Berührung, 0,5–0,7 m daneben) */
-                        float uJ = -1, uBest = uMin, dBest = 1e9f;
-                        foreach (var (u2, q2) in LB) { if (u2 < uMin - .01f) continue; float dm = 1e9f; foreach (var (_, p2) in LA) dm = Mathf.Min(dm, (p2 - q2).magnitude); if (dm < dBest) { dBest = dm; uBest = u2; } if (dm <= BW * .5f) { uJ = u2; break; } }
-                        if (uJ < 0) uJ = uBest;
-                        mergeEnd[B.id] = Mathf.Min(mergeEnd.TryGetValue(B.id, out var me) ? me : 1e9f, uJ); marks.RemoveAll(m => m.u >= uMin - .01f);
-                    }
-                    else if (false) /* keine Abzweige mehr – sie hingen in der Luft */ { mergeStart[B.id] = Mathf.Max(mergeStart.TryGetValue(B.id, out var ms) ? ms : -1e9f, uMax); marks.RemoveAll(m => m.u <= uMax + .01f); }
-                }
-                if (marks.Count == 0) continue; marks.Sort((a, b) => a.u.CompareTo(b.u)); var res = new List<Vector3>(); float a0 = marks[0].u, a1 = a0, am = marks[0].amt;
-                void Flush() { float x = Mathf.Max(EndGuard, a0 - .5f), y = Mathf.Min((mergeEnd.TryGetValue(B.id, out var mE) ? Mathf.Min(mE, len[B.id]) : len[B.id]) - EndGuard, a1 + .5f); /* Y-Ende bleibt unten */ if (y < x) return; /* zu nah am Ende: lieber nicht anheben als in der Luft hängen */ res.Add(new Vector3(x, y, am)); } // Bandenden bleiben immer unten
-                for (int k = 1; k < marks.Count; k++) { if (marks[k].u - a1 > 1.5f) { Flush(); a0 = marks[k].u; am = 0; } a1 = marks[k].u; am = Mathf.Max(am, marks[k].amt); }
-                Flush(); bridges[B.id] = res;
-                // Nachprüfen: liegt das angehobene Stück jetzt auf Höhe eines anderen (höheren) Bandes? Dann noch einmal darüber.
-                for (int pass = 0; pass < 2; pass++)
-                {
-                    float extra = 0; foreach (var A in live.Take(j)) foreach (var (u, q) in smp[B.id]) { float hb = HB + Lift(B.id, u); if (hb - HB < .1f) continue; foreach (var (s, p) in smp[A.id]) if ((p - q).magnitude < BW * 2 + .3f) { float ha = BeltDeck(A) + Lift(A.id, s); if (Mathf.Abs(ha - hb) < .62f) extra = Mathf.Max(extra, ha + 1f - hb); break; } }
-                    if (extra <= 0) break; for (int k = 0; k < res.Count; k++) res[k] = new Vector3(res[k].x, res[k].y, res[k].z + extra);
-                }
+                var b = ps.lay.belts.FirstOrDefault(x => x.id == kv.Key); if (b == null || ps.plan == null || !ps.plan.merge.TryGetValue(b.id, out var mg)) continue;
+                var V = Vis(b); Vector2 m = mg.m; int best = 0; float bd = 1e9f; for (int i = 0; i < V.rp.Length; i++) { float d = (V.rp[i] - m).sqrMagnitude; if (d < bd) { bd = d; best = i; } }
+                mergeEnd[b.id] = V.cum[best];
             }
         }
         /// <summary>Liegt der Punkt auf der Grundfläche eines Gebäudes (dort trägt das Gebäude das Band)?</summary>
@@ -908,7 +863,7 @@ namespace LunarCleanup.Gameplay
                 if (!beltCum.TryGetValue(b.id, out var cum) || !ps.belts.TryGetValue(b.id, out var items)) continue;
                 foreach (var it in items)
                 {
-                    float sp = it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1]; if (beltTrim.TryGetValue(b.id, out var tr) && (sp < tr.x - .2f || sp > tr.y + .2f)) continue; // im Gebäude: unsichtbar
+                    float sp = it.s / Mathf.Max(.01f, b.L) * cum[cum.Length - 1]; if (beltTrim.TryGetValue(b.id, out var tr) && (sp < tr.x - .2f || sp > (mergeEnd.ContainsKey(b.id) ? cum[cum.Length - 1] - 2.4f : tr.y + .2f))) continue; // im Gebäude: unsichtbar; Zweig: über das Hauptband bis zum Eingang
                     var p = PointAt(Vis(b).rp, cum, sp, out var tan); var d = pd.PlanDir(p);
                     var M = GameData.Mats[it.m]; Vector3 sc = M.shape == "brick" ? new Vector3(.3f, .2f, .5f) : M.shape == "ingot" ? new Vector3(.22f, .16f, .55f) : M.shape == "gem" ? new Vector3(.3f, .3f, .3f) : M.shape == "barrel" ? new Vector3(.32f, .4f, .32f) : new Vector3(.42f, .34f, .42f);
                     var wb = LcKit.Ware(M.key); /* eigenes Warenmodell (Fabian): Ursprung unten, schon in Metern */

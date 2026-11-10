@@ -13,7 +13,7 @@ namespace LunarCleanup.Gameplay
         float MoveYaw() { float y = ps.lay.yaw.TryGetValue(MoveGroup, out var yy) ? yy : 0; return Game.IsUnit(MoveId) ? y : Mathf.Round(y / (Mathf.PI / 2)) * (Mathf.PI / 2); }
         public void BeginMove(string id)
         {
-            EndMove(); EndEdit(); if (!ps.lay.pos.ContainsKey(id) || !blds.ContainsKey(Game.IsUnit(id) ? "u1" : id)) return; MoveId = id; movePos = ps.lay.pos[id]; moveWhy = "";
+            EndMove(); if (!ps.lay.pos.ContainsKey(id) || !blds.ContainsKey(Game.IsUnit(id) ? "u1" : id)) return; MoveId = id; movePos = ps.lay.pos[id]; moveWhy = "";
             moveRingMat = GlowMat(MeshKit.GlowTex(), new Color(.4f, 1f, .6f, .8f)); var g = MeshKit.Part(transform, MeshKit.Quad, moveRingMat, Vector3.zero, Vector3.one); NoShadow(g); moveRing = g.transform; MoveTo(movePos);
             Sfx.Play("click", 1.1f, .5f);
         }

@@ -13,7 +13,7 @@ namespace LunarCleanup.Core
     public class LqNav { public int to = -2; public bool free; public List<int> p; public int i, k; }
     public class PState
     {
-        public PlanetSave sv; public PlanetData pd; public PlanetDef P; public LayoutDef lay; public LineDef line;
+        public PlanetSave sv; public PlanetData pd; public PlanetDef P; public LayoutDef lay; public LineDef line; public FactoryPlan plan; /* 10.11.: Fabrik-Planer */
         public bool[] clean, paid; public int nClean;
         public Dictionary<int, Act> act = new Dictionary<int, Act>();
         public Dictionary<int, LqNav> lqnav = new Dictionary<int, LqNav>(); // Umwege um Seen (nicht gespeichert)
@@ -115,7 +115,7 @@ namespace LunarCleanup.Core
             if (sv.freq <= 0) sv.freq = GameData.OldFreq.TryGetValue(sv.pid, out int of) ? of : GameData.Planets[sv.pid].freq;
             string sk = GameData.SizeKey(sv.pid, sv.freq);
             var ps = new PState { sv = sv, pd = PlanetData.GetKey(sv.pid, sk), P = GameData.Planets[sv.pid], lay = OneStation(GameData.Layouts[sk]), line = GameData.Lines[sv.pid] };
-            ApplyMoves(ps); /* 03.11.: verschobene Gebäude */
+            ps.lay = PlannedLayout(ps); /* 10.11.: Fabrik-Planer – Gebäude, Anschlüsse, Bänder und Y-Stücke gemeinsam (verschobene Nebengebäude inklusive) */
             sv.hand = Arr(sv.hand); sv.roh = Arr(sv.roh); sv.prod = Arr(sv.prod); sv.sellBuf = Arr(sv.sellBuf);
             if (sv.cart == null) sv.cart = new CartSave(); sv.cart.tank = Arr(sv.cart.tank);
             if (sv.cart.owned && !Hard) { for (int m = 0; m < NM; m++) { sv.roh[m] += sv.cart.tank[m]; RohIn(ps, m, sv.cart.tank[m]); } Array.Clear(sv.cart.tank, 0, NM); sv.cart.owned = false; cartRefund += CartCost(ps); } /* Sammelwagen abgeschafft: Ladung ins Lager, Kaufpreis zurück */
