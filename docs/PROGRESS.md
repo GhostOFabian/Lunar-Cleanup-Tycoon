@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 63 (10.11.):** Puzzle-Ende: Linien bauen sich von der Mitte aus auf, dann leuchtet das Zeichen. Spielstand 17× kleiner (Meteoritenstaub kompakt), Speichern dadurch viel schneller. Im Editor geprüft; auf dem Handy noch offen.
 - **Build 62 (10.11.):** Puzzle-Animation: Kamera mittig und weit genug draußen, Erfolgsmeldungen verdecken nichts mehr (kommen danach). Im Editor geprüft.
 
 ## Fertig – Browser-Prototyp v6.3 (`prototype/index.html`)

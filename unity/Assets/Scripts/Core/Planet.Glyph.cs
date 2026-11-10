@@ -36,6 +36,17 @@ namespace LunarCleanup.Core
             }
         }
         /// <summary>Zeichen und Puzzleteile malen. done = Puzzle fertig (großes Zeichen sichtbar). piece = Pixel gehört zu einem Teil (nur sauber sichtbar).</summary>
+        /// <summary>10.11.: Linien wachsen nach dem Einfliegen von der Mitte aus (0 … 1,6), danach (2) leuchtet das Zeichen voll.</summary>
+        public static float GlyphGrow = 2f, GlyphGrowT = -99f;
+        static float GrowNow => GlyphGrow; /* wird in Threads gelesen – Sicherung gegen Hängenbleiben in Game.SecretStep */
+        public static readonly Color TipC = new Color(1f, .96f, .8f); static Color TipCol => TipC;
+        /// <summary>Wie weit die Linie in Richtung ang schon gewachsen ist (je Richtung verschieden schnell).</summary>
+        public static float GrowFront(float G, float ang, float seed) => G * (1.05f + .28f * Mathf.Sin(ang * 3 + seed) + .14f * Mathf.Sin(ang * 7 + seed * 2.3f));
+        /// <summary>Farbe des fertigen Zeichens an Stelle (hx, hy) – für die Leuchtschicht der Aufbau-Animation.</summary>
+        public static void GlyphPixel(Feature f, float hx, float hy, out Color c, out float k, out Color g)
+        {
+            GlyphLine(Mathf.RoundToInt(f.crat), Mathf.RoundToInt(f.crD), hx, hy, out float line, out float bright); Shade(f, line, bright, Mathf.Sqrt(hx * hx + hy * hy), .5f, out c, out k, out g);
+        }
         public bool GlyphPaintCell(int cell, Vector3 dir, bool done, out Color col, out float a, out Color glow, out bool piece)
         {
             col = Color.black; a = 0; glow = Color.black; piece = false; if (hk == null) InitTerrain(); if (!cellFeats.TryGetValue(cell, out var l)) return false; bool any = false;
@@ -45,7 +56,8 @@ namespace LunarCleanup.Core
                 float cd = Vector3.Dot(dir, f.d); if (cd < .3f) continue; float dist = Mathf.Acos(Mathf.Min(1, cd)) * R; if (dist / f.rad >= 1.1f) continue;
                 float lx = Vector3.Dot(dir - f.d * cd, f.e1) * R, ly = Vector3.Dot(dir - f.d * cd, f.e2) * R, n1 = Noise2(lx * .7f + f.seed, ly * .7f);
                 float hx = lx / f.rad, hy = ly / f.rad, k; Color c, g;
-                if (f.kind == 6) { GlyphLine(Mathf.RoundToInt(f.crat), Mathf.RoundToInt(f.crD), hx, hy, out float line, out float bright); Shade(f, line, bright, Mathf.Sqrt(hx * hx + hy * hy), n1, out c, out k, out g); }
+                if (f.kind == 6) { GlyphLine(Mathf.RoundToInt(f.crat), Mathf.RoundToInt(f.crD), hx, hy, out float line, out float bright); Shade(f, line, bright, Mathf.Sqrt(hx * hx + hy * hy), n1, out c, out k, out g);
+                    float G = GrowNow; if (G < 1.9f) { float rr = Mathf.Sqrt(hx * hx + hy * hy), fr = GrowFront(G, Mathf.Atan2(hy, hx), f.seed); if (rr > fr) continue; float tip = Mathf.Clamp01(1 - (fr - rr) / .08f); k *= .55f + .45f * tip; c = Color.Lerp(c, TipCol, tip * .7f); g = g * .3f + TipCol * (tip * k * 1.6f); } /* 10.11.: Linien bauen sich auf */ }
                 else
                 {
                     // Teil k zeigt den Ausschnitt k des Zeichens (Tortenstück mit Puzzle-Rand)

@@ -68,6 +68,7 @@ namespace LunarCleanup.Core
             }
             bool allClean = ps.nClean >= NonBase(ps);
             if (prog >= 1 && allClean && !sv.puzzleDone && PuzzleAnimPid != ps.pid) PuzzleDone(ps); /* 10.11.: erst bei 100 % Reinigung */
+            if (PlanetData.GlyphGrow < 2f && Time.realtimeSinceStartup - PlanetData.GlyphGrowT > 12f) { PlanetData.GlyphGrow = 2f; foreach (int c in ps.pd.GlyphCells) ps.dirtyCells.Add(c); } /* Linien-Animation abgebrochen */
             if (PuzzleAnimPid == ps.pid && !PuzzleAnim) PuzzleReveal(ps); /* Animation abgebrochen (z. B. Planet gewechselt) */
             // Logbuch
             var log = SecretLog(ps);
@@ -126,16 +127,17 @@ namespace LunarCleanup.Core
         /// <summary>Läuft gerade die Puzzle-Animation? Dann keine Meldungen und keine Fenster.</summary>
         public static bool PuzzleAnim => PuzzleAnimPid != null && Time.realtimeSinceStartup - puzzleAnimT < 40;
         /// <summary>10.11.: Animation plus 6 s zum Bestaunen – Kamera bleibt stehen, Meldungen warten.</summary>
-        public static bool PuzzleQuiet => PuzzleAnim || Time.realtimeSinceStartup < PuzzleHoldUntil;
+        public static bool PuzzleQuiet => PuzzleAnim || (PuzzleFxOn && Time.realtimeSinceStartup - PuzzleFxT < 40f) || Time.realtimeSinceStartup < PuzzleHoldUntil;
+        public static bool PuzzleFxOn; public static float PuzzleFxT; /* läuft die Aufbau-Animation noch? */
         public static float PuzzleHoldUntil;
         /// <summary>Ende der Animation (oder ohne Animation sofort): Zeichen sichtbar machen, danach kurz das Logbuch zeigen.</summary>
-        public static void PuzzleReveal(PState ps)
+        public static void PuzzleReveal(PState ps, bool paintCap = true)
         {
             bool wasAnim = PuzzleAnimPid == ps.pid; if (wasAnim) PuzzleAnimPid = null; if (ps.sv.puzzleDone) return; ps.sv.puzzleDone = true; var f = ps.pd.BigGlyph;
-            if (f != null) { float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / ps.pd.R + .05f)); foreach (var c in ps.pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) ps.dirtyCells.Add(c.id); }
+            if (f != null && paintCap) { float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / ps.pd.R + .05f)); foreach (var c in ps.pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) ps.dirtyCells.Add(c.id); }
             foreach (int c in ps.pd.GlyphCells) ps.dirtyCells.Add(c);
             if (ps.pid == S.planet && !Offline) { StoryNew = true; StoryAfter = Time.realtimeSinceStartup + 7f; /* erst das Zeichen bestaunen */ if (wasAnim) PuzzleHoldUntil = Time.realtimeSinceStartup + 6f; }
-            Save();
+            if (!wasAnim) Save(); /* während der Animation speichert GameRoot danach – kein Ruckler */
         }
         public static float StoryAfter;
         public static string NextPid(string pid) { var o = GameData.POrder; if (o == null) return null; int i = Array.IndexOf(o, pid); return i >= 0 && i + 1 < o.Length ? o[i + 1] : null; }

@@ -209,7 +209,7 @@ namespace LunarCleanup.Gameplay
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(true); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
             Game.CartGoal = cd; WorldView.MapMode = mapMode;
-            saveT += dt; if (saveT > 10) { saveT = 0; if (!offlineRunning) Game.Save(); }
+            saveT += dt; if (saveT > 10 && !Game.PuzzleQuiet) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

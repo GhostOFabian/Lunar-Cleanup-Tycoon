@@ -159,6 +159,7 @@ namespace LunarCleanup.Gameplay
         public void PuzzleFx(PState p) { if (pd == null || p.pd != pd || MapMode || pd.BigGlyph == null) { Game.PuzzleReveal(p); return; } StartCoroutine(PuzzleCo(p)); }
         IEnumerator PuzzleCo(PState p)
         {
+            Game.PuzzleFxOn = true; Game.PuzzleFxT = Time.realtimeSinceStartup;
             var f = pd.BigGlyph; var cells = new List<int>(pd.GlyphCells); int N = Mathf.Max(1, cells.Count); var col = f.glow;
             LunarCleanup.UI.Hud.I?.CloseSheet(); LunarCleanup.Gameplay.GameRoot.FocusReq = f.d; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 3f;
             Sfx.Play("discover", .8f, .7f);
@@ -168,14 +169,80 @@ namespace LunarCleanup.Gameplay
             var parts = new List<(GameObject go, Material m)>(); float stagger = Mathf.Clamp(5f / N, .18f, .6f), fly = 1.5f;
             for (int k = 0; k < N; k++) StartCoroutine(PieceFly(pd.cells[cells[k]].c.normalized, PieceTarget(f, k, N, a), col, fly, parts, k * stagger));
             yield return new WaitForSeconds(N * stagger + fly + .6f);
-            // alle Teile liegen – jetzt fügt sich das Zeichen zusammen
-            LunarCleanup.UI.Hud.I?.Flash(col, .7f); EmitDust(f.d, col, 200); Sfx.Play("discover", 1.25f, 1f);
-            Game.PuzzleReveal(p);
+            // 10.11.: alle Teile liegen – die Linien wachsen von der Mitte aus in alle Richtungen, erst dann leuchtet das Zeichen
+
+            PlanetData.GlyphGrow = 0; PlanetData.GlyphGrowT = Time.realtimeSinceStartup; Game.PuzzleReveal(p, false);
+ /* Textur zeigt das Zeichen noch nicht */
+            var ov = GlyphOverlay(f, out var otex, out var omat, out var oc, out var og, out var ok, out var orr, out var oai);
+
+            int S = otex.width; var px = new Color32[S * S]; var fr = new float[360];
+            Sfx.Play("discover", .8f, .6f); float T = 3.8f, tg = 0, lit = 0;
+            while (tg < T + .7f)
+            {
+                tg += Mathf.Min(Time.deltaTime, .05f); float e = Mathf.Clamp01(tg / T), G = 1.6f * (e * e * (3 - 2 * e) * .5f + e * .5f); lit = Mathf.Clamp01((tg - T) / .5f);
+                PlanetData.GlyphGrowT = Time.realtimeSinceStartup;
+                for (int q = 0; q < 360; q++) fr[q] = PlanetData.GrowFront(G, (q + .5f) * Mathf.Deg2Rad - Mathf.PI, f.seed);
+                for (int q = 0; q < px.Length; q++)
+                {
+                    float k = ok[q]; if (k <= 0) { px[q] = default; continue; } float f0 = fr[oai[q]], r = orr[q];
+                    if (r > f0 && lit <= 0) { px[q] = default; continue; }
+                    float tip = lit > 0 ? 0 : Mathf.Clamp01(1 - (f0 - r) / .08f), kk = k * Mathf.Lerp(.55f + .45f * tip, 1.1f, lit);
+                    var c = oc[q] * kk * .7f + og[q] * Mathf.Lerp(.35f, 1.2f, lit) + PlanetData.TipC * (tip * k * 1.4f);
+                    px[q] = new Color32((byte)(Mathf.Clamp01(c.r) * 255), (byte)(Mathf.Clamp01(c.g) * 255), (byte)(Mathf.Clamp01(c.b) * 255), 255);
+                }
+                otex.SetPixels32(px); otex.Apply(false);
+                foreach (var q in parts) if (q.go && G > .7f) q.go.transform.localScale *= .97f; /* Teile gehen in den Linien auf */
+                if (lit > 0 && PlanetData.GlyphGrow < 2f)
+                {
+                    PlanetData.GlyphGrow = 2f; LunarCleanup.UI.Hud.I?.Flash(col, .7f); EmitDust(f.d, col, 200); Sfx.Play("discover", 1.25f, 1f);
+                    StartCoroutine(PuzzleRing(f, col, parts));
+                    string next = Game.NextPid(p.pid), nn = next != null ? GameData.Planets[next].name : null;
+                    LunarCleanup.UI.Hud.I?.BuffPop(Game.GlyphName(p), col, 6, nn != null ? nn + " ist jetzt freigeschaltet – die Reise ist kostenlos" : "Die Route der Wanderer ist vollständig");
+                }
+                yield return null;
+            }
+            // Textur in kleinen Portionen neu malen, solange die Leuchtschicht das Zeichen zeigt – kein Ruckler
+            float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / pd.R + .05f)); int nb = 0;
+            foreach (var c in pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) { p.dirtyCells.Add(c.id); if (++nb % 6 == 0) { Game.PuzzleFxT = Time.realtimeSinceStartup; yield return null; } }
+            yield return null; yield return null;
+
+            StartCoroutine(FadeOverlay(ov, omat, otex));
+            Game.PuzzleFxOn = false; Game.PuzzleHoldUntil = Time.realtimeSinceStartup + 5f;
+        }
+        IEnumerator PuzzleRing(Feature f, Color col, List<(GameObject go, Material m)> parts)
+        {
             var ring = FxQuad(f.d, 1f, FxRingTex(), col, out var rm);
-            string next = Game.NextPid(p.pid), nn = next != null ? GameData.Planets[next].name : null;
-            LunarCleanup.UI.Hud.I?.BuffPop(Game.GlyphName(p), col, 6, nn != null ? nn + " ist jetzt freigeschaltet – die Reise ist kostenlos" : "Die Route der Wanderer ist vollständig");
             float t2 = 0; while (t2 < 1.6f) { t2 += Time.deltaTime; float e = t2 / 1.6f; ring.transform.localScale = Vector3.one * pd.R * 1.8f * e; rm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, 1 - e)); foreach (var q in parts) if (q.go) q.go.transform.localScale *= .94f; yield return null; }
             foreach (var q in parts) { if (q.go) Destroy(q.go); if (q.m) Destroy(q.m); } Destroy(ring); Destroy(rm);
+        }
+        /// <summary>10.11.: gewölbte Leuchtschicht über dem großen Zeichen; Farben je Pixel vorberechnet.</summary>
+        GameObject GlyphOverlay(Feature f, out Texture2D tex, out Material m, out Color[] oc, out Color[] og, out float[] ok, out float[] orr, out int[] oai)
+        {
+            const int S = 192, G = 48; const float E = 1.12f; tex = new Texture2D(S, S, TextureFormat.RGBA32, false); tex.wrapMode = TextureWrapMode.Clamp;
+            oc = new Color[S * S]; og = new Color[S * S]; ok = new float[S * S]; orr = new float[S * S]; oai = new int[S * S];
+            for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
+                {
+                    int q = y * S + x; float hx = ((x + .5f) / S * 2 - 1) * E, hy = ((y + .5f) / S * 2 - 1) * E; orr[q] = Mathf.Sqrt(hx * hx + hy * hy);
+                    oai[q] = Mathf.Clamp(Mathf.FloorToInt((Mathf.Atan2(hy, hx) + Mathf.PI) * Mathf.Rad2Deg), 0, 359);
+                    if (orr[q] > 1.05f) continue; PlanetData.GlyphPixel(f, hx, hy, out oc[q], out ok[q], out og[q]);
+                }
+            var vs = new List<Vector3>(); var uv = new List<Vector2>(); var tr = new List<int>();
+            for (int j = 0; j <= G; j++) for (int i = 0; i <= G; i++)
+                {
+                    float hx = ((float)i / G * 2 - 1) * E, hy = ((float)j / G * 2 - 1) * E, s = Mathf.Min(.999f, Mathf.Sqrt(hx * hx + hy * hy) * f.rad / pd.R);
+                    var t = (f.e1 * hx + f.e2 * hy); var dir = t.sqrMagnitude > 1e-8f ? (f.d * Mathf.Sqrt(1 - s * s) + t.normalized * s) : f.d;
+                    vs.Add(pd.Surf(dir, .5f)); uv.Add(new Vector2((float)i / G, (float)j / G));
+                }
+            for (int j = 0; j < G; j++) for (int i = 0; i < G; i++) { int a = j * (G + 1) + i; tr.Add(a); tr.Add(a + G + 1); tr.Add(a + 1); tr.Add(a + 1); tr.Add(a + G + 1); tr.Add(a + G + 2); }
+            var mesh = new Mesh(); mesh.SetVertices(vs); mesh.SetUVs(0, uv); mesh.SetTriangles(tr, 0); mesh.RecalculateBounds();
+            m = GlowMat(tex, Color.white); m.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always); m.renderQueue = 3100;
+            var go = new GameObject("GlyphOverlay"); go.transform.SetParent(transform, false); go.AddComponent<MeshFilter>().sharedMesh = mesh; var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = m; NoShadow(go);
+            return go;
+        }
+        IEnumerator FadeOverlay(GameObject go, Material m, Texture2D tex)
+        {
+            float t = 0; while (t < 1.5f && go) { t += Time.deltaTime; m.SetColor("_BaseColor", new Color(1, 1, 1, 1 - t / 1.5f)); yield return null; }
+            if (go) { Destroy(go.GetComponent<MeshFilter>().sharedMesh); Destroy(go); } Destroy(m); Destroy(tex);
         }
         static Vector3 PieceTarget(Feature f, int k, int N, float a)
         {

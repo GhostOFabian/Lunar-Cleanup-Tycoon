@@ -137,7 +137,7 @@ namespace LunarCleanup.Core
             foreach (var a in sv.act)
             {
                 if (a.id < 0 || a.id >= N) continue; /* auch saubere Parzellen mit Meteoritenstaub */
-                var A = NewAct(ps, a.id); var bytes = string.IsNullOrEmpty(a.grid) ? null : Convert.FromBase64String(a.grid);
+                var A = NewAct(ps, a.id); var bytes = ActUnpack(a.grid, A.grid.Length);
                 if (bytes != null && bytes.Length == A.grid.Length) { float s = 0; for (int k = 0; k < bytes.Length; k++) { A.grid[k] = A.cl.inside[k] ? bytes[k] / 255f : 0; s += A.grid[k]; } A.sum = s; }
                 ps.act[a.id] = A;
             }
@@ -162,7 +162,7 @@ namespace LunarCleanup.Core
             sv.clean = new string(cb); sv.paid = new string(pb);
             sv.bld = ps.bld.ToList(); sv.upg = ps.upg.Select(k => new KV { k = k.Key, v = k.Value }).ToList();
             sv.act = new List<ActSave>();
-            foreach (var kv in ps.act) { var A = kv.Value; if (kv.Key >= 0 && kv.Key < ps.clean.Length && ps.clean[kv.Key] && A.sum < 1e-3f) continue; /* Fabian 02.11.: leere, saubere Parzellen nicht speichern (Spielstand war 11 MB → Laden/Speichern langsam) */ var by = new byte[A.grid.Length]; for (int k = 0; k < by.Length; k++) by[k] = (byte)Mathf.Clamp(Mathf.RoundToInt(A.grid[k] * 255), 0, 255); sv.act.Add(new ActSave { id = kv.Key, sum = A.sum, grid = Convert.ToBase64String(by) }); }
+            foreach (var kv in ps.act) { var A = kv.Value; if (kv.Key >= 0 && kv.Key < ps.clean.Length && ps.clean[kv.Key] && A.sum < 1e-3f) continue; /* Fabian 02.11.: leere, saubere Parzellen nicht speichern (Spielstand war 11 MB → Laden/Speichern langsam) */ bool dust = kv.Key >= 0 && kv.Key < ps.clean.Length && ps.clean[kv.Key]; byte[] by = null; if (!dust) { by = new byte[A.grid.Length]; for (int k = 0; k < by.Length; k++) by[k] = (byte)Mathf.Clamp(Mathf.RoundToInt(A.grid[k] * 255), 0, 255); } sv.act.Add(new ActSave { id = kv.Key, sum = A.sum, grid = ActPack(A, by, dust) }); }
             sv.belts = new List<BeltSave>();
             foreach (var kv in ps.belts) { var b = new BeltSave { id = kv.Key }; foreach (var it in kv.Value) { b.s.Add(it.s); b.m.Add(it.m); b.a.Add(it.a); } sv.belts.Add(b); }
         }
@@ -185,6 +185,72 @@ namespace LunarCleanup.Core
             if (!TestMode) Platform.MaybeUpload(json, S.lastActive); // Konto-Speicher (Google Play Spiele / Game Center), sobald verbunden
         }
 
+        /// <summary>10.11.: Unberührter Staub (alle Werte fast gleich, nichts angewischt) wird als ein Wert "=v" gespeichert statt 1024 Zufallswerten – Spielstand war 68 MB.</summary>
+        static string ActPack(Act A, byte[] by, bool dust)
+        {
+            if (dust) /* Staub auf sauberer Parzelle: grobes 4×4-Raster reicht, beim Laden geglättet */
+            {
+                int G = GameData.GRID, B = G / 4; var ch = new char[17]; ch[0] = '~';
+                for (int by4 = 0; by4 < 4; by4++) for (int bx4 = 0; bx4 < 4; bx4++)
+                    {
+                        float s0 = 0; int n0 = 0; for (int y = by4 * B; y < by4 * B + B; y++) for (int x = bx4 * B; x < bx4 * B + B; x++) { int k = y * G + x; if (!A.cl.inside[k]) continue; s0 += A.grid[k] * 255f; n0++; }
+                        int q = n0 > 0 ? Mathf.Clamp(Mathf.RoundToInt(s0 / n0 / 17f), 0, 15) : 0; ch[1 + by4 * 4 + bx4] = "0123456789abcdef"[q];
+                    }
+                return new string(ch);
+            }
+            int mn = 255, mx = 0; long s = 0, n = 0; for (int k = 0; k < by.Length; k++) { if (!A.cl.inside[k]) continue; int v = by[k]; if (v < mn) mn = v; if (v > mx) mx = v; s += v; n++; }
+            if (n > 0 && mn >= 189 && mx - mn <= 66) return "=" + (s / n);
+            return Convert.ToBase64String(by);
+        }
+        static byte[] ActUnpack(string g, int len)
+        {
+            if (string.IsNullOrEmpty(g)) return null;
+            if (g[0] == '~' && g.Length == 17)
+            {
+                int G = GameData.GRID; if (len != G * G) return null; var b = new byte[len]; var q = new float[16]; for (int i = 0; i < 16; i++) { int h = "0123456789abcdef".IndexOf(g[1 + i]); q[i] = Mathf.Max(0, h) * 17f; }
+                for (int y = 0; y < G; y++) for (int x = 0; x < G; x++)
+                    {
+                        float fx = Mathf.Clamp((x + .5f) / G * 4 - .5f, 0, 3), fy = Mathf.Clamp((y + .5f) / G * 4 - .5f, 0, 3); int x0 = Mathf.Min(2, (int)fx), y0 = Mathf.Min(2, (int)fy); float tx = fx - x0, ty = fy - y0;
+                        float v = Mathf.Lerp(Mathf.Lerp(q[y0 * 4 + x0], q[y0 * 4 + x0 + 1], tx), Mathf.Lerp(q[(y0 + 1) * 4 + x0], q[(y0 + 1) * 4 + x0 + 1], tx), ty); b[y * G + x] = (byte)Mathf.Clamp(Mathf.RoundToInt(v), 0, 255);
+                    }
+                return b;
+            }
+            if (g[0] == '=') { if (!int.TryParse(g.Substring(1), out int v)) return null; var b = new byte[len]; for (int k = 0; k < len; k++) b[k] = (byte)Mathf.Clamp(v, 0, 255); return b; }
+            try { return Convert.FromBase64String(g); } catch (Exception) { return null; }
+        }
+        public static string DevActStats()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var ps in P.Values)
+            {
+                int n = ps.act.Count, cl = 0, zero = 0, full = 0, lowMin = 0; var hist = new int[6];
+                foreach (var kv in ps.act) { var A = kv.Value; if (ps.clean[kv.Key]) cl++; float mn = 9, mx = -1; int z = 0, ni = 0; for (int k = 0; k < A.grid.Length; k++) { if (!A.cl.inside[k]) continue; ni++; float v = A.grid[k]; if (v < mn) mn = v; if (v > mx) mx = v; if (v < .02f) z++; } if (z == ni) zero++; if (mn >= .74f) full++; if (mn < .74f) lowMin++; hist[Mathf.Clamp((int)((mx - mn) * 5), 0, 5)]++; }
+                if (n > 300) sb.Append(ps.pid + ": " + n + " act, sauber " + cl + ", leer " + zero + ", voll " + full + ", angewischt " + lowMin + ", Spanne " + string.Join("/", hist) + " | ");
+            }
+            return sb.ToString();
+        }
+        public static string DevSaveSizes()
+        {
+            var sb = new System.Text.StringBuilder(); int full = JsonUtility.ToJson(S).Length;
+            void Probe(object o, string pre)
+            {
+                foreach (var fi in o.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    if (fi.FieldType.IsPrimitive || fi.IsNotSerialized) continue; var v = fi.GetValue(o); if (v == null) continue;
+                    object empty; try { empty = fi.FieldType.IsArray ? Array.CreateInstance(fi.FieldType.GetElementType(), 0) : (fi.FieldType == typeof(string) ? "" : Activator.CreateInstance(fi.FieldType)); } catch { continue; }
+                    fi.SetValue(o, empty); int n = JsonUtility.ToJson(S).Length; fi.SetValue(o, v); int d = full - n; if (d > 200000) sb.Append(pre + fi.Name + " " + d / 1024 + " KB; ");
+                }
+            }
+            Probe(S, ""); foreach (var ps in S.planets) Probe(ps, ps.pid + ".");
+            return "voll " + full / 1024 + " KB: " + sb;
+        }
+        public static string DevSaveTiming()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew(); foreach (var ps in P.Values) Detach(ps); long a = sw.ElapsedMilliseconds;
+            string json = JsonUtility.ToJson(S); long b = sw.ElapsedMilliseconds; string packed = Pack(json); long c = sw.ElapsedMilliseconds;
+            PlayerPrefs.SetString(Key + "-timing", packed); long d = sw.ElapsedMilliseconds; PlayerPrefs.Save(); long e = sw.ElapsedMilliseconds; PlayerPrefs.DeleteKey(Key + "-timing");
+            return "detach " + a + " json " + (b - a) + " (" + json.Length / 1024 + " KB) pack " + (c - b) + " (" + packed.Length / 1024 + " KB) set " + (d - c) + " save " + (e - d);
+        }
         const string PackPrefix = "LCZ1:";
         /// <summary>Spielstand gezippt als Text (wie der Spielstand-Code). Alte, ungezippte Stände lassen sich weiter lesen.</summary>
         static string Pack(string json)
