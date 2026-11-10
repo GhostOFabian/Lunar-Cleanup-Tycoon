@@ -154,33 +154,48 @@ namespace LunarCleanup.Gameplay
                 pylonGos.Add(g);
             }
         }
-        /// <summary>Fabian 09.11.: Puzzle fertig – die Teile steigen auf, fliegen in einem Bogen zur Rückseite und verschmelzen; dann leuchtet das große Zeichen auf.</summary>
-        public void PuzzleFx(List<int> cells, Vector3 center, Color col) { if (pd == null || MapMode) return; StartCoroutine(PuzzleCo(cells, center.normalized, col)); }
-        IEnumerator PuzzleCo(List<int> cells, Vector3 center, Color col)
+        /// <summary>Fabian 10.11.: Planet zu 100 % sauber – die Kamera dreht zur Rückseite, die Puzzleteile fliegen nacheinander an ihren Platz
+        /// im großen Zeichen, erst dann leuchtet das Symbol auf. Kurzer Text: nächster Planet frei. Nichts verdeckt die Animation.</summary>
+        public void PuzzleFx(PState p) { if (pd == null || p.pd != pd || MapMode || pd.BigGlyph == null) { Game.PuzzleReveal(p); return; } StartCoroutine(PuzzleCo(p)); }
+        IEnumerator PuzzleCo(PState p)
         {
-            LunarCleanup.Gameplay.GameRoot.FocusReq = center; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 1.6f; Sfx.Play("discover", 1f, .9f);
-            var parts = new List<(GameObject go, Material m, Vector3 from)>();
-            foreach (int c in cells)
+            var f = pd.BigGlyph; var cells = new List<int>(pd.GlyphCells); int N = Mathf.Max(1, cells.Count); var col = f.glow;
+            LunarCleanup.UI.Hud.I?.CloseSheet(); LunarCleanup.Gameplay.GameRoot.FocusReq = f.d; LunarCleanup.Gameplay.GameRoot.ZoomReq = pd.R * 1.7f;
+            Sfx.Play("discover", .8f, .7f);
+            yield return new WaitForSeconds(1.6f);
+            // Ziel jedes Teils: die Mitte seines Ausschnitts im großen Zeichen
+            float a = Mathf.Asin(Mathf.Clamp(.55f * f.rad / pd.R, -1, 1));
+            var parts = new List<(GameObject go, Material m)>(); float stagger = Mathf.Clamp(5f / N, .18f, .6f), fly = 1.5f;
+            for (int k = 0; k < N; k++) StartCoroutine(PieceFly(pd.cells[cells[k]].c.normalized, PieceTarget(f, k, N, a), col, fly, parts, k * stagger));
+            yield return new WaitForSeconds(N * stagger + fly + .6f);
+            // alle Teile liegen – jetzt fügt sich das Zeichen zusammen
+            LunarCleanup.UI.Hud.I?.Flash(col, .7f); EmitDust(f.d, col, 200); Sfx.Play("discover", 1.25f, 1f);
+            Game.PuzzleReveal(p);
+            var ring = FxQuad(f.d, 1f, FxRingTex(), col, out var rm);
+            string next = Game.NextPid(p.pid), nn = next != null ? GameData.Planets[next].name : null;
+            LunarCleanup.UI.Hud.I?.BuffPop(Game.GlyphName(p), col, 6, nn != null ? nn + " ist jetzt freigeschaltet – die Reise ist kostenlos" : "Die Route der Wanderer ist vollständig");
+            float t2 = 0; while (t2 < 1.6f) { t2 += Time.deltaTime; float e = t2 / 1.6f; ring.transform.localScale = Vector3.one * pd.R * 1.8f * e; rm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, 1 - e)); foreach (var q in parts) if (q.go) q.go.transform.localScale *= .94f; yield return null; }
+            foreach (var q in parts) { if (q.go) Destroy(q.go); if (q.m) Destroy(q.m); } Destroy(ring); Destroy(rm);
+        }
+        static Vector3 PieceTarget(Feature f, int k, int N, float a)
+        {
+            float th = (k + .5f) * 2 * Mathf.PI / N; var t = (f.e1 * Mathf.Cos(th) + f.e2 * Mathf.Sin(th)); t = (t - f.d * Vector3.Dot(t, f.d)).normalized;
+            return (f.d * Mathf.Cos(a) + t * Mathf.Sin(a)).normalized;
+        }
+        IEnumerator PieceFly(Vector3 from, Vector3 to, Color col, float dur, List<(GameObject, Material)> parts, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            var go = MeshKit.Part(transform, MeshKit.Cube, MeshKit.Glow(col, 3f), Vector3.zero, Vector3.one); NoShadow(go); var m = go.GetComponent<MeshRenderer>().material; parts.Add((go, m));
+            EmitDust(from, col, 30); Sfx.Play("find", 1f + Random.value * .3f, .5f); float t = 0;
+            while (t < dur && go)
             {
-                var d = pd.cells[c].c.normalized; EmitDust(d, col, 40);
-                var go = MeshKit.Part(transform, MeshKit.Cube, MeshKit.Glow(col, 3f), Vector3.zero, Vector3.one); NoShadow(go); parts.Add((go, go.GetComponent<MeshRenderer>().material, d));
-            }
-            float t = 0, dur = 3.2f;
-            while (t < dur)
-            {
-                t += Time.deltaTime; float e = Mathf.Clamp01(t / dur), ee = e * e * (3 - 2 * e);
-                foreach (var p in parts)
-                {
-                    var d = Vector3.Slerp(p.from, center, ee).normalized; float h = Mathf.Sin(e * Mathf.PI) * pd.R * .35f + (1 - e) * 1.5f;
-                    p.go.transform.position = pd.Surf(d, h); p.go.transform.rotation = Quaternion.Euler(e * 360, e * 540, e * 200); p.go.transform.localScale = Vector3.one * (1.6f + 1.4f * Mathf.Sin(e * Mathf.PI));
-                }
+                t += Time.deltaTime; float e = Mathf.Clamp01(t / dur), ee = e * e * (3 - 2 * e); var d = Vector3.Slerp(from, to, ee).normalized;
+                float h = Mathf.Sin(e * Mathf.PI) * pd.R * .3f + .6f; go.transform.position = pd.Surf(d, h);
+                go.transform.rotation = Quaternion.Slerp(Quaternion.Euler(e * 500, e * 700, 0), Quaternion.FromToRotation(Vector3.up, d), ee);
+                float s = 2.2f + 1.2f * Mathf.Sin(e * Mathf.PI); go.transform.localScale = new Vector3(s, Mathf.Lerp(s, .35f, ee), s);
                 yield return null;
             }
-            foreach (var p in parts) { Destroy(p.go); Destroy(p.m); }
-            EmitDust(center, col, 160); Sfx.Play("discover", 1.2f, 1f);
-            var ring = FxQuad(center, 1f, FxRingTex(), col, out var rm); float t2 = 0;
-            while (t2 < 1.4f) { t2 += Time.deltaTime; float e = t2 / 1.4f; ring.transform.localScale = Vector3.one * pd.R * 1.6f * e; rm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, 1 - e)); yield return null; }
-            Destroy(ring); Destroy(rm); LunarCleanup.UI.Hud.I?.Flash(col, .6f);
+            if (go) { EmitDust(to, col, 25); Sfx.Play("find", 1.4f, .6f); }
         }
         IEnumerator ScreenFlash() { LunarCleanup.UI.Hud.I?.Flash(new Color(1, .97f, .85f), .9f); yield break; }
     }

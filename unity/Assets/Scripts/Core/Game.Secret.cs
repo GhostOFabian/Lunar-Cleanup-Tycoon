@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
         public static string GlyphName(PState ps) => Glyphs.TryGetValue(ps.pid, out var g) ? g.name : "Zeichen";
         public static int StarCount(PState ps) { int s = ps.sv.stars; return (s & 1) + ((s >> 1) & 1) + ((s >> 2) & 1); }
         public static string StarText(PState ps) { string r = ""; for (int i = 0; i < 3; i++) r += (ps.sv.stars & (1 << i)) != 0 ? "★" : "☆"; return r; }
-        public static readonly string[] StarNames = { "Planet komplett sauber", "Puzzle zusammengesetzt", "Puzzle in unter 60 min zusammengesetzt" };
+        public static readonly string[] StarNames = { "Planet komplett sauber", "Alle Puzzleteile gefunden", "Alle Teile in unter 60 min gefunden" };
         public static event Action<PState> OnStory; public static bool StoryNew; static float gooToastT = -999;
 
         /// <summary>Je Schritt (live und offline gleich): Schleim säen und ausbreiten, Logbuch und Sterne prüfen.</summary>
@@ -37,6 +37,7 @@ namespace LunarCleanup.Core
             if (!SecretOn(ps)) return; var sv = ps.sv; if (sv.goo == null) sv.goo = new List<int>();
             var glyph = ps.pd.GlyphCells; if (glyph.Count == 0) return;
             sv.goo.RemoveAll(c => c < 0 || c >= ps.pd.N || (ps.clean[c] && !ps.act.ContainsKey(c)));
+            if (sv.pieceN != glyph.Count) { sv.pieceN = glyph.Count; sv.pieceMask = 0; } /* Teilezahl geändert (Update) – neu zählen */
             PieceCheck(ps); float prog = SecretProgress(ps);
             if (prog < 1 && ps.pid == S.planet) sv.secretT += dt; /* Uhr für den dritten Stern: läuft, solange du auf dem Mond bist und die Karte noch nicht frei ist */
             // säen: solange die Karte noch nicht frei ist, liegt immer etwas Schleim auf ihr
@@ -65,12 +66,14 @@ namespace LunarCleanup.Core
                 }
                 if (grown > 0 && !Offline && ps.pid == S.planet && Time.realtimeSinceStartup - gooToastT > 240) { gooToastT = Time.realtimeSinceStartup; Toast("Der schwarze Schleim breitet sich aus – nur du kannst ihn wegwischen", "bad"); }
             }
-            if (prog >= 1 && !sv.puzzleDone) PuzzleDone(ps);
+            bool allClean = ps.nClean >= NonBase(ps);
+            if (prog >= 1 && allClean && !sv.puzzleDone && PuzzleAnimPid != ps.pid) PuzzleDone(ps); /* 10.11.: erst bei 100 % Reinigung */
+            if (PuzzleAnimPid == ps.pid && !PuzzleAnim) PuzzleReveal(ps); /* Animation abgebrochen (z. B. Planet gewechselt) */
             // Logbuch
             var log = SecretLog(ps);
-            while (sv.secretBeat < log.Length && sv.secretBeat < LogAt.Length && prog >= LogAt[sv.secretBeat] - 1e-4f)
+            while (sv.secretBeat < log.Length && sv.secretBeat < LogAt.Length && prog >= LogAt[sv.secretBeat] - 1e-4f && (sv.secretBeat < log.Length - 1 || sv.puzzleDone)) /* letztes Kapitel erst nach der Animation */
             {
-                sv.secretBeat++; if (ps.pid == S.planet) StoryNew = true;
+                sv.secretBeat++; if (ps.pid == S.planet && !PuzzleAnim) StoryNew = true;
                 if (!Offline && ps.pid == S.planet) { Toast("Logbuch " + ps.P.name + ": " + log[sv.secretBeat - 1].title, "good"); OnStory?.Invoke(ps); }
                 StoryAchCheck();
             }
@@ -78,7 +81,7 @@ namespace LunarCleanup.Core
             if (sv.secretBeat == 0) return;
             bool done = ps.nClean >= NonBase(ps) && ps.act.Count == 0; /* jetzt wirklich sauber – nicht „früher einmal geschafft“ (Neustart) */
             if (done) GiveStar(ps, 0);
-            if (prog >= 1) GiveStar(ps, 1);
+            if (prog >= 1) GiveStar(ps, 1); /* Sterne 2 und 3: alle Teile gefunden (das Zeichen erscheint erst bei 100 %) */
             if (prog >= 1 && sv.secretT <= STAR_TIME) GiveStar(ps, 2);
         }
         /// <summary>09.11.: Geschichts-Erfolge für Game Center (nur mit LC_STORE wirksam).</summary>
@@ -113,13 +116,25 @@ namespace LunarCleanup.Core
         /// <summary>Fabian 09.11.: Alle Teile frei – sie fliegen zusammen, das Zeichen erscheint riesig auf der Rückseite, der nächste Planet ist entschlüsselt.</summary>
         static void PuzzleDone(PState ps)
         {
-            ps.sv.puzzleDone = true; var f = ps.pd.BigGlyph;
+            string next = NextPid(ps.pid);
+            if (next != null && !P.ContainsKey(next) && !S.freeUnlock.Contains(next)) S.freeUnlock.Add(next);
+            /* Fabian 10.11.: erst die Animation (Teile fliegen nacheinander an ihren Platz), dann wird das Zeichen sichtbar */
+            if (!Offline && ps.pid == S.planet && OnPuzzle != null && ps.pd.BigGlyph != null) { PuzzleAnimPid = ps.pid; puzzleAnimT = Time.realtimeSinceStartup; OnPuzzle(ps, new List<int>(ps.pd.GlyphCells)); }
+            else PuzzleReveal(ps);
+        }
+        public static string PuzzleAnimPid; static float puzzleAnimT;
+        /// <summary>Läuft gerade die Puzzle-Animation? Dann keine Meldungen und keine Fenster.</summary>
+        public static bool PuzzleAnim => PuzzleAnimPid != null && Time.realtimeSinceStartup - puzzleAnimT < 40;
+        /// <summary>Ende der Animation (oder ohne Animation sofort): Zeichen sichtbar machen, danach kurz das Logbuch zeigen.</summary>
+        public static void PuzzleReveal(PState ps)
+        {
+            if (PuzzleAnimPid == ps.pid) PuzzleAnimPid = null; if (ps.sv.puzzleDone) return; ps.sv.puzzleDone = true; var f = ps.pd.BigGlyph;
             if (f != null) { float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / ps.pd.R + .05f)); foreach (var c in ps.pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) ps.dirtyCells.Add(c.id); }
             foreach (int c in ps.pd.GlyphCells) ps.dirtyCells.Add(c);
-            string next = NextPid(ps.pid), nn = next != null ? GameData.Planets[next].name : null;
-            if (next != null && !P.ContainsKey(next) && !S.freeUnlock.Contains(next)) S.freeUnlock.Add(next);
-            if (!Offline && ps.pid == S.planet) { OnPuzzle?.Invoke(ps, new List<int>(ps.pd.GlyphCells)); Toast(GlyphName(ps) + " ist vollständig!" + (nn != null ? " Die Koordinaten von " + nn + " sind entschlüsselt – die Reise dorthin ist kostenlos." : ""), "good"); }
+            if (ps.pid == S.planet && !Offline) { StoryNew = true; StoryAfter = Time.realtimeSinceStartup + 3.5f; }
+            Save();
         }
+        public static float StoryAfter;
         public static string NextPid(string pid) { var o = GameData.POrder; if (o == null) return null; int i = Array.IndexOf(o, pid); return i >= 0 && i + 1 < o.Length ? o[i + 1] : null; }
         /// <summary>Saubere Parzelle wird vom Schleim überzogen (wie Meteorstaub: wieder putzbar, gibt beim Putzen wieder alles).</summary>
         static void GooCover(PState ps, int cid)

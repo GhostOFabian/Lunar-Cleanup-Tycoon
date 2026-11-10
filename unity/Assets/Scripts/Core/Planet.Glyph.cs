@@ -25,7 +25,7 @@ namespace LunarCleanup.Core
             AddFeature(bigGlyph);
             // Teile: nach Ring sortiert verteilt, das letzte bei ~80 %
             var pool = cells.Where(c => !c.IsBase && !c.Wet).OrderBy(c => c.ring).ThenBy(c => c.id).ToList(); if (pool.Count < 10) return;
-            int N = Mathf.Clamp(pool.Count / 40, 6, 10); var rnd = new System.Random(pid.GetHashCode() ^ 0x5eed);
+            int N = Mathf.Clamp(pool.Count / 25, 6, 24); /* 10.11.: je größer der Planet, desto mehr Teile */ var rnd = new System.Random(pid.GetHashCode() ^ 0x5eed);
             for (int k = 0; k < N; k++)
             {
                 float pct = .08f + (.80f - .08f) * k / (N - 1); int ring = pool[Mathf.Clamp(Mathf.RoundToInt(pct * (pool.Count - 1)), 0, pool.Count - 1)].ring;

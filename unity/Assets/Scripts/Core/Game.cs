@@ -311,6 +311,7 @@ namespace LunarCleanup.Core
         public static void Toast(string t, string k, bool minor)
         {
             if (Offline) return; Log.Add((t, k, Now())); if (Log.Count > 80) Log.RemoveAt(0);
+            if (PuzzleAnim) return; /* 10.11.: die Puzzle-Animation wird von nichts verdeckt */
             float now = Time.realtimeSinceStartup; toastT.RemoveAll(x => now - x > 4f);
             if ((minor || k == "") && toastT.Count >= 2) return; /* schon zwei Meldungen sichtbar: Nebensächliches nur ins Protokoll */
             toastT.Add(now); OnToast?.Invoke(t, k);

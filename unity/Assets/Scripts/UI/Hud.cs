@@ -579,7 +579,7 @@ namespace LunarCleanup.UI
         {
             if (Game.S == null) return; var ps = Game.Cur; var P = ps.P;
             if (Game.NeedClass && !MenuOpen && sheetKind != "class") OpenSheet("class");
-            if (Game.StoryNew && !MenuOpen && !SheetOpen) { Game.StoryNew = false; if (Game.SecretKnown(Game.Cur)) OpenSheet("secret"); } /* 08.11.: neuer Logbuch-Eintrag */ /* 05.11.: Klasse wählen ist Pflicht – auch in alten Hard-Spielständen */
+            if (Game.StoryNew && !MenuOpen && !SheetOpen && !Game.PuzzleAnim && Time.realtimeSinceStartup >= Game.StoryAfter) { Game.StoryNew = false; if (Game.SecretKnown(Game.Cur)) OpenSheet("secret"); } /* 08.11.: neuer Logbuch-Eintrag */ /* 05.11.: Klasse wählen ist Pflicht – auch in alten Hard-Spielständen */
             /* Fabian 02.11.: beim Abfangen Meldungen nach unten, damit sie keine Brocken verdecken */
             bool icpLow = Game.Icp != null; if (icpLow != toastLow) { toastLow = icpLow; if (icpLow) toastBox.Anchor(0, 0, 1, 0, 24, 40, 24, -170); else toastBox.Anchor(0, 1, 1, 1, 24, -330, 24, 196); }
             credShown = credShown < Game.S.credits ? Math.Min(Game.S.credits, credShown + Math.Max(1, (Game.S.credits - credShown) * Time.deltaTime * 6)) : Game.S.credits;
