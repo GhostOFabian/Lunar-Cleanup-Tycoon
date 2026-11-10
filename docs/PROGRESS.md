@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 69 (10.11.):** Astronauten laufen vorwärts und haben Aufgaben: Techniker, Kristallsammler, Kisten verladen bei Bestellungen. Kristall und Verladen im Editor geprüft, Techniker nur im Code (Testspielstand ohne Störungen).
 - **Build 68 (10.11.):** Kein versehentliches Antippen mehr von Flaggen/Gebäuden auf der Rückseite des Planeten; Trefferflächen passend zur Größe im Bild. (`tapcheck`: vorher 4 von 8 Flaggen im Bild auf der Rückseite antippbar.)
 - **Build 67 (10.11.):** Bestellungen neu: Ware bleibt reserviert im Lager, Abholung sobald alles bereit; realistische Mengen (gemessener Zufluss). Alles freigegeben, Lieferketten-Reiter weg, Erfolge im Ziele-Reiter, unten ohne Planeten. Im Editor: 2 Bestellungen in 1 h abgeschlossen.
 - **Build 66 (10.11.):** Waren der Zweigbänder laufen über das Y bis ins Produktlager weiter (Länge des Hauptband-Rests wurde vorher nicht angehängt). `call DevBeltInfo` zeigt Länge und Warenstand je Band.

@@ -1095,7 +1095,7 @@ namespace LunarCleanup.Core
                     }
                 case "fieldRepair":
                     {
-                        v.repT -= dt; if (ps.bld.Contains("werkstatt") && v.rep < VM_REPS) { v.mode = "broken"; break; }
+                        v.repT -= dt * (TechOn(ps, "veh", v.id) ? 2f : 1f); /* 10.11.: Techniker hilft */ if (ps.bld.Contains("werkstatt") && v.rep < VM_REPS) { v.mode = "broken"; break; }
                         if (v.repT <= 0) { v.wear = Mathf.Min(v.wear, .5f); v.mode = "seek"; if (ps.pid == S.planet) Toast(T.name + " #" + v.id + " hat sich notdürftig repariert – eine Roboterwerkstatt hält es länger in Schuss", ""); }
                         break;
                     }
@@ -1243,7 +1243,7 @@ namespace LunarCleanup.Core
         public static string FaultName(RigSave r) => Faults.TryGetValue(r.faultK, out var n) ? n : r.faultK;
         static bool RigFault(PState ps, RigSave r, float dt)
         {
-            if (r.faultK != "") { r.faultT -= dt; if (r.faultT <= 0) { r.faultK = ""; r.fixedN++; } return r.faultK != ""; }
+            if (r.faultK != "") { r.faultT -= dt * (TechOn(ps, "rig", r.cell) ? 2f : 1f); /* 10.11.: Techniker vor Ort */ if (r.faultT <= 0) { r.faultK = ""; r.fixedN++; } return r.faultK != ""; }
             if (!r.busy) return false; bool storm = ps.sv.hzOn > 0 && !ps.shOn; float rf = RadF(ps);
             double p = dt / 2400.0 * (1 + .15 * r.lv) * (r.bag ? 1.3 : 1) * (storm ? 4 : 1) * (1 + 3 * rf) / Uv("rcare", ps);
             if (Rng.NextDouble() < p)
@@ -1848,7 +1848,7 @@ namespace LunarCleanup.Core
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
             AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); ToastFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
-        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
+        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); CrewStep(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
         static void StepPlanet0(PState ps, float dt)
         {
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */

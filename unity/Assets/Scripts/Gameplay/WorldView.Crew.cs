@@ -8,8 +8,9 @@ namespace LunarCleanup.Gameplay
 {
     public partial class WorldView
     {
-        class Crew { public Transform t; public Vector2 a, b; public float s, len, wait; public Transform legL, legR; }
+        class Crew { public Transform t, legL, legR, box; public Vector2 a, b, cur, face; public float s, len, wait; public string job = ""; public int leg; public bool work; }
         readonly List<Crew> crew = new List<Crew>(); string crewFor; int crewVer = -1;
+        float carryUntil; Vector2 carryA, carryB;
 
         void BuildCrew()
         {
@@ -20,33 +21,40 @@ namespace LunarCleanup.Gameplay
             for (int i = 0; i < n; i++)
             {
                 var g = new GameObject("Astronaut"); g.transform.SetParent(baseRoot, false); var t = g.transform;
-                if (LcKit.Astronaut(t)) { var c0 = new Crew { t = t, wait = Random.Range(0f, 3f) }; NewTrip(c0, ids); c0.s = Random.Range(0f, c0.len); crew.Add(c0); continue; } /* eigenes Modell (Fabian) */
+                var lca = LcKit.Astronaut(t); if (lca) { lca.transform.localRotation = Quaternion.Euler(0, 180, 0) * lca.transform.localRotation; /* 10.11.: Modell schaut nach −Z – sonst läuft er rückwärts */ var c0 = new Crew { t = t, wait = Random.Range(0f, 3f), cur = Spawn(ids, i) }; AddBox(c0, suit); NewTrip(c0, ids); crew.Add(c0); continue; } /* eigenes Modell (Fabian) */
                 MeshKit.Cyl(t, suit, new Vector3(0, .62f, 0), .16f, .18f, .5f, 10);          // Rumpf
                 MeshKit.Ball(t, suit, new Vector3(0, 1.02f, 0), .3f);                        // Helm
                 MeshKit.Box(t, visor, new Vector3(0, 1.03f, .11f), new Vector3(.2f, .12f, .08f)); // Visier
                 MeshKit.Box(t, pack, new Vector3(0, .68f, -.17f), new Vector3(.26f, .34f, .12f)); // Rucksack
                 var lL = MeshKit.Cyl(t, suit, new Vector3(-.07f, .2f, 0), .06f, .06f, .38f, 8).transform; var lR = MeshKit.Cyl(t, suit, new Vector3(.07f, .2f, 0), .06f, .06f, .38f, 8).transform;
-                var c = new Crew { t = t, legL = lL, legR = lR, wait = Random.Range(0f, 3f) }; NewTrip(c, ids); c.s = Random.Range(0f, c.len); crew.Add(c);
+                var c = new Crew { t = t, legL = lL, legR = lR, wait = Random.Range(0f, 3f), cur = Spawn(ids, i) }; AddBox(c, suit); NewTrip(c, ids); crew.Add(c);
             }
         }
+        Vector2 Spawn(List<string> ids, int i) { var id = ids[i % ids.Count]; var d = Random.insideUnitCircle.normalized; return ps.lay.pos[id] + d * (FactoryPlanner.Half(id) + 1.6f); }
+        /// <summary>Kiste vor der Brust – nur beim Verladen sichtbar.</summary>
+        void AddBox(Crew c, Material m)
+        {
+            var g = MeshKit.Box(c.t, MeshKit.Mat(GameData.Hex("#ffbf4d"), .2f, .5f), new Vector3(0, .62f, .3f), new Vector3(.36f, .3f, .3f)); c.box = g.transform; g.SetActive(false);
+        }
+        /// <summary>10.11.: Besucher holt eine Bestellung ab – Kisten vom Produktlager zum Raumhafen bzw. zur Rakete tragen (30 s).</summary>
+        public void CrewCarry()
+        {
+            if (ps == null) return; string from = ps.bld.Contains("prod") ? "prod" : "roh", to = ps.bld.Contains("sell") ? "sell" : ps.bld.Contains("port") ? "port" : null; /* Rakete steht direkt neben dem Produktlager */
+            if (to == null || !ps.lay.pos.ContainsKey(from) || !ps.lay.pos.ContainsKey(to)) return;
+            var pa = ps.lay.pos[from]; var pb = ps.lay.pos[to]; var d = (pb - pa).normalized; var side = new Vector2(-d.y, d.x) * 2.6f; /* neben dem Band, nicht darauf */
+            carryA = pa + d * (FactoryPlanner.Half(from) + 1.2f) + side; carryB = pb - d * (FactoryPlanner.Half(to) + 1.2f) + side; carryUntil = Time.time + 30f;
+        }
+        public string CrewInfo() => string.Join(" | ", crew.Select((c, i) => i + ":" + (c.job == "" ? "spaziert" : c.job) + (c.work ? " (arbeitet)" : "") + (c.box && c.box.gameObject.activeSelf ? " (Kiste)" : "")));
+        void Go(Crew c, Vector2 to) { c.a = c.cur; c.b = to; c.len = Mathf.Max(.1f, (to - c.cur).magnitude); c.s = 0; c.wait = 0; c.work = false; }
         void NewTrip(Crew c, List<string> ids)
         {
-            // nur Wege, die kein Band und kein Gebäude kreuzen; sonst eine kleine Runde um das eigene Gebäude
+            // vom aktuellen Platz zu einem anderen Gebäude – nur Wege, die kein Band und kein Gebäude kreuzen; sonst kurz stehen bleiben
             for (int k = 0; k < 16; k++)
             {
-                string A = ids[Random.Range(0, ids.Count)], B = ids[Random.Range(0, ids.Count)]; if (A == B) continue;
-                Vector2 pa = ps.lay.pos[A], pb = ps.lay.pos[B]; var d = (pb - pa).normalized;
-                Vector2 a = pa + d * (GameData.Bld[A].fp + .8f), b = pb - d * (GameData.Bld[B].fp + .8f);
-                if ((b - a).magnitude < 2 || !CrewClear(a, b)) continue;
-                c.a = a; c.b = b; c.len = (b - a).magnitude; c.s = 0; return;
+                string B = ids[Random.Range(0, ids.Count)]; var pb = ps.lay.pos[B]; var d = (pb - c.cur).normalized; var b = pb - d * (FactoryPlanner.Half(B) + 1.6f);
+                if ((b - c.cur).magnitude < 2 || !CrewClear(c.cur, b)) continue; Go(c, b); return;
             }
-            for (int k = 0; k < 16; k++)
-            {
-                string A = ids[Random.Range(0, ids.Count)]; var pa = ps.lay.pos[A]; float r = GameData.Bld[A].fp + 1.3f, a0 = Random.Range(0f, 6.283f), a1 = a0 + Random.Range(.6f, 1.4f) * (Random.value < .5f ? 1 : -1);
-                Vector2 a = pa + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * r, b = pa + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * r;
-                if (!CrewClear(a, b)) continue; c.a = a; c.b = b; c.len = Mathf.Max(.1f, (b - a).magnitude); c.s = 0; return;
-            }
-            c.a = c.b = c.t ? (Vector2)pd.PlanLocal(c.t.position.normalized) : Vector2.zero; c.len = .1f; c.s = 0; c.wait = 5; /* nirgends frei: stehen bleiben */
+            c.a = c.b = c.cur; c.len = .1f; c.s = 0; c.wait = 4;
         }
         /// <summary>Kreuzt die Strecke a→b ein Band oder ein Gebäude?</summary>
         bool CrewClear(Vector2 a, Vector2 b)
@@ -60,18 +68,40 @@ namespace LunarCleanup.Gameplay
             }
             return true;
         }
+        public Vector3? CrewDir(int i) => i >= 0 && i < crew.Count && crew[i].t ? crew[i].t.position.normalized : (Vector3?)null;
         void UpdateCrew()
         {
             if (ps == null || MapMode) { foreach (var c in crew) if (c.t) c.t.gameObject.SetActive(false); return; }
             if (crewFor != ps.pid || crewVer != ps.baseVersion) BuildCrew();
-            var ids = ps.bld.Where(id => ps.lay.pos.ContainsKey(id) && !(Game.IsUnit(id) && id != "u1")).ToList();
+            var ids = ps.bld.Where(id => ps.lay.pos.ContainsKey(id) && !(Game.IsUnit(id) && id != "u1")).ToList(); if (ids.Count < 2) return;
+            // Aufgaben: Techniker an Störungen, Kristallsammler, Kisten tragen – sonst spazieren
+            var jobs = new List<(string key, Vector2 at)>();
+            foreach (var jb in Game.TechJobs(ps)) jobs.Add(("t:" + jb.k + jb.id, pd.PlanLocal(jb.d)));
+            if (ps.sv.crewCr >= 0) { var cx = ps.sv.crystals.Find(x => x.id == ps.sv.crewCr); if (cx != null) jobs.Add(("c:" + cx.id, pd.PlanLocal(Game.CrystalDir(ps, cx)))); }
+            bool carry = Time.time < carryUntil; int ji = 0, carriers = 0;
             foreach (var c in crew)
             {
                 if (!c.t) continue; c.t.gameObject.SetActive(true);
-                if (c.wait > 0) { c.wait -= Time.deltaTime; } else { c.s += Time.deltaTime * 1.3f; if (c.s >= c.len) { c.wait = Random.Range(2f, 6f); NewTrip(c, ids); } }
-                var p = Vector2.Lerp(c.a, c.b, Mathf.Clamp01(c.s / c.len)); var dir = pd.PlanDir(p); var fwd = pd.PlanDir(p + (c.b - c.a).normalized * .5f) - dir;
-                c.t.position = pd.Surf(dir, c.legL || c.wait > 0 ? 0 : Mathf.Abs(Mathf.Sin(Time.time * 7 + c.len)) * .08f); /* Modell ohne Beine: wippt beim Gehen */ c.t.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(fwd, dir).normalized + dir * 1e-4f, dir);
-                float sw = c.wait > 0 ? 0 : Mathf.Sin(Time.time * 7 + c.len) * 25; if (c.legL) c.legL.localRotation = Quaternion.Euler(sw, 0, 0); if (c.legR) c.legR.localRotation = Quaternion.Euler(-sw, 0, 0);
+                string key = ""; Vector2 at = default;
+                if (ji < jobs.Count) { key = jobs[ji].key; at = jobs[ji].at; ji++; } else if (carry && carriers < 3) { key = "k"; carriers++; }
+                if (key != c.job)
+                {
+                    c.job = key; if (c.box) c.box.gameObject.SetActive(false);
+                    if (key == "") NewTrip(c, ids);
+                    else if (key == "k") { c.leg = 0; Go(c, carryA + Random.insideUnitCircle * .8f); }
+                    else { var off = (c.cur - at); off = off.sqrMagnitude > 1e-4f ? off.normalized * 1.1f : Vector2.right * 1.1f; Go(c, at + off); c.face = -off; }
+                }
+                bool walking = c.wait <= 0 && c.s < c.len;
+                if (c.wait > 0) c.wait -= Time.deltaTime;
+                else if (c.s < c.len) { c.s += Time.deltaTime * (c.job == "k" ? 1.1f : Game.CREW_SPEED); }
+                else if (c.job == "") { c.wait = Random.Range(2f, 6f); c.cur = c.b; NewTrip(c, ids); }
+                else if (c.job == "k") { c.cur = c.b; if (c.leg == 0) { c.leg = 1; if (c.box) c.box.gameObject.SetActive(true); Go(c, carryB + Random.insideUnitCircle * .8f); } else { c.leg = 0; if (c.box) c.box.gameObject.SetActive(false); Go(c, carryA + Random.insideUnitCircle * .8f); } }
+                else c.work = true; /* angekommen: reparieren bzw. ernten */
+                if (c.s <= c.len) c.cur = Vector2.Lerp(c.a, c.b, Mathf.Clamp01(c.s / c.len));
+                var dir = pd.PlanDir(c.cur); var mv = c.work ? c.face : (c.b - c.a); if (mv.sqrMagnitude < 1e-6f) mv = Vector2.up; var fwd = pd.PlanDir(c.cur + mv.normalized * .5f) - dir;
+                float bob = c.work ? Mathf.Abs(Mathf.Sin(Time.time * 5 + c.len)) * .12f : walking && !c.legL ? Mathf.Abs(Mathf.Sin(Time.time * 7 + c.len)) * .08f : 0; /* Arbeiten: kniet und hämmert */
+                c.t.position = pd.Surf(dir, bob); c.t.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(fwd, dir).normalized + dir * 1e-4f, dir);
+                float sw = walking ? Mathf.Sin(Time.time * 7 + c.len) * 25 : 0; if (c.legL) c.legL.localRotation = Quaternion.Euler(sw, 0, 0); if (c.legR) c.legR.localRotation = Quaternion.Euler(-sw, 0, 0);
             }
         }
     }
