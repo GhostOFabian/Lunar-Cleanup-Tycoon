@@ -49,6 +49,10 @@ namespace LunarCleanup.Core
         public static Color FlagInk(FlagSave f) => TextCols[Mathf.Clamp(f.tcol, 0, TextCols.Length - 1)].col;
         public static void NextFlagCol(FlagSave f) { f.fcol = (f.fcol + 1) % FlagCols.Length; FlagVer++; }
         public static void NextTextCol(FlagSave f) { f.tcol = (f.tcol + 1) % TextCols.Length; FlagVer++; }
+        /// <summary>Fabian 11.11.: vorgeschlagene Fahnentexte in beiden Sprachen – gespeichert wird der deutsche, angezeigt in der eingestellten Sprache.</summary>
+        public static readonly (string de, string en)[] FlagIdeas = { ("Gänsehaut!", "Goosebumps!"), ("Ich les weiter!", "Reading on!"), ("Unglaublich …", "Unbelievable …"), ("Hier war ich!", "I was here!"), ("Wie geht's weiter?", "What happens next?"), ("Gruß an alle", "Hi everyone") };
+        public static string FlagShow(string t) { foreach (var i in FlagIdeas) if (t == i.de || t == i.en) return Loc.En ? i.en : i.de; return t; }
+        public static bool FlagIs(FlagSave f, string de) { foreach (var i in FlagIdeas) if (i.de == de) return f.text == i.de || f.text == i.en; return f.text == de; }
         public static void SetFlagText(FlagSave f, string t) { f.text = (t ?? "").Trim(); if (f.text.Length > 24) f.text = f.text.Substring(0, 24); FlagVer++; }
     }
 }

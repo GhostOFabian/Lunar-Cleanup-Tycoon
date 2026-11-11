@@ -19,7 +19,7 @@ Mobiles 3D-Spiel aus Reinigungssimulation, Idle-Tycoon und Automatisierung: Du w
 - **Fairer Shop** ohne Werbung und ohne Pay-to-Win (Käufe noch nicht freigeschaltet).
 
 ## Stand
-- Version 0.5 (Beta), Build 73. Unity 6 (6000.6), Ziel iOS und später Android; die Browser-Version ist ein WebGL-Build desselben Projekts.
+- Version 0.5 (Beta), Build 74. Unity 6 (6000.6), Ziel iOS und später Android; die Browser-Version ist ein WebGL-Build desselben Projekts.
 - Unity-Projekt: [`unity/`](unity/). Der alte Browser-Prototyp (three.js) liegt in [`prototype/`](prototype/) und wird nicht mehr weiterentwickelt.
 - Alle 3D-Modelle entstehen prozedural mit [`unity/Modelle_Quelle/lunar_models.py`](unity/Modelle_Quelle/lunar_models.py) – keine gekauften Assets.
 

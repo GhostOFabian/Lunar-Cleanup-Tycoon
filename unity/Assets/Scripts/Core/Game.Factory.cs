@@ -105,6 +105,8 @@ namespace LunarCleanup.Core
             }
             return n + " Bänder, " + bad + " Enden nicht auf der Plattform | " + sb;
         }
+        /// <summary>Editor/Test: Rohstofflager mit allen Rohstoffen des Planeten füllen (für Bilder der Bänder).</summary>
+        public static string DevFill() { var ps = Cur; int n = 0; for (int m = 0; m < ps.sv.roh.Length; m++) if (GameData.Mats[m].raw) { ps.sv.roh[m] += 3000; n++; } return n + " Rohstoffe aufgefüllt"; }
         public static string DevPad() { var P = Cur?.plan; return P == null ? "kein Plan" : (P.hasPad ? "Landeplatz " + P.pad + " h" + P.padH + (P.padOutside ? " gewachsen " + P.grow.Count : "") : "kein Landeplatz"); }
         /// <summary>Editor/Test: Ergebnis des Planers für den aktuellen Planeten.</summary>
         public static string DevPlanInfo()

@@ -1813,6 +1813,38 @@ def _pmat(key, shape, col):
     return name
 
 
+def raw_item(key, name, col):
+    """Fabian 11.11.: Rohstoffe als echte Gegenstände statt Kiste mit Inhalt (Ursprung unten, ca. 0,4 m)."""
+    m = Model("item_" + key, name, "Produkte"); M = m.body
+    pm = _pmat(key, "crate", col); r = _rnd(900 + sum(map(ord, key)))
+    if key == "staub":      # Staubhaufen mit ein paar Steinchen
+        M.blob(pm, (0, 0, 0.02), 0.2, 901, (1.0, 0.9, 0.55), 0.25, 12, 6)
+        for i in range(4):
+            a = i * 1.7; M.blob("fels", (0.16 * math.cos(a), 0.14 * math.sin(a), 0.03), 0.045, 910 + i, (1, 1, 0.8), 0.4, 6, 4)
+    elif key == "metall":   # Schrottbündel: verbogene Bleche, Rohr, Zahnrad
+        M.box(pm, (0, 0, 0.04), (0.36, 0.26, 0.035), rot=(4, -6, 12))
+        M.box("rost", (0.03, -0.02, 0.09), (0.3, 0.2, 0.03), rot=(-10, 8, -20))
+        M.box(pm, (-0.05, 0.04, 0.14), (0.24, 0.16, 0.025), rot=(14, 4, 35))
+        M.tube("stahl", (-0.17, -0.1, 0.06), (0.16, 0.12, 0.17), 0.035, 10)
+        M.torus("stahl", (0.1, 0.07, 0.2), 0.06, 0.018, 12, 5, rot=(70, 0, 20))
+        M.box("dunkel", (0.12, -0.1, 0.11), (0.08, 0.05, 0.12), rot=(0, 20, 30))
+    elif key == "kristall": # Kristallgruppe auf Gestein
+        M.blob("felsdkl", (0, 0, 0.0), 0.14, 920, (1.2, 1.0, 0.45), 0.3, 10, 5)
+        for i, (x, y, h, rx, ry) in enumerate(((0, 0, 0.3, 0, 0), (0.07, 0.03, 0.22, 18, 10), (-0.07, 0.04, 0.2, -15, 12), (0.02, -0.08, 0.18, 10, -20), (-0.05, -0.05, 0.15, -20, -14))):
+            w = 0.05 if i == 0 else 0.035
+            M.lathe(pm, (x, y, 0.03), [(0.0, 0.0), (w, 0.02), (w, h * 0.7), (0.0, h)], 6, rot=(rx, ry, 0))
+    elif key == "chemie":   # glänzender Schlammklumpen mit Tropfen
+        M.blob(pm, (0, 0, 0.0), 0.19, 930, (1.0, 0.85, 0.5), 0.35, 14, 7)
+        for i, (x, y, rr) in enumerate(((0.17, 0.05, 0.04), (-0.15, -0.09, 0.035), (0.05, -0.17, 0.03))):
+            M.sphere(pm, (x, y, 0.02), rr, 10, 5)
+    else:                   # Strahlenerz: Gesteinsbrocken mit leuchtenden Adern
+        M.blob("felsdkl", (0, 0, 0.02), 0.18, 940, (1.1, 0.95, 0.75), 0.35, 12, 6, facet=0.18)
+        for i in range(6):
+            a = i * 1.05 + 0.3; z = 0.1 + 0.07 * math.sin(i * 2.1)
+            M.blob(pm, (0.15 * math.cos(a), 0.13 * math.sin(a), z), 0.04, 945 + i, (1, 1, 1), 0.5, 6, 4, facet=0.2)
+    return m
+
+
 def product(key, name, shape, col):
     m = Model("ware_" + key, name, "Produkte"); M = m.body
     pm = _pmat(key, shape, col)
@@ -2978,6 +3010,7 @@ def all_models():
         ("anschluss_eingang", lambda: f_anschluss(False)), ("anschluss_ausgang", lambda: f_anschluss(True)),
         ("uebergabe_saeule", f_uebergabe),
     ] + [("ware_" + k, (lambda k=k, n=n, sh=sh, c=c: product(k, n, sh, c))) for k, n, sh, c in PRODUCTS] + [
+        ("item_" + k, (lambda k=k, n=n, c=c: raw_item(k, n, c))) for k, n, sh, c in PRODUCTS if sh == "crate"] + [
         ("schmutz_fels_1", lambda: d_rock(1)), ("schmutz_fels_2", lambda: d_rock(2)), ("schmutz_fels_3", lambda: d_rock(3)),
         ("schmutz_schrott_1", lambda: d_scrap(1)), ("schmutz_schrott_2", lambda: d_scrap(2)), ("schmutz_schrott_3", lambda: d_scrap(3)),
         ("schmutz_satellit_1", lambda: d_sat(1)), ("schmutz_satellit_2", lambda: d_sat(2)),

@@ -55,7 +55,7 @@ namespace LunarCleanup.Gameplay
                 if (v.go && v.go.activeSelf != vis) v.go.SetActive(vis);
                 if (v.go && vis)
                 {
-                    string t = v.f.got ? (string.IsNullOrEmpty(v.f.text) ? "#" + n : v.f.text) : "?";
+                    string t = v.f.got ? (string.IsNullOrEmpty(v.f.text) ? "#" + n : Game.FlagShow(v.f.text)) : "?"; /* 11.11.: Vorschläge in der eingestellten Sprache */
                     if (t != v.text) { v.text = t; foreach (var tm in v.go.GetComponentsInChildren<TextMeshPro>()) tm.text = t; }
                 }
             }

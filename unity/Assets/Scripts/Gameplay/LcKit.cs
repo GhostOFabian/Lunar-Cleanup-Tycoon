@@ -191,7 +191,7 @@ namespace LunarCleanup.Gameplay
             bk = new Baked { mesh = mesh, mats = mats, size = mesh.bounds.size }; BakeCache[path] = bk; return bk;
         }
         /// <summary>Warenmodell für ein Produkt (Browser-Schlüssel), null wenn es keins gibt.</summary>
-        public static Baked Ware(string key) => key != null && Has("Produkte/ware_" + key) ? Bake("Produkte/ware_" + key) : null;
+        public static Baked Ware(string key) => key == null ? null : Has("Produkte/item_" + key) ? Bake("Produkte/item_" + key) : Has("Produkte/ware_" + key) ? Bake("Produkte/ware_" + key) : null; /* 11.11.: Rohstoffe als echte Gegenstände (item_) statt Kiste mit Inhalt */
         /// <summary>Außenlager (Silo, Andockplätze, Pumpenhaus) in Spielgröße.</summary>
         public static Models.BuildingParts Outpost(Color acc)
         {

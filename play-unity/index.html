@@ -26,27 +26,50 @@ canvas{width:100%;height:100%;display:block;background:#000}
 #err{color:#ff8a8a}
 footer{color:var(--dim);font-size:.8rem;padding:6px 16px 10px;text-align:center}
 body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{border:0;border-radius:0;height:100%;width:100%;max-height:none;aspect-ratio:auto}
+#fbBtn{display:none}
+#fbBox{position:fixed;inset:0;background:rgba(3,6,12,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#fbBox .card{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+#fbBox h3{margin:0 0 6px;font-family:Oxanium,sans-serif}
+#fbBox p{margin:0 0 12px;color:var(--dim);font-size:.92rem;line-height:1.4}
+#fbBox .thumbs{display:flex;gap:10px;margin-bottom:12px}
+#fbBox .thumbs button{flex:1;font-size:1.6rem;padding:10px;border-radius:12px;border:1px solid var(--line);background:#0b1220;color:var(--ink);cursor:pointer}
+#fbBox .thumbs button.on{border-color:var(--credit);background:#2a2210}
+#fbBox textarea{width:100%;min-height:110px;resize:vertical;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font:inherit;padding:10px}
+#fbBox .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#fbBox .row button{font:inherit;border-radius:10px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:#0b1220;color:var(--ink)}
+#fbBox .row button.send{background:var(--credit);color:#1a1300;border-color:var(--credit);font-weight:700}
+#fbBox .row button:disabled{opacity:.45;cursor:default}
+#fbMsg{color:var(--dim);font-size:.85rem;margin-top:8px;min-height:1.2em}
+#fbFloat{display:none;position:fixed;right:6px;top:50%;transform:translateY(-50%);z-index:40;background:rgba(17,24,39,.72);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px 6px;font-size:1.1rem;cursor:pointer}
 </style>
 </head>
 <body>
 <header>
   <a href="../index.html">Lunar Cleanup <span>Tycoon</span></a>
-  <div class="b"><button id="fs" type="button">Vollbild</button></div>
+  <div class="b"><button id="fbBtn" type="button">Feedback</button><button id="fs" type="button">Vollbild</button></div>
 </header>
 <main><div id="frame">
   <canvas id="c" tabindex="-1"></canvas>
   <div id="load"><b>Unity-Version wird geladen …</b><div id="bar"><i></i></div><small>Einmalig rund 28 MB, danach aus dem Browser-Speicher. Eigener Spielstand in diesem Browser.</small><small id="err"></small></div>
 </div></main>
-<footer>Beta · Version 0.5 · Build 73 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser</footer>
+<button id="fbFloat" type="button" aria-label="Feedback">💬</button>
+<div id="fbBox" role="dialog" aria-modal="true" aria-labelledby="fbT"><div class="card">
+  <h3 id="fbT"></h3><p id="fbP"></p>
+  <div class="thumbs"><button type="button" id="fbUp" aria-label="Gefällt mir">👍</button><button type="button" id="fbDown" aria-label="Gefällt mir nicht">👎</button></div>
+  <textarea id="fbText" maxlength="1500"></textarea>
+  <div id="fbMsg"></div>
+  <div class="row"><button type="button" id="fbClose"></button><button type="button" class="send" id="fbSend" disabled></button></div>
+</div></div>
+<footer>Beta · Version 0.5 · Build 74 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser</footer>
 <script>
 (function(){
   var mob=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent); if(mob) document.body.classList.add('m');
   var c=document.getElementById('c'),bar=document.querySelector('#bar i'),load=document.getElementById('load'),err=document.getElementById('err');
-  var cfg={dataUrl:'Build/WebGL-GitHub.data.unityweb?v=66',frameworkUrl:'Build/WebGL-GitHub.framework.js.unityweb?v=66',codeUrl:'Build/WebGL-GitHub.wasm.unityweb?v=66',streamingAssetsUrl:'StreamingAssets',
+  var cfg={dataUrl:'Build/WebGL-GitHub.data.unityweb?v=67',frameworkUrl:'Build/WebGL-GitHub.framework.js.unityweb?v=67',codeUrl:'Build/WebGL-GitHub.wasm.unityweb?v=67',streamingAssetsUrl:'StreamingAssets',
     companyName:'DefaultCompany',productName:'Lunar Cleanup Tycoon',productVersion:'0.5',
     showBanner:function(msg,type){ if(type==='error') err.textContent=msg; }};
   if(mob) cfg.devicePixelRatio=Math.min(window.devicePixelRatio||1,2);
-  var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js?v=66';
+  var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js?v=67';
   s.onload=function(){
     createUnityInstance(c,cfg,function(p){bar.style.width=(p*100)+'%';}).then(function(u){
       load.style.display='none';
@@ -56,6 +79,29 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   s.onerror=function(){err.textContent='Spieldateien konnten nicht geladen werden.';};
   document.body.appendChild(s);
 })();
+/* Fabian 11.11.: Feedback mit Daumen und Kommentar – landet in Fabians Google-Formular (Antworten in Google Sheets).
+   Eintragen: Formular-Adresse (…/formResponse) und die drei entry-Nummern aus dem vorausgefüllten Link. Ohne Adresse bleibt der Knopf unsichtbar. */
+(function(){
+  var GF={url:'',rate:'',text:'',build:''};
+  if(!GF.url) return;
+  var en=!/^de/i.test(navigator.language||'de'), T=en?{t:'How do you like it?',p:'Thumbs up or down, and tell me what you think. Every comment helps.',ph:'What do you like, what bugs you? (optional)',send:'Send',close:'Close',ok:'Thank you! Your feedback has been sent.',err:'Could not send – please try again later.'}
+    :{t:'Wie gefällt dir das Spiel?',p:'Daumen hoch oder runter und gern ein paar Worte dazu. Jeder Kommentar hilft.',ph:'Was gefällt dir, was stört dich? (freiwillig)',send:'Senden',close:'Schließen',ok:'Danke! Dein Feedback ist angekommen.',err:'Senden hat nicht geklappt – bitte später noch einmal.'};
+  var $=function(i){return document.getElementById(i);}, box=$('fbBox'), rate='';
+  $('fbT').textContent=T.t; $('fbP').textContent=T.p; $('fbText').placeholder=T.ph; $('fbSend').textContent=T.send; $('fbClose').textContent=T.close;
+  var mob=document.body.classList.contains('m'); $(mob?'fbFloat':'fbBtn').style.display='inline-block';
+  function open(){ box.style.display='flex'; $('fbMsg').textContent=''; }
+  function close(){ box.style.display='none'; }
+  function pick(r){ rate=r; $('fbUp').classList.toggle('on',r==='up'); $('fbDown').classList.toggle('on',r==='down'); $('fbSend').disabled=false; }
+  $('fbBtn').onclick=open; $('fbFloat').onclick=open; $('fbClose').onclick=close; box.onclick=function(e){ if(e.target===box) close(); };
+  $('fbUp').onclick=function(){pick('up');}; $('fbDown').onclick=function(){pick('down');};
+  $('fbSend').onclick=function(){
+    var f=new FormData(); f.append(GF.rate, rate==='up'?'👍':'👎'); f.append(GF.text, $('fbText').value.slice(0,1500)); f.append(GF.build, document.querySelector('footer').textContent.replace(/.*Build (\d+).*/,'$1')+(mob?' · Handy':' · PC')+(en?' · EN':' · DE'));
+    $('fbSend').disabled=true;
+    fetch(GF.url,{method:'POST',mode:'no-cors',body:f}).then(function(){ $('fbMsg').textContent=T.ok; $('fbText').value=''; rate=''; $('fbUp').classList.remove('on'); $('fbDown').classList.remove('on'); setTimeout(close,1600); })
+      .catch(function(){ $('fbMsg').textContent=T.err; $('fbSend').disabled=false; });
+  };
+})();
+
 </script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 # Fortschritt
+- **Build 74 (11.11.):** Rohstoffe als echte Gegenstände auf den Bändern, Fahnentexte zweisprachig, Feedback-Knopf auf der Spielseite vorbereitet (wartet auf das Google-Formular).
 - **Build 73 (11.11.):** Keine grün leuchtenden Bodenflecken mehr im vollen Terraforming; Editor-Befehle für Werbebilder (photo clean, rot, day, freeze, lookveh, lookpad).
 - **Build 72 (11.11.):** Anschlussrahmen und Übergabesäulen stehen immer ganz auf der Plattform (auch an Tanks und Rakete); Basisprüfung prüft das, 49/49 in Ordnung.
 - **Build 71 (11.11.):** Bandenden an der Entladeanlage liegen jetzt auf der Plattform (alle 441 Bänder auf allen 49 Layouts geprüft), Basisprüfung 49/49 in Ordnung.
