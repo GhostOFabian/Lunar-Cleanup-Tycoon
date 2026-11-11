@@ -2683,6 +2683,13 @@ def e_haendler():
     for i in range(7):
         for sx in (-1, 1):
             M.box("glas", (sx * 1.54, -2.6 + i * 0.75, 0.45), (0.05, 0.4, 0.2))
+    # Fabian 11.11.: Landebeine – das Schiff landet jetzt auf dem Landeplatz (Unterseite der Füße bei z = −2,4)
+    F = m.part("Fahrwerk", (0, 0, -1.5))
+    for sx in (-1, 1):
+        for y0 in (-2.6, 2.4):
+            F.tube("stahl", (sx * 0.8, y0, -1.2), (sx * 1.25, y0 + (-0.25 if y0 < 0 else 0.25), -2.25), 0.09)
+            F.tube("dunkel", (sx * 0.5, y0 + (0.5 if y0 < 0 else -0.5), -1.4), (sx * 1.2, y0 + (-0.2 if y0 < 0 else 0.2), -1.9), 0.05)
+            F.cyl("gummi", (sx * 1.25, y0 + (-0.25 if y0 < 0 else 0.25), -2.4), 0.3, 0.15, 12)
     return m
 
 

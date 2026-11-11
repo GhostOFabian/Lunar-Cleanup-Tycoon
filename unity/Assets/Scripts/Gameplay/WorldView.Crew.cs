@@ -50,6 +50,12 @@ namespace LunarCleanup.Gameplay
             var pa = ps.lay.pos[from]; var pb = ps.lay.pos[to]; var d = (pb - pa).normalized; var side = new Vector2(-d.y, d.x) * 2.6f; /* neben dem Band, nicht darauf */
             carryA = pa + d * (FactoryPlanner.Half(from) + 1.2f) + side; carryB = pb - d * (FactoryPlanner.Half(to) + 1.2f) + side; carryUntil = Time.time + 30f;
         }
+        /// <summary>11.11.: Crew trägt Kisten vom Produktlager zum Landeplatz (Händlerschiff wartet dort).</summary>
+        public void CrewCarryTo(Vector2 to, float dur)
+        {
+            if (ps == null) return; string from = ps.bld.Contains("prod") ? "prod" : "roh"; if (!ps.lay.pos.ContainsKey(from)) return;
+            var pa = ps.lay.pos[from]; var d = (to - pa).normalized; carryA = pa + d * (FactoryPlanner.Half(from) + 1.2f); carryB = to; carryUntil = Time.time + dur;
+        }
         public string CrewInfo() => string.Join(" | ", crew.Select((c, i) => i + ":" + (c.job == "" ? "spaziert" : c.job) + (c.work ? " (arbeitet)" : "") + (c.box && c.box.gameObject.activeSelf ? " (Kiste)" : "")));
         void Go(Crew c, Vector2 to) { c.a = c.cur; c.b = to; c.len = Mathf.Max(.1f, (to - c.cur).magnitude); c.s = 0; c.wait = 0; c.work = false; }
         void NewTrip(Crew c, List<string> ids)

@@ -41,7 +41,7 @@ namespace LunarCleanup.Gameplay
             var cols = new[] { new Color(.85f, .64f, .25f), new Color(.36f, .56f, .85f), new Color(.6f, .82f, .77f) };
             for (int i = 0; i < 6; i++) MeshKit.Box(cr.transform, MeshKit.Mat(cols[i % 3], .1f, .4f), new Vector3((i % 3 - 1) * .8f, .35f + (i / 3) * .7f, 0), Vector3.one * .65f);
             // Besucher-Shuttles schweben über dem Lager
-            for (int i = 0; i < ordCount; i++)
+            for (int i = 0; i < (PadOn ? 0 : ordCount); i++) /* 11.11.: mit Landeplatz schweben keine Schiffe mehr – sie landen dort */
             {
                 var holder = new GameObject("Besucher " + i); holder.transform.SetParent(ordDepot.transform, false); holder.transform.localPosition = new Vector3((i - (ordCount - 1) / 2f) * 4.5f, 3.2f, -4.5f);
                 var shipModel = LcKit.Has("Ereignisse/haendlerschiff") ? LcKit.Spawn("Ereignisse/haendlerschiff", holder.transform, Vector3.zero, 90, acc, null, .45f) : (LcKit.Has("Ereignisse/lieferrakete") ? LcKit.Spawn("Ereignisse/lieferrakete", holder.transform, Vector3.zero, 0, acc, null, .9f) : null);

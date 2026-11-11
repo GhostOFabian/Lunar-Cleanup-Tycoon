@@ -29,12 +29,13 @@ namespace LunarCleanup.Core
             S.credits -= take; P[to].sv.cash += take; P[to].sv.cashIn += take; return take;
         }
         /// <summary>Zuschuss vom aktiven Planeten an einen anderen (zählt gegen dessen Startbudget).</summary>
+        public static event Action<string> OnCashSent; // 11.11.: Lieferschiff holt den Zuschuss ab (nur Darstellung)
         public static bool SendCash(string pid)
         {
             if (!P.ContainsKey(pid) || pid == S.planet) return false; var t = P[pid]; double amt = Math.Min(S.credits, ImportLeft(t));
             if (ImportLeft(t) < 1) return Fail(t.P.name + " hat sein Startbudget schon bekommen – dort musst du selbst verdienen");
             if (amt < 1) return Fail("In dieser Kasse ist kein Geld");
-            S.credits -= amt; t.sv.cash += amt; t.sv.cashIn += amt; Toast(Fmt(amt) + " Cr an " + t.P.name + " geschickt", "good"); Save(); return true;
+            S.credits -= amt; t.sv.cash += amt; t.sv.cashIn += amt; OnCashSent?.Invoke(pid); Toast(Fmt(amt) + " Cr an " + t.P.name + " geschickt", "good"); Save(); return true;
         }
         /// <summary>Alte Spielstände: alles Geld liegt bisher in einer Kasse. Jeder andere Planet bekommt sein Startbudget daraus, der Rest bleibt hier.</summary>
         static void MigrateWallet()
