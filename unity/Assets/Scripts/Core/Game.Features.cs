@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
             var ev = ps.sv.ev; if (false && ev != null && ev.key == "wreck" && ev.cell == id && ev.t > 0) { double w = FeatureData.WRECK_BONUS * ps.P.diff + bonus * (FeatureData.WRECK_AMT - 1); Earn(w); if (live) Toast("Wrack geborgen · +" + Fmt(w) + " Cr", "good"); EvEnd(ps, null); }
             // Schatzfund
             if (!FeatureData.Finds.TryGetValue(ps.pid, out var album)) return;
-            float ch = (GameData.Kinds[ps.pd.cells[id].kind].key == "anomaly" ? FeatureData.FIND_CHANCE_ANOMALY : FeatureData.FIND_CHANCE) * (Sd("find") ? 1.1f : 1);
+            float ch = (GameData.Kinds[ps.pd.cells[id].kind].key == "anomaly" ? FeatureData.FIND_CHANCE_ANOMALY : FeatureData.FIND_CHANCE) * (1 + .05f * SdLv("find"));
             if (fr.NextDouble() >= ch) return;
             int i = fr.Next(album.Length); string key = ps.pid + ":" + i;
             if (S.finds.Contains(key)) { double c = FeatureData.FIND_DUP_CR * ps.P.diff; Earn(c); if (live) FloatTxt(ps.pd.cells[id].c, "Doppelter Fund · +" + Fmt(c), "good"); return; }
@@ -63,7 +63,7 @@ namespace LunarCleanup.Core
                 bool due = (pc >= .3f && !ps.sv.pile30) || (pc >= .7f && !ps.sv.pile70) || (pc >= .3f && pc < .999f && ps.sv.pileT >= 2700);
                 if (due && StartEvent(ps, "pile")) { ps.sv.pile30 = true; if (pc >= .7f) ps.sv.pile70 = true; ps.sv.pileT = 0; return; }
             }
-            S.evNext -= dt * (Sd("event") ? 1.2f : 1); if (S.evNext > 0) return;
+            S.evNext -= dt * (1 + .1f * SdLv("event")); if (S.evNext > 0) return;
             S.evNext = Mathf.Lerp(FeatureData.EV_MIN, FeatureData.EV_MAX, (float)fr.NextDouble());
             StartEvent(ps, null);
         }
@@ -204,24 +204,39 @@ namespace LunarCleanup.Core
         }
 
         // ---------- Sternenstaub-Neustart ----------
-        public static bool Sd(string node) => S != null && S.sdNodes.Contains(node);
+        /// <summary>Werkstatt-Stufe (0 = nicht gekauft).</summary>
+        public static int SdLv(string id) { if (S == null || S.sdLv == null) return 0; string k = id + "="; foreach (var x in S.sdLv) if (x.StartsWith(k) && int.TryParse(x.Substring(k.Length), out int n)) return n; return 0; }
+        public static bool Sd(string node) => SdLv(node) > 0;
+        static void SetSdLv(string id, int n) { S.sdLv.RemoveAll(x => x.StartsWith(id + "=")); if (n > 0) S.sdLv.Add(id + "=" + n); }
         /// <summary>Sternenstaub, den ein Neustart jetzt bringen würde: je komplett sauberem Planeten (Position in der Reihenfolge + 1), dazu 1 je 10 Funde.</summary>
         public static int StardustPending() { if (S == null) return 0; int n = 0; foreach (var pid in S.done) { int i = Array.IndexOf(GameData.POrder, pid); if (i >= 0) n += i + 1; } return n + S.finds.Count / 10; }
         public static int StardustFree() => S == null ? 0 : (int)S.stardust - S.sdSpent;
-        public static string SdWhy(SdNode n) { if (S.sdNodes.Contains(n.id)) return "Gekauft"; if (!string.IsNullOrEmpty(n.needs) && !S.sdNodes.Contains(n.needs)) return "Erst „" + FeatureData.Stardust.First(x => x.id == n.needs).name + "“"; if (StardustFree() < n.cost) return "Zu wenig Sternenstaub"; return ""; }
-        public static void SdBuy(SdNode n) { if (SdWhy(n) != "") { Toast(SdWhy(n), "bad"); return; } S.sdSpent += n.cost; S.sdNodes.Add(n.id); Toast(n.name + " freigeschaltet", "good"); Save(); }
-        /// <summary>Neustart: Planeten, Credits, Upgrades und Forschung zurück auf Anfang. Bleiben: Sternenstaub, Boni, Funde, Tagesbonus, Einstellungen, Statistik.</summary>
+        public static int SdCost(SdNode n) { int l = SdLv(n.id); return l >= n.Max ? 0 : n.costs[l]; }
+        public static string SdWhy(SdNode n) { if (SdLv(n.id) >= n.Max) return "Max"; if (!string.IsNullOrEmpty(n.needs) && !Sd(n.needs)) return "Erst „" + FeatureData.Stardust.First(x => x.id == n.needs).name + "“"; if (StardustFree() < SdCost(n)) return "Zu wenig Sternenstaub"; return ""; }
+        public static void SdBuy(SdNode n) { if (SdWhy(n) != "") { Toast(SdWhy(n), "bad"); return; } int c = SdCost(n), l = SdLv(n.id) + 1; S.sdSpent += c; SetSdLv(n.id, l); Toast(n.name + " Stufe " + l + " · " + n.lv(l), "good"); Save(); }
+        /// <summary>11.11.: alte einmalige Knoten in Stufen übernehmen (gleiche oder bessere Wirkung), „Glanz“ zurückerstatten.</summary>
+        static void MigrateSd()
+        {
+            if (S.sdLv == null) S.sdLv = new List<string>(); if (S.medals == null) S.medals = new List<MedalSave>(); if (S.sdNodes == null) S.sdNodes = new List<string>();
+            if (S.sdV >= 1) return; S.sdV = 1; var o = S.sdNodes;
+            int L(string id, int n) => o.Contains(id) ? n : 0;
+            SetSdLv("cash", Math.Max(L("cash3", 3), Math.Max(L("cash2", 2), L("cash1", 1)))); SetSdLv("fast", L("fast", 1)); SetSdLv("buggy", L("buggy", 1));
+            SetSdLv("price", L("price", 2)); SetSdLv("hand", L("hand", 1)); SetSdLv("offline", L("offline", 2)); SetSdLv("crystal", L("crystal", 2)); SetSdLv("find", L("find", 2)); SetSdLv("event", L("event", 2));
+            if (o.Contains("glow")) S.sdSpent = Math.Max(0, S.sdSpent - 2);
+        }
+        /// <summary>Neustart: Planeten, Credits, Upgrades und Forschung zurück auf Anfang. Bleiben: Sternenstaub, Werkstatt, Medaillenbuch, Funde, Erfolge, Tagesbonus, Einstellungen, Statistik.</summary>
         public static void Prestige()
         {
             int gain = StardustPending(); if (gain <= 0) { Toast("Erst einen Planeten komplett reinigen", "bad"); return; }
-            var old = S; var n = Fresh();
-            n.stardust = old.stardust + gain; n.sdSpent = old.sdSpent; n.sdNodes = old.sdNodes; n.resets = old.resets + 1; n.finds = old.finds; n.daily = old.daily; n.achievements = old.achievements; n.title = old.title;
-            n.sound = old.sound; n.music = old.music; n.vibrate = old.vibrate; n.notifyOff = old.notifyOff; n.stats = old.stats;
-            n.credits = Sd("cash3") ? 25000 : Sd("cash2") ? 5000 : Sd("cash1") ? 1000 : 0;
+            MedalAll(); var old = S; var n = Fresh();
+            n.stardust = old.stardust + gain; n.sdSpent = old.sdSpent; n.sdNodes = old.sdNodes; n.sdLv = old.sdLv; n.sdV = old.sdV; n.medals = old.medals; n.resets = old.resets + 1; n.finds = old.finds; n.daily = old.daily; n.achievements = old.achievements; n.title = old.title;
+            n.sound = old.sound; n.music = old.music; n.vibrate = old.vibrate; n.notifyOff = old.notifyOff; n.stats = old.stats; n.lineCol = old.lineCol;
+            foreach (var pid in old.done) { var md = Medal(pid, n); md.runs++; }
+            n.credits = FeatureData.CASH[Mathf.Clamp(SdLv("cash"), 0, FeatureData.CASH.Length - 1)]; /* S ist hier noch der alte Stand */
             S = n; GUpg.Clear(); P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps);
             var m = Cur; if (Sd("fast") && m.sv.stage < 2) { m.sv.stage = 2; m.baseVersion++; }
-            if (Sd("buggy")) m.sv.veh.Add(new VehSave { id = m.sv.nextVeh++, type = "buggy", d = m.pd.PlanDir(m.lay.start), tank = new float[NM] });
-            Save(); OnPlanetChanged?.Invoke(); Toast("Neustart Nr. " + n.resets + " · +" + gain + " Sternenstaub (jetzt " + StardustFree() + " frei)", "good");
+            for (int b = 0; b < SdLv("buggy"); b++) m.sv.veh.Add(new VehSave { id = m.sv.nextVeh++, type = "buggy", d = m.pd.PlanDir(m.lay.start), tank = new float[NM] });
+            Save(); OnPlanetChanged?.Invoke(); Toast("Neustart Nr. " + n.resets + " · +" + gain + " Sternenstaub (jetzt " + StardustFree() + " frei) · Medaillen und Bestzeiten bleiben", "good");
         }
 
         // ---------- Erfolge (Fabian 01.11.: Stufen Bronze/Silber/Gold, Belohnungen, Kategorien) ----------

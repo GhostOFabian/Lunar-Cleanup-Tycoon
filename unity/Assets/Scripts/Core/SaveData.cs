@@ -33,6 +33,7 @@ namespace LunarCleanup.Core
     [Serializable] public class ContractItem { public string type = ""; public double target, start, reward; public bool done; }
     [Serializable] public class ContractSave { public int day; public List<ContractItem> list = new List<ContractItem>(); public bool bonus; }
     [Serializable] public class TeamSave { public string mode = "home"; public Vector3 d; public float t; public int cell = -1; public string key = ""; } // Suchtrupp (Bergung von Wracks und Kometentrümmern)
+    [Serializable] public class MedalSave { public string pid = ""; public int tier; public double best; public int runs; } // 11.11.: 1 Bronze, 2 Silber, 3 Gold; best = kürzeste Spielzeit bis sauber
     [Serializable] public class CartSave { public bool owned; public Vector3 d; public string mode = "park", to = ""; public float[] tank; public float wt; }
 
     [Serializable]
@@ -125,6 +126,8 @@ namespace LunarCleanup.Core
         public double stardust; public int sdSpent, resets;       // D1
         public double debt; // Fabian 01.11.: Reise auf Kredit – wird mit 50 % jeder Einnahme abbezahlt
         public List<string> sdNodes = new List<string>();
+        public List<string> sdLv = new List<string>(); public int sdV; // 11.11.: Werkstatt-Stufen „id=stufe“ (sdV 1 = alte Knoten übernommen)
+        public List<MedalSave> medals = new List<MedalSave>();          // 11.11.: Medaillenbuch – bleibt bei jedem Neustart
         public SeasonSave season = new SeasonSave();              // D2
         public List<string> achievements = new List<string>(); public string title = ""; // D3
         public List<StationSave> station = new List<StationSave>(); // C5

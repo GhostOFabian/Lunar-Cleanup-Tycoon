@@ -13,7 +13,7 @@ namespace LunarCleanup.Core
     public class LqNav { public int to = -2; public bool free; public List<int> p; public int i, k; }
     public class PState
     {
-        public PlanetSave sv; public PlanetData pd; public PlanetDef P; public LayoutDef lay; public LineDef line; public FactoryPlan plan; /* 10.11.: Fabrik-Planer */
+        public PlanetSave sv; public PlanetData pd; public PlanetDef P; public LayoutDef lay; public LineDef line; public FactoryPlan plan; public float medT; /* 11.11.: Medaillen-Prüfung */ /* 10.11.: Fabrik-Planer */
         public bool[] clean, paid; public int nClean;
         public Dictionary<int, Act> act = new Dictionary<int, Act>();
         public Dictionary<int, LqNav> lqnav = new Dictionary<int, LqNav>(); // Umwege um Seen (nicht gespeichert)
@@ -71,7 +71,7 @@ namespace LunarCleanup.Core
             Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades(); InitHard();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet();
+            P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet(); MigrateSd();
             if (!P.ContainsKey(S.planet)) S.planet = "moon";
         }
 
@@ -302,7 +302,7 @@ namespace LunarCleanup.Core
                 Save(); PlayerPrefs.SetString(Key + "-vorImport", PlayerPrefs.GetString(Key, ""));
                 if (s.stats == null) s.stats = new Stats(); if (s.upg == null) s.upg = new List<KV>(); s.planets.RemoveAll(p => !GameData.Planets.ContainsKey(p.pid));
                 S = s; GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
-                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet(); if (!P.ContainsKey(S.planet)) S.planet = "moon";
+                P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet(); MigrateSd(); if (!P.ContainsKey(S.planet)) S.planet = "moon";
                 Save(); OnPlanetChanged?.Invoke(); return "";
             }
             catch (Exception e) { return "Code nicht lesbar (" + e.GetType().Name + ")"; }
@@ -346,7 +346,7 @@ namespace LunarCleanup.Core
         public static double MatValue(int m, PState ps)
         {
             var M = GameData.Mats[m]; bool port = P.Values.Any(x => x.bld.Contains("port"));
-            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (Sd("price") ? 1.1 : 1) * RestSellF * (Hard ? HARD_PRICE : 1); /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 %; 03.11.: Hard Mode ×3 */
+            return M.v * Uv("price", ps) * (M.raw ? 1 : Uv("mqual", ps)) * (port ? 1.2 : 1) * ps.P.diff * (1 + .1 * DoneCount()) * (1 + AlbumBonus(ps.pid)) * (1 + .05 * SdLv("price")) * MedalPriceF() * RestSellF * (Hard ? HARD_PRICE : 1); /* Fabian 02.11.: jeder ruhende, gerettete Planet +5 %; 03.11.: Hard Mode ×3 */
         }
         public static void Earn(double cr) { HistEarn(cr); S.stats.earned += cr; if (S.debt > 0 && cr > 0) { double pay = Math.Min(S.debt, cr * .5); S.debt -= pay; cr -= pay; if (S.debt < .5) { S.debt = 0; if (!Offline) Toast("Reisekredit abbezahlt", "good"); } } if (earnPid != null && earnPid != S.planet && P.TryGetValue(earnPid, out var eps)) eps.sv.cash += cr; else S.credits += cr; } /* 03.11.: Planetenkasse */
         /// <summary>Fabian 01.11.: Spieler mit sauberem Planeten, aber ohne Geld sollen nie festsitzen.
@@ -550,7 +550,7 @@ namespace LunarCleanup.Core
                 var a = EnsureAct(ps, sc); if (a == null) continue;
                 var l = pd.ToLocal(a.cl, d);
                 if (Mathf.Abs(l.x) > a.cl.H + r || Mathf.Abs(l.y) > a.cl.H + r) continue;
-                float k = 1 - Mathf.Exp(-.35f * Uv("power") * PowerF * (Sd("hand") ? 1.25f : 1) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
+                float k = 1 - Mathf.Exp(-.35f * Uv("power") * PowerF * (1 + .25f * SdLv("hand")) * Mathf.Min(dt, .1f) * 60f / (a.D.hard * a.K.hard * PileHard(ps, sc)));
                 if (IsPile(ps, sc)) { pileHandT = Time.realtimeSinceStartup; pileHandCell = sc; k = Mathf.Min(k, PileK(ps, sc, null, dt)); }
                 float got = CleanAt(ps, a, l.x, l.y, r, k); /* Pinsel wieder wie bis Build 21 (Fabian: Build 22 war schlechter) */
                 if (got <= 0) continue;
@@ -922,7 +922,7 @@ namespace LunarCleanup.Core
         public static Vector3 CrystalDir(PState ps, CrystalSave c) => ps.pd.ToDir(ps.pd.cells[c.cell], c.x, c.y);
         static void CrystalStep(PState ps, float dt)
         {
-            var sv = ps.sv; if (sv.crystals == null) sv.crystals = new List<CrystalSave>(); foreach (var c in sv.crystals) if (c.g < 1) c.g = Mathf.Min(1, c.g + dt / CR_GROW * (Sd("crystal") ? 1.3f : 1));
+            var sv = ps.sv; if (sv.crystals == null) sv.crystals = new List<CrystalSave>(); foreach (var c in sv.crystals) if (c.g < 1) c.g = Mathf.Min(1, c.g + dt / CR_GROW * (1 + .15f * SdLv("crystal")));
             sv.crT += dt; if (sv.crT < CR_EVERY) return; sv.crT -= CR_EVERY; if (sv.crystals.Count >= CrystalMax(ps)) return;
             var rnd = new System.Random(ps.pid.GetHashCode() ^ (sv.crN * 7919 + 17)); var pd = ps.pd;
             for (int tr = 0; tr < 40; tr++)
@@ -1852,7 +1852,7 @@ namespace LunarCleanup.Core
             ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
             AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); ToastFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
-        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); CrewStep(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
+        static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); CrewStep(ps, dt); MedalStep(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
         static void StepPlanet0(PState ps, float dt)
         {
             if (RestStep(ps, dt)) return; /* Fabian 02.11.: ruhender, geretteter Planet – nur Einkommen */
@@ -1877,6 +1877,6 @@ namespace LunarCleanup.Core
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
 
-        public static float OfflineCap => Platform.Owned("offline24") ? 86400 : (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
+        public static float OfflineCap => Platform.Owned("offline24") ? 86400 : (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + 7200 * SdLv("offline");
     }
 }

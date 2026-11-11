@@ -6,7 +6,7 @@ namespace LunarCleanup.Core
 {
     public class EventDef { public string key, name, hint; public float dur, w; }
     public class FindDef { public string name, desc; }
-    public class SdNode { public string id, name, desc, needs; public int cost; }
+    public class SdNode { public string id, name, desc, needs; public int cost; public int[] costs; public System.Func<int, string> lv; public int Max => costs?.Length ?? 1; } /* 11.11.: Werkstatt mit Stufen – lv(n) beschreibt Stufe n */
     public class WeatherDef { public string key, name; public float every, dur; }
 
     public static class FeatureData
@@ -53,20 +53,20 @@ namespace LunarCleanup.Core
         public static readonly string[] Skins = { "Werksfarbe", "Signalorange", "Polarweiß", "Tiefblau", "Smaragd", "Karminrot", "Graphit", "Gold" };
 
         // ---------- D1 Sternenstaub ----------
+        /// <summary>Fabian 11.11.: Sternenstaub-Werkstatt mit Stufen – jede Stufe kostet mehr, damit Sternenstaub immer einen Zweck hat.
+        /// Alles bleibt bei einem Neustart erhalten. „Glanz“ entfällt (goldene Ränder gibt es längst kostenlos in den Einstellungen).</summary>
+        public static readonly int[] CASH = { 0, 1000, 5000, 25000, 100000, 500000 };
         public static readonly SdNode[] Stardust =
         {
-            new SdNode { id = "cash1", name = "Startkapital I", desc = "Neustart mit 1.000 Cr", cost = 1 },
-            new SdNode { id = "cash2", name = "Startkapital II", desc = "Neustart mit 5.000 Cr", cost = 3, needs = "cash1" },
-            new SdNode { id = "cash3", name = "Startkapital III", desc = "Neustart mit 25.000 Cr", cost = 8, needs = "cash2" },
-            new SdNode { id = "fast", name = "Schnellstart", desc = "Basisstufe 2 sofort", cost = 4 },
-            new SdNode { id = "buggy", name = "Ewige Flotte", desc = "Ein Reinigungsbuggy ist sofort da", cost = 5, needs = "fast" },
-            new SdNode { id = "find", name = "Sammler", desc = "+10 % Fundchance", cost = 3 },
-            new SdNode { id = "price", name = "Gute Kontakte", desc = "+10 % Verkaufspreis", cost = 6 },
-            new SdNode { id = "hand", name = "Goldene Hand", desc = "+25 % Saugkraft beim Wischen", cost = 4 },
-            new SdNode { id = "offline", name = "Nachtschicht", desc = "Offline-Zeit +4 Stunden", cost = 6 },
-            new SdNode { id = "event", name = "Ereignisradar", desc = "Ereignisse 20 % häufiger", cost = 5, needs = "find" },
-            new SdNode { id = "glow", name = "Glanz", desc = "Goldene Parzellenränder", cost = 2 },
-            new SdNode { id = "crystal", name = "Kristallgarten", desc = "Leuchtkristalle wachsen 30 % schneller", cost = 5 },
+            new SdNode { id = "cash", name = "Startkapital", costs = new[] { 1, 3, 8, 15, 30 }, lv = n => "Neustart mit " + (CASH[n] / 1000) + ".000" + " Cr" },
+            new SdNode { id = "fast", name = "Schnellstart", costs = new[] { 4 }, lv = n => "Nach dem Neustart gleich Basisstufe 2" },
+            new SdNode { id = "buggy", name = "Ewige Flotte", costs = new[] { 5, 8, 12 }, needs = "fast", lv = n => n + (n == 1 ? " Reinigungsbuggy ist" : " Reinigungsbuggys sind") + " nach dem Neustart sofort da" },
+            new SdNode { id = "price", name = "Gute Kontakte", costs = new[] { 3, 6, 10, 16, 25, 40, 60, 90 }, lv = n => "+" + (5 * n) + " % Verkaufspreis" },
+            new SdNode { id = "hand", name = "Goldene Hand", costs = new[] { 4, 8, 14, 24 }, lv = n => "+" + (25 * n) + " % Saugkraft beim Wischen" },
+            new SdNode { id = "offline", name = "Nachtschicht", costs = new[] { 3, 6, 10, 16 }, lv = n => "Offline-Zeit +" + (2 * n) + " Stunden" },
+            new SdNode { id = "crystal", name = "Kristallgarten", costs = new[] { 3, 5, 9, 14 }, lv = n => "Leuchtkristalle wachsen " + (15 * n) + " % schneller" },
+            new SdNode { id = "find", name = "Sammler", costs = new[] { 2, 3, 6, 10 }, lv = n => "+" + (5 * n) + " % Fundchance" },
+            new SdNode { id = "event", name = "Ereignisradar", costs = new[] { 3, 5, 9 }, needs = "find", lv = n => "Ereignisse " + (10 * n) + " % häufiger" },
         };
 
         // ---------- A2 Wetter (nur Optik) ----------

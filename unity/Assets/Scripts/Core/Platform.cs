@@ -63,7 +63,6 @@ namespace LunarCleanup.Core
             new ShopOffer { id = "timeskip", name = "Zeitsprung 4 h", desc = "Alle Planeten arbeiten sofort 4 Stunden weiter (wie offline)", price = "0,99 €", consumable = true },
             new ShopOffer { id = "cargo2", name = "Großer Frachtraum", desc = "Jede Rakete fasst dauerhaft 50 % mehr – auch im Hard Mode", price = "2,99 €" },
             new ShopOffer { id = "xlic", name = "Export-Lizenz", desc = "Der Export-Frachter zahlt 60 % statt 40 % des Werts – auf allen Planeten, auch im Hard Mode", price = "1,99 €" },
-            new ShopOffer { id = "sd50", name = "Sternenstaub-Beutel", desc = "+50 Sternenstaub für Forschung und Sonderwünsche", price = "0,99 €", consumable = true },
             new ShopOffer { id = "skin_gold", name = "Goldene Flotte", desc = "Goldene Lackierung für alle Fahrzeuge (nur Aussehen)", price = "1,50 €" },
             new ShopOffer { id = "hardmode", name = "Hard Mode sofort", desc = "Schaltet den Hard Mode sofort frei, ohne erst alle 18 Planeten zu säubern: eigener Spielstand, du putzt selbst, Perks zum Finden, Anzug-Energie", price = "3,99 €" },
             new ShopOffer { id = "supporter", name = "Unterstützer-Paket", desc = "Goldene Flotte, goldene Anzüge für deine Crew, goldene Fahnenmasten und dein Unterstützer-Abzeichen – kein Spielvorteil, nur Danke", price = "4,99 €" },

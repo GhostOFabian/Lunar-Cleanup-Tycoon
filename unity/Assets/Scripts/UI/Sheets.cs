@@ -462,9 +462,9 @@ namespace LunarCleanup.UI
         };
         static readonly (string name, string[] ids)[] SdGroups =
         {
-            ("Schneller Start", new[] { "cash1", "cash2", "cash3", "fast", "buggy" }),
+            ("Schneller Start (gilt beim Neustart)", new[] { "cash", "fast", "buggy" }),
             ("Einnahmen", new[] { "price", "hand", "offline", "crystal" }),
-            ("Funde und Optik", new[] { "find", "event", "glow" }),
+            ("Funde", new[] { "find", "event" }),
         };
         static void Planets(Hud h)
         {
@@ -509,7 +509,8 @@ namespace LunarCleanup.UI
         static void Stardust(Hud h)
         {
             h.Section("Neustart · " + Game.StardustFree() + " Sternenstaub frei");
-            h.Note("Jeder komplett saubere Planet bringt Sternenstaub (später in der Reihe = mehr), dazu 1 je 10 Funde. Mit einem Neustart beginnst du wieder auf dem Mond – Sternenstaub, Boni, Funde und Tagesbonus bleiben.");
+            h.Note("Werkstatt-Stufen, Medaillen und Bestzeiten bleiben bei jedem Neustart. Im neuen Durchlauf kommst du schneller voran und kannst deine Bestzeiten schlagen.");
+            h.Note("Jeder komplett saubere Planet bringt Sternenstaub (später in der Reihe = mehr), dazu 1 je 10 Funde. Mit einem Neustart beginnst du wieder auf dem Mond – Sternenstaub, Werkstatt, Medaillen, Funde und Tagesbonus bleiben.");
             h.Row("Neustart", () => Time.unscaledTime - prestigeT < 4 ? "Wirklich? Noch einmal tippen setzt Planeten, Credits, Upgrades und Forschung zurück." : "Bringt jetzt +" + Game.StardustPending() + " Sternenstaub" + (Game.S.resets > 0 ? " · bisher " + Game.S.resets + " Neustarts" : ""),
                 () => Time.unscaledTime - prestigeT < 4 ? "Ja, neu starten" : "Neu starten", () => Game.StardustPending() > 0, () => { if (Time.unscaledTime - prestigeT < 4) { Game.Prestige(); h.CloseSheet(); } else prestigeT = Time.unscaledTime; }, false);
             var done = new HashSet<string>();
@@ -521,7 +522,30 @@ namespace LunarCleanup.UI
             var rest = FeatureData.Stardust.Where(n => !done.Contains(n.id)).ToList();
             if (rest.Count > 0) { h.Section("Weitere"); foreach (var n in rest) SdRow(h, n); }
         }
-        static void SdRow(Hud h, SdNode n) { var nn = n; h.Row(n.name, () => nn.desc + (Game.SdWhy(nn) != "" && Game.SdWhy(nn) != "Gekauft" ? " · " + Game.SdWhy(nn) : ""), () => Game.S.sdNodes.Contains(nn.id) ? "Gekauft" : nn.cost + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn)); }
+        static void SdRow(Hud h, SdNode n)
+        {
+            var nn = n;
+            h.Row(n.name, () => { int l = Game.SdLv(nn.id); string w = Game.SdWhy(nn); return "Stufe " + l + "/" + nn.Max + (l > 0 ? " · jetzt: " + nn.lv(l) : "") + (l < nn.Max ? " · nächste: " + nn.lv(l + 1) : "") + (w != "" && w != "Max" ? " · " + w : ""); },
+                () => Game.SdLv(nn.id) >= nn.Max ? "Max" : Game.SdCost(nn) + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn), true, null, false);
+        }
+        /// <summary>Fabian 11.11.: Medaillenbuch – je Planet Bronze/Silber/Gold, Bestzeit und Durchläufe. Bleibt bei jedem Neustart.</summary>
+        static void MedalBook(Hud h)
+        {
+            h.Note("Jeder Planet bekommt eine Medaille, die auch einen Neustart überlebt. Bronze: komplett sauber. Silber: dazu alle Truhen und das Puzzle. Gold: dazu alle 3 Sterne, das Fund-Album und Terraforming bis zum Wald. Erstes Mal: 2 / 5 / 10 Sternenstaub. Silber gibt dauerhaft +1 %, Gold +2 % Verkaufspreis auf allen Planeten." + (Game.Hard ? " Der Hard Mode hat sein eigenes Buch." : ""));
+            h.Section("Gold " + Game.MedalCount(3) + " · Silber " + (Game.MedalCount(2) - Game.MedalCount(3)) + " · Bronze " + (Game.MedalCount(1) - Game.MedalCount(2)) + " · Bonus +" + Mathf.RoundToInt((float)(Game.MedalPriceF() - 1) * 100) + " %");
+            foreach (var pid in GameData.POrder)
+            {
+                string key = pid; var P = GameData.Planets[pid];
+                h.Row(Raw + MedalDot(Game.MedalTier(key)) + " " + P.name, () =>
+                {
+                    int t = Game.MedalTier(key); double b = Game.MedalBest(key); int r = Game.MedalRuns(key);
+                    string head = t > 0 ? Game.MedalName[t] : "Noch keine Medaille";
+                    string next = t >= 3 ? "" : " · " + Game.MedalNext(Game.P.TryGetValue(key, out var q) ? q : null);
+                    return head + (b > 0 ? " · Bestzeit " + Game.DurTxt(b) : "") + (r > 0 ? " · " + r + "× geschafft" : "") + next;
+                });
+            }
+        }
+        static string MedalDot(int t) => t >= 3 ? "<color=#ffd24d>●</color>" : t == 2 ? "<color=#c8d2e0>●</color>" : t == 1 ? "<color=#cd7f45>●</color>" : "<color=#4a5266>○</color>";
 
         static string Dur(double sec) { if (sec <= 0) return "–"; long t = (long)sec; long d = t / 86400, hh = t % 86400 / 3600, mm = t % 3600 / 60; return d > 0 ? d + " T " + hh + " h" : hh > 0 ? hh + " h " + mm + " min" : Mathf.Max(1, mm) + " min"; }
         const string Raw = "\u2060"; /* Texte, die schon in der richtigen Sprache sind */
@@ -714,7 +738,7 @@ namespace LunarCleanup.UI
         {
             /* Fabian 04.11.: kompakter – 4 statt 6 Reiter (Statistik und Abschluss stecken im Kodex), keine doppelten Abschnitte, Aufträge in einem Abschnitt */
             /* 10.11. (Fabian): Ziele, Aufträge, Planetenziele und Erfolge in einem Reiter – alles, was man abholen kann, an einer Stelle */
-            int ap = Game.AchPending(); h.Tabs("Ziele" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Kodex"); int gtab = h.Tab;
+            int ap = Game.AchPending(); h.Tabs("Ziele" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Medaillen", "Kodex"); int gtab = h.Tab; if (gtab == 3) gtab = 2; else if (gtab == 2) { MedalBook(h); return; } /* 11.11.: Medaillenbuch */
             if (gtab == 1) { OrdersSheet(h); return; }
             if (gtab == 2) { Completion(h); Stats(h); Codex(h); return; }
             if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => (sp.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(sp) + "/" + sp.pd.GlyphCells.Count) + " · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
