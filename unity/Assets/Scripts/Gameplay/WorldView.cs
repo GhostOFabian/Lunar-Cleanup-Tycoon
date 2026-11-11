@@ -468,7 +468,7 @@ namespace LunarCleanup.Gameplay
             foreach (var kv in beltInfo)
             {
                 var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value;
-                bool in0 = beltWall.TryGetValue(kv.Key, out var bwq) && bwq.x - s0 > .05f, in1 = beltWall.TryGetValue(kv.Key, out var bwr) && bwr.y - s1 > .05f;
+                bool in0 = beltWall.TryGetValue(kv.Key, out var bwq) && bwq.x - s0 > .05f, in1 = beltWall.TryGetValue(kv.Key, out var bwr) && s1 - bwr.y > .05f; /* Ende rückt nach innen = größeres s */
                 if (w0 && !in0 && blds.ContainsKey(b.from) && FlushShift(b.from, rp, cum, s0 - .36f, false, H) > .08f) out_.Add(kv.Key + ": Ausgang-Rahmen an " + b.from + " schneidet in die Wand");
                 if (w1 && !in1 && blds.ContainsKey(b.to) && FlushShift(b.to, rp, cum, s1 + .36f, true, H) > .08f) out_.Add(kv.Key + ": Eingang-Rahmen an " + b.to + " schneidet in die Wand");
             }
