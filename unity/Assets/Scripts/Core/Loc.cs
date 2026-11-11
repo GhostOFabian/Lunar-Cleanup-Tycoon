@@ -28,11 +28,17 @@ namespace LunarCleanup.Core
             if (inited) return; inited = true;
             string lang = PlayerPrefs.GetString(Key, "");
             if (lang == "") lang = Application.systemLanguage == SystemLanguage.German ? "de" : "en";
-            En = lang == "en";
+            En = lang == "en"; Page();
         }
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")] static extern void LcPageLang(string l);
+        static void Page() { try { LcPageLang(En ? "en" : "de"); } catch { } }
+#else
+        static void Page() { }
+#endif
         public static void Set(bool en)
         {
-            Init(); if (En == en) return; En = en; PlayerPrefs.SetString(Key, en ? "en" : "de"); PlayerPrefs.Save(); cache.Clear();
+            Init(); if (En == en) return; En = en; PlayerPrefs.SetString(Key, en ? "en" : "de"); PlayerPrefs.Save(); cache.Clear(); Page();
             Changed?.Invoke();
         }
 
