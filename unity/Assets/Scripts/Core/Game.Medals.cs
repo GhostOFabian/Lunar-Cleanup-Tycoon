@@ -4,6 +4,7 @@
 // Belohnung beim ersten Mal: 2 / 5 / 10 Sternenstaub. Dauerhaft: Silber +1 %, Gold +2 % Verkaufspreis auf allen Planeten.
 // Bestzeit: kürzeste Spielzeit auf dem Planeten, bis er sauber war – in jedem Durchlauf neu zu schlagen.
 // Normaler Modus und Hard Mode haben getrennte Spielstände und damit getrennte Bücher.
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -70,6 +71,35 @@ namespace LunarCleanup.Core
             int dust = 0; for (int k = m.tier + 1; k <= t; k++) dust += MedalDust[k]; m.tier = t; S.stardust += dust;
             Toast(MedalName[t] + "-Medaille für " + ps.P.name + "! +" + dust + " Sternenstaub" + (t >= 2 ? " · +" + (t >= 3 ? 2 : 1) + " % Verkaufspreis überall" : ""), "good");
         }
+        // ---------- Medaillen-Schritte (Fabian 11.11.: ersetzen die 21 Planetenziele) ----------
+        // Jede Medaille hat ihre Schritte; jeder Schritt bringt einmal Credits (Summe wie früher alle Planetenziele: 123 × 250 × Schwierigkeit).
+        public class MStep { public int tier; public string text; public Func<PState, float> prog; public Func<PState, bool> on; public int k; }
+        public static readonly MStep[] MedalSteps = {
+            new MStep { tier = 1, text = "Reinige 10 Parzellen", prog = p => p.nClean / 10f, k = 2 },
+            new MStep { tier = 1, text = "Reinige 25 % des Planeten", prog = p => CleanPct(p) / .25f, k = 5 },
+            new MStep { tier = 1, text = "Reinige die Hälfte des Planeten", prog = p => CleanPct(p) / .5f, k = 8 },
+            new MStep { tier = 1, text = "Reinige 80 % des Planeten", prog = p => CleanPct(p) / .8f, k = 12 },
+            new MStep { tier = 1, text = "Reinige den ganzen Planeten", prog = p => IsDone(p.pid) ? 1 : CleanPct(p) / .999f, k = 20 },
+            new MStep { tier = 2, text = "Öffne alle Truhen", prog = p => p.sv.flags.Count > 0 ? FlagsGot(p) / (float)p.sv.flags.Count : 1, on = p => p.sv.flags != null && p.sv.flags.Count > 0, k = 20 },
+            new MStep { tier = 2, text = "Setze das Puzzle zusammen", prog = p => p.sv.puzzleDone ? 1 : 0, on = p => SecretOn(p), k = 14 },
+            new MStep { tier = 3, text = "Finde alle 3 Sterne", prog = p => StarCount(p) / 3f, on = p => SecretOn(p), k = 10 },
+            new MStep { tier = 3, text = "Fülle das Fund-Album", prog = p => FeatureData.Finds.TryGetValue(p.pid, out var a) && a.Length > 0 ? FindsOn(p.pid) / (float)a.Length : 1, on = p => FeatureData.Finds.TryGetValue(p.pid, out var a) && a.Length > 0, k = 14 },
+            new MStep { tier = 3, text = "Terraforming bis zum Wald", prog = p => p.sv.terra / (float)TERRA_MAX, k = 18 } };
+        public static bool MStepOn(PState ps, int i) { var s = MedalSteps[i]; try { return s.on == null || s.on(ps); } catch { return false; } }
+        public static float MStepProg(PState ps, int i) { try { return Mathf.Clamp01(MedalSteps[i].prog(ps)); } catch { return 0; } }
+        public static bool MStepClaimed(PState ps, int i) => ps.sv.msDone != null && ps.sv.msDone.Contains(i);
+        public static double MStepReward(PState ps, int i) => Math.Round(250 * ps.P.diff * MedalSteps[i].k * GoalF);
+        public static int MStepsReady(PState ps) { int n = 0; for (int i = 0; i < MedalSteps.Length; i++) if (MStepOn(ps, i) && !MStepClaimed(ps, i) && MStepProg(ps, i) >= 1) n++; return n; }
+        public static int MStepsOpen(PState ps) { int n = 0; for (int i = 0; i < MedalSteps.Length; i++) if (MStepOn(ps, i) && !MStepClaimed(ps, i)) n++; return n; }
+        public static int MStepsAll(PState ps) { int n = 0; for (int i = 0; i < MedalSteps.Length; i++) if (MStepOn(ps, i)) n++; return n; }
+        public static bool ClaimMStep(int i)
+        {
+            var ps = Cur; if (ps == null || !MStepOn(ps, i) || MStepClaimed(ps, i) || MStepProg(ps, i) < 1) return false; if (ps.sv.msDone == null) ps.sv.msDone = new System.Collections.Generic.List<int>();
+            double r = MStepReward(ps, i); ps.sv.msDone.Add(i); Earn(r); Toast(MedalName[MedalSteps[i].tier] + "-Schritt geschafft: " + MedalSteps[i].text + " · +" + Fmt(r) + " Cr", "good"); return true;
+        }
+        /// <summary>Alle Medaillen zusammen: je Planet bis zu 3 (Bronze, Silber, Gold) plus jede erreichte Erfolgs-Stufe.</summary>
+        public static int MedalsGot() => (S?.medals?.Sum(m => Mathf.Clamp(m.tier, 0, 3)) ?? 0) + Achievements.Sum(a => AchTier(a));
+        public static int MedalsMax() => GameData.POrder.Length * 3 + Achievements.Count * 3;
         static void MedalAll() { if (S == null) return; foreach (var ps in P.Values) MedalCheck(ps); }
         public static string DurTxt(double sec) { long t = (long)sec; long d = t / 86400, h = t % 86400 / 3600, mi = t % 3600 / 60; return d > 0 ? d + " T " + h + " h" : h > 0 ? h + " h " + mi + " min" : Mathf.Max(1, mi) + " min"; }
     }

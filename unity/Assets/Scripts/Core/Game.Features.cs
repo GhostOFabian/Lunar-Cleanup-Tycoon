@@ -305,9 +305,9 @@ namespace LunarCleanup.Core
             foreach (var a in Achievements)
             {
                 double v; try { v = a.val(); } catch { continue; }
-                for (int i = 0; i < 3; i++) { string k = "t:" + a.id + ":" + i; if (S.achievements.Contains(k) || v < a.tiers[i]) continue; S.achievements.Add(k); AppleServices.ReportAchievement(AppleIds.Ach(a.id, i)); /* 09.11.: Game Center (nur mit LC_STORE) */ if (quiet) quietN++; else Toast("Erfolg " + TierName[i] + ": " + a.name + " · " + Fmt(a.tiers[i]) + (a.unit != "" ? " " + a.unit : "") + " – Belohnung unter Ziele → Erfolge", "good"); }
+                for (int i = 0; i < 3; i++) { string k = "t:" + a.id + ":" + i; if (S.achievements.Contains(k) || v < a.tiers[i]) continue; S.achievements.Add(k); AppleServices.ReportAchievement(AppleIds.Ach(a.id, i)); /* 09.11.: Game Center (nur mit LC_STORE) */ if (quiet) quietN++; else Toast("Erfolg " + TierName[i] + ": " + a.name + " · " + Fmt(a.tiers[i]) + (a.unit != "" ? " " + a.unit : "") + " – Belohnung unter Ziele → Medaillen", "good"); }
             }
-            if (quietN > 0) Toast("Erfolg-System neu: " + quietN + " Stufen schon erreicht – Belohnungen unter Ziele → Erfolge abholen", "good");
+            if (quietN > 0) Toast("Erfolg-System neu: " + quietN + " Stufen schon erreicht – Belohnungen unter Ziele → Medaillen abholen", "good");
         }
     }
 }

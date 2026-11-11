@@ -64,48 +64,15 @@ namespace LunarCleanup.Core
         /// <summary>Beim Raketenstart: gelieferte Waren zählen für Werksauftrag und tägliche Aufträge.</summary>
         static void CountSold(PState ps, float[] buf) { for (int m = 0; m < NM; m++) if (buf[m] > 1e-6f) WoCount(ps, m, buf[m]); }
 
-        // ---------- Planetenziele ----------
-        public class PGoal { public string text; public Func<PState, float> prog; public int k; }
-        public static readonly PGoal[] PlanetGoals = {
-            new PGoal { text = "Reinige 10 Parzellen", prog = p => p.nClean / 10f, k = 1 },
-            new PGoal { text = "Reinige 25 % des Planeten", prog = p => CleanPct(p) / .25f, k = 2 },
-            new PGoal { text = "Reinige die Hälfte des Planeten", prog = p => CleanPct(p) / .5f, k = 4 },
-            new PGoal { text = "Reinige 80 % des Planeten", prog = p => CleanPct(p) / .8f, k = 6 },
-            new PGoal { text = "Reinige den ganzen Planeten", prog = p => CleanPct(p) / .999f, k = 10 },
-            new PGoal { text = "Baue die Basis auf Stufe 2 aus", prog = p => (p.sv.stage - 1) / 1f, k = 1 },
-            new PGoal { text = "Baue die Basis auf Stufe 3 aus", prog = p => (p.sv.stage - 1) / 2f, k = 3 },
-            new PGoal { text = "Baue die Basis auf Stufe 4 aus", prog = p => (p.sv.stage - 1) / 3f, k = 6 },
-            new PGoal { text = "Baue die Basis auf Stufe 5 aus", prog = p => (p.sv.stage - 1) / 4f, k = 10 },
-            new PGoal { text = "Habe 3 Fahrzeuge im Einsatz", prog = p => p.sv.veh.Count / 3f, k = 2 },
-            new PGoal { text = "Habe 8 Fahrzeuge im Einsatz", prog = p => p.sv.veh.Count / 8f, k = 5 },
-            new PGoal { text = "Starte 10 Raketen", prog = p => p.sv.nRockets / 10f, k = 3 },
-            new PGoal { text = "Starte 50 Raketen", prog = p => p.sv.nRockets / 50f, k = 8 },
-            new PGoal { text = "Wähle eine Ausrichtung", prog = p => string.IsNullOrEmpty(p.sv.spec) ? 0 : 1, k = 2 },
-            new PGoal { text = "Erfülle einen Werksauftrag", prog = p => p.sv.woDone, k = 4 },
-            new PGoal { text = "Erfülle 5 Werksaufträge", prog = p => p.sv.woDone / 5f, k = 10 },
-            new PGoal { text = "Baue ein Gebäude eine Stufe aus", prog = p => p.sv.blvl.Count > 0 ? 1 : 0, k = 5 },
-            new PGoal { text = "Baue einen Bohrturm", prog = p => p.sv.rigs.Count, k = 6 },
-            new PGoal { text = "Finde alle Funde dieses Planeten", prog = p => FeatureData.Finds.TryGetValue(p.pid, out var a) && a.Length > 0 ? FindsOn(p.pid) / (float)a.Length : 0, k = 8 },
-            new PGoal { text = "Erreiche Ausbaustufe 1", prog = p => p.sv.exp, k = 15 },
-            new PGoal { text = "Sammle alle Flaggen dieses Planeten", prog = p => p.sv.flags.Count > 0 ? FlagsGot(p) / (float)p.sv.flags.Count : 0, k = 12 } };
-        public static double PGoalReward(PState ps, int i) => Math.Round(250 * ps.P.diff * PlanetGoals[i].k * GoalF);
-        public static bool PGoalClaimed(PState ps, int i) => ps.sv.pgDone.Contains(i);
-        public static float PGoalProg(PState ps, int i) => Mathf.Clamp01(PlanetGoals[i].prog(ps));
-        public static int PGoalsReady(PState ps) { int n = 0; for (int i = 0; i < PlanetGoals.Length; i++) if (!PGoalClaimed(ps, i) && PGoalProg(ps, i) >= 1) n++; return n; }
-        /// <summary>Alles, was gerade abholbar ist (Hauptziel, Tagesaufträge, Planetenziele) – für den Punkt am Ziele-Knopf.</summary>
+        // Planetenziele: seit 11.11. ersetzt durch die Medaillen-Schritte (Game.Medals.cs).
+        /// <summary>Alles, was gerade abholbar ist (Hauptziel, Aufträge, Medaillen-Schritte, Erfolge) – für den Punkt am Ziele-Knopf.</summary>
         public static int ClaimableCount()
         {
-            var ps = Cur; if (ps == null) return 0; int n = PGoalsReady(ps) + AchPending(); n += HardGoalsClaimable();
+            var ps = Cur; if (ps == null) return 0; int n = MStepsReady(ps) + AchPending(); n += HardGoalsClaimable();
             if (S.quest < Mathf.Min(QuestsSupported, GameData.Quests.Count) && QuestProgress(S.quest) >= 1) n++;
             if (S.contracts != null) foreach (var it in S.contracts.list) if (!it.done && ContractProg(it) >= it.target) n++;
             return n;
         }
-        public static bool ClaimPGoal(int i)
-        {
-            var ps = Cur; if (PGoalClaimed(ps, i) || PGoalProg(ps, i) < 1) return false; double r = PGoalReward(ps, i); ps.sv.pgDone.Add(i); Earn(r);
-            Toast("Planetenziel erreicht: " + PlanetGoals[i].text + " · +" + Fmt(r) + " Cr", "good"); return true;
-        }
-
         // ---------- Tägliche Aufträge ----------
         static double CtrValue(string type) => type == "cells" ? S.stats.cells : type == "sold" ? S.stats.sold : type == "rockets" ? S.planets.Sum(p => p.nRockets) : S.stats.crystals;
         public static void DailyContracts()

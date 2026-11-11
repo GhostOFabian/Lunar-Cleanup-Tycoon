@@ -76,7 +76,7 @@ namespace LunarCleanup.Core
         // Wirtschaft (wie im Browser-Prototyp): Produktionsplan, Verkaufsband je Produkt, Frachtauftrag, Verkaufsautomat, Betriebsbonus, Gebäudestufen
         public List<string> planOff = new List<string>();   // ausgeschaltete Rezepte (Plan-Schlüssel)
         public TeamSave team = new TeamSave();
-        public int exp, woDone; public string spec = ""; public WorkOrderSave wo = new WorkOrderSave(); public List<int> pgDone = new List<int>(); // Ausbaustufe, Ausrichtung, Werksaufträge, Planetenziele
+        public int exp, woDone; public string spec = ""; public WorkOrderSave wo = new WorkOrderSave(); public List<int> pgDone = new List<int>(); public List<int> msDone = new List<int>(); /* 11.11.: abgeholte Medaillen-Schritte (ersetzen die Planetenziele; pgDone bleibt nur für alte Stände) */ // Ausbaustufe, Ausrichtung, Werksaufträge, Planetenziele
         public List<int> sellYes = new List<int>();         // ausdrücklich zum Verkauf freigegebene Waren
         public List<int> autoOff = new List<int>();         // Produkte, die NICHT aufs Verkaufsband sollen
         public int order = -1; public bool autoOrder = true, autoDump;

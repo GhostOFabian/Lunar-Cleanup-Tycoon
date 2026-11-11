@@ -131,14 +131,14 @@ namespace LunarCleanup.Core
         public static double ChalProgress() { var ch = S.chal; if (ch == null || ch.act == "") return 0; var c = Chal(ch.act); return c == null ? 0 : (c.val() - ch.v0) / ChalTarget(ch.act); }
         public static bool ChalStart(string id)
         {
-            var ch = S.chal; if (ch.act != "") return Fail("Es läuft schon eine Herausforderung"); var c = Chal(id); if (c == null) return false;
+            var ch = S.chal; if (ch.act != "") return Fail("Es läuft schon ein Bonus-Auftrag"); var c = Chal(id); if (c == null) return false;
             ChalTarget(id); ch.act = id; ch.v0 = c.val(); ch.left = c.time; Toast("Los! " + c.name + ": " + string.Format(Loc.Tr(c.desc), Fmt(ChalTarget(id))) + " in " + Mathf.RoundToInt(c.time / 60) + " min", "good"); return true;
         }
         static void ChalStep(float dt)
         {
             var ch = S.chal; if (ch == null || ch.act == "" || Offline) return; var c = Chal(ch.act); if (c == null) { ch.act = ""; return; }
             ch.left -= dt;
-            if (ChalProgress() >= 1) { double r = ChalReward(ch.act); Earn(r); if (c.sd > 0) S.stardust += c.sd; ch.done++; Toast("Herausforderung geschafft: " + c.name + " · +" + Fmt(r) + " Cr" + (c.sd > 0 ? " und " + c.sd + " Sternenstaub" : ""), "good"); ch.offer.Remove(ch.act); ch.act = ""; chalTarget.Remove(c.id); return; }
+            if (ChalProgress() >= 1) { double r = ChalReward(ch.act); Earn(r); if (c.sd > 0) S.stardust += c.sd; ch.done++; Toast("Bonus-Auftrag geschafft: " + c.name + " · +" + Fmt(r) + " Cr" + (c.sd > 0 ? " und " + c.sd + " Sternenstaub" : ""), "good"); ch.offer.Remove(ch.act); ch.act = ""; chalTarget.Remove(c.id); return; }
             if (ch.left <= 0) { Toast("Zeit um – " + c.name + " nicht geschafft. Versuch's noch mal!", "bad"); ch.act = ""; }
         }
 

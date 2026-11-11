@@ -361,7 +361,7 @@ namespace LunarCleanup.UI
             }
             if (tab == 1)
             {
-                WorkOrder(h); /* 04.11.: Ausrichtung ausgeblendet (wirkte kaum spürbar) – gewählte Ausrichtungen wirken weiter */
+                /* 11.11.: Werksauftrag steht jetzt bei den Aufträgen im Ziele-Fenster */
                 BaseMore(h);
                 h.Section("Steht schon");
                 h.Note(string.Join(" · ", GameData.BOrder.Where(ps.bld.Contains).Select(id => id == "presse" || id == "schmelze" || id == "raff" ? GameData.MachName(ps.pid, id) : GameData.Bld[id].name)));
@@ -419,9 +419,7 @@ namespace LunarCleanup.UI
         static void WorkOrder(Hud h)
         {
             if (Game.Gs(ps) < 2) return; if (ps.sv.wo == null || ps.sv.wo.n <= 0) Game.NewWorkOrder(ps); var w = ps.sv.wo; if (w == null || w.m < 0) return;
-            h.Section("Werksauftrag");
-            h.Row("Liefere " + Game.Fmt(w.n) + " " + GameData.Mats[w.m].name + " per Rakete", () => Game.Fmt(Mathf.Min(ps.sv.wo.got, ps.sv.wo.n)) + " / " + Game.Fmt(ps.sv.wo.n) + " · Belohnung " + Cr(ps.sv.wo.r) + " · erfüllt: " + ps.sv.woDone + " (Ruf +" + Mathf.RoundToInt((float)(Game.WoRep(ps) - 1) * 100) + " % auf alle Preise hier)");
-            h.Note("Stell den Produktionsplan so ein, dass die Ware entsteht – sie fährt dann von selbst in die Rakete.");
+            h.Row("Werksauftrag: Liefere " + Game.Fmt(w.n) + " " + GameData.Mats[w.m].name + " per Rakete", () => Game.Fmt(Mathf.Min(ps.sv.wo.got, ps.sv.wo.n)) + " / " + Game.Fmt(ps.sv.wo.n) + " · Belohnung " + Cr(ps.sv.wo.r) + " · erfüllt: " + ps.sv.woDone + " (Ruf +" + Mathf.RoundToInt((float)(Game.WoRep(ps) - 1) * 100) + " % auf alle Preise hier)");
         }
         static void BaseMore(Hud h)
         {
@@ -531,12 +529,13 @@ namespace LunarCleanup.UI
         /// <summary>Fabian 11.11.: Medaillenbuch – je Planet Bronze/Silber/Gold, Bestzeit und Durchläufe. Bleibt bei jedem Neustart.</summary>
         static void MedalBook(Hud h)
         {
-            h.Note("Jeder Planet bekommt eine Medaille, die auch einen Neustart überlebt. Bronze: komplett sauber. Silber: dazu alle Truhen und das Puzzle. Gold: dazu alle 3 Sterne, das Fund-Album und Terraforming bis zum Wald. Erstes Mal: 2 / 5 / 10 Sternenstaub. Silber gibt dauerhaft +1 %, Gold +2 % Verkaufspreis auf allen Planeten." + (Game.Hard ? " Der Hard Mode hat sein eigenes Buch." : ""));
+            h.Section("Medaillen " + Game.MedalsGot() + " / " + Game.MedalsMax());
+            h.Note("Medaillen gibt es für Planeten und für Erfolge – alle zählen zusammen und bleiben bei jedem Neustart. Planet: Bronze = sauber, Silber = alle Truhen und das Puzzle, Gold = 3 Sterne, alle Funde und Wald. Silber gibt +1 %, Gold +2 % Verkaufspreis überall.");
             h.Section("Gold " + Game.MedalCount(3) + " · Silber " + (Game.MedalCount(2) - Game.MedalCount(3)) + " · Bronze " + (Game.MedalCount(1) - Game.MedalCount(2)) + " · Bonus +" + Mathf.RoundToInt((float)(Game.MedalPriceF() - 1) * 100) + " %");
             foreach (var pid in GameData.POrder)
             {
                 string key = pid; var P = GameData.Planets[pid];
-                h.Row(Raw + MedalDot(Game.MedalTier(key)) + " " + P.name, () =>
+                h.Row(Raw + MedalDot(Game.MedalTier(key)) + " " + Loc.Tr(P.name), () =>
                 {
                     int t = Game.MedalTier(key); double b = Game.MedalBest(key); int r = Game.MedalRuns(key);
                     string head = t > 0 ? Game.MedalName[t] : "Noch keine Medaille";
@@ -544,6 +543,7 @@ namespace LunarCleanup.UI
                     return head + (b > 0 ? " · Bestzeit " + Game.DurTxt(b) : "") + (r > 0 ? " · " + r + "× geschafft" : "") + next;
                 });
             }
+            h.Section("Erfolge · " + Game.Achievements.Sum(a => Game.AchTier(a)) + " / " + Game.Achievements.Count * 3 + " Medaillen"); Achievements(h); /* 11.11.: Erfolge sind Medaillen */
         }
         static string MedalDot(int t) => t >= 3 ? "<color=#ffd24d>●</color>" : t == 2 ? "<color=#c8d2e0>●</color>" : t == 1 ? "<color=#cd7f45>●</color>" : "<color=#4a5266>○</color>";
 
@@ -720,7 +720,7 @@ namespace LunarCleanup.UI
                 if (q.sv.flags != null && q.sv.flags.Count > 0) l.Add(("Flaggen " + Game.FlagsGot(q) + "/" + q.sv.flags.Count, Game.FlagsGot(q) >= q.sv.flags.Count));
                 if (FeatureData.Finds.TryGetValue(pid, out var al)) l.Add(("Funde " + Game.FindsOn(pid) + "/" + al.Length, Game.FindsOn(pid) >= al.Length));
                 if (LunarCleanup.Gameplay.WorldView.TryWonder(pid, out _, out _)) l.Add(("Entdeckung", LunarCleanup.Gameplay.WorldView.WonderKnown(pid)));
-                int pg = Enumerable.Range(0, Game.PlanetGoals.Length).Count(k => Game.PGoalClaimed(q, k)); l.Add(("Planetenziele " + pg + "/" + Game.PlanetGoals.Length, pg >= Game.PlanetGoals.Length));
+                int mt = Game.MedalTier(pid); l.Add(("Medaille " + (mt > 0 ? Game.MedalName[mt] : "–"), mt >= 3));
                 parts[pid] = l; if (l.All(x => x.Item2)) full++;
             }
             int reached = parts.Count, total = GameData.POrder.Length;
@@ -738,7 +738,8 @@ namespace LunarCleanup.UI
         {
             /* Fabian 04.11.: kompakter – 4 statt 6 Reiter (Statistik und Abschluss stecken im Kodex), keine doppelten Abschnitte, Aufträge in einem Abschnitt */
             /* 10.11. (Fabian): Ziele, Aufträge, Planetenziele und Erfolge in einem Reiter – alles, was man abholen kann, an einer Stelle */
-            int ap = Game.AchPending(); h.Tabs("Ziele" + (ap > 0 ? " · " + ap : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Medaillen", "Kodex"); int gtab = h.Tab; if (gtab == 3) gtab = 2; else if (gtab == 2) { MedalBook(h); return; } /* 11.11.: Medaillenbuch */
+            /* 11.11. (Fabian): weniger Sammel-Systeme – Erfolge sind Medaillen, Planetenziele sind Medaillen-Schritte, Tagesaufträge + Bonus-Auftrag + Werksauftrag sind eine Liste */
+            int ap = Game.AchPending(), gp = Mathf.Max(0, Game.ClaimableCount() - ap); h.Tabs("Ziele" + (gp > 0 ? " · " + gp : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Medaillen" + (ap > 0 ? " · " + ap : ""), "Kodex"); int gtab = h.Tab; if (gtab == 3) gtab = 2; else if (gtab == 2) { MedalBook(h); return; } /* 11.11.: Medaillenbuch */
             if (gtab == 1) { OrdersSheet(h); return; }
             if (gtab == 2) { Completion(h); Stats(h); Codex(h); return; }
             if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => (sp.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(sp) + "/" + sp.pd.GlyphCells.Count) + " · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
@@ -761,25 +762,26 @@ namespace LunarCleanup.UI
             foreach (int k0 in order) { int i = k0;
     int k = i; var it = cs.list[k]; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k));
             }
-            { Game.ChalRefresh(); var ch = Game.S.chal; 
-              if (ch.act != "") { var c = Game.Chal(ch.act); if (c != null) h.Row(c.name + " · läuft", () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(c.id))) + " · " + Mathf.Min(100, Mathf.FloorToInt((float)Game.ChalProgress() * 100)) + " % · noch " + Dur(Mathf.Max(0, Game.S.chal.left)), () => "+" + Cr(Game.ChalReward(c.id)), () => false, null, false); }
-              else foreach (var id in ch.offer) { var c = Game.Chal(id); if (c == null) continue; var cid = id; h.Row(c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(cid))) + " in " + Mathf.RoundToInt(c.time / 60) + " min · Belohnung " + Cr(Game.ChalReward(cid)) + (c.sd > 0 ? " + " + c.sd + " Sternenstaub" : ""), () => "Starten", () => Game.S.chal.act == "", () => Game.ChalStart(cid), false); }
-              if (ch.act == "" && ch.offer.Count == 0) h.Note("Neue Herausforderungen in " + Dur(System.Math.Max(0L, ch.refresh - Game.Now())) + ".");
-              if (ch.done > 0) h.Note("Geschafft: " + ch.done); }
-            var pl = Enumerable.Range(0, Game.PlanetGoals.Length).Where(k => !Game.PGoalClaimed(ps, k)).OrderBy(k => Game.PGoalProg(ps, k) >= 1 ? 0 : 1).ToList();
-            if (pl.Count > 0)
-            {
-                h.Section("Planetenziele " + ps.P.name + " · " + ps.sv.pgDone.Count + "/" + Game.PlanetGoals.Length);
-                foreach (int k0 in pl.Take(4)) { int k = k0; h.Row(Game.PlanetGoals[k].text, () => Mathf.RoundToInt(Game.PGoalProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.PGoalReward(ps, k)), () => Game.PGoalProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.PGoalProg(ps, k) >= 1, () => Game.ClaimPGoal(k)); }
-                if (pl.Count > 4) h.Note("… und " + (pl.Count - 4) + " weitere.");
-            }
+            if (cs.list.Count > 0 && order.Count == 0) h.Note("Neue Tagesaufträge morgen.");
+            { Game.ChalRefresh(); var ch = Game.S.chal; /* 11.11.: ein Bonus-Auftrag mit Zeitlimit statt drei Herausforderungen zur Auswahl */
+              if (ch.act != "") { var c = Game.Chal(ch.act); if (c != null) h.Row("Bonus-Auftrag läuft: " + c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(c.id))) + " · " + Mathf.Min(100, Mathf.FloorToInt((float)Game.ChalProgress() * 100)) + " % · noch " + Dur(Mathf.Max(0, Game.S.chal.left)), () => "+" + Cr(Game.ChalReward(c.id)), () => false, null, false); }
+              else foreach (var id in ch.offer.Take(1)) { var c = Game.Chal(id); if (c == null) continue; var cid = id; h.Row("Bonus-Auftrag: " + c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(cid))) + " in " + Mathf.RoundToInt(c.time / 60) + " min · Belohnung " + Cr(Game.ChalReward(cid)) + (c.sd > 0 ? " + " + c.sd + " Sternenstaub" : ""), () => "Starten", () => Game.S.chal.act == "", () => Game.ChalStart(cid), false); }
+              if (ch.act == "" && ch.offer.Count == 0) h.Note("Nächster Bonus-Auftrag in " + Dur(System.Math.Max(0L, ch.refresh - Game.Now())) + "."); }
+            WorkOrder(h);
+            { int ma = Game.MStepsAll(ps); /* 11.11.: Medaillen-Schritte dieses Planeten statt Planetenziele */
+              var ms = Enumerable.Range(0, Game.MedalSteps.Length).Where(k => Game.MStepOn(ps, k) && !Game.MStepClaimed(ps, k)).OrderBy(k => Game.MStepProg(ps, k) >= 1 ? 0 : 1).ThenBy(k => k).ToList();
+              int mt = Game.MedalTier(ps.pid);
+              h.Section("Medaille " + ps.P.name + " · " + (mt > 0 ? Game.MedalName[mt] : "noch keine") + " · Schritte " + (ma - ms.Count) + "/" + ma);
+              var show = ms.Where(k => Game.MStepProg(ps, k) >= 1).ToList(); var nx = ms.FirstOrDefault(k => Game.MStepProg(ps, k) < 1); if (ms.Any(k => Game.MStepProg(ps, k) < 1)) show.Add(nx); /* alles Abholbare und der nächste Schritt */
+              foreach (int k0 in show) { int k = k0; var st = Game.MedalSteps[k]; h.Row(Raw + MedalDot(st.tier) + " " + Loc.Tr(st.text), () => Game.MedalName[st.tier] + " · " + Mathf.RoundToInt(Game.MStepProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.MStepReward(ps, k)), () => Game.MStepProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.MStepProg(ps, k) >= 1, () => Game.ClaimMStep(k)); }
+              if (ms.Count == 0) h.Note("Alle Schritte geschafft."); }
             var ev = ps.sv.ev;
             if (ev != null && ev.key != "")
             {
                 var E = Game.EvDef(ev.key); h.Section("Ereignis");
                 h.Row(E != null ? E.name : "Ereignis", () => (E != null ? E.hint : "") + " · noch " + Mathf.CeilToInt(Mathf.Max(0, ps.sv.ev.t) / 60f) + " min", () => ps.sv.ev.cell >= 0 ? "Hinfliegen" : "OK", () => true, () => { h.CloseSheet(); h.OnFocusEvent?.Invoke(); }, false);
             }
-            h.Section("Erfolge"); Achievements(h); /* 10.11.: Erfolge im selben Reiter */
+            /* 11.11.: Erfolge stehen jetzt im Medaillenbuch */
         }
 
         static string Dec(float x, int d) => x.ToString(d == 0 ? "0" : d == 1 ? "0.0" : "0.00");
