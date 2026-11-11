@@ -84,6 +84,27 @@ namespace LunarCleanup.Core
             sb.Append(" | Rakete ").Append(SellCap(ps).ToString("0")).Append(" je ").Append(RocketTime(ps).ToString("0.0")).Append(" s | rohCap ").Append(RohCap(ps).ToString("0")).Append(" prodCap ").Append(ProdCap(ps).ToString("0"));
             return sb.ToString();
         }
+        /// <summary>Editor/Test: liegen Anfang und Ende jedes Bandes auf der Plattform des Gebäudes? (alle Layouts)</summary>
+        public static string DevBeltEnds()
+        {
+            int n = 0, bad = 0; var sb = new System.Text.StringBuilder();
+            foreach (var k in GameData.Layouts.Keys)
+            {
+                string pid = k.Split('@')[0]; if (!GameData.Planets.ContainsKey(pid) || !GameData.Cells.ContainsKey(k)) continue; var pd = PlanetData.GetKey(pid, k);
+                bool InBase(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && pd.cells[cc].IsBase && !pd.cells[cc].Wet; }
+                var T = OneStation(GameData.Layouts[k]); var P = FactoryPlanner.Plan(k, T, InBase); if (!P.ok) { sb.Append(k).Append(": Plan FEHLER | "); continue; } var L = Build(T, P);
+                foreach (var b in L.belts)
+                {
+                    if (!P.cells.ContainsKey(b.id)) continue; n++;
+                    string G(string id) => IsUnit(id) ? "u1" : id;
+                    float r0 = GameData.Bld[b.from].fp, d0 = (b.rp[0] - L.pos[b.from]).magnitude;
+                    bool ok0 = d0 <= r0 - .3f, ok1 = true; float d1 = 0, r1 = 0;
+                    if (!P.merge.ContainsKey(b.id)) { r1 = GameData.Bld[b.to].fp; d1 = (b.rp[b.rp.Length - 1] - L.pos[b.to]).magnitude; ok1 = d1 <= r1 - .3f; }
+                    if (!ok0 || !ok1) { bad++; sb.Append(k).Append(" ").Append(b.id).Append(!ok0 ? " Anfang " + d0.ToString("0.0") + "/" + r0.ToString("0.0") : "").Append(!ok1 ? " Ende " + d1.ToString("0.0") + "/" + r1.ToString("0.0") : "").Append(" | "); }
+                }
+            }
+            return n + " Bänder, " + bad + " Enden nicht auf der Plattform | " + sb;
+        }
         public static string DevPad() { var P = Cur?.plan; return P == null ? "kein Plan" : (P.hasPad ? "Landeplatz " + P.pad + " h" + P.padH + (P.padOutside ? " gewachsen " + P.grow.Count : "") : "kein Landeplatz"); }
         /// <summary>Editor/Test: Ergebnis des Planers für den aktuellen Planeten.</summary>
         public static string DevPlanInfo()
@@ -141,13 +162,19 @@ namespace LunarCleanup.Core
             return L;
         }
         /// <summary>Sichtbare Linie eines Bandes: 1,6 m im Gebäude, Rasterweg mit runden Kurven (1 m), beim Y schräg bis auf die Mitte des Hauptbandes.</summary>
+        /// <summary>11.11.: Bandende sicher auf der Plattform – mindestens 0,35 m innerhalb des Plattformrands (Entladeanlage lag 0,2 m daneben).</summary>
+        static Vector2 Inset(Vector2 p, string id, Vector2 n, FactoryPlan P)
+        {
+            if (!P.pos.ContainsKey(id) || !GameData.Bld.ContainsKey(id)) return p; var c = (Vector2)P.pos[id]; float r = GameData.Bld[id].fp - .35f, d = (p - c).magnitude;
+            return d > r ? p - n * (d - r) : p;
+        }
         static Vector2[] Line(BeltDef b, FactoryPlan P)
         {
             var cells = P.cells[b.id]; var pts = new List<Vector2>();
-            int fo = P.faceOut[b.from]; var n0 = (Vector2)FactoryPlanner.Dir(fo); pts.Add((Vector2)cells[0] - n0 * 2.2f); pts.Add((Vector2)cells[0] - n0 * .6f);
+            int fo = P.faceOut[b.from]; var n0 = (Vector2)FactoryPlanner.Dir(fo); pts.Add(Inset((Vector2)cells[0] - n0 * 2.2f, b.from, n0, P)); pts.Add((Vector2)cells[0] - n0 * .6f);
             for (int i = 0; i < cells.Count; i++) { if (i == 0 || i == cells.Count - 1 || cells[i] - cells[i - 1] != cells[i + 1] - cells[i]) pts.Add(cells[i]); }
             if (P.merge.TryGetValue(b.id, out var mg)) pts.Add(mg.m);
-            else { int fi = P.faceIn[b.to]; var n1 = (Vector2)FactoryPlanner.Dir(fi); pts.Add((Vector2)cells[cells.Count - 1] - n1 * .6f); pts.Add((Vector2)cells[cells.Count - 1] - n1 * 2.2f); }
+            else { int fi = P.faceIn[b.to]; var n1 = (Vector2)FactoryPlanner.Dir(fi); pts.Add((Vector2)cells[cells.Count - 1] - n1 * .6f); pts.Add(Inset((Vector2)cells[cells.Count - 1] - n1 * 2.2f, b.to, n1, P)); }
             return FactoryPlanner.Round(pts, 1f);
         }
         /// <summary>Hauptband ab dem Y-Punkt m bis zum Ende (ohne m selbst).</summary>
