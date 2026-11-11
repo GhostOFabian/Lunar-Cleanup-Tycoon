@@ -76,15 +76,16 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   base('Build/',V);
   var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js'+V;
   s.onload=function(){
-    var done=false, go=function(cdn){ if(done) return; done=true; if(cdn) base(CDN,''); start(); };
+    var done=false, go=function(cdn){ if(done) return; done=true; if(cdn){ cfg.frameworkUrl=CDN+'WebGL-GitHub.framework.js.unityweb'; cfg.codeUrl=CDN+'WebGL-GitHub.wasm.unityweb'; } start(cdn); }; /* Daten (16 MB) sind jsDelivr zu groß – die kommen immer von GitHub */
     setTimeout(function(){ go(false); },5000);
+    if(/nocdn/.test(location.search)) return go(false);
     try{ fetch(CDN+'WebGL-GitHub.framework.js.unityweb',{method:'HEAD',mode:'cors'}).then(function(r){ go(r.ok); },function(){ go(false); }); }catch(e){ go(false); }
   };
-  function start(){
+  function start(cdn){
     createUnityInstance(c,cfg,function(p){bar.style.width=(p*100)+'%';}).then(function(u){
       load.style.display='none';
       document.getElementById('fs').onclick=function(){u.SetFullscreen(1);};
-    }).catch(function(m){err.textContent='Konnte nicht starten: '+m+' – bitte einen aktuellen Browser am PC verwenden.';});
+    }).catch(function(m){ if(cdn){ location.replace(location.pathname+'?nocdn=1'); return; } err.textContent='Konnte nicht starten: '+m+' – bitte einen aktuellen Browser am PC verwenden.';});
   };
   s.onerror=function(){err.textContent='Spieldateien konnten nicht geladen werden.';};
   document.body.appendChild(s);
