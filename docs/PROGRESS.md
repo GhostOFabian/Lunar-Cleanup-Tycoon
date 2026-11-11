@@ -310,3 +310,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - Ursache der langsamen Seite am 11.11.: GitHub Pages lieferte nur ~30 KB/s (Cloudflare/jsDelivr gleichzeitig schnell). Spiel lädt jetzt über jsDelivr: frischer Start 5,8 s statt > 90 s, im Browser geprüft (Startmenü erscheint).
 - Spielseite folgt der Spielsprache (DE/EN), Feedback-Fenster inklusive; [Build · Gerät · Sprache] zeigt die Spielsprache.
 - Webseite komplett auf Englisch umschaltbar (248 Texte inkl. Bildbeschreibungen, Tabelle, Zahlen im englischen Format). Bei Textänderungen an der Seite: Eintrag in site/en.py ergänzen und tools/site_i18n.py laufen lassen.
+- Planetenzeichen blendet nach dem Puzzle aus (Editor-Screenshots geprüft); noch nicht im Build.

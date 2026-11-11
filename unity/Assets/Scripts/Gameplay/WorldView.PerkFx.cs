@@ -204,9 +204,10 @@ namespace LunarCleanup.Gameplay
             // Textur in kleinen Portionen neu malen, solange die Leuchtschicht das Zeichen zeigt – kein Ruckler
             float cmin = Mathf.Cos(Mathf.Min(Mathf.PI, f.rad * 1.15f / pd.R + .05f)); int nb = 0;
             foreach (var c in pd.cells) if (Vector3.Dot(c.c.normalized, f.d) >= cmin) { p.dirtyCells.Add(c.id); if (++nb % 6 == 0) { Game.PuzzleFxT = Time.realtimeSinceStartup; yield return null; } }
+            foreach (var c in cells) p.dirtyCells.Add(c); /* 11.11.: Puzzleteile vom Boden nehmen */
             yield return null; yield return null;
 
-            StartCoroutine(FadeOverlay(ov, omat, otex));
+            StartCoroutine(FadeOverlay(ov, omat, otex, GLYPH_HOLD, GLYPH_FADE)); /* Fabian 11.11.: Zeichen kurz zeigen, dann langsam ausblenden – danach ist der ganze Planet zu sehen */
             Game.PuzzleFxOn = false; Game.PuzzleHoldUntil = Time.realtimeSinceStartup + 5f;
         }
         IEnumerator PuzzleRing(Feature f, Color col, List<(GameObject go, Material m)> parts)
@@ -214,6 +215,20 @@ namespace LunarCleanup.Gameplay
             var ring = FxQuad(f.d, 1f, FxRingTex(), col, out var rm);
             float t2 = 0; while (t2 < 1.6f) { t2 += Time.deltaTime; float e = t2 / 1.6f; ring.transform.localScale = Vector3.one * pd.R * 1.8f * e; rm.SetColor("_BaseColor", new Color(col.r, col.g, col.b, 1 - e)); foreach (var q in parts) if (q.go) q.go.transform.localScale *= .94f; yield return null; }
             foreach (var q in parts) { if (q.go) Destroy(q.go); if (q.m) Destroy(q.m); } Destroy(ring); Destroy(rm);
+        }
+        /// <summary>11.11.: „Hinsehen“ im Geheimnis-Fenster – das fertige Zeichen leuchtet kurz auf und blendet wieder aus.</summary>
+        public void GlyphFlash(PState p)
+        {
+            if (pd == null || p.pd != pd || pd.BigGlyph == null || !p.sv.puzzleDone) return; var f = pd.BigGlyph;
+            var ov = GlyphOverlay(f, out var otex, out var omat, out var oc, out var og, out var ok, out _, out _);
+            var px = new Color32[otex.width * otex.height];
+            for (int q = 0; q < px.Length; q++) { float k = ok[q]; if (k <= 0) continue; var c = oc[q] * k * 1.1f * .7f + og[q] * 1.2f; px[q] = new Color32((byte)(Mathf.Clamp01(c.r) * 255), (byte)(Mathf.Clamp01(c.g) * 255), (byte)(Mathf.Clamp01(c.b) * 255), 255); }
+            otex.SetPixels32(px); otex.Apply(false); StartCoroutine(GlyphFlashCo(ov, omat, otex));
+        }
+        IEnumerator GlyphFlashCo(GameObject go, Material m, Texture2D tex)
+        {
+            float t = 0; while (t < 1f && go) { t += Time.deltaTime; m.SetColor("_BaseColor", new Color(1, 1, 1, t)); yield return null; }
+            yield return FadeOverlay(go, m, tex, GLYPH_HOLD, GLYPH_FADE);
         }
         /// <summary>10.11.: gewölbte Leuchtschicht über dem großen Zeichen; Farben je Pixel vorberechnet.</summary>
         GameObject GlyphOverlay(Feature f, out Texture2D tex, out Material m, out Color[] oc, out Color[] og, out float[] ok, out float[] orr, out int[] oai)
@@ -239,9 +254,11 @@ namespace LunarCleanup.Gameplay
             var go = new GameObject("GlyphOverlay"); go.transform.SetParent(transform, false); go.AddComponent<MeshFilter>().sharedMesh = mesh; var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = m; NoShadow(go);
             return go;
         }
-        IEnumerator FadeOverlay(GameObject go, Material m, Texture2D tex)
+        const float GLYPH_HOLD = 6f, GLYPH_FADE = 6f;
+        IEnumerator FadeOverlay(GameObject go, Material m, Texture2D tex, float hold = 0, float fade = 1.5f)
         {
-            float t = 0; while (t < 1.5f && go) { t += Time.deltaTime; m.SetColor("_BaseColor", new Color(1, 1, 1, 1 - t / 1.5f)); yield return null; }
+            float t = 0; while (t < hold && go) { t += Time.deltaTime; yield return null; }
+            t = 0; while (t < fade && go) { t += Time.deltaTime; float e = t / fade; m.SetColor("_BaseColor", new Color(1, 1, 1, 1 - e * e * (3 - 2 * e))); yield return null; }
             if (go) { Destroy(go.GetComponent<MeshFilter>().sharedMesh); Destroy(go); } Destroy(m); Destroy(tex);
         }
         static Vector3 PieceTarget(Feature f, int k, int N, float a)

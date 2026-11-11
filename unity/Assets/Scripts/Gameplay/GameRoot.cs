@@ -22,7 +22,7 @@ namespace LunarCleanup.Gameplay
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
         /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
         public static string MoveReq; /* 03.11.: Gebäude verschieben (aus dem Gebäudefenster) */
-        public static float ZoomReq = -1, RotReq; public static int PhotoReq = -1; public static Vector3? FocusReq; public static bool CheckReq, CheckNoPhotos;
+        public static float ZoomReq = -1, RotReq; public static int PhotoReq = -1; public static Vector3? FocusReq; public static bool GlyphReq; /* 11.11.: Zeichen kurz zeigen */ public static bool CheckReq, CheckNoPhotos;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
@@ -206,6 +206,7 @@ namespace LunarCleanup.Gameplay
             if (MoveReq != null) { var mr = MoveReq; MoveReq = null; if (world) { world.BeginMove(mr); if (Game.Cur.lay.pos.ContainsKey(mr)) { cd = Game.Cur.pd.PlanDir(Game.Cur.lay.pos[mr]); altGoal = Mathf.Clamp(altGoal, 30, 60); } } }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
+            if (GlyphReq) { GlyphReq = false; world.GlyphFlash(Game.Cur); }
             if (Game.PuzzleQuiet && Game.Cur.pd.BigGlyph != null) { cd = Game.Cur.pd.BigGlyph.d; altGoal = Game.Cur.pd.R * 3f; } /* 10.11.: Kamera steht senkrecht mittig über dem Zeichen, weit genug draußen */
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(true); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
