@@ -65,12 +65,22 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
 (function(){
   var mob=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent); if(mob) document.body.classList.add('m');
   var c=document.getElementById('c'),bar=document.querySelector('#bar i'),load=document.getElementById('load'),err=document.getElementById('err');
-  var cfg={dataUrl:'Build/WebGL-GitHub.data.unityweb?v=74b',frameworkUrl:'Build/WebGL-GitHub.framework.js.unityweb?v=74b',codeUrl:'Build/WebGL-GitHub.wasm.unityweb?v=74b',streamingAssetsUrl:'StreamingAssets',
+  /* Fabian 11.11.: GitHub Pages lieferte die Spieldateien zeitweise mit ~30 KB/s. Darum zuerst vom kostenlosen jsDelivr-CDN laden (fest auf den Commit mit diesem Build),
+     bei Fehler oder nach 5 s ohne Antwort wie bisher direkt von GitHub. Bei jedem neuen Build CDN_REV auf den Commit setzen, der die neuen Build-Dateien enthält. */
+  var CDN_REV='b40cfc7', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=74b';
+  var cfg={dataUrl:'',frameworkUrl:'',codeUrl:'',streamingAssetsUrl:'StreamingAssets',
     companyName:'DefaultCompany',productName:'Lunar Cleanup Tycoon',productVersion:'0.5',
     showBanner:function(msg,type){ if(type==='error') err.textContent=msg; }};
   if(mob) cfg.devicePixelRatio=Math.min(window.devicePixelRatio||1,2);
-  var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js?v=74b';
+  function base(b,q){ cfg.dataUrl=b+'WebGL-GitHub.data.unityweb'+q; cfg.frameworkUrl=b+'WebGL-GitHub.framework.js.unityweb'+q; cfg.codeUrl=b+'WebGL-GitHub.wasm.unityweb'+q; }
+  base('Build/',V);
+  var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js'+V;
   s.onload=function(){
+    var done=false, go=function(cdn){ if(done) return; done=true; if(cdn) base(CDN,''); start(); };
+    setTimeout(function(){ go(false); },5000);
+    try{ fetch(CDN+'WebGL-GitHub.framework.js.unityweb',{method:'HEAD',mode:'cors'}).then(function(r){ go(r.ok); },function(){ go(false); }); }catch(e){ go(false); }
+  };
+  function start(){
     createUnityInstance(c,cfg,function(p){bar.style.width=(p*100)+'%';}).then(function(u){
       load.style.display='none';
       document.getElementById('fs').onclick=function(){u.SetFullscreen(1);};
