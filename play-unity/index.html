@@ -75,7 +75,7 @@ var LC_TX={
      fail:'Could not start: ',failEnd:' – please use an up-to-date browser on a computer.',files:'Game files could not be loaded.',
      t:'How do you like the game?',p:'Thumbs up or down, and a few words if you like. Every comment helps.',ph:'What do you like, what bugs you? (optional)',
      send:'Send',close:'Close',ok:'Thank you! Your feedback has arrived.',err:'Could not send – please try again later.',up:'I like it',down:'I don\'t like it'}};
-var LC_LANG=/^de/i.test(navigator.language||'de')?'de':'en';
+var LC_LANG=(function(){ try{ var l=localStorage.getItem('lc-site-lang'); if(l) return l; }catch(e){} return /^de/i.test(navigator.language||'de')?'de':'en'; })(); /* Wahl von der Webseite (DE/EN-Knopf), bis das Spiel seine Sprache meldet */
 function LT(k){ return LC_TX[LC_LANG][k]; }
 window.lcSetLang=function(l){ LC_LANG=(l==='de')?'de':'en'; var T=LC_TX[LC_LANG], g=function(i){return document.getElementById(i);};
   document.documentElement.lang=LC_LANG;

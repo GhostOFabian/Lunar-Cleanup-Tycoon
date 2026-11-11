@@ -309,3 +309,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - Ladezeit gemessen (Mac, 11.11.): Webseite 0,85 s; Spiel-Download 1,5 s für 29 MB, Entpacken + Kompilieren < 0,2 s, Spielstart ~1 s, gesamt ~10 s im versteckten Browser-Fenster. Neuer Build mit DiskSize + Mesh-Kompression online. Offen: Fabians Ladezeit auf „Ghost“ prüfen (Browser, Erst- oder Zweitaufruf).
 - Ursache der langsamen Seite am 11.11.: GitHub Pages lieferte nur ~30 KB/s (Cloudflare/jsDelivr gleichzeitig schnell). Spiel lädt jetzt über jsDelivr: frischer Start 5,8 s statt > 90 s, im Browser geprüft (Startmenü erscheint).
 - Spielseite folgt der Spielsprache (DE/EN), Feedback-Fenster inklusive; [Build · Gerät · Sprache] zeigt die Spielsprache.
+- Webseite komplett auf Englisch umschaltbar (248 Texte inkl. Bildbeschreibungen, Tabelle, Zahlen im englischen Format). Bei Textänderungen an der Seite: Eintrag in site/en.py ergänzen und tools/site_i18n.py laufen lassen.
