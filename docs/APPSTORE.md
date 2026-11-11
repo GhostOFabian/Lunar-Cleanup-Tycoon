@@ -16,6 +16,14 @@ keine nativen Aufrufe, keine neuen Knöpfe, normale Builds wie bisher.
 | Xcode-Projekt | `Editor/IosBuild.cs` | Trägt mit `LC_STORE` Game Center, iCloud (Schlüssel-Wert + Dokumente) und „Mit Apple anmelden“ samt GameKit/AuthenticationServices ein. |
 | Erfolgsliste | `docs/gamecenter_erfolge.csv` | Alle 95 Erfolge mit ID, Name, Beschreibung, Punkten (zusammen genau 1000). |
 
+## Plan von Fabian (11.11.2026)
+
+- Anmeldung als **Einzelperson** (Anbieter im Store = Fabians Name), Bundle-ID `com.fabian.lunarcleanup`, Name „Lunar Cleanup Tycoon“.
+- **Zuerst TestFlight** (Beta für Fabian und Freunde), Store-Eintrag später.
+- **Noch kein Gewerbe.** Für TestFlight egal. Vor der Veröffentlichung im EU-Store mit Käufen: Gewerbe anmelden und den EU-Händlerstatus (DSA) in App Store Connect angeben – Adresse, Telefon und E-Mail werden dann öffentlich gezeigt (eigene Geschäftsadresse/-nummer überlegen).
+- Shop-Produkte (Stand Build 70): `offline24`, `timeskip`, `cargo2`, `xlic`, `sd50`, `skin_gold` (1,50 €), `hardmode` (3,99 €), `supporter` (4,99 €), `coffee` (1,50 €, Verbrauchsartikel ohne Gegenleistung – Trinkgeld an den Entwickler ist per In-App-Kauf erlaubt). Preise später an Apples Preisstufen anpassen.
+- Zum Testen von Käufen (Sandbox) braucht es die Vereinbarung „Paid Apps“ mit Steuer- und Bankdaten in App Store Connect – die gibt Fabian selbst ein.
+
 ## Einschalten, wenn es so weit ist
 
 1. **Apple Developer Program** (99 €/Jahr) – ohne geht weder Game Center noch TestFlight noch App Store.
@@ -29,7 +37,7 @@ keine nativen Aufrufe, keine neuen Knöpfe, normale Builds wie bisher.
 
 ## Was vor der Veröffentlichung noch fehlt
 
-- **In-App-Käufe**: Die Angebote stehen in `Platform.Offers`, gekauft werden kann noch nichts. Dafür Unity IAP einbinden und die Produkte in App Store Connect anlegen (`offline24`, `timeskip`, `cargo2`, `xlic`, `insure`, `sd50`, `skin_gold`, `hardmode`, `supporter`).
+- **In-App-Käufe**: Die Angebote stehen in `Platform.Offers`, gekauft werden kann noch nichts. Dafür Unity IAP einbinden und die Produkte in App Store Connect anlegen (`offline24`, `timeskip`, `cargo2`, `xlic`, `sd50`, `skin_gold`, `hardmode`, `supporter`).
   „Käufe wiederherstellen“ ist bei Apple Pflicht.
 - **Mit Apple anmelden** ist nur nötig, wenn es eine andere Anmeldung (z. B. Google) gibt. Mit nur Game Center kann man es weglassen – vorbereitet ist es trotzdem.
 - **Datenschutz**: Datenschutzerklärung (URL) und die Angaben „App-Datenschutz“ in App Store Connect. Das Spiel sammelt selbst keine Daten; Game Center und iCloud laufen über Apple.
