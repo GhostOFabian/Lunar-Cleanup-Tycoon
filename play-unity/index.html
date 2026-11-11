@@ -50,7 +50,7 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
 </header>
 <main><div id="frame">
   <canvas id="c" tabindex="-1"></canvas>
-  <div id="load"><b>Unity-Version wird geladen …</b><div id="bar"><i></i></div><small>Einmalig rund 28 MB, danach aus dem Browser-Speicher. Eigener Spielstand in diesem Browser.</small><small id="err"></small></div>
+  <div id="load"><b id="loadT">Unity-Version wird geladen …</b><div id="bar"><i></i></div><small id="loadH">Einmalig rund 28 MB, danach aus dem Browser-Speicher. Eigener Spielstand in diesem Browser.</small><small id="err"></small></div>
 </div></main>
 <button id="fbFloat" type="button" aria-label="Feedback">💬</button>
 <div id="fbBox" role="dialog" aria-modal="true" aria-labelledby="fbT"><div class="card">
@@ -62,12 +62,35 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
 </div></div>
 <footer>Beta · Version 0.5 · Build 74 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser</footer>
 <script>
+/* Fabian 11.11.: Die ganze Seite folgt der Spielsprache. Bis das Spiel läuft gilt die Browsersprache (wie im Spiel selbst);
+   danach meldet das Spiel seine Sprache über window.lcSetLang (Assets/Plugins/WebGL/LcPage.jslib), auch beim Umschalten im Spiel. */
+var LC_TX={
+ de:{fs:'Vollbild',load:'Unity-Version wird geladen …',hint:'Einmalig rund 27 MB, danach aus dem Browser-Speicher. Eigener Spielstand in diesem Browser.',
+     foot:'Beta · Version 0.5 · Build 74 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser',
+     fail:'Konnte nicht starten: ',failEnd:' – bitte einen aktuellen Browser am PC verwenden.',files:'Spieldateien konnten nicht geladen werden.',
+     t:'Wie gefällt dir das Spiel?',p:'Daumen hoch oder runter und gern ein paar Worte dazu. Jeder Kommentar hilft.',ph:'Was gefällt dir, was stört dich? (freiwillig)',
+     send:'Senden',close:'Schließen',ok:'Danke! Dein Feedback ist angekommen.',err:'Senden hat nicht geklappt – bitte später noch einmal.',up:'Gefällt mir',down:'Gefällt mir nicht'},
+ en:{fs:'Fullscreen',load:'Loading the Unity version …',hint:'About 27 MB once, then loaded from your browser. Your save stays in this browser.',
+     foot:'Beta · Version 0.5 · Build 74 · Mouse = finger, mouse wheel = zoom · Your save stays in this browser',
+     fail:'Could not start: ',failEnd:' – please use an up-to-date browser on a computer.',files:'Game files could not be loaded.',
+     t:'How do you like the game?',p:'Thumbs up or down, and a few words if you like. Every comment helps.',ph:'What do you like, what bugs you? (optional)',
+     send:'Send',close:'Close',ok:'Thank you! Your feedback has arrived.',err:'Could not send – please try again later.',up:'I like it',down:'I don\'t like it'}};
+var LC_LANG=/^de/i.test(navigator.language||'de')?'de':'en';
+function LT(k){ return LC_TX[LC_LANG][k]; }
+window.lcSetLang=function(l){ LC_LANG=(l==='de')?'de':'en'; var T=LC_TX[LC_LANG], g=function(i){return document.getElementById(i);};
+  document.documentElement.lang=LC_LANG;
+  g('fs').textContent=T.fs; g('loadT').textContent=T.load; g('loadH').textContent=T.hint; document.querySelector('footer').textContent=T.foot;
+  g('fbT').textContent=T.t; g('fbP').textContent=T.p; g('fbText').placeholder=T.ph; g('fbSend').textContent=T.send; g('fbClose').textContent=T.close;
+  g('fbUp').setAttribute('aria-label',T.up); g('fbDown').setAttribute('aria-label',T.down); };
+window.lcSetLang(window.lcLang||LC_LANG);
+</script>
+<script>
 (function(){
   var mob=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent); if(mob) document.body.classList.add('m');
   var c=document.getElementById('c'),bar=document.querySelector('#bar i'),load=document.getElementById('load'),err=document.getElementById('err');
   /* Fabian 11.11.: GitHub Pages lieferte die Spieldateien zeitweise mit ~30 KB/s. Darum zuerst vom kostenlosen jsDelivr-CDN laden (fest auf den Commit mit diesem Build),
      bei Fehler oder nach 5 s ohne Antwort wie bisher direkt von GitHub. Bei jedem neuen Build CDN_REV auf den Commit setzen, der die neuen Build-Dateien enthält. */
-  var CDN_REV='db4d12b', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=74b';
+  var CDN_REV='0fd1008', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=74c';
   var cfg={dataUrl:'',frameworkUrl:'',codeUrl:'',streamingAssetsUrl:'StreamingAssets',
     companyName:'DefaultCompany',productName:'Lunar Cleanup Tycoon',productVersion:'0.5',
     showBanner:function(msg,type){ if(type==='error') err.textContent=msg; }};
@@ -78,11 +101,11 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   s.onload=function(){
     /* Daten (16 MB) sind für jsDelivr zu groß (Grenze pro Datei) – sie liegen in 3 Teilen, werden hier zusammengesetzt und als Blob an Unity gegeben.
        Fortschritt der Teile zählt als erste Hälfte des Balkens. */
-    var PARTS=3, got=0, TOTAL=16103657;
+    var PARTS=3, got=0, TOTAL=16103583;
     function parts(b,q){ var a=[],ok=0; return Promise.all(Array.from({length:PARTS},function(_,i){ return fetch(b+'WebGL-GitHub.data.part'+i+q).then(function(r){ if(!r.ok) throw r.status;
         var rd=r.body.getReader(), ch=[]; return (function pump(){ return rd.read().then(function(x){ if(x.done) return new Blob(ch); ch.push(x.value); got+=x.value.length; bar.style.width=Math.min(50,got/TOTAL*50)+'%'; return pump(); }); })(); }); })); }
     var done=false, go=function(cdn){ if(done) return; done=true; if(cdn){ cfg.frameworkUrl=CDN+'WebGL-GitHub.framework.js.unityweb'; cfg.codeUrl=CDN+'WebGL-GitHub.wasm.unityweb'; }
-      parts(cdn?CDN:'Build/',cdn?'':V).catch(function(){ got=0; return parts('Build/',V); }).then(function(bl){ cfg.dataUrl=URL.createObjectURL(new Blob(bl)); start(cdn); },function(){ err.textContent='Spieldateien konnten nicht geladen werden.'; }); };
+      parts(cdn?CDN:'Build/',cdn?'':V).catch(function(){ got=0; return parts('Build/',V); }).then(function(bl){ cfg.dataUrl=URL.createObjectURL(new Blob(bl)); start(cdn); },function(){ err.textContent=LT('files'); }); };
     cfg.cacheControl=function(u){ return /^blob:/.test(u)?'no-store':'must-revalidate'; };
     setTimeout(function(){ go(false); },5000);
     if(/nocdn/.test(location.search)) return go(false);
@@ -92,9 +115,9 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
     createUnityInstance(c,cfg,function(p){bar.style.width=(50+p*50)+'%';}).then(function(u){
       load.style.display='none';
       document.getElementById('fs').onclick=function(){u.SetFullscreen(1);};
-    }).catch(function(m){ if(cdn){ location.replace(location.pathname+'?nocdn=1'); return; } err.textContent='Konnte nicht starten: '+m+' – bitte einen aktuellen Browser am PC verwenden.';});
+    }).catch(function(m){ if(cdn){ location.replace(location.pathname+'?nocdn=1'); return; } err.textContent=LT('fail')+m+LT('failEnd');});
   };
-  s.onerror=function(){err.textContent='Spieldateien konnten nicht geladen werden.';};
+  s.onerror=function(){err.textContent=LT('files');};
   document.body.appendChild(s);
 })();
 /* Fabian 11.11.: Feedback mit Daumen und Kommentar – landet in Fabians Google-Formular (Antworten in Google Sheets).
@@ -102,10 +125,7 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
 (function(){
   var GF={url:'https://docs.google.com/forms/d/e/1FAIpQLSc3XUuLh01cYpBmL1B6hfa279A-EJLekDFhh-v2e_4ikxXlJg/formResponse',rate:'entry.1970576894',text:'entry.2051658818',build:''};
   if(!GF.url) return;
-  var en=!/^de/i.test(navigator.language||'de'), T=en?{t:'How do you like it?',p:'Thumbs up or down, and tell me what you think. Every comment helps.',ph:'What do you like, what bugs you? (optional)',send:'Send',close:'Close',ok:'Thank you! Your feedback has been sent.',err:'Could not send – please try again later.'}
-    :{t:'Wie gefällt dir das Spiel?',p:'Daumen hoch oder runter und gern ein paar Worte dazu. Jeder Kommentar hilft.',ph:'Was gefällt dir, was stört dich? (freiwillig)',send:'Senden',close:'Schließen',ok:'Danke! Dein Feedback ist angekommen.',err:'Senden hat nicht geklappt – bitte später noch einmal.'};
   var $=function(i){return document.getElementById(i);}, box=$('fbBox'), rate='';
-  $('fbT').textContent=T.t; $('fbP').textContent=T.p; $('fbText').placeholder=T.ph; $('fbSend').textContent=T.send; $('fbClose').textContent=T.close;
   var mob=document.body.classList.contains('m'); $(mob?'fbFloat':'fbBtn').style.display='inline-block';
   function open(){ box.style.display='flex'; $('fbMsg').textContent=''; }
   function close(){ box.style.display='none'; }
@@ -113,10 +133,10 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   $('fbBtn').onclick=open; $('fbFloat').onclick=open; $('fbClose').onclick=close; box.onclick=function(e){ if(e.target===box) close(); };
   $('fbUp').onclick=function(){pick('up');}; $('fbDown').onclick=function(){pick('down');};
   $('fbSend').onclick=function(){
-    var f=new FormData(); var info='Build '+document.querySelector('footer').textContent.replace(/.*Build (\d+).*/,'$1')+(mob?' · Handy':' · PC')+(en?' · EN':' · DE'); f.append(GF.rate, rate==='up'?'Up':'Down'); f.append(GF.text, $('fbText').value.slice(0,1500)+'\n['+info+']'); if(GF.build) f.append(GF.build, info);
+    var f=new FormData(); var info='Build '+document.querySelector('footer').textContent.replace(/.*Build (\d+).*/,'$1')+(mob?' · Handy':' · PC')+(LC_LANG==='en'?' · EN':' · DE'); f.append(GF.rate, rate==='up'?'Up':'Down'); f.append(GF.text, $('fbText').value.slice(0,1500)+'\n['+info+']'); if(GF.build) f.append(GF.build, info);
     $('fbSend').disabled=true;
-    fetch(GF.url,{method:'POST',mode:'no-cors',body:f}).then(function(){ $('fbMsg').textContent=T.ok; $('fbText').value=''; rate=''; $('fbUp').classList.remove('on'); $('fbDown').classList.remove('on'); setTimeout(close,1600); })
-      .catch(function(){ $('fbMsg').textContent=T.err; $('fbSend').disabled=false; });
+    fetch(GF.url,{method:'POST',mode:'no-cors',body:f}).then(function(){ $('fbMsg').textContent=LT('ok'); $('fbText').value=''; rate=''; $('fbUp').classList.remove('on'); $('fbDown').classList.remove('on'); setTimeout(close,1600); })
+      .catch(function(){ $('fbMsg').textContent=LT('err'); $('fbSend').disabled=false; });
   };
 })();
 
