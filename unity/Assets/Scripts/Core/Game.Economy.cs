@@ -77,19 +77,26 @@ namespace LunarCleanup.Core
 
         // ---------- Produktions-Ampel ----------
         public class FlowItem { public string id, name, why; public int lvl; public string[] fix; }
+        /// <summary>11.11.: Lässt sich noch etwas verbessern? (eins der Upgrades nicht voll, oder freie Fahrzeugplätze)</summary>
+        static bool CanImprove(PState ps, bool veh, params string[] ups)
+        {
+            foreach (var id in ups) { if (!GameData.Up.ContainsKey(id)) continue; var u = GameData.Up[id]; if (Lvl(id, ps) < Mathf.Min(u.max, u.vals.Length - 1)) return true; }
+            return veh && !Hard && ps.sv.veh.Count < VehSlots(ps);
+        }
         public static List<FlowItem> FlowReport(PState ps)
         {
             var o = new List<FlowItem>(); void Add(string id, string name, int lvl, string why, params string[] fix) => o.Add(new FlowItem { id = id, name = name, lvl = lvl, why = why, fix = fix });
             var sv = ps.sv; float rf = RohSum(ps) / Mathf.Max(1, RohCap(ps)), pf = ProdUsed(ps) / Mathf.Max(1, ProdCap(ps));
             if (ps.ef < .99f && (sv.veh.Count > 0 || ps.bld.Contains("presse") || sv.rigs.Count > 0)) Add(ps.bld.Contains("energy") ? "energy" : "hq", "Energie", 2, "Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.", "energy", "ecap");
-            { int fl = sv.rigs.Count(r => r.faultK != ""); if (fl > 0) Add("roh", "Störung", 2, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – Techniker sind unterwegs, oder sofort beheben (antippen).", "rcare"); }
-            { int br = sv.veh.Count(v => v.mode == "broken"), due = sv.veh.Count(v => v.wear >= .75f && v.mode != "broken"); if (br > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 2, br + (br > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen – " + (ps.bld.Contains("werkstatt") ? "Werkstatt öffnen" : "baue eine Roboterwerkstatt") + ".", "vdur"); else if (due > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 1, due + (due > 1 ? " Fahrzeuge brauchen" : " Fahrzeug braucht") + " bald Wartung.", "vdur"); }
-            { int full = sv.rigs.Count(r => Sum(r.buf) >= RigBufCap(r) - .5f); if (full > 0) Add("roh", "Bohrtürme", 1, full + (full > 1 ? " Bohrtürme sind" : " Bohrturm ist") + " voll – " + (sv.veh.Count > 0 ? "die Fahrzeuge holen nicht schnell genug ab." : "kauf Fahrzeuge, die abholen."), "vtank", "vspeed", "urate"); } /* Fabian 02.11.: volle Bohrtürme bremsen nur den Abbau – Gelb statt Rot */
+            { int fl = sv.rigs.Count(r => r.faultK != ""); if (fl > 0 && TechN(ps) > 0) Add("roh", "Störung", 0, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – die Techniker reparieren das gleich (oder sofort beheben: antippen)."); else if (fl > 0) Add("roh", "Störung", 2, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – Techniker sind unterwegs, oder sofort beheben (antippen).", "rcare"); }
+            { int br = sv.veh.Count(v => v.mode == "broken"), due = sv.veh.Count(v => v.wear >= .75f && v.mode != "broken"); if (br > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 2, br + (br > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen – " + (ps.bld.Contains("werkstatt") ? "Werkstatt öffnen" : "baue eine Roboterwerkstatt") + ".", "vdur"); else if (due > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", ps.bld.Contains("werkstatt") ? 0 : 1, due + (due > 1 ? " Fahrzeuge brauchen" : " Fahrzeug braucht") + " bald Wartung.", "vdur"); }
+            { int full = sv.rigs.Count(r => Sum(r.buf) >= RigBufCap(r) - .5f); if (full > 0 && !CanImprove(ps, true, "vtank", "vspeed", "urate")) Add("roh", "Bohrtürme", 0, full + (full > 1 ? " Bohrtürme fördern" : " Bohrturm fördert") + " auf Vorrat – mehr Abholung geht nicht mehr."); else if (full > 0) Add("roh", "Bohrtürme", 1, full + (full > 1 ? " Bohrtürme sind" : " Bohrturm ist") + " voll – " + (sv.veh.Count > 0 ? "die Fahrzeuge holen nicht schnell genug ab." : "kauf Fahrzeuge, die abholen."), "vtank", "vspeed", "urate"); } /* Fabian 02.11.: volle Bohrtürme bremsen nur den Abbau – Gelb statt Rot */
             { string s = null; float f = -1; foreach (var s0 in GameData.Stations) if (ps.bld.Contains(s0) && ps.st.ContainsKey(s0)) { float f0 = Sum(ps.st[s0].buf) / Mathf.Max(1, StBuf(ps, s0)); if (f0 > f) { f = f0; s = s0; } } /* eine Entladeanlage: der vollste Teil zählt */
                 if (s != null)
                 {
                     bool rfull = rf > .97f; string nm = IsUnit(s) ? "Entladeanlage" : GameData.Bld[s].name;
-                    if (f > .97f) Add(s, nm, 2, "Puffer voll – Fahrzeuge warten, weil " + (rfull ? "das Rohstofflager voll ist." : "das Förderband zu langsam abtransportiert."), rfull ? new[] { "rohcap", "sellcap" } : new[] { "bspeed", "bcap", "ubuf" });
+                    if (f > .7f && !rfull && !CanImprove(ps, false, "bspeed", "bcap", "ubuf")) Add(s, nm, 0, "Läuft auf voller Leistung – die Fahrzeuge liefern mehr, als das Band schafft; schneller geht es nicht."); /* 11.11.: im Endausbau kein Fehler */
+                    else if (f > .97f) Add(s, nm, 2, "Puffer voll – Fahrzeuge warten, weil " + (rfull ? "das Rohstofflager voll ist." : "das Förderband zu langsam abtransportiert."), rfull ? new[] { "rohcap", "sellcap" } : new[] { "bspeed", "bcap", "ubuf" });
                     else if (f > .7f) Add(s, nm, 1, "Puffer füllt sich – " + (rfull ? "das Rohstofflager ist voll." : "das Förderband kommt nicht ganz hinterher."), rfull ? new[] { "rohcap", "sellcap" } : new[] { "bspeed", "bcap" });
                     else Add(s, nm, 0, "Läuft – Puffer " + Mathf.RoundToInt(f * 100) + " %");
                 }
@@ -113,7 +120,7 @@ namespace LunarCleanup.Core
                 {
                     string nm = "Band " + GameData.Bld[b.from].name + " → " + GameData.Bld[b.to].name; int cap = Mathf.FloorToInt(b.L / BSP);
                     if (ps.jam.TryGetValue(b.id, out bool j) && j) Add(b.id, nm, 2, "Stau – das Ziel nimmt nichts mehr an.", "bspeed");
-                    else if (ps.belts.TryGetValue(b.id, out var it) && it.Count >= cap * .9f) Add(b.id, nm, 1, "Am Limit – das Band ist voll belegt.", "bspeed", "bcap");
+                    else if (ps.belts.TryGetValue(b.id, out var it) && it.Count >= cap * .9f) { if (CanImprove(ps, false, "bspeed", "bcap")) Add(b.id, nm, 1, "Am Limit – das Band ist voll belegt.", "bspeed", "bcap"); else Add(b.id, nm, 0, "Läuft auf voller Leistung – schneller geht es nicht."); } /* 11.11.: im Endausbau kein Fehler */
                 }
             return o;
         }

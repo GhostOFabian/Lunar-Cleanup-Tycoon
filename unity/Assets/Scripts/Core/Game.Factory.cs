@@ -71,6 +71,19 @@ namespace LunarCleanup.Core
         public static string DevCashShip() { OnCashSent?.Invoke(S.planet); return "Zuschuss-Schiff"; }
         /// <summary>Editor/Test: gelbe/rote Ampeln des aktuellen Planeten.</summary>
         public static string DevFlow() { var ps = Cur; var r = FlowReport(ps).Where(f => f.lvl >= 1).Select(f => (f.lvl == 2 ? "ROT " : "GELB ") + f.name + ": " + f.why).ToList(); return ps.pid + " " + (r.Count == 0 ? "alles grün" : string.Join(" | ", r)); }
+        /// <summary>Editor/Test: Durchsatz je Sekunde – Bänder (roh-Pakete, Maschinen-Pakete) gegen Maschinenleistung.</summary>
+        public static string DevRates()
+        {
+            var ps = Cur; float v = BeltSpeed(ps) * ps.bm, P = Packet(ps), PB = Mathf.Max(1, Mathf.Round(P / 8)); var sb = new System.Text.StringBuilder();
+            sb.Append(ps.pid).Append(" Band ").Append(v.ToString("0.0")).Append(" m/s, Paket ").Append(P.ToString("0")).Append("/").Append(PB.ToString("0")).Append(" → roh-Band ").Append((v / BSP * P).ToString("0")).Append("/s, Maschinen-Band ").Append((v / BSP * PB).ToString("0")).Append("/s");
+            foreach (var id in new[] { "presse", "schmelze", "raff" })
+            {
+                if (!ps.bld.Contains(id) || ps.line.Of(id).Count == 0) continue; var rc = ps.line.Of(id)[0]; float sp = Uv("mspeed", ps) * BlF(ps, id) * SpecF(ps, "mach") * ps.mm; int bt = MachBatch(ps, id);
+                sb.Append(" | ").Append(id).Append(": ein ").Append((rc.n * bt * sp / rc.t).ToString("0.0")).Append("/s aus ").Append((rc.k * bt * sp / rc.t).ToString("0.0")).Append("/s (t ").Append(rc.t).Append(", n ").Append(rc.n).Append(", k ").Append(rc.k).Append(", Charge ").Append(bt).Append(", OutCap ").Append(MachOutCap(ps, id).ToString("0")).Append(")");
+            }
+            sb.Append(" | Rakete ").Append(SellCap(ps).ToString("0")).Append(" je ").Append(RocketTime(ps).ToString("0.0")).Append(" s | rohCap ").Append(RohCap(ps).ToString("0")).Append(" prodCap ").Append(ProdCap(ps).ToString("0"));
+            return sb.ToString();
+        }
         public static string DevPad() { var P = Cur?.plan; return P == null ? "kein Plan" : (P.hasPad ? "Landeplatz " + P.pad + " h" + P.padH + (P.padOutside ? " gewachsen " + P.grow.Count : "") : "kein Landeplatz"); }
         /// <summary>Editor/Test: Ergebnis des Planers für den aktuellen Planeten.</summary>
         public static string DevPlanInfo()
