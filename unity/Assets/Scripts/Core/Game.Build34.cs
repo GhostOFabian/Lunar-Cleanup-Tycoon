@@ -43,8 +43,8 @@ namespace LunarCleanup.Core
         public static float GoodRate(PState ps) => !IsDone(ps.pid) || Ruined(ps.pid) ? 0 : 40f * (ps.sv.terra >= 4 ? 2 : 1);
         /// <summary>Unterhalt je Stunde und je benötigtem Gut (Schild und Terraforming).</summary>
         public static float UpkeepH(PState ps) => ps.sv.terra * 2f; /* Fabian 02.11.: der Schild braucht nur Energie, keine Güter – sonst wäre er am Anfang immer „unversorgt“ */
-        public static event Action<string, string, int> OnSupply; // Planet, Gut, Menge – Rakete landet (nur live, aktueller Planet)
-        static void Delivered(PState ps, string gid, int n) { if (!Offline && ps.pid == S.planet && n > 0) OnSupply?.Invoke(ps.pid, gid, n); }
+        public static event Action<string, string, int> OnSupply; // Planet, Gut, Menge – Schiff landet (aktueller Planet; offline gesammelt, beim Start ein Schiff)
+        static void Delivered(PState ps, string gid, int n) { if (ps.pid == S.planet && n > 0) OnSupply?.Invoke(ps.pid, gid, n); } /* 11.11.: auch offline melden – das Schiff kommt dann beim Start */
         /// <summary>Güter für einen Kauf auf diesem Planeten: true, wenn alles da ist (und dann abgebucht).</summary>
         static bool PayGoods(PState ps, (string g, int n)[] cost)
         {

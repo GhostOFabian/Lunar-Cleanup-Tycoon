@@ -102,7 +102,7 @@ namespace LunarCleanup.Gameplay
             /* Fabian 02.11. (Build 34): Schild, Abfangen, Lieferraketen, Terraforming */
             Game.OnDoomBlocked += pid => { if (pid == Game.S.planet && world) world.ShieldBlock(); };
             Game.OnIcpStart += pid => { if (!world) return; hud.CloseSheet(); world.StartIntercept(); };
-            Game.OnSupply += (pid, g, n) => { if (world && pid == Game.S.planet) world.SupplyRocket(g, n); };
+            Game.OnSupply += (pid, g, n) => { if (pid != Game.S.planet) return; if (Game.Offline) { offSup = g; return; } if (world) world.SupplyRocket(g, n); };
             Game.OnTerra += (pid, a, b) =>
             {
                 if (world && pid == Game.S.planet) world.TerraChanged(a, b);
@@ -123,7 +123,7 @@ namespace LunarCleanup.Gameplay
             hud.MoveInfo = () => !world || !world.Moving ? "" : (world.MoveWhyText != "" ? "Rot: " + world.MoveWhyText + ". " : "Grün: passt. ") + "Zieh das Gebäude mit dem Finger an einen freien Platz im Basisgelände. Die Bänder werden danach neu verlegt.";
             hud.MoveBtn = k => { if (!world || !world.Moving) return; if (k == "ok") world.CommitMove(); else if (k == "reset") world.ResetMove(); else world.EndMove(); };
             Game.OnPlanetChanged += BuildPlanet; Game.OnFloat += OnFloat; Game.OnBoom += d => { if (!world) return; world.EmitDust(d, new Color(1, .54f, .23f), 40); world.EmitDust(d, new Color(.33f, .33f, .33f), 30); }; Game.OnRocket += (p, v) => { if (world) world.LaunchRocket(); }; Game.OnMeteors += cells => { if (world) world.MeteorShower(cells); }; Game.OnCellFlash += id => { if (world) world.FlashCell(id); }; Game.OnPerk += (id, d, cells) => { if (world) world.PerkFx(id, d, cells); }; /* 05.11.: im Editor bleiben alte Abos nach Stop/Play hängen */ Game.OnDrop += (d, t) => { if (world) world.DropFx(d, t); };
-            Game.OnOrderDone += o => { if (world && !Game.Offline && o.pid == Game.S.planet && !world.VisitorPickup()) world.CrewCarry(); }; Game.OnOrderNew += o => { if (world && !Game.Offline && o.pid == Game.S.planet) world.VisitorArrive(); }; Game.OnCashSent += pid => { if (world) world.CashShip(); }; /* 11.11.: Schiffe auf dem Landeplatz */ /* 10.11.: Crew verlädt die Bestellung */ Game.OnPuzzle += (p, cells) => { if (world) world.PuzzleFx(p); else Game.PuzzleReveal(p); }; /* 09.11.: Puzzle fügt sich zusammen */ Game.OnLevelUp += (l, t) => { if (Game.PuzzleQuiet) { Game.Toast("Putz-Level " + l + (string.IsNullOrEmpty(t) ? "" : " · " + t), "good"); return; } if (hud) hud.BuffPop("Putz-Level " + l, new Color(.55f, 1f, .7f), 0, t); };
+            Game.OnOrderDone += o => { if (o.pid != Game.S.planet) return; if (Game.Offline) { offDone++; return; } if (world && !world.VisitorPickup()) world.CrewCarry(); }; Game.OnOrderNew += o => { if (o.pid != Game.S.planet) return; if (Game.Offline) { offNew++; return; } if (world) world.VisitorArrive(); }; Game.OnCashSent += pid => { if (world) world.CashShip(); }; /* 11.11.: Schiffe auf dem Landeplatz */ /* 10.11.: Crew verlädt die Bestellung */ Game.OnPuzzle += (p, cells) => { if (world) world.PuzzleFx(p); else Game.PuzzleReveal(p); }; /* 09.11.: Puzzle fügt sich zusammen */ Game.OnLevelUp += (l, t) => { if (Game.PuzzleQuiet) { Game.Toast("Putz-Level " + l + (string.IsNullOrEmpty(t) ? "" : " · " + t), "good"); return; } if (hud) hud.BuffPop("Putz-Level " + l, new Color(.55f, 1f, .7f), 0, t); };
             brush = MeshKit.Cyl(null, MeshKit.Unlit(new Color(.43f, .95f, .82f, .35f), true), Vector3.zero, 1, 1, .04f, 40); brush.name = "Saugkopf"; brush.SetActive(false);
             { var bl = new GameObject("Licht"); bl.transform.SetParent(brush.transform, false); bl.transform.localPosition = new Vector3(0, 4.5f, 0); brushLight = bl.AddComponent<Light>(); brushLight.type = LightType.Point; brushLight.range = 16; brushLight.color = new Color(1f, .96f, .88f); brushLight.intensity = 0; brushLight.shadows = LightShadows.None; }
             BuildPlanet();
@@ -154,6 +154,8 @@ namespace LunarCleanup.Gameplay
                 yield return null;
             }
             Game.Offline = false; offlineRunning = false; hud.ShowOffline(null);
+            /* Fabian 11.11.: was offline passiert ist, fliegt beim Start sichtbar an – je Art ein Schiff, nacheinander auf dem Landeplatz */
+            if (world) { if (offDone > 0) world.VisitorPickup(); if (offSup != null) world.SupplyRocket(offSup, 1); if (offNew > 0) world.VisitorArrive(); } offDone = offNew = 0; offSup = null;
             double gain = System.Math.Max(Game.S.credits - c0, Game.S.stats.earned - e0); int h = Mathf.FloorToInt(t / 3600), m = Mathf.FloorToInt(t % 3600 / 60); int r1 = 0, n1 = 0; foreach (var q in Game.P.Values) { r1 += q.sv.nRockets; n1 += q.nClean; }
             /* Fabian 01.11.: zeigen, was offline passiert ist – nicht nur Credits */
             Game.Toast("Während du weg warst (" + (h > 0 ? h + " h " : "") + m + " min): +" + Game.Fmt(gain) + " Cr" + (r1 > r0 ? " · " + (r1 - r0) + (r1 - r0 == 1 ? " Rakete" : " Raketen") : "") + (n1 > n0 ? " · " + (n1 - n0) + " Parzellen gereinigt" : ""), "good");
@@ -180,6 +182,7 @@ namespace LunarCleanup.Gameplay
         void OnApplicationPause(bool p) { if (p) Game.Save(); else if (!offlineRunning && Game.S != null) StartCoroutine(Offline((float)(Game.Now() - Game.S.lastActive))); }
         void OnApplicationQuit() { Game.Save(); }
 
+        static int offDone, offNew; static string offSup; // 11.11.: Schiffe, die nach der Offline-Zeit beim Start anfliegen
         void Update()
         {
             GfxTick();

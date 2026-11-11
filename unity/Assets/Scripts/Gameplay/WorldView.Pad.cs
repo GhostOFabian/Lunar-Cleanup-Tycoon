@@ -1,7 +1,7 @@
 // Fabian 11.11.: Landeplatz und Lieferschiff. Lieferungen von anderen Planeten (Spezialgüter fürs Terraforming) kommen nicht mehr
 // mit einer Rakete „aus dem Nichts“: Ein Lieferschiff fliegt an, schwenkt die Triebwerke nach unten, landet auf dem Landeplatz,
 // öffnet die Heckrampe, schiebt die Kisten hinaus, schließt die Rampe und startet wieder. Nur Darstellung – die Güter bucht die
-// Simulation wie bisher (Game.OnSupply). Ohne Landeplatz im Plan (kein Platz) landet weiter die alte Lieferrakete.
+// Simulation wie bisher (Game.OnSupply). Der Landeplatz ist immer im Plan (notfalls kleiner oder direkt vor der Basis).
 using System.Collections.Generic;
 using LunarCleanup.Core;
 using UnityEngine;
@@ -20,6 +20,7 @@ namespace LunarCleanup.Gameplay
         Ship ship; readonly Queue<Visit> visits = new Queue<Visit>();
         float ShipT(Visit v) => 12f + v.stay + 2.5f + 8f;
 
+        float PadK => ps?.plan == null ? 1 : (2 * ps.plan.padH + 1) / 9f; /* kleinerer Landeplatz → Platz und Schiffe etwas kleiner */
         bool PadOn => ps != null && ps.plan != null && ps.plan.hasPad; /* 11.11.: von Anfang an da – Schiffe kommen auch vor dem Terraforming */
 
         void UpdatePad()
@@ -41,9 +42,9 @@ namespace LunarCleanup.Gameplay
         /// <summary>Bestellung fertig: Händlerschiff landet, die Crew trägt die Kisten hinein, dann startet es.</summary>
         public bool VisitorPickup() => Enqueue(new Visit { kind = "pickup", model = "Ereignisse/haendlerschiff", col = VisCol(), stay = 14f, scale = .55f, foot = 2.4f, onLand = () => CrewCarryTo(PadEdge(), 13f) });
         Color VisCol() { Color c = ps.P.col0; return c.grayscale > .8f ? GameData.Hex("#6fe0ff") : c; }
-        bool Enqueue(Visit v) { if (!padGo || !LcKit.Has(v.model)) return false; if (visits.Count < 4) visits.Enqueue(v); return true; }
+        bool Enqueue(Visit v) { if (!PadOn || !LcKit.Has(v.model)) return false; /* Landeplatz kommt evtl. erst im nächsten Bild – Schiff wartet in der Reihe */ if (visits.Count < 4) visits.Enqueue(v); return true; }
         /// <summary>Rand des Landeplatzes zur Seite des Produktlagers (Ziel der Crew).</summary>
-        Vector2 PadEdge() { var c = (Vector2)ps.plan.pad; var from = ps.lay.pos.ContainsKey("prod") ? ps.lay.pos["prod"] : ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var d = (from - c); if (d.sqrMagnitude < .01f) d = Vector2.down; return c + d.normalized * (FactoryPlan.PAD_H + 1.2f); }
+        Vector2 PadEdge() { var c = (Vector2)ps.plan.pad; var from = ps.lay.pos.ContainsKey("prod") ? ps.lay.pos["prod"] : ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var d = (from - c); if (d.sqrMagnitude < .01f) d = Vector2.down; return c + d.normalized * (ps.plan.padH + 1.2f); }
 
         void BuildPad(bool on)
         {
@@ -54,9 +55,9 @@ namespace LunarCleanup.Gameplay
             Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var u = c - hq; if (u.sqrMagnitude < .01f) u = Vector2.up; u.Normalize();
             float yaw = Mathf.Atan2(u.x, -u.y); /* PlanRot: vorne (+Z des Modells) = e1·sin − e2·cos → zeigt nach außen, zur Anflugseite */
             var d = pd.PlanDir(c); float hmax = pd.Height(d);
-            for (int k = 0; k < 12; k++) { float a = k * Mathf.PI / 6; for (float r = 2f; r <= FactoryPlan.PAD_H; r += 2f) hmax = Mathf.Max(hmax, pd.Height(pd.PlanDir(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r))); }
+            for (int k = 0; k < 12; k++) { float a = k * Mathf.PI / 6; for (float r = 2f; r <= P.padH; r += 2f) hmax = Mathf.Max(hmax, pd.Height(pd.PlanDir(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r))); }
             Color acc = ps.P.col0; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
-            padGo = LcKit.Has("Welt/landeplatz") ? LcKit.Spawn("Welt/landeplatz", transform, Vector3.zero, 0, acc) : null;
+            padGo = LcKit.Has("Welt/landeplatz") ? LcKit.Spawn("Welt/landeplatz", transform, Vector3.zero, 0, acc, null, PadK) : null;
             if (!padGo)
             {
                 padGo = new GameObject("Landeplatz"); padGo.transform.SetParent(transform, false);
@@ -66,13 +67,13 @@ namespace LunarCleanup.Gameplay
             padGo.name = "Landeplatz";
             foreach (var t in padGo.GetComponentsInChildren<Transform>(true)) if (t.name.EndsWith("_Lichter")) padLights = t;
             padGo.transform.position = d * (pd.R + hmax); padGo.transform.rotation = PlanRot(d, yaw);
-            padUp = d; padTop = padGo.transform.position + d * PAD_TOP; padOut = padGo.transform.forward;
+            padUp = d; padTop = padGo.transform.position + d * PAD_TOP * PadK; padOut = padGo.transform.forward;
         }
 
         void StartShip(Visit v)
         {
             var go = new GameObject("Schiff " + v.kind); go.transform.SetParent(transform, false);
-            GameObject m = LcKit.Spawn(v.model, go.transform, Vector3.zero, 0, v.col, null, v.scale);
+            float sk = v.scale * PadK; GameObject m = LcKit.Spawn(v.model, go.transform, Vector3.zero, 0, v.col, null, sk);
             if (!m) { Destroy(go); return; }
             var s = new Ship { go = go, v = v };
             /* OBJ hat keine Drehpunkte: bewegliche Teile unter einen Drehpunkt hängen (Werte aus lunar_models.py, in Unity-Achsen, Modellmaß) */
@@ -83,7 +84,7 @@ namespace LunarCleanup.Gameplay
             }
             if (v.model.EndsWith("lieferschiff")) { s.duesen = Piv("_Duesen", new Vector3(0, 1.65f, -.5f)); s.rampe = Piv("_Rampe", new Vector3(0, 1.15f, -3.92f)); s.ladung = Piv("_Ladung", new Vector3(0, 1f, -3.4f)); s.fahrwerk = Piv("_Fahrwerk", new Vector3(0, 1f, 0)); }
             else s.fahrwerk = Piv("_Fahrwerk", new Vector3(0, -1.5f, 0));
-            m.transform.localPosition = Vector3.up * v.foot * v.scale; /* Füße auf der Plattform */
+            m.transform.localPosition = Vector3.up * v.foot * sk; /* Füße auf der Plattform */
             foreach (var r in go.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var fl = MeshKit.Part(go.transform, MeshKit.Quad, GlowMat(MeshKit.GlowTex(), new Color(1f, .7f, .35f, 1)), new Vector3(0, .9f, 0), Vector3.one * 3.2f); NoShadow(fl); fl.AddComponent<Billboard>(); fl.name = "Glut";
             if (v.cargo < 0 && s.ladung) s.ladung.gameObject.SetActive(false);

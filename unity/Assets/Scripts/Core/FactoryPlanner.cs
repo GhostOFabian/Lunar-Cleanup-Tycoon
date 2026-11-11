@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
         public readonly Dictionary<string, Vector2Int> start = new Dictionary<string, Vector2Int>();
         public readonly Dictionary<string, Vector2Int> goal = new Dictionary<string, Vector2Int>();   // Eingang je Zielgebäude
         public RectInt dock; public float unitYaw; public int rot, mir; public Vector2Int shift; public long ms;
-        public bool hasPad; public Vector2Int pad; public const int PAD_H = 4; // 11.11.: Landeplatz für Lieferschiffe (9 × 9 m), nur wenn Platz ist
+        public bool hasPad, padOutside; public Vector2Int pad; public int padH = PAD_H; public const int PAD_H = 4; // 11.11.: Landeplatz für alle Schiffe (9 × 9 m), immer vorhanden – notfalls etwas kleiner oder direkt am Basisrand
         public readonly HashSet<Vector2Int> reserved = new HashSet<Vector2Int>();   // Bänder + Abstand, Y-Stücke, Andockfläche + Zufahrt
         public bool[] mask;
         public bool InBase(Vector2 p) { int x = Mathf.RoundToInt(p.x), y = Mathf.RoundToInt(p.y); return x >= -FactoryPlanner.EXT && x <= FactoryPlanner.EXT && y >= -FactoryPlanner.EXT && y <= FactoryPlanner.EXT && mask != null && mask[(y + FactoryPlanner.EXT) * FactoryPlanner.N + x + FactoryPlanner.EXT]; }
@@ -147,7 +147,11 @@ namespace LunarCleanup.Core
                 placed[k] = spot.Value; pk.Add(spot.Value, hs[k], false);
             }
             /* Fabian 11.11.: Landeplatz für Lieferschiffe von anderen Planeten – zuletzt gepackt, gern nahe der Verkaufsrakete. Kein Platz = kein Fehler (dann landet die alte Lieferrakete). */
-            { var want = placed.TryGetValue("sell", out var sp) ? sp : new Vector2Int(dock.x + dock.width / 2, dock.y + dock.height / 2); var pp = pk.Best(FactoryPlan.PAD_H, want); if (pp.HasValue) { P.hasPad = true; P.pad = pp.Value; pk.Add(pp.Value, FactoryPlan.PAD_H, false); } }
+            {
+                var want = placed.TryGetValue("sell", out var sp) ? sp : new Vector2Int(dock.x + dock.width / 2, dock.y + dock.height / 2);
+                for (int ph = FactoryPlan.PAD_H; ph >= 3 && !P.hasPad; ph--) { var pp = pk.Best(ph, want); if (pp.HasValue) { P.hasPad = true; P.pad = pp.Value; P.padH = ph; pk.Add(pp.Value, ph, false); } }
+                if (!P.hasPad) { var po = pk.BestOutside(FactoryPlan.PAD_H, want); if (po.HasValue) { P.hasPad = true; P.padOutside = true; P.pad = po.Value; P.padH = FactoryPlan.PAD_H; } } /* Fabian 11.11.: Schiffe sollen nie schweben – notfalls direkt vor der Basis */
+            }
             foreach (var kv in placed) { P.pos[kv.Key] = kv.Value; P.half[kv.Key] = hs[kv.Key]; }
             foreach (var q in res) P.reserved.Add(q); P.mask = mask;
             foreach (var kv in X.fIn) P.faceIn[kv.Key] = kv.Value; foreach (var kv in X.fOut) P.faceOut[kv.Key] = kv.Value;
@@ -198,6 +202,19 @@ namespace LunarCleanup.Core
                         int ring = Q(sHard, x - r, y - r, x + r, y + r) - Q(sHard, x - r + 1, y - r + 1, x + r - 1, y + r - 1) + Ext(x - r, y - r, x + r, y + r) - Ext(x - r + 1, y - r + 1, x + r - 1, y + r - 1);
                         int d = Mathf.Abs(x - want.x) + Mathf.Abs(y - want.y);
                         if (ring > bc || (ring == bc && d < bd)) { bc = ring; bd = d; best = q; }
+                    }
+                return best;
+            }
+            /// <summary>11.11.: Platz ganz außerhalb der Basis, aber direkt am Rand (höchstens 3 m Lücke), ohne Zufahrt/Bänder.</summary>
+            public Vector2Int? BestOutside(int h, Vector2Int want)
+            {
+                Vector2Int? best = null; int bd = int.MaxValue; int area = (2 * h + 1) * (2 * h + 1);
+                for (int y = -EXT + h; y <= EXT - h; y++) for (int x = -EXT + h; x <= EXT - h; x++)
+                    {
+                        if (Q(sOut, x - h, y - h, x + h, y + h) < area) continue;                               // ganz außerhalb
+                        if (Q(sRes, x - h - 1, y - h - 1, x + h + 1, y + h + 1) > 0) continue;                  // keine Zufahrt
+                        int r = h + 3; int ringOut = Q(sOut, x - r, y - r, x + r, y + r); if (ringOut >= (2 * r + 1) * (2 * r + 1)) continue; // Basis in der Nähe
+                        int d = Mathf.Abs(x - want.x) + Mathf.Abs(y - want.y); if (d < bd) { bd = d; best = new Vector2Int(x, y); }
                     }
                 return best;
             }

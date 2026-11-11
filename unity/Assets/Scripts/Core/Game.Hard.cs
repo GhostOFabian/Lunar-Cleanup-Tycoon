@@ -63,7 +63,7 @@ namespace LunarCleanup.Core
             for (float r = 6; r <= 40; r += 2) for (int k = 0; k < 24; k++)
             {
                 float a = k * Mathf.PI / 12; var q = roh + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r; int cl = pd.CellOf(pd.PlanDir(q)); if (cl < 0 || !pd.cells[cl].IsBase) continue;
-                bool ok = true; foreach (var kv in ps.lay.pos) { if (!GameData.Bld.ContainsKey(kv.Key)) continue; if ((kv.Value - q).magnitude < GameData.Bld[kv.Key].fp + 5f) { ok = false; break; } } if (ps.plan != null && ps.plan.hasPad && Mathf.Abs(q.x - ps.plan.pad.x) < FactoryPlan.PAD_H + 4f && Mathf.Abs(q.y - ps.plan.pad.y) < FactoryPlan.PAD_H + 4f) ok = false; /* 11.11.: Landeplatz */
+                bool ok = true; foreach (var kv in ps.lay.pos) { if (!GameData.Bld.ContainsKey(kv.Key)) continue; if ((kv.Value - q).magnitude < GameData.Bld[kv.Key].fp + 5f) { ok = false; break; } } if (ps.plan != null && ps.plan.hasPad && Mathf.Abs(q.x - ps.plan.pad.x) < ps.plan.padH + 4f && Mathf.Abs(q.y - ps.plan.pad.y) < ps.plan.padH + 4f) ok = false; /* 11.11.: Landeplatz */
                 if (!ok) continue; float sc = r - Vector2.Dot(new Vector2(Mathf.Cos(a), Mathf.Sin(a)), away) * 4; if (sc < bs) { bs = sc; best = q; }
             }
             depotPos[ps.pid] = (ps.baseVersion, best); return best;
