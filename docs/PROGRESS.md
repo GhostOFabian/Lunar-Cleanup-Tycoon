@@ -306,3 +306,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 10.11. 05:45: Build 61 iPhone-Paket gebaut (Puzzle-Animation Teil für Teil, im Editor geprüft: Teile landen nacheinander, Zeichen erst danach, Banner, Logbuch danach; Test-Knopf 99 %). Browser-Build lief, konnte wegen getrennter Mac-Verbindung noch nicht hochgeladen werden – Web bleibt auf Build 60.
 
 - Feedback-Knopf auf der Spielseite mit Fabians Google Form verbunden (entry.1970576894 Bewertung Up/Down, entry.2051658818 Kommentar + [Build · Gerät · Sprache]). Offen: Im Formular muss die Anmeldepflicht aus sein, sonst kommen keine Antworten an.
+- Ladezeit gemessen (Mac, 11.11.): Webseite 0,85 s; Spiel-Download 1,5 s für 29 MB, Entpacken + Kompilieren < 0,2 s, Spielstart ~1 s, gesamt ~10 s im versteckten Browser-Fenster. Neuer Build mit DiskSize + Mesh-Kompression online. Offen: Fabians Ladezeit auf „Ghost“ prüfen (Browser, Erst- oder Zweitaufruf).

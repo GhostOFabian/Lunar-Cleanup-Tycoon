@@ -29,7 +29,7 @@ namespace LunarCleanup.EditorTools
             PlayerSettings.WebGL.compressionFormat = pub ? WebGLCompressionFormat.Gzip : WebGLCompressionFormat.Disabled; // unkomprimiert läuft auf jedem einfachen Webserver
             PlayerSettings.WebGL.decompressionFallback = pub; // GitHub Pages: der Browser entpackt selbst
             PlayerSettings.WebGL.nameFilesAsHashes = false;
-            SetCodeOptimization(pub ? "BuildTimes" : null); /* der erste Release-Versuch mit voller Optimierung hat Unity abstürzen lassen */
+            SetCodeOptimization(pub ? "DiskSize" : null); /* Fabian 11.11.: Seite lud sehr langsam – „DiskSize“ macht den Code kleiner und schneller als „BuildTimes“ */ /* der erste Release-Versuch mit voller Optimierung hat Unity abstürzen lassen */
             PlayerSettings.WebGL.dataCaching = true;
             PlayerSettings.WebGL.maximumMemorySize = 4096; /* Fabian 02.11.: „OOM“ beim Riesenmeteor mit voll ausgebauten Planeten – 2 GB reichten nicht */
             PlayerSettings.defaultWebScreenWidth = 540; PlayerSettings.defaultWebScreenHeight = 960;

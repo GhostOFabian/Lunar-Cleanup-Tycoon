@@ -13,6 +13,7 @@ namespace LunarCleanup.EditorTools
     public class LcModelImport : AssetPostprocessor
     {
         const string Root = "Assets/Resources/LC/";
+        public override uint GetVersion() => 2; // erhöhen, wenn sich die Import-Einstellungen ändern (Unity importiert dann neu)
 
         void OnPreprocessModel()
         {
@@ -24,7 +25,7 @@ namespace LunarCleanup.EditorTools
             mi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;             // nur für die Namen LC_* – die echten Materialien setzt LcKit
             mi.materialLocation = ModelImporterMaterialLocation.InPrefab;
             mi.isReadable = true;                                                              // Bänder suchen ihre Anschlüsse an den echten Gebäudewänden (Dreiecke lesen)
-            mi.addCollider = false; mi.meshCompression = ModelImporterMeshCompression.Off;
+            mi.addCollider = false; mi.meshCompression = ModelImporterMeshCompression.Low; /* 11.11.: kleinere Spieldateien, Abweichung unter 1 mm */
             mi.importNormals = ModelImporterNormals.Import; mi.importTangents = ModelImporterTangents.None;
         }
 
