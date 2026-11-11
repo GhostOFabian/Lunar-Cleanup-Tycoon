@@ -52,7 +52,7 @@ namespace LunarCleanup.Gameplay
         {
             var swB = System.Diagnostics.Stopwatch.StartNew(); long tm0 = 0; string Tm(string n) { long e = swB.ElapsedMilliseconds; string r = n + " " + (e - tm0) + " · "; tm0 = e; return r; }
             foreach (Transform c in baseRoot) Destroy(c.gameObject); foreach (Transform c in beltRoot) Destroy(c.gameObject);
-            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
+            blds.Clear(); beltCum.Clear(); beltTrim.Clear(); beltWall.Clear(); beltMats.Clear(); bTris.Clear(); tGrid.Clear(); beltInfo.Clear(); pipeMiss = 0;
             Color acc = ps.P.col0, acc2 = ps.P.col1; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
             foreach (var id in GameData.BOrder)
             {
@@ -304,6 +304,9 @@ namespace LunarCleanup.Gameplay
             /* Fabian 01.11.: Anschlussrahmen nie in die Wand schneiden – an runden Tanks und Kuppeln rückt er so weit vor, dass er nur an der vordersten Stelle anliegt */
             if (w0 && LcKit.HasBelt) s0 += FlushShift(b.from, rp0, cum0, s0, false, H0) + .36f;
             if (w1 && LcKit.HasBelt) s1 -= FlushShift(b.to, rp0, cum0, s1, true, H0) + .36f;
+            /* Fabian 11.11.: Anfang und Ende (Anschlussrahmen/Übergabesäule, ragen 0,45 m nach außen) stehen immer ganz auf der Plattform –
+               liegt die Wand am Plattformrand (Tanks, Rakete), rückt der Rahmen nach innen und steckt dafür tiefer im Gebäude */
+            float sw0 = s0, sw1 = s1; s0 = OnPlat(b.from, rp0, cum0, s0, false); s1 = OnPlat(b.to, rp0, cum0, s1, true); beltWall[b.id] = new Vector2(sw0, sw1); /* sw = Lage an der Wand (für die Prüfung) */
             if (s1 - s0 < 1f) { s0 = 0; s1 = L0; w0 = w1 = false; }
             bool m1 = mergeEnd.TryGetValue(b.id, out float mE), m0 = mergeStart.TryGetValue(b.id, out float mS);
             if (m1) { s1 = Mathf.Min(s1, mE + .45f); w1 = true; } if (m0) { s0 = Mathf.Max(s0, mS - .45f); w0 = true; } // Weiche: mündet seitlich auf das andere Band
@@ -385,6 +388,8 @@ namespace LunarCleanup.Gameplay
                     for (float u = oth.s0; u <= oth.s1; u += .25f) { float d0 = (PointAt(oth.rp, oth.cum, u, out _) - pe).magnitude; if (d0 < md) { md = d0; dh = Mathf.Abs(oth.H + Lift(sw, u) - hb); } }
                     if (md > BW + .25f || dh > .15f) out_.Add(nm + ": Y-Anschluss an " + sw + " trifft das Band nicht (" + md.ToString("0.0") + " m daneben)"); else Notes.Add(nm + ": mündet als Y in " + sw);
                 }
+                if (!mergeStart.ContainsKey(kv.Key) && ps.lay.pos.ContainsKey(b.from) && GameData.Bld.ContainsKey(b.from) && (PointAt(rp, cum, Mathf.Min(s0 + PORT_OUT, cum[cum.Length - 1]), out _) - ps.lay.pos[b.from]).magnitude > PlatR(b.from) + .02f) out_.Add(nm + ": Anfang steht nicht auf der Plattform von " + b.from);
+                if (!mergeEnd.ContainsKey(kv.Key) && ps.lay.pos.ContainsKey(b.to) && GameData.Bld.ContainsKey(b.to) && (PointAt(rp, cum, Mathf.Max(s1 - PORT_OUT, 0), out _) - ps.lay.pos[b.to]).magnitude > PlatR(b.to) + .02f) out_.Add(nm + ": Ende steht nicht auf der Plattform von " + b.to);
                 if (!w0) Notes.Add(nm + ": Start über überdachten Zulauf mit " + b.from + " verbunden"); if (!w1) Notes.Add(nm + ": Ende über überdachten Zulauf mit " + b.to + " verbunden");
                 /* Stützen: dieselben Plätze wie beim Bauen; Beine nie in einem anderen Band, angehobene Stücke nie länger als 6,5 m ohne Stütze */
                 var sub = SubPath(rp, cum, s0, s1); var subCum = new float[sub.Length]; for (int i = 1; i < sub.Length; i++) subCum[i] = subCum[i - 1] + (sub[i] - sub[i - 1]).magnitude;
@@ -410,7 +415,8 @@ namespace LunarCleanup.Gameplay
                 foreach (var id in ids)
                 {
                     var T = TrisOf(id); if (T.Count == 0) continue; bool hit = false;
-                    for (float s = s0 + .1f; s < s1 - .1f && !hit; s += .25f)
+                    float cs0 = beltWall.TryGetValue(kv.Key, out var bw0) ? Mathf.Max(s0, bw0.x) : s0, cs1 = beltWall.TryGetValue(kv.Key, out var bw1) ? Mathf.Min(s1, bw1.y) : s1; /* nach innen gerückte Enden stecken absichtlich im Gebäude */
+                    for (float s = cs0 + .1f; s < cs1 - .1f && !hit; s += .25f)
                     {
                         float sb = Mathf.Min(s + .25f, s1 - .1f); var pa = PointAt(rp, cum, s, out var ta); var pb = PointAt(rp, cum, sb, out _); var na = new Vector2(-ta.y, ta.x);
                         float la = Lift(kv.Key, s), lb = Lift(kv.Key, sb);
@@ -462,8 +468,9 @@ namespace LunarCleanup.Gameplay
             foreach (var kv in beltInfo)
             {
                 var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value;
-                if (w0 && blds.ContainsKey(b.from) && FlushShift(b.from, rp, cum, s0 - .36f, false, H) > .08f) out_.Add(kv.Key + ": Ausgang-Rahmen an " + b.from + " schneidet in die Wand");
-                if (w1 && blds.ContainsKey(b.to) && FlushShift(b.to, rp, cum, s1 + .36f, true, H) > .08f) out_.Add(kv.Key + ": Eingang-Rahmen an " + b.to + " schneidet in die Wand");
+                bool in0 = beltWall.TryGetValue(kv.Key, out var bwq) && bwq.x - s0 > .05f, in1 = beltWall.TryGetValue(kv.Key, out var bwr) && bwr.y - s1 > .05f;
+                if (w0 && !in0 && blds.ContainsKey(b.from) && FlushShift(b.from, rp, cum, s0 - .36f, false, H) > .08f) out_.Add(kv.Key + ": Ausgang-Rahmen an " + b.from + " schneidet in die Wand");
+                if (w1 && !in1 && blds.ContainsKey(b.to) && FlushShift(b.to, rp, cum, s1 + .36f, true, H) > .08f) out_.Add(kv.Key + ": Eingang-Rahmen an " + b.to + " schneidet in die Wand");
             }
             foreach (var id in AmpelIds) { if (!blds.TryGetValue(id, out var bp) || !bp.root) continue; if (SideSpot(bp, out var sp, out _) && !SpotFree(bp.root.transform.TransformPoint(sp), bp)) out_.Add("Ampel an " + id + " steht in einem Band oder Gebäude"); }
             foreach (var q in lampSpots.ToList()) { lampSpots.Remove(q); bool ok = SpotFree(pd.PlanDir(q) * pd.R, null); lampSpots.Add(q); if (!ok) { out_.Add("Laterne bei " + q.ToString("0.0") + " steht in einem Band oder Gebäude"); } }
@@ -570,6 +577,18 @@ namespace LunarCleanup.Gameplay
         }
         /// <summary>Anschluss am Gebäude: Rahmen mit dunkler Öffnung, halb in der Wand – das Band läuft sichtbar hinein bzw. heraus.
         /// Ohne Wandtreffer (Gebäude zu niedrig) steht dort eine Übergabesäule, damit das Band nie in der Luft endet.</summary>
+        public const float PORT_OUT = .45f; readonly Dictionary<string, Vector2> beltWall = new Dictionary<string, Vector2>(); // 11.11.: Rahmen nach innen gerückt → steckt absichtlich in der Wand
+        static float PlatR(string id) => GameData.Bld.ContainsKey(id) ? GameData.Bld[id].fp - .05f : 0;
+        float OnPlat(string id, Vector2[] rp, float[] cum, float s, bool atEnd)
+        {
+            if (!ps.lay.pos.ContainsKey(id) || !GameData.Bld.ContainsKey(id)) return s; var c = ps.lay.pos[id]; float r = PlatR(id), L = cum[cum.Length - 1];
+            for (int k = 0; k < 80; k++)
+            {
+                var q = PointAt(rp, cum, Mathf.Clamp(atEnd ? s - PORT_OUT : s + PORT_OUT, 0, L), out _); if ((q - c).magnitude <= r) break;
+                s += atEnd ? .1f : -.1f; if (s <= 0 || s >= L) break;
+            }
+            return Mathf.Clamp(s, 0, L);
+        }
         void Port(Vector2[] rp, float[] cum, float s, float H, bool atEnd, bool wall)
         {
             var p = PointAt(rp, cum, s, out var tan); if (!atEnd) tan = -tan; var d = pd.PlanDir(p); var fwd = Tangent(d, tan); var rot = Quaternion.LookRotation(fwd, d);

@@ -98,8 +98,8 @@ namespace LunarCleanup.Core
                     if (!P.cells.ContainsKey(b.id)) continue; n++;
                     string G(string id) => IsUnit(id) ? "u1" : id;
                     float r0 = GameData.Bld[b.from].fp, d0 = (b.rp[0] - L.pos[b.from]).magnitude;
-                    bool ok0 = d0 <= r0 - .3f, ok1 = true; float d1 = 0, r1 = 0;
-                    if (!P.merge.ContainsKey(b.id)) { r1 = GameData.Bld[b.to].fp; d1 = (b.rp[b.rp.Length - 1] - L.pos[b.to]).magnitude; ok1 = d1 <= r1 - .3f; }
+                    bool ok0 = d0 <= r0 - .9f, ok1 = true; float d1 = 0, r1 = 0;
+                    if (!P.merge.ContainsKey(b.id)) { r1 = GameData.Bld[b.to].fp; d1 = (b.rp[b.rp.Length - 1] - L.pos[b.to]).magnitude; ok1 = d1 <= r1 - .9f; }
                     if (!ok0 || !ok1) { bad++; sb.Append(k).Append(" ").Append(b.id).Append(!ok0 ? " Anfang " + d0.ToString("0.0") + "/" + r0.ToString("0.0") : "").Append(!ok1 ? " Ende " + d1.ToString("0.0") + "/" + r1.ToString("0.0") : "").Append(" | "); }
                 }
             }
@@ -165,7 +165,7 @@ namespace LunarCleanup.Core
         /// <summary>11.11.: Bandende sicher auf der Plattform – mindestens 0,35 m innerhalb des Plattformrands (Entladeanlage lag 0,2 m daneben).</summary>
         static Vector2 Inset(Vector2 p, string id, Vector2 n, FactoryPlan P)
         {
-            if (!P.pos.ContainsKey(id) || !GameData.Bld.ContainsKey(id)) return p; var c = (Vector2)P.pos[id]; float r = GameData.Bld[id].fp - .35f, d = (p - c).magnitude;
+            if (!P.pos.ContainsKey(id) || !GameData.Bld.ContainsKey(id)) return p; var c = (Vector2)P.pos[id]; float r = GameData.Bld[id].fp - 1f, d = (p - c).magnitude; /* Platz für den Anschlussrahmen (ragt 0,45 m nach außen) */
             return d > r ? p - n * (d - r) : p;
         }
         static Vector2[] Line(BeltDef b, FactoryPlan P)
