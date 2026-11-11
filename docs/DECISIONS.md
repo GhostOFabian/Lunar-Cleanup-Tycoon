@@ -364,3 +364,4 @@ Je eine Zeile: Entscheidung – Grund. Neue Einträge unten anfügen.
 - 11.11. (Fabian): Rohstoffe auf den Bändern sind echte Gegenstände statt einer grauen Kiste mit Inhalt: Staubhaufen, Schrottbündel, Kristallgruppe, Schlammklumpen, Strahlenerz-Brocken (`item_*.obj`, Vorrang vor `ware_*`).
 - 11.11. (Fabian): Vorgeschlagene Fahnentexte werden in der eingestellten Sprache angezeigt (gespeichert bleibt der deutsche Text); eigene Texte bleiben, wie sie getippt wurden.
 - 11.11. (Fabian): Feedback im Browser über ein Google-Formular (Daumen, Kommentar, Build/Gerät/Sprache). Knopf „Feedback“ im Kopf der Spielseite, am Handy ein kleiner Knopf am rechten Rand. Ohne eingetragene Formular-Adresse bleibt er unsichtbar.
+- Feedback-Formular (Google Form) hat nur zwei Felder (Bewertung, Kommentar); Build, Gerät und Sprache werden deshalb in eckigen Klammern an den Kommentar angehängt.

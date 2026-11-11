@@ -304,3 +304,5 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - 09.11. 19:10: Build 60 (iPhone + Browser): Puzzle-Zeichen mit Zusammenflug (im Editor auf dem Mond gesehen), großes Zeichen auf der Rückseite (Proxima-Doppelsichel geprüft), Bestellungen nach Bezahlung, App-Store-Vorbereitung (aus).
 - 10.11. 04:00: Für Build 61 geschrieben (Mac aus, ungetestet): Puzzle-Animation neu (Teile nacheinander an ihren Platz, Zeichen erst danach, nichts verdeckt), Abschluss erst bei 100 %, mehr Teile auf großen Planeten.
 - 10.11. 05:45: Build 61 iPhone-Paket gebaut (Puzzle-Animation Teil für Teil, im Editor geprüft: Teile landen nacheinander, Zeichen erst danach, Banner, Logbuch danach; Test-Knopf 99 %). Browser-Build lief, konnte wegen getrennter Mac-Verbindung noch nicht hochgeladen werden – Web bleibt auf Build 60.
+
+- Feedback-Knopf auf der Spielseite mit Fabians Google Form verbunden (entry.1970576894 Bewertung Up/Down, entry.2051658818 Kommentar + [Build · Gerät · Sprache]). Offen: Im Formular muss die Anmeldepflicht aus sein, sonst kommen keine Antworten an.
