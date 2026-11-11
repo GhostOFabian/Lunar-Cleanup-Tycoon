@@ -4,7 +4,7 @@ EN = {
 "Lunar Cleanup Tycoon": "Lunar Cleanup Tycoon",
 "Mobiles Idle-Tycoon-Spiel: Planeten sauber wischen, Reinigungsindustrie automatisieren, 18 Welten vom Mond bis zum Pulsarplaneten Poltergeist.":
  "Mobile idle tycoon game: wipe planets clean, automate a cleaning industry, 18 worlds from the Moon to the pulsar planet Poltergeist.",
-"Mobile Idle-Tycoon · Version 0.5 (Beta) · Build 74": "Mobile idle tycoon · Version 0.5 (Beta) · Build 74",
+"Mobile Idle-Tycoon · Version 0.5 (Beta) · Build 75": "Mobile idle tycoon · Version 0.5 (Beta) · Build 75",
 "Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.":
  "A whole moon full of junk. You wipe the first plots clean yourself, then buggies, conveyor belts, presses and drones take over. And when you close the game, your fleet just keeps on cleaning.",
 "Im Browser spielen (Beta)": "Play in your browser (beta)",
@@ -203,8 +203,8 @@ EN = {
 "Das Spiel entsteht als App für iOS und Android. Im Browser kannst du den aktuellen Stand schon spielen.": "The game is being made as an app for iOS and Android. You can already play the current version in your browser.",
 "Ein Landeplatz auf jedem Planeten: Lieferschiffe bringen Waren von anderen Planeten, Besucher landen, holen ihre Bestellungen ab und fliegen wieder los.":
  "A landing pad on every planet: supply ships bring goods from other planets, visitors land, pick up their orders and fly off again.",
-"Das Medaillenbuch: Bronze, Silber und Gold für jeden Planeten, dazu Bestzeiten – und eine Sternenstaub-Werkstatt mit Stufen, die jeden Neustart überlebt.":
- "The medal book: bronze, silver and gold for every planet, plus best times – and a stardust workshop with levels that survive every restart.",
+"Das Medaillenbuch: Bronze, Silber und Gold für jeden Planeten, alle Erfolge als Medaillen in einem Zähler, dazu Bestzeiten – und eine Sternenstaub-Werkstatt, die jeden Neustart überlebt.":
+ "The medal book: bronze, silver and gold for every planet, all achievements as medals in one counter, plus best times – and a stardust workshop that survives every restart.",
 "Fairer Shop ohne Werbung: Das Unterstützer-Paket gibt nur Aussehen und Dank, gekaufte Vorteile gelten auch im Hard Mode.":
  "A fair shop without ads: the supporter pack only gives looks and thanks, and bought advantages also apply in Hard Mode.",
 "Jetzt spielen": "Play now",
@@ -246,6 +246,6 @@ EN = {
 "Ausgebaute Basis auf Ganymed": "Developed base on Ganymede",
 "Voll ausgebaute Basis auf Pluto": "Fully built base on Pluto",
 "Ausgebaute Basis auf Triton mit Bändern und Entladeanlage": "Developed base on Triton with belts and unloader",
-"Lunar Cleanup Tycoon · Version 0.5 (Beta) · Build 74 · November 2026": "Lunar Cleanup Tycoon · Version 0.5 (beta) · Build 74 · November 2026",
+"Lunar Cleanup Tycoon · Version 0.5 (Beta) · Build 75 · November 2026": "Lunar Cleanup Tycoon · Version 0.5 (beta) · Build 75 · November 2026",
 "Alle Rechte vorbehalten": "All rights reserved",
 }
