@@ -25,6 +25,7 @@ namespace LunarCleanup.Gameplay
                     bool ok = true;
                     foreach (var kv in ps.lay.pos) { if (!GameData.Bld.ContainsKey(kv.Key)) continue; if ((kv.Value - p).magnitude < GameData.Bld[kv.Key].fp + DEF_FP + 1.2f) { ok = false; break; } }
                     if (!ok) continue;
+                    if (ps.plan != null && ps.plan.hasPad && Mathf.Abs(p.x - ps.plan.pad.x) < FactoryPlan.PAD_H + DEF_FP + 1f && Mathf.Abs(p.y - ps.plan.pad.y) < FactoryPlan.PAD_H + DEF_FP + 1f) continue; /* 11.11.: Landeplatz frei lassen */
                     foreach (var kv in routed) { if (SegDist(kv.Value, p) < DEF_FP + 1.4f) { ok = false; break; } }
                     if (!ok) continue;
                     foreach (var l in lampSpots) if ((l - p).magnitude < DEF_FP + 1) { ok = false; break; }

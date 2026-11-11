@@ -10,7 +10,7 @@ namespace LunarCleanup.Gameplay
 {
     public partial class WorldView
     {
-        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdateTerra(); UpdateDefense(); UpdateOrders(); UpdateFind(); SyncHelpers(); }
+        void UpdateBuild34() { UpdateIcp(); UpdateShots(); UpdateSupply(); UpdatePad(); UpdateTerra(); UpdateDefense(); UpdateOrders(); UpdateFind(); SyncHelpers(); }
 
         // =====================================================================
         // Riesenmeteor: Schild lenkt ab / letzter Sturz / Abfangen
@@ -167,6 +167,7 @@ namespace LunarCleanup.Gameplay
         public void SupplyRocket(string gid, int n)
         {
             if (Time.time - lastSupply < 15) return; lastSupply = Time.time; var g0 = Game.Good(gid);
+            if (SupplyShip(g0.col)) return; /* 11.11.: mit Landeplatz kommt das Lieferschiff */
             var bc = pd.cells[pd.baseCell]; var land = pd.PlanDir(ps.lay.pos.ContainsKey("sell") ? ps.lay.pos["sell"] + new Vector2(5, 5) : Vector2.one * 6);
             var b = pd.Surf(land, 1.2f); var a = b + (b.normalized * .8f + bc.e1 * .6f).normalized * pd.R * 1.5f;
             var go = new GameObject("Lieferrakete"); go.transform.SetParent(transform, false);

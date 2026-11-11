@@ -2633,30 +2633,165 @@ def w_putzi():
 
 
 def e_haendler():
-    """Händlerschiff: schwebender Frachter mit Containern, Flügeln, Leuchtband und Landestrahl-Öffnung unten. Ca. 12 m."""
+    """Händlerschiff (Fabian 11.11. überarbeitet): schlanker Rumpf mit Spitze, Cockpit-Haube, Containerrahmen auf dem Rücken,
+    zwei große Triebwerke an Auslegern, Deltaflügel mit Winglets, Landestrahl unten. Ca. 12 m. Akzent = Farbe im Spiel."""
     m = Model("haendlerschiff", "Händlerschiff", "Ereignisse"); M = m.body
-    M.lathe("weiss", (0, 0, 0), [(0, -5.5), (0.9, -5.0), (1.5, -3.5), (1.6, 2.5), (1.2, 4.2), (0.6, 5.2), (0, 5.5)], 20, rot=(90, 0, 0))
-    M.lathe("akzent", (0, 0, 0), [(1.62, -0.6), (1.62, 0.6)], 20, rot=(90, 0, 0))
-    M.sphere("glas", (0, -4.6, 0.55), 0.55, 14, 6)
+    # Rumpf: Drehkörper entlang Y (Spitze vorne −Y), unten leicht abgeflacht durch einen dunklen Kiel
+    M.lathe("weiss", (0, 0, 0), [(0, -6.0), (0.35, -5.6), (0.9, -4.6), (1.35, -3.0), (1.55, -1.0), (1.55, 2.6), (1.3, 4.2), (0.95, 5.0), (0, 5.2)], 20, rot=(90, 0, 0))
+    M.extrude("dunkel", (0, 0, -1.35), [(-4.2, 0.0), (-3.0, -0.35), (3.8, -0.35), (4.6, 0.0)], 1.5, plane="YZ")
+    for y0 in (-2.2, 1.0, 3.6):
+        M.lathe("akzent", (0, y0, 0), [(1.58, 0), (1.58, 0.35)], 20, rot=(90, 0, 0))
+    # Cockpit-Haube (lang gezogen) und Brücke
+    M.lathe("glas", (0, -4.0, 0.95), [(0, -1.0), (0.4, -0.65), (0.55, 0.0), (0.45, 0.8), (0, 1.2)], 14, rot=(90, 0, 0))
+    M.extrude("hell", (0, 0, 0), [(-3.0, 1.3), (-2.4, 1.75), (-1.2, 1.75), (-0.8, 1.35)], 1.1, plane="YZ")
+    M.box("glas", (0, -2.35, 1.6), (0.9, 0.06, 0.18), rot=(-35, 0, 0))
+    # Deltaflügel mit Winglets und Positionslichtern
     for sx in (-1, 1):
-        M.extrude("hell", (sx * 1.4, 0, 0), [(0, -2.5), (3.4, -1.2), (3.6, 1.0), (0, 2.0)], 0.18, plane="XY", rot=(0, 0, 0) if sx > 0 else (0, 0, 180))
-        M.cyl("dunkel", (sx * 4.6, 1.2, -0.3), 0.45, 1.6, 14, rot=(90, 0, 0))
-        M.cyl("glut", (sx * 4.6, 2.85, -0.3), 0.35, 0.05, 14, rot=(90, 0, 0))
-        M.sphere("warn" if sx < 0 else "mint", (sx * 4.9, 0, 0.05), 0.12, 8, 4)
-    for i, c in enumerate(("kiste1", "kiste2", "kiste3", "kiste1")):
-        M.box(c, (0, -1.5 + i * 1.3, 1.75), (1.6, 1.1, 0.9))
-    M.cyl("kaltlicht", (0, 0.5, -1.65), 0.6, 0.06, 16)
-    M.lathe("dunkel", (0, 0.5, -1.6), [(0.9, 0), (0.7, 0.25), (0, 0.25)], 16)
-    if DETAIL:  # Fensterband, Antennen, Positionslichter, zweite Containerlage
-        for i in range(8):
-            for sx in (-1, 1):
-                M.box("glas", (sx * 1.58, -3.0 + i * 0.7, 0.35), (0.03, 0.35, 0.18))
-        for i in range(3):
-            M.box(("kiste2", "kiste3", "kiste1")[i], (0, -0.85 + i * 1.3, 2.6), (1.4, 1.0, 0.75))
-        for x in (-0.6, 0.6):
-            M.cyl("stahl", (x, 3.5, 1.2), 0.03, 1.2, 6); M.sphere("warn", (x, 3.5, 2.45), 0.06, 6, 3)
+        M.extrude("hell", (0, 0, -0.25), [(sx * 1.3, -2.2), (sx * 4.6, 1.6), (sx * 4.6, 2.6), (sx * 1.3, 3.2)], 0.16, plane="XY")
+        M.extrude("akzent", (0, 0, -0.25), [(sx * 4.4, 1.5), (sx * 4.6, 1.6), (sx * 4.6, 2.6), (sx * 4.4, 2.6)], 0.18, plane="XY")
+        M.extrude("akzent", (sx * 4.6, 0, -0.1), [(1.6, 0.0), (2.6, 0.0), (2.8, 1.1), (2.3, 1.1)], 0.1, plane="YZ")
+        M.sphere("mint" if sx > 0 else "warn", (sx * 4.62, 2.75, 1.05), 0.1, 8, 4)
+        # Triebwerk am Ausleger
+        M.box("dunkel", (sx * 2.25, 3.3, 0.35), (1.6, 1.0, 0.25))
+        M.cyl("hell", (sx * 3.0, 2.0, 0.45), 0.72, 2.6, 18, rot=(90, 0, 0), r2=0.62)
+        M.cyl("dunkel", (sx * 3.0, 1.85, 0.45), 0.6, 0.2, 18, rot=(90, 0, 0))
+        M.lathe("akzent", (sx * 3.0, 2.6, 0.45), [(0.74, 0), (0.74, 0.3)], 18, rot=(90, 0, 0))
+        M.cyl("dunkel", (sx * 3.0, 4.6, 0.45), 0.6, 0.35, 18, rot=(90, 0, 0), r2=0.5)
+        M.cyl("glut", (sx * 3.0, 4.96, 0.45), 0.46, 0.05, 18, rot=(90, 0, 0))
+    # Containerrahmen auf dem Rücken: 2 × 3 Container
+    for i in range(3):
+        y = -0.6 + i * 1.45
+        for sx in (-1, 1):
+            M.box(("kiste1", "kiste2", "kiste3")[(i + (sx > 0)) % 3], (sx * 0.62, y, 1.95), (1.15, 1.3, 1.0))
+            for k in range(3):
+                M.box("dunkel", (sx * 0.62, y - 0.45 + k * 0.45, 1.95), (1.18, 0.05, 0.9))
+    for y in (-1.4, 0.15, 1.6, 3.05):
+        M.box("stahl", (0, y, 1.45), (2.7, 0.12, 0.12)); M.box("stahl", (0, y, 2.5), (2.7, 0.12, 0.12))
+        for sx in (-1, 1):
+            M.box("stahl", (sx * 1.3, y, 1.95), (0.12, 0.12, 1.15))
+    M.box("stahl", (0, 0.8, 2.52), (0.12, 4.5, 0.1))
+    # Heckflosse mit Antenne
+    M.extrude("akzent", (0, 0, 0), [(3.0, 1.2), (4.7, 0.9), (5.3, 2.7), (4.6, 2.75)], 0.14, plane="YZ")
+    M.cyl("stahl", (0, 5.0, 2.7), 0.03, 0.8, 6); M.sphere("warn", (0, 5.0, 3.55), 0.07, 6, 3)
+    # Landestrahl-Öffnung und Lichter unten
+    M.cyl("kaltlicht", (0, 0.5, -1.75), 0.6, 0.06, 16)
+    M.lathe("dunkel", (0, 0.5, -1.72), [(0.9, 0), (0.7, 0.3), (0, 0.3)], 16)
+    for k in range(5):
+        M.sphere("lampe", (0, -3.4 + k * 1.7, -1.72), 0.08, 6, 3)
+    M.sphere("lampe", (0, -5.9, -0.05), 0.12, 8, 4)
+    # Fensterband
+    for i in range(7):
+        for sx in (-1, 1):
+            M.box("glas", (sx * 1.54, -2.6 + i * 0.75, 0.45), (0.05, 0.4, 0.2))
+    return m
+
+
+def e_lieferschiff():
+    """Lieferschiff (Fabian 11.11.): kleines Frachtschiff für Lieferungen von anderen Planeten. Landet senkrecht auf dem Landeplatz,
+    öffnet die Heckrampe, lädt ab und startet wieder. Ca. 8 m lang, 7,6 m breit. Bewegliche Teile:
+    Duesen (schwenkbare Triebwerke, Drehpunkt auf der Querachse), Rampe (Scharnier unten am Heck), Ladung (Kisten), Fahrwerk.
+    Am Boden steht es auf dem Fahrwerk (Rumpfunterseite 1 m hoch). Akzent = Farbe des gelieferten Guts."""
+    m = Model("lieferschiff", "Lieferschiff", "Ereignisse"); M = m.body
+    side = [(-4.0, 1.55), (-3.4, 1.12), (-1.0, 1.0), (2.9, 1.0), (3.9, 1.25), (3.9, 2.35), (2.6, 2.65), (-1.5, 2.65), (-2.9, 2.3), (-3.8, 1.95)]
+    M.extrude("weiss", (0, 0, 0), side, 2.3, plane="YZ")
+    M.extrude("hell", (0, 0, 0), [(-1.4, 2.6), (2.5, 2.6), (2.2, 2.95), (-0.9, 2.95)], 1.6, plane="YZ")
+    M.extrude("dunkel", (0, 0, 0), [(-3.3, 1.08), (-1.0, 0.95), (2.9, 0.95), (3.8, 1.2), (3.8, 1.3), (-3.3, 1.3)], 2.36, plane="YZ")
+    for sx in (-1, 1):
+        M.box("akzent", (sx * 1.16, 0.4, 1.95), (0.04, 6.2, 0.2))
+        for i in range(4):
+            M.box("glas", (sx * 1.16, -2.3 + i * 0.55, 2.3), (0.05, 0.34, 0.18))
+        M.box("warn", (sx * 1.16, 3.2, 1.55), (0.05, 0.9, 0.1))
+    # Cockpit-Haube
+    M.extrude("glas", (0, 0, 0), [(-3.75, 1.9), (-2.8, 2.5), (-2.0, 2.55), (-2.3, 2.1), (-3.3, 1.7)], 1.5, plane="YZ")
+    M.box("dunkel", (0, -2.0, 2.56), (1.4, 0.12, 0.08))
+    # Stummelflügel mit Ausleger
+    for sx in (-1, 1):
+        M.extrude("hell", (0, 0, 1.55), [(sx * 1.1, -0.9), (sx * 2.85, -0.2), (sx * 2.85, 1.2), (sx * 1.1, 1.8)], 0.2, plane="XY")
+        M.extrude("akzent", (0, 0, 1.56), [(sx * 2.55, -0.32), (sx * 2.85, -0.2), (sx * 2.85, 1.2), (sx * 2.55, 1.3)], 0.2, plane="XY")
+        M.sphere("mint" if sx > 0 else "warn", (sx * 2.88, 0.5, 1.68), 0.09, 8, 4)
+    # Heckflosse
+    M.extrude("akzent", (0, 0, 0), [(2.3, 2.9), (3.6, 2.9), (4.0, 3.9), (3.45, 3.9)], 0.14, plane="YZ")
+    M.sphere("warn", (0, 3.75, 3.95), 0.06, 6, 3)
+    # Lichter vorne und unten
+    M.sphere("lampe", (0, -3.98, 1.5), 0.12, 8, 4)
+    for sx in (-0.7, 0.7):
+        M.sphere("lampe", (sx, -3.2, 1.1), 0.08, 6, 3)
+    M.cyl("kaltlicht", (0, 0.6, 0.93), 0.35, 0.04, 14)
+    # Heck: dunkle Ladeöffnung (sichtbar, wenn die Rampe offen ist)
+    M.box("dunkel", (0, 3.91, 1.75), (1.8, 0.04, 1.2))
+    # Schwenkbare Triebwerke (Gondeln an den Flügelspitzen). Drehpunkt auf der Achse; im Flug zeigen sie nach hinten (+Y), zum Landen nach unten.
+    D = m.part("Duesen", (0, 0.5, 1.65))
+    for sx in (-1, 1):
+        x = sx * 3.35
+        D.cyl("hell", (x, -0.6, 1.65), 0.42, 1.9, 16, rot=(90, 0, 0), r2=0.36)
+        D.cyl("dunkel", (x, -0.68, 1.65), 0.36, 0.12, 16, rot=(90, 0, 0))
+        D.lathe("akzent", (x, -0.15, 1.65), [(0.44, 0), (0.44, 0.22)], 16, rot=(90, 0, 0))
+        D.cyl("dunkel", (x, 1.3, 1.65), 0.36, 0.25, 16, rot=(90, 0, 0), r2=0.3)
+        D.cyl("glut", (x, 1.56, 1.65), 0.28, 0.04, 16, rot=(90, 0, 0))
+        D.box("stahl", (sx * 3.0, 0.5, 1.65), (0.5, 0.3, 0.16))
+    # Heckrampe: Scharnier unten am Heck, geschlossen senkrecht
+    R = m.part("Rampe", (0, 3.92, 1.15))
+    R.box("hell", (0, 3.97, 1.75), (1.9, 0.1, 1.25))
+    R.box("akzent", (0, 4.03, 1.75), (1.92, 0.02, 0.12))
+    for k in range(4):
+        R.box("dunkel", (0, 3.92, 1.3 + k * 0.28), (1.6, 0.03, 0.05))
+    # Ladung: drei Kisten im Laderaum (das Spiel schiebt sie über die Rampe hinaus)
+    L = m.part("Ladung", (0, 3.4, 1.0))
+    for i, c in enumerate(("kiste1", "kiste2", "kiste3")):
+        L.box(c, (-0.5 + i * 0.5, 3.4, 1.27), (0.45, 0.45, 0.45))
+        L.box("dunkel", (-0.5 + i * 0.5, 3.4, 1.27), (0.47, 0.06, 0.47))
+    # Fahrwerk: vier Beine mit Tellerfüßen
+    F = m.part("Fahrwerk", (0, 0, 1.0))
+    for sx in (-1, 1):
+        for y0, y1 in ((-2.3, -2.55), (2.4, 2.65)):
+            F.tube("stahl", (sx * 0.85, y0, 1.0), (sx * 1.15, y1, 0.12), 0.07)
+            F.tube("dunkel", (sx * 0.85, y0 + (0.4 if y0 < 0 else -0.4), 1.0), (sx * 1.1, y1, 0.35), 0.04)
+            F.cyl("gummi", (sx * 1.15, y1, 0.0), 0.24, 0.12, 12)
+    return m
+
+
+def w_landeplatz():
+    """Landeplatz (Fabian 11.11.): Plattform für Lieferschiffe von anderen Planeten. 7,8 × 7,8 m mit abgeschrägten Ecken,
+    Landekreis, Markierungen, kleiner Turm in einer Ecke. Die Randlichter sind ein eigener Teil (Lichter) zum Blinken. Akzent = Planetenfarbe."""
+    m = Model("landeplatz", "Landeplatz", "Welt", fp=4.4); M = m.body
+    e, c, h = 3.9, 1.1, 0.3
+    octo = [(-e + c, -e), (e - c, -e), (e, -e + c), (e, e - c), (e - c, e), (-e + c, e), (-e, e - c), (-e, -e + c)]
+    M.extrude("felsdkl", (0, 0, 0), [(x * 1.03, y * 1.03) for x, y in octo], 0.12, plane="XY")
+    M.extrude("platte", (0, 0, 0), octo, h, plane="XY")
+    M.extrude("akzent", (0, 0, h), [(-e + c, -e), (e - c, -e), (e - c + 0.05, -e + 0.25), (-e + c - 0.05, -e + 0.25)], 0.02, plane="XY")
+    M.extrude("akzent", (0, 0, h), [(-e + c, e), (-e + c - 0.05, e - 0.25), (e - c + 0.05, e - 0.25), (e - c, e)], 0.02, plane="XY")
+    # Landekreis und Zielkreuz
+    M.lathe("hell", (0, 0, h), [(2.75, 0), (2.75, 0.02), (2.45, 0.02), (2.45, 0)], 40, closed_loop=True)
+    M.lathe("warn", (0, 0, h), [(1.15, 0), (1.15, 0.025), (1.0, 0.025), (1.0, 0)], 32, closed_loop=True)
+    for rz in (0, 90):
+        M.box("hell", (0, 0, h + 0.012), (0.22, 1.7, 0.025), rot=(0, 0, rz))
+    # Anflug-Pfeile vorne (−Y)
+    for k in range(3):
+        y = -e + 0.55 + k * 0.0
+    for k in range(2):
+        M.extrude("hell", (0, 0, h), [(-0.5, -3.3 + k * 0.45), (0, -3.0 + k * 0.45), (0.5, -3.3 + k * 0.45), (0.5, -3.1 + k * 0.45), (0, -2.8 + k * 0.45), (-0.5, -3.1 + k * 0.45)], 0.02, plane="XY")
+    # Warnstreifen an den Seiten
+    for sx in (-1, 1):
         for k in range(6):
-            M.sphere("lampe", (0, -4.0 + k * 1.6, -1.45), 0.07, 6, 3)
+            M.box("warn" if k % 2 == 0 else "hell", (sx * (e - 0.18), -1.5 + k * 0.6, h + 0.01), (0.2, 0.5, 0.02))
+    # Kleiner Turm in der Ecke hinten rechts (innerhalb der abgeschrägten Ecke)
+    tx, ty = 2.85, 2.85
+    M.box("hell", (tx, ty, h + 0.7), (0.7, 0.7, 1.4))
+    M.box("glas", (tx, ty, h + 1.6), (0.85, 0.85, 0.4))
+    M.box("dunkel", (tx, ty, h + 1.85), (0.95, 0.95, 0.1))
+    M.cyl("stahl", (tx, ty, h + 1.9), 0.025, 0.7, 6)
+    M.sphere("warn", (tx, ty, h + 2.65), 0.06, 6, 3)
+    # kleiner Tank in der Ecke hinten links
+    M.cyl("weiss", (-2.95, 2.95, h), 0.4, 0.9, 14)
+    M.lathe("akzent", (-2.95, 2.95, h + 0.5), [(0.42, 0), (0.42, 0.1)], 14)
+    # Randlichter (blinken im Spiel)
+    Lc = m.part("Lichter", (0, 0, h))
+    for i in range(8):
+        x, y = octo[i]; nx, ny = octo[(i + 1) % 8]
+        for t in (0.25, 0.75):
+            Lc.sphere("lampe", (x + (nx - x) * t, y + (ny - y) * t, h + 0.05), 0.07, 8, 4)
+    for k in range(3):
+        Lc.sphere("mint", (-0.9 + k * 0.9, -e + 0.12, h + 0.05), 0.07, 8, 4)
     return m
 
 
@@ -2813,7 +2948,8 @@ SOFT_MODELS = {"riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "bohrsocke
 NEW_KEYS = ["schild", "flak", "lieferrakete", "baum_laub_1", "baum_laub_2", "baum_laub_3", "baum_tanne_1", "baum_tanne_2", "busch_1", "busch_2", "gras_1",
             "riesenmeteor", "brocken_1", "brocken_2", "brocken_3", "abwehrrakete", "schildkuppel", "moos_1", "moos_2", "moos_3", "teich", "bohrsockel", "erzader_fels",
             "putzi", "haendlerschiff", "muellberg", "flagge", "truhe", "wahrzeichen_1", "wahrzeichen_2", "wahrzeichen_3", "geysir_schlot",
-            "baum_kristall", "baum_pilz", "baum_eis", "gras_2", "gras_3", "bestelllager"]
+            "baum_kristall", "baum_pilz", "baum_eis", "gras_2", "gras_3", "bestelllager",
+            "lieferschiff", "landeplatz"]
 
 
 def all_models():
@@ -2862,6 +2998,7 @@ def all_models():
         ("geysir_schlot", w_geysir),
         ("baum_kristall", lambda: n_baum_spezial("kristall")), ("baum_pilz", lambda: n_baum_spezial("pilz")), ("baum_eis", lambda: n_baum_spezial("eis")),
         ("gras_2", lambda: n_gras_var(2)), ("gras_3", lambda: n_gras_var(3)), ("bestelllager", w_bestelllager),
+        ("lieferschiff", e_lieferschiff), ("landeplatz", w_landeplatz),  # Fabian 11.11.
     ]
 
 

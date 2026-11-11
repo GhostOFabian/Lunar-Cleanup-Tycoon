@@ -101,7 +101,7 @@ namespace LunarCleanup.Core
         static float Len(Vector2[] p) { float s = 0; for (int i = 1; i < p.Length; i++) s += (p[i] - p[i - 1]).magnitude; return s; }
         static Vector2 FreePoint(FactoryPlan P, Vector2 q)
         {
-            bool Free(Vector2 p) { foreach (var kv in P.pos) { float h = P.half[kv.Key] + 1.5f; if (Mathf.Abs(p.x - kv.Value.x) < h && Mathf.Abs(p.y - kv.Value.y) < h) return false; } var c = new Vector2Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y)); return P.InBase(p) && !P.reserved.Contains(c); }
+            bool Free(Vector2 p) { foreach (var kv in P.pos) { float h = P.half[kv.Key] + 1.5f; if (Mathf.Abs(p.x - kv.Value.x) < h && Mathf.Abs(p.y - kv.Value.y) < h) return false; } if (P.hasPad && Mathf.Abs(p.x - P.pad.x) < FactoryPlan.PAD_H + 1.5f && Mathf.Abs(p.y - P.pad.y) < FactoryPlan.PAD_H + 1.5f) return false; var c = new Vector2Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y)); return P.InBase(p) && !P.reserved.Contains(c); }
             if (Free(q)) return q;
             for (int r = 1; r < 30; r++) for (int k = 0; k < 16; k++) { float a = k * Mathf.PI / 8; var p = q + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r; if (Free(p)) return p; }
             return q;

@@ -28,6 +28,7 @@ namespace LunarCleanup.Core
         public readonly Dictionary<string, Vector2Int> start = new Dictionary<string, Vector2Int>();
         public readonly Dictionary<string, Vector2Int> goal = new Dictionary<string, Vector2Int>();   // Eingang je Zielgebäude
         public RectInt dock; public float unitYaw; public int rot, mir; public Vector2Int shift; public long ms;
+        public bool hasPad; public Vector2Int pad; public const int PAD_H = 4; // 11.11.: Landeplatz für Lieferschiffe (9 × 9 m), nur wenn Platz ist
         public readonly HashSet<Vector2Int> reserved = new HashSet<Vector2Int>();   // Bänder + Abstand, Y-Stücke, Andockfläche + Zufahrt
         public bool[] mask;
         public bool InBase(Vector2 p) { int x = Mathf.RoundToInt(p.x), y = Mathf.RoundToInt(p.y); return x >= -FactoryPlanner.EXT && x <= FactoryPlanner.EXT && y >= -FactoryPlanner.EXT && y <= FactoryPlanner.EXT && mask != null && mask[(y + FactoryPlanner.EXT) * FactoryPlanner.N + x + FactoryPlanner.EXT]; }
@@ -145,6 +146,8 @@ namespace LunarCleanup.Core
                 if (!spot.HasValue) { P.errors.Add("Kein Platz für " + GameData.Bld[k].name); return P; }
                 placed[k] = spot.Value; pk.Add(spot.Value, hs[k], false);
             }
+            /* Fabian 11.11.: Landeplatz für Lieferschiffe von anderen Planeten – zuletzt gepackt, gern nahe der Verkaufsrakete. Kein Platz = kein Fehler (dann landet die alte Lieferrakete). */
+            { var want = placed.TryGetValue("sell", out var sp) ? sp : new Vector2Int(dock.x + dock.width / 2, dock.y + dock.height / 2); var pp = pk.Best(FactoryPlan.PAD_H, want); if (pp.HasValue) { P.hasPad = true; P.pad = pp.Value; pk.Add(pp.Value, FactoryPlan.PAD_H, false); } }
             foreach (var kv in placed) { P.pos[kv.Key] = kv.Value; P.half[kv.Key] = hs[kv.Key]; }
             foreach (var q in res) P.reserved.Add(q); P.mask = mask;
             foreach (var kv in X.fIn) P.faceIn[kv.Key] = kv.Value; foreach (var kv in X.fOut) P.faceOut[kv.Key] = kv.Value;

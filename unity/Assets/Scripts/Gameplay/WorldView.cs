@@ -370,7 +370,7 @@ namespace LunarCleanup.Gameplay
         public List<string> CheckBase()
         {
             var out_ = new List<string>(); Notes.Clear(); var ids = new List<string>(blds.Keys);
-            if (ps.plan == null) out_.Add("Kein Fabrik-Plan"); else { foreach (var e in ps.plan.errors) out_.Add("Planer: " + e); Notes.Add("Fabrik-Planer " + ps.plan.ms + " ms, Lage " + ps.plan.rot + "/" + ps.plan.mir + " " + ps.plan.shift); }
+            if (ps.plan != null) Notes.Add(ps.plan.hasPad ? "Landeplatz bei " + ps.plan.pad : "Kein Platz für den Landeplatz (Lieferrakete wie bisher)"); if (ps.plan == null) out_.Add("Kein Fabrik-Plan"); else { foreach (var e in ps.plan.errors) out_.Add("Planer: " + e); Notes.Add("Fabrik-Planer " + ps.plan.ms + " ms, Lage " + ps.plan.rot + "/" + ps.plan.mir + " " + ps.plan.shift); }
             foreach (var kv in beltInfo)
             {
                 var (b, w0, w1, s0, s1, H, rp, cum) = kv.Value; string nm = kv.Key + " (" + b.from + "→" + b.to + ")";
