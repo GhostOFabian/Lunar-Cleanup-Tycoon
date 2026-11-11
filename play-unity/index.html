@@ -67,7 +67,7 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   var c=document.getElementById('c'),bar=document.querySelector('#bar i'),load=document.getElementById('load'),err=document.getElementById('err');
   /* Fabian 11.11.: GitHub Pages lieferte die Spieldateien zeitweise mit ~30 KB/s. Darum zuerst vom kostenlosen jsDelivr-CDN laden (fest auf den Commit mit diesem Build),
      bei Fehler oder nach 5 s ohne Antwort wie bisher direkt von GitHub. Bei jedem neuen Build CDN_REV auf den Commit setzen, der die neuen Build-Dateien enthält. */
-  var CDN_REV='b40cfc7', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=74b';
+  var CDN_REV='db4d12b', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=74b';
   var cfg={dataUrl:'',frameworkUrl:'',codeUrl:'',streamingAssetsUrl:'StreamingAssets',
     companyName:'DefaultCompany',productName:'Lunar Cleanup Tycoon',productVersion:'0.5',
     showBanner:function(msg,type){ if(type==='error') err.textContent=msg; }};
@@ -76,13 +76,20 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   base('Build/',V);
   var s=document.createElement('script'); s.src='Build/WebGL-GitHub.loader.js'+V;
   s.onload=function(){
-    var done=false, go=function(cdn){ if(done) return; done=true; if(cdn){ cfg.frameworkUrl=CDN+'WebGL-GitHub.framework.js.unityweb'; cfg.codeUrl=CDN+'WebGL-GitHub.wasm.unityweb'; } start(cdn); }; /* Daten (16 MB) sind jsDelivr zu groß – die kommen immer von GitHub */
+    /* Daten (16 MB) sind für jsDelivr zu groß (Grenze pro Datei) – sie liegen in 3 Teilen, werden hier zusammengesetzt und als Blob an Unity gegeben.
+       Fortschritt der Teile zählt als erste Hälfte des Balkens. */
+    var PARTS=3, got=0, TOTAL=16103657;
+    function parts(b,q){ var a=[],ok=0; return Promise.all(Array.from({length:PARTS},function(_,i){ return fetch(b+'WebGL-GitHub.data.part'+i+q).then(function(r){ if(!r.ok) throw r.status;
+        var rd=r.body.getReader(), ch=[]; return (function pump(){ return rd.read().then(function(x){ if(x.done) return new Blob(ch); ch.push(x.value); got+=x.value.length; bar.style.width=Math.min(50,got/TOTAL*50)+'%'; return pump(); }); })(); }); })); }
+    var done=false, go=function(cdn){ if(done) return; done=true; if(cdn){ cfg.frameworkUrl=CDN+'WebGL-GitHub.framework.js.unityweb'; cfg.codeUrl=CDN+'WebGL-GitHub.wasm.unityweb'; }
+      parts(cdn?CDN:'Build/',cdn?'':V).catch(function(){ got=0; return parts('Build/',V); }).then(function(bl){ cfg.dataUrl=URL.createObjectURL(new Blob(bl)); start(cdn); },function(){ err.textContent='Spieldateien konnten nicht geladen werden.'; }); };
+    cfg.cacheControl=function(u){ return /^blob:/.test(u)?'no-store':'must-revalidate'; };
     setTimeout(function(){ go(false); },5000);
     if(/nocdn/.test(location.search)) return go(false);
     try{ fetch(CDN+'WebGL-GitHub.framework.js.unityweb',{method:'HEAD',mode:'cors'}).then(function(r){ go(r.ok); },function(){ go(false); }); }catch(e){ go(false); }
   };
   function start(cdn){
-    createUnityInstance(c,cfg,function(p){bar.style.width=(p*100)+'%';}).then(function(u){
+    createUnityInstance(c,cfg,function(p){bar.style.width=(50+p*50)+'%';}).then(function(u){
       load.style.display='none';
       document.getElementById('fs').onclick=function(){u.SetFullscreen(1);};
     }).catch(function(m){ if(cdn){ location.replace(location.pathname+'?nocdn=1'); return; } err.textContent='Konnte nicht starten: '+m+' – bitte einen aktuellen Browser am PC verwenden.';});
