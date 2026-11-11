@@ -51,6 +51,27 @@ namespace LunarCleanup.Core
             if (sv.rigs != null) foreach (var r in sv.rigs) if (r.cell >= 0 && r.cell < pd.N && pd.cells[r.cell].IsBase) r.cell = Near(r.cell);
             if (sv.outposts != null) foreach (var o in sv.outposts) if (o.cell >= 0 && o.cell < pd.N && pd.cells[o.cell].IsBase) o.cell = Near(o.cell);
         }
+        /// <summary>Editor/Test: Landeplatz auf allen Layouts (Lage, Größe, gewachsene Basisfläche).</summary>
+        public static string DevPadAll()
+        {
+            var sb = new System.Text.StringBuilder(); int grown = 0, n = 0;
+            foreach (var k in GameData.Layouts.Keys)
+            {
+                string pid = k.Split('@')[0]; if (!GameData.Planets.ContainsKey(pid) || !GameData.Cells.ContainsKey(k)) continue; var pd = PlanetData.GetKey(pid, k); n++;
+                bool InBase(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && pd.cells[cc].IsBase && !pd.cells[cc].Wet; }
+                int normal = GameData.Kinds.FindIndex(q => q.key == "normal"); bool CanGrow(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && !pd.cells[cc].Wet && pd.cells[cc].kind == normal; }
+                var P = FactoryPlanner.Plan(k, OneStation(GameData.Layouts[k]), InBase, null, CanGrow);
+                if (!P.hasPad) sb.Append(k).Append(": KEIN Landeplatz | "); else if (P.padOutside) { grown++; sb.Append(k).Append(": Basis +").Append(P.grow.Count).Append(" | "); }
+            }
+            return n + " Layouts, " + grown + " mit gewachsener Basis | " + sb;
+        }
+        /// <summary>Editor/Test: Schiffe auf den Landeplatz schicken (nur Darstellung).</summary>
+        public static string DevShip() { OnSupply?.Invoke(S.planet, Goods[0].id, 1); return "Lieferschiff"; }
+        public static string DevVisitor() { OnOrderDone?.Invoke(new VisitOrder { pid = S.planet }); return "Händlerschiff (Abholung)"; }
+        public static string DevCashShip() { OnCashSent?.Invoke(S.planet); return "Zuschuss-Schiff"; }
+        /// <summary>Editor/Test: gelbe/rote Ampeln des aktuellen Planeten.</summary>
+        public static string DevFlow() { var ps = Cur; var r = FlowReport(ps).Where(f => f.lvl >= 1).Select(f => (f.lvl == 2 ? "ROT " : "GELB ") + f.name + ": " + f.why).ToList(); return ps.pid + " " + (r.Count == 0 ? "alles grün" : string.Join(" | ", r)); }
+        public static string DevPad() { var P = Cur?.plan; return P == null ? "kein Plan" : (P.hasPad ? "Landeplatz " + P.pad + " h" + P.padH + (P.padOutside ? " gewachsen " + P.grow.Count : "") : "kein Landeplatz"); }
         /// <summary>Editor/Test: Ergebnis des Planers für den aktuellen Planeten.</summary>
         public static string DevPlanInfo()
         {
