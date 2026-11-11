@@ -226,10 +226,13 @@ namespace LunarCleanup.Gameplay
             Vector3 Spot(Cell c, float k) { float r = Rad(c) * k; return pd.ToDir(c, ((float)rng.NextDouble() * 2 - 1) * r, ((float)rng.NextDouble() * 2 - 1) * r); }
             float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
             // 1) Grüne Flecken auf dem Boden (Sprites/Default, Vertexfarben) – eine Mesh
+            /* Fabian 11.11.: die Flecken sind unbeleuchtet und lassen den Planeten grün leuchten – im vollen Terraforming (Wald) ganz weg,
+               vorher nur um die Basis (nicht über den ganzen Planeten) */
+            if (st < Game.TERRA_MAX)
             {
                 var v = new List<Vector3>(); var uv = new List<Vector2>(); var col = new List<Color>(); var t = new List<int>();
                 float al = new[] { 0, 0, .4f, .6f, .7f, .8f }[st];
-                foreach (var c in cells)
+                foreach (var c in near)
                 {
                     var n = c.c.normalized; var p = pd.Surf(n, .06f); var e1 = c.e1 * Rad(c) * 1.25f; var e2 = c.e2 * Rad(c) * 1.25f; int b0 = v.Count;
                     v.Add(p - e1 - e2); v.Add(p + e1 - e2); v.Add(p + e1 + e2); v.Add(p - e1 + e2); uv.Add(new Vector2(0, 0)); uv.Add(new Vector2(1, 0)); uv.Add(new Vector2(1, 1)); uv.Add(new Vector2(0, 1));

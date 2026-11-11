@@ -17,6 +17,7 @@ namespace LunarCleanup.UI
         public Action<string> OnNav;              // Klick in der unteren Leiste
         public Action OnMap, OnFocusQuest, OnFocusEvent, OnPhoto, OnHome, OnPhotoExit; GameObject photoGo; CanvasGroup photoCg; float photoT;
         /// <summary>Foto-Modus: Oberfläche weg, nur ein dezenter Knopf zum Zurückholen (wird nach 3 s fast unsichtbar, bleibt aber antippbar).</summary>
+        public void PhotoBtn(bool v) { if (photoGo) photoGo.SetActive(v); } /* Editor/Test: Werbebilder ganz ohne Knopf */
         public void SetPhoto(bool on) { if (root) root.gameObject.SetActive(!on); if (photoGo) { photoGo.SetActive(on); photoT = 0; } }
         RectTransform root, sheetPanel, sheetContent, toastBox, floatLayer;
         TextMeshProUGUI credits, rate, pname, pprog, goalKick, goalText, goalReward, handTxt, sheetKick, sheetTitle, offlineTxt;

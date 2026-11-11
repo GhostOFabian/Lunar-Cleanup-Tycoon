@@ -22,7 +22,7 @@ namespace LunarCleanup.Gameplay
         Vector3 cd, north; float alt = 64, altGoal = 64; bool mapMode;
         /// <summary>Editor-Fernsteuerung: gewünschte Kamerahöhe (wird einmal übernommen).</summary>
         public static string MoveReq; /* 03.11.: Gebäude verschieben (aus dem Gebäudefenster) */
-        public static float ZoomReq = -1; public static Vector3? FocusReq; public static bool CheckReq, CheckNoPhotos;
+        public static float ZoomReq = -1, RotReq; public static int PhotoReq = -1; public static Vector3? FocusReq; public static bool CheckReq, CheckNoPhotos;
         float TILT = 38f * Mathf.Deg2Rad; float lastAng;
         bool offlineRunning; float saveT;
         // Eingabe
@@ -201,6 +201,8 @@ namespace LunarCleanup.Gameplay
             if (!offlineRunning) Game.Step(dt); CatchUpOthers(); if (Time.realtimeSinceStartup - lastUnload > 180 && !exploding && Game.Icp == null) { lastUnload = Time.realtimeSinceStartup; Resources.UnloadUnusedAssets(); } /* Umbauten erzeugen neue Meshes – alle 3 min aufräumen */
             planet.Tick();
             if (ZoomReq > 0) { altGoal = ZoomReq; ZoomReq = -1; }
+            if (RotReq != 0) { north = Quaternion.AngleAxis(RotReq, cd) * north; RotReq = 0; } /* Editor/Test: Kamera drehen (Werbebilder) */
+            if (PhotoReq >= 0) { photo = PhotoReq >= 1; hud.SetPhoto(photo); if (PhotoReq == 2) hud.PhotoBtn(false); PhotoReq = -1; }
             if (MoveReq != null) { var mr = MoveReq; MoveReq = null; if (world) { world.BeginMove(mr); if (Game.Cur.lay.pos.ContainsKey(mr)) { cd = Game.Cur.pd.PlanDir(Game.Cur.lay.pos[mr]); altGoal = Mathf.Clamp(altGoal, 30, 60); } } }
             if (((Game.DoomActive && Game.S.doomPid == Game.S.planet && Game.S.doomT < 12) || Game.Icp != null) && !exploding) { altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.4f); var bc0 = Game.Cur.pd.cells[Game.Cur.pd.baseCell].c; cd = Vector3.Slerp(cd, bc0, dt * .8f).normalized; } /* rauszoomen: man soll den Planeten explodieren sehen */
             if (FocusReq.HasValue) { cd = FocusReq.Value.normalized; FocusReq = null; }
