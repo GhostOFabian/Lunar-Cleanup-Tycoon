@@ -9,18 +9,18 @@ namespace LunarCleanup.Gameplay
     public partial class WorldView
     {
         class FlagView { public GameObject go; public Transform cloth; public TextMeshPro label; public FlagSave f; public bool shown, got; public string text; public Transform lid, chest; public float openT = -1; public int look = -1; }
-        readonly List<FlagView> flagViews = new List<FlagView>(); string flagFor; int flagVer = -1; float flagT;
+        readonly List<FlagView> flagViews = new List<FlagView>(); string flagFor; int flagVer = -1, flagSkin = -1; float flagT;
 
         void BuildFlags()
         {
-            flagFor = ps.pid; foreach (var v in flagViews) if (v.go) Destroy(v.go); flagViews.Clear(); flagVer = -1;
+            flagFor = ps.pid; flagSkin = Platform.Version; foreach (var v in flagViews) if (v.go) Destroy(v.go); flagViews.Clear(); flagVer = -1;
             foreach (var f in ps.sv.flags) flagViews.Add(new FlagView { f = f });
         }
         GameObject MakeFlag(FlagView v)
         {
             var dir = Game.FlagDir(ps, v.f); var g = new GameObject("Flagge"); g.transform.SetParent(transform, false);
             g.transform.position = pd.Surf(dir, 0, v.f.cell); g.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(pd.cells[v.f.cell].e1, dir).normalized, dir);
-            var pole = MeshKit.Mat(new Color(.82f, .84f, .88f), .8f, .6f); MeshKit.Cyl(g.transform, pole, new Vector3(0, 1.1f, 0), .04f, .05f, 2.2f, 8); MeshKit.Ball(g.transform, pole, new Vector3(0, 2.24f, 0), .09f);
+            var pole = Platform.Supporter ? MeshKit.Mat(GameData.Hex("#e3b341"), .9f, .75f) : MeshKit.Mat(new Color(.82f, .84f, .88f), .8f, .6f); /* 11.11.: Unterstützer – goldene Fahnenmasten */ MeshKit.Cyl(g.transform, pole, new Vector3(0, 1.1f, 0), .04f, .05f, 2.2f, 8); MeshKit.Ball(g.transform, pole, new Vector3(0, 2.24f, 0), .09f);
             MeshKit.Cyl(g.transform, MeshKit.Mat(new Color(.25f, .26f, .3f), .4f, .3f), new Vector3(0, .03f, 0), .22f, .26f, .06f, 10);
             var cl = new GameObject("Tuch"); cl.transform.SetParent(g.transform, false); cl.transform.localPosition = new Vector3(.03f, 1.82f, 0); v.cloth = cl.transform;
             var col = v.f.got ? Game.FlagCloth(ps, v.f) : new Color(.85f, .86f, .9f); var cm = MeshKit.Mat(col, .05f, .3f, v.f.got ? col * .35f : (Color?)null);
@@ -45,7 +45,7 @@ namespace LunarCleanup.Gameplay
         }
         void UpdateFlags()
         {
-            if (ps == null || pd == null || ps.sv.flags == null) return; if (flagFor != ps.pid || flagViews.Count != ps.sv.flags.Count) BuildFlags();
+            if (ps == null || pd == null || ps.sv.flags == null) return; if (flagFor != ps.pid || flagViews.Count != ps.sv.flags.Count || flagSkin != Platform.Version) BuildFlags();
             flagT -= Time.deltaTime; bool force = flagVer != Game.FlagVer; if (flagT > 0 && !force) { Wave(); return; } flagT = .5f; flagVer = Game.FlagVer;
             int n = 0;
             foreach (var v in flagViews)

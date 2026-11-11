@@ -19,6 +19,8 @@ namespace LunarCleanup.UI
                 case "vehicles": title = "Fahrzeuge"; Vehicles(h); break;
                 case "flag": { int fi = int.TryParse(arg, out var q) ? q : -1; title = "Flagge"; FlagSheet(h, fi); break; }
                 case "story": title = "Geschichte"; StorySheet(h, arg); break;
+                case "logbook": title = "Logbuch"; LogbookSheet(h, arg); break;
+                case "allstories": title = "Alle Geschichten"; AllStories(h); break;
                 case "vehicle": { var v = ps.sv.veh.FirstOrDefault(x => x.id.ToString() == arg); if (v == null) { title = "Fahrzeuge"; Vehicles(h); } else { title = Game.VehName(v); Vehicle(h, v); } break; }
                 case "production": title = "Produktion"; Production(h); break;
                 case "base": title = "Basis"; Base(h); break;
@@ -479,7 +481,7 @@ namespace LunarCleanup.UI
             }
             foreach (var pid in GameData.POrder) if (!Regions.Any(r => r.ids.Contains(pid)) && Game.P.ContainsKey(pid) == travel) { PlanetRow(h, pid); shown++; } /* Sicherheitsnetz für neue Planeten */
             if (shown == 0) h.Note(travel ? "Noch keine Planeten." : "Alle Planeten sind freigeschaltet.");
-            if (travel) h.Note("Jeder Planet hat seine eigene Kasse: Was er verdient, bleibt bei ihm. Von außen darf nur ein Startbudget kommen (2× Freischaltpreis). Ohne dich lassen Maschinen und Fahrzeuge nach 30 min langsam nach – kurz vorbeischauen und antippen bringt sie zurück.");
+            if (travel) h.Note("Jeder Planet hat seine eigene Kasse: Was er verdient, bleibt bei ihm. Von außen darf nur ein Startbudget kommen (so viel wie der Freischaltpreis, mindestens 12 500 Cr). Ohne dich lassen Maschinen und Fahrzeuge nach 30 min langsam nach – kurz vorbeischauen und antippen bringt sie zurück.");
             if (Game.S.debt > 0) h.Note("Reisekredit offen: " + Cr(Game.S.debt) + " – wird mit der Hälfte jeder Einnahme abbezahlt.");
             if (!travel && Game.S.debt > 0 && Game.StardustPending() > 0) h.Note("Tipp: Ein Sternenstaub-Neustart (Reiter Sternenstaub) bringt jetzt +" + Game.StardustPending() + " Sternenstaub für dauerhafte Boni.");
             else if (!travel) h.Note("Freischalten kannst du immer den nächsten Planeten der Reihe.");
@@ -556,9 +558,47 @@ namespace LunarCleanup.UI
             }
             if (got.Count < q.sv.flags.Count) h.Note("<i>Fortsetzung folgt – in der nächsten Truhe.</i>");
         }
+        /// <summary>Fabian 11.11.: Logbuch eines Zeichens (Puzzleteile) – auch von anderen Planeten lesbar.</summary>
+        static void LogbookSheet(Hud h, string pid)
+        {
+            if (!Game.P.TryGetValue(pid, out var q) || !Game.SecretKnown(q)) { h.Note("Hier gibt es noch nichts zu lesen."); return; }
+            LogOf(h, q, true);
+        }
+        static void LogOf(Hud h, PState q, bool head)
+        {
+            if (head) h.Note(Raw + "<b>" + Game.GlyphName(q) + "</b> · " + (q.sv.puzzleDone ? (Loc.En ? "assembled" : "zusammengesetzt") : (Loc.En ? "pieces " : "Puzzleteile ") + Game.PiecesFound(q) + "/" + q.pd.GlyphCells.Count));
+            var log = Game.SecretLog(q); int n = Mathf.Min(q.sv.secretBeat, log.Length);
+            for (int i = 0; i < n; i++) { h.Section(Raw + log[i].title); h.Note(Raw + log[i].text); }
+            if (n < log.Length) h.Note("<i>Noch " + (log.Length - n) + " Kapitel verborgen – wisch weiter auf " + q.P.name + ".</i>");
+        }
+        static int LogN(PState q) => Game.SecretKnown(q) ? Mathf.Min(q.sv.secretBeat, Game.SecretLog(q).Length) : 0;
+        /// <summary>Fabian 11.11.: Alles, was du schon gefunden hast, auf einer Seite – Truhen-Geschichten und Logbücher der Zeichen, Planet für Planet.</summary>
+        static void AllStories(Hud h)
+        {
+            bool any = false;
+            foreach (var pid in GameData.POrder)
+            {
+                if (!Game.P.TryGetValue(pid, out var q)) continue; int fg = q.sv.flags == null ? 0 : Game.FlagsGot(q), lg = LogN(q); if (fg == 0 && lg == 0) continue; any = true;
+                h.Section(Raw + q.P.name);
+                if (fg > 0)
+                {
+                    Game.EnsureSlots(q); h.Note(Raw + "<color=#ffbf4d><b>„" + FlagStories.ArcTitle(pid) + "“</b></color> · " + fg + "/" + q.sv.flags.Count + (Loc.En ? " chests" : " Truhen"));
+                    foreach (var f in q.sv.flags.Where(f => f.got).OrderBy(f => f.slot)) { var e = Game.FlagStory(q, f); h.Note(Raw + "<b>" + e.title + "</b> – <b>" + e.who + "</b>: " + e.body); }
+                }
+                if (lg > 0) { h.Note(Raw + "<color=#6fe0ff><b>" + Game.GlyphName(q) + "</b></color> · " + (Loc.En ? "logbook " : "Logbuch ") + lg + "/" + Game.SecretLog(q).Length); LogOf(h, q, false); }
+            }
+            if (!any) h.Note("Noch nichts gefunden. Öffne Truhen bei den Flaggen und wisch Puzzleteile frei – jede Geschichte landet hier.");
+        }
         static void Codex(Hud h)
         {
-            h.Section("Geschichten");
+            int totF = Game.P.Values.Sum(q => q.sv.flags == null ? 0 : Game.FlagsGot(q)), totL = Game.P.Values.Sum(q => LogN(q));
+            h.Row("Alle Geschichten lesen", () => totF + (Loc.En ? " chest stories · " : " Truhen-Geschichten · ") + totL + (Loc.En ? " logbook chapters – all on one page" : " Logbuch-Kapitel – alles auf einer Seite"), () => "Lesen", () => totF + totL > 0, () => h.OpenSheet("allstories"), false);
+            h.Section("Zeichen und Puzzleteile");
+            int zk = 0;
+            foreach (var pid in GameData.POrder) { if (!Game.P.TryGetValue(pid, out var q) || !Game.SecretKnown(q)) continue; zk++; string key = pid;
+                h.Row(q.P.name + " · " + Game.GlyphName(q), () => { var qq = Game.P[key]; return (qq.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(qq) + "/" + qq.pd.GlyphCells.Count) + " · Logbuch " + LogN(qq) + "/" + Game.SecretLog(qq).Length + " · Sterne " + Game.StarCount(qq) + "/3"; }, () => "Lesen", () => true, () => h.OpenSheet("logbook", key), false); }
+            if (zk == 0) h.Note("Noch kein Zeichen entdeckt. Puzzleteile liegen unter dem Staub – wisch sie frei.");
+            h.Section("Truhen-Geschichten");
             foreach (var pid in GameData.POrder) { if (!Game.P.ContainsKey(pid)) continue; var q = Game.P[pid]; if (q.sv.flags == null || q.sv.flags.Count == 0) continue; string key = pid;
                 h.Row(GameData.Planets[pid].name, () => Raw + "„" + FlagStories.ArcTitle(key) + "“ · " + Game.FlagsGot(Game.P[key]) + "/" + Game.P[key].sv.flags.Count + (Loc.En ? " chests opened" : " Truhen geöffnet"), () => "Lesen", () => Game.FlagsGot(Game.P[key]) > 0, () => h.OpenSheet("story", key), false); }
             h.Section("Flaggen");
@@ -583,7 +623,7 @@ namespace LunarCleanup.UI
         static void OrdersSheet(Hud h)
         {
             if (!Game.OrdersOpen) { h.Note("Sobald ein Planet Basisstufe 2 hat, kommen Besucher und bestellen Waren."); return; }
-            h.Note("Besucher bestellen Waren – auch von anderen Planeten. Deine Maschinen stellen Bestelltes zuerst her, und es bleibt im Lager liegen, statt in den Frachter zu fahren. Liegt alles bereit, holt der Besucher es ab und zahlt deutlich mehr als die Rakete. Läuft auch offline.");
+            h.Note("Besucher bestellen Waren – auch von anderen Planeten. Deine Maschinen stellen Bestelltes zuerst her, und es bleibt im Lager liegen, statt in den Frachter zu fahren. Liegt alles bereit, gibst du die Bestellung frei – der Besucher holt sie ab und zahlt deutlich mehr als die Rakete. Gibst du sie nicht frei, geht sie 10 min vor Ablauf von selbst raus. Läuft auch offline.");
             h.Section("Bestelllager");
             h.Row("Stufe " + Game.S.voLv + "/" + Game.ORDER_MAXLV, () => Game.Orders.Count + " von " + Game.OrderMax() + " Bestellungen gleichzeitig" + (Game.S.voLv < Game.ORDER_MAXLV ? " · nächste Stufe: +1 Platz" : ""),
                 () => Game.S.voLv >= Game.ORDER_MAXLV ? "Max" : Cr(Game.OrderLvCost()), () => Game.OrderLvWhy() == "", () => Game.BuyOrderLv(), why: () => Game.Steps("", Game.OrderLvCost()));
@@ -595,8 +635,8 @@ namespace LunarCleanup.UI
                 h.Row(o.who + " · " + GameData.Planets[o.pid].name, () =>
                 {
                     var parts = oo.items.Select(it => Game.ItemName(it) + " " + Game.Fmt(Mathf.Min(it.got, it.n)) + "/" + Game.Fmt(it.n) + (it.src != oo.pid || it.g != "" ? " (von " + Game.ItemFrom(it) + ")" : ""));
-                    return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % liegt bereit";
-                }, () => "Absagen", () => true, () => Game.CancelOrder(oo.id), false);
+                    return string.Join(" · ", parts) + "\nNoch " + Game.TimeLeft(oo.until) + " · zahlt " + Cr(oo.reward) + " + " + oo.sd + " Sternenstaub · " + (oo.ready ? "<color=#5cf2b0>alles bereit – freigeben oder es geht 10 min vor Ablauf von selbst raus</color>" : Mathf.RoundToInt(Game.OrderProgress(oo) * 100) + " % liegt bereit");
+                }, () => oo.ready ? "Freigeben" : "Absagen", () => true, () => { if (oo.ready) Game.ReleaseOrder(oo.id); else Game.CancelOrder(oo.id); }, false);
             }
             h.Note("Die am besten bezahlte Bestellung bekommt die Ware zuerst. Ist eine Bestellung kurz vor Ablauf zu 60 % bereit, wartet der Besucher 45 min länger. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
         }
@@ -850,6 +890,7 @@ namespace LunarCleanup.UI
             if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
             h.Section("Darstellung");
             h.Row("Farbe der Parzellenränder", () => "Parzellen, die noch dreckig sind, bekommen einen leuchtenden Rand (saubere zeigen den Planeten ohne Rand) – jetzt: " + Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => true, () => Game.NextLineColor(), false);
+            h.Row("Bewuchs anzeigen", () => "Moos, Gras, Büsche, Teiche und Bäume, wenn ein Planet ergrünt. Aus = der Planet bleibt im Bild kahl (spart Leistung, das Terraforming wirkt trotzdem).", () => LunarCleanup.Gameplay.WorldView.VegOn ? "An" : "Aus", () => true, () => LunarCleanup.Gameplay.WorldView.VegOn = !LunarCleanup.Gameplay.WorldView.VegOn, false);
             h.Section("Sprache · Language");
             h.Row("Sprache · Language", () => Loc.En ? "English · tap to switch to German" : "Deutsch · tippen für Englisch", () => Loc.En ? "Deutsch" : "English", () => true, () => { Loc.Set(!Loc.En); h.OpenSheet("settings", null); }, false);
             h.Section("Foto-Modus");
@@ -923,6 +964,9 @@ namespace LunarCleanup.UI
             } if (stab == 4) {
             h.Section("Shop (Vorschau)");
             h.Note("Vorschau der späteren Angebote. Noch wird nichts berechnet und nichts vergeben.");
+            h.Note("Keine Werbung – nie. Kein Kauf ist nötig, um alles zu schaffen. Käufe gelten auf diesem Gerät für beide Spielstände (normal und Hard Mode).");
+            if (Platform.Supporter) h.Note(Raw + "<color=#e3b341><b>Unterstützer</b></color> – danke, dass du Lunar Cleanup möglich machst!");
+            if (Platform.Coffees > 0) h.Note("Kaffee spendiert: " + Platform.Coffees + "× – danke!");
             foreach (var o in Platform.Offers) { var oo = o; h.Row(o.name, () => oo.desc, () => !oo.consumable && Platform.Owned(oo.id) ? "Gekauft" : oo.price, () => oo.consumable || !Platform.Owned(oo.id), () => Platform.Buy(oo, ok => Game.Toast(ok ? oo.name + " gekauft – danke!" : "Käufe sind noch nicht freigeschaltet – es wurde nichts berechnet", ok ? "good" : "")), true); }
             } if (stab == 0) {
             h.Section("Über");

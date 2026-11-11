@@ -72,7 +72,7 @@ namespace LunarCleanup.Core
         // ---------- Verkaufsautomat (ab Basisstufe 3): volle Lager werden komplett verkauft, auch offline ----------
         /// <summary>Verkaufsautomat (ab Basisstufe 3): sind die Lager fast voll, startet die Rakete schon halb beladen – verkauft wird trotzdem nur, was im Frachtraum ist.</summary>
         static void AutoDumpStep(PState ps) { }
-        public static bool EarlyLaunch(PState ps) => ps.sv.autoDump && Gs(ps) >= 3 && (RohSum(ps) >= RohCap(ps) * .9f || (ps.bld.Contains("prod") && ProdSum(ps) >= ProdCap(ps) * .9f));
+        public static bool EarlyLaunch(PState ps) => ps.sv.autoDump && Gs(ps) >= 3 && (RohSum(ps) >= RohCap(ps) * .9f || (ps.bld.Contains("prod") && ProdUsed(ps) >= ProdCap(ps) * .9f));
         public static void ToggleAutoDump() { var sv = Cur.sv; sv.autoDump = !sv.autoDump; Toast(sv.autoDump ? "Verkaufsautomat an – bei vollen Lagern startet die Rakete schon halb beladen" : "Verkaufsautomat aus"); }
 
         // ---------- Produktions-Ampel ----------
@@ -80,7 +80,7 @@ namespace LunarCleanup.Core
         public static List<FlowItem> FlowReport(PState ps)
         {
             var o = new List<FlowItem>(); void Add(string id, string name, int lvl, string why, params string[] fix) => o.Add(new FlowItem { id = id, name = name, lvl = lvl, why = why, fix = fix });
-            var sv = ps.sv; float rf = RohSum(ps) / Mathf.Max(1, RohCap(ps)), pf = ProdSum(ps) / Mathf.Max(1, ProdCap(ps));
+            var sv = ps.sv; float rf = RohSum(ps) / Mathf.Max(1, RohCap(ps)), pf = ProdUsed(ps) / Mathf.Max(1, ProdCap(ps));
             if (ps.ef < .99f && (sv.veh.Count > 0 || ps.bld.Contains("presse") || sv.rigs.Count > 0)) Add(ps.bld.Contains("energy") ? "energy" : "hq", "Energie", 2, "Energie reicht nicht – Fahrzeuge, Bänder und Maschinen laufen langsamer.", "energy", "ecap");
             { int fl = sv.rigs.Count(r => r.faultK != ""); if (fl > 0) Add("roh", "Störung", 2, fl + (fl > 1 ? " Bohrtürme/Erzbagger gestört" : " Bohrturm/Erzbagger gestört") + " – Techniker sind unterwegs, oder sofort beheben (antippen).", "rcare"); }
             { int br = sv.veh.Count(v => v.mode == "broken"), due = sv.veh.Count(v => v.wear >= .75f && v.mode != "broken"); if (br > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 2, br + (br > 1 ? " Fahrzeuge" : " Fahrzeug") + " ausgefallen – " + (ps.bld.Contains("werkstatt") ? "Werkstatt öffnen" : "baue eine Roboterwerkstatt") + ".", "vdur"); else if (due > 0) Add(ps.bld.Contains("werkstatt") ? "werkstatt" : "hq", "Fahrzeuge", 1, due + (due > 1 ? " Fahrzeuge brauchen" : " Fahrzeug braucht") + " bald Wartung.", "vdur"); }
@@ -103,10 +103,11 @@ namespace LunarCleanup.Core
                     var M = ps.mach[m]; string st = MachStatus(ps, m), nm = GameData.Bld[m].name; float inF = Sum(M.inp) / Mathf.Max(1, MachInCap(ps, m));
                     if (st == "Keine Energie") Add(m, nm, 2, "Steht – keine Energie.", "energy");
                     else if (st == "Ausgang voll") Add(m, nm, 2, "Ausgang voll – " + (pf > .97f ? "das Produktlager ist voll." : "das Band dahinter ist zu langsam."), pf > .97f ? new[] { "prodcap", "sellcap" } : new[] { "bspeed", "bcap", "mcap" });
-                    else if (inF > .9f) Add(m, nm, 1, "Kommt nicht hinterher – Eingang fast voll.", "mspeed", "mcap");
+                    else if (inF > .9f && rf > .85f && !sv.xport) Add(m, nm, 1, "Kommt nicht hinterher – Eingang fast voll, das Rohstofflager läuft voll.", "mspeed", "mcap");
+                    else if (inF > .9f) Add(m, nm, 0, "Läuft auf voller Leistung – es kommt mehr an, als sie schafft; der Rest fährt zur Rakete."); /* 11.11.: kein Fehler, solange nichts überläuft */
                     else Add(m, nm, st.StartsWith("Arbeitet") ? 0 : -1, st);
                 }
-            if (ps.bld.Contains("prod")) { if (pf > .97f) Add("prod", "Produktlager", 2, "Voll – die Rakete holt zu wenig ab.", "prodcap", "sellcap", "rspeed"); else if (pf > .85f) Add("prod", "Produktlager", 1, "Fast voll.", "prodcap", "sellcap"); else Add("prod", "Produktlager", 0, "Läuft – " + Mathf.RoundToInt(pf * 100) + " % belegt"); }
+            if (ps.bld.Contains("prod")) { if (pf > .85f && sv.xport) Add("prod", "Produktlager", 0, "Läuft – der Export-Frachter hält Platz frei."); else if (pf > .97f) Add("prod", "Produktlager", 2, "Voll – die Rakete holt zu wenig ab.", "prodcap", "sellcap", "rspeed"); else if (pf > .85f) Add("prod", "Produktlager", 1, "Fast voll.", "prodcap", "sellcap"); else Add("prod", "Produktlager", 0, "Läuft – " + Mathf.RoundToInt(pf * 100) + " % belegt"); }
             if (Gs(ps) >= 2 && ps.bld.Contains("sell")) { float f = Sum(sv.sellBuf) / Mathf.Max(1, SellCap(ps)); if (sv.rk > 0 && f > .97f) Add("sell", "Verkaufsrakete", 1, "Frachtraum voll, Rakete noch unterwegs – die Bänder warten.", "rspeed", "sellcap"); else Add("sell", "Verkaufsrakete", 0, sv.rk > 0 ? "Rakete unterwegs" : "Frachtraum " + Mathf.RoundToInt(f * 100) + " % – startet, wenn voll"); }
             foreach (var b in ps.lay.belts) if (BeltLive(ps, b) && !HiddenBelt(b))
                 {

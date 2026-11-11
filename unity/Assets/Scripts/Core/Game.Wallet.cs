@@ -1,6 +1,6 @@
 // Fabian 03.11.: Eigene Planetenkasse – jeder Planet hat sein eigenes Geld. S.credits ist immer die Kasse des Planeten, auf dem du gerade bist;
 // die Kassen der anderen Planeten liegen in PlanetSave.cash. Was ein Planet verdient (auch offline), landet in seiner eigenen Kasse.
-// Zu einem Planeten darf von außen insgesamt nur ein Startbudget kommen (2× Freischaltpreis, mindestens 25 000 Cr) – beim Freischalten oder als Zuschuss.
+// Zu einem Planeten darf von außen insgesamt nur ein Startbudget kommen (Fabian 11.11. halbiert: 1× Freischaltpreis, mindestens 12 500 Cr) – beim Freischalten oder als Zuschuss.
 // Dazu „Betreuung“: Ohne dich laufen Maschinen und Fahrzeuge nach 30 min langsam schwächer (bis 35 % nach 4,5 h). Antippen oder Wischen bringt sie sofort zurück.
 using System;
 using System.Linq;
@@ -15,7 +15,7 @@ namespace LunarCleanup.Core
         public static double Cash(PState ps) => ps.pid == S.planet ? S.credits : ps.sv.cash;
         static void AddCash(PState ps, double c) { if (ps.pid == S.planet) S.credits += c; else ps.sv.cash += c; }
         /// <summary>Wie viel Geld von außen insgesamt zu diesem Planeten darf.</summary>
-        public static double ImportCap(string pid) => Math.Max(25000, 2 * GameData.Planets[pid].unlockCost);
+        public static double ImportCap(string pid) => Math.Max(12500, GameData.Planets[pid].unlockCost); /* 11.11.: Zuschuss halbiert (vorher 2×, mind. 25 000) */
         public static double ImportLeft(PState ps) => Math.Max(0, ImportCap(ps.pid) - ps.sv.cashIn);
         /// <summary>Beim Wechsel des Planeten: Kasse des alten Planeten weglegen, die des neuen holen.</summary>
         static void SwapWallet(string from, string to)

@@ -151,7 +151,7 @@ namespace LunarCleanup.Core
         /// kaputte Fahrzeuge, gestörte Bohrtürme, halbe Lager, 10 min gedrosselte Produktion und Terraforming-Rückschlag. Aufräumen bringt alles zurück.</summary>
         public static void Devastate(string pid, float sev)
         {
-            if (!P.ContainsKey(pid)) return; var ps = P[pid]; var pd = ps.pd; sev = Mathf.Clamp01(sev); bool ins = S.owned.Contains("insure"); if (ins) sev *= .5f; /* Shop: Meteor-Versicherung */ int G = GameData.GRID; bool done = IsDone(pid);
+            if (!P.ContainsKey(pid)) return; var ps = P[pid]; var pd = ps.pd; sev = Mathf.Clamp01(sev); int G = GameData.GRID; bool done = IsDone(pid);
             var c0 = pd.cells[pd.baseCell].c.normalized;
             var cand = new List<int>(); for (int i = 0; i < pd.N; i++) if (!pd.cells[i].IsBase && !pd.cells[i].Wet) cand.Add(i);
             int want = Mathf.Min(2500, Mathf.RoundToInt(cand.Count * (.12f + .22f * sev)));
@@ -166,7 +166,7 @@ namespace LunarCleanup.Core
             }
             foreach (var v in ps.sv.veh.Where(v => v.mode != "broken" && v.mode != "repair" && v.mode != "toShop").OrderBy(_ => Rng.Next()).Take(Mathf.CeilToInt(ps.sv.veh.Count * .7f * sev)).ToList()) v.wear = 1f;
             foreach (var r in ps.sv.rigs) if (r.faultK == "") { r.faultK = "impact"; r.faultT = 300; }
-            if (!ins) { for (int m = 0; m < ps.sv.roh.Length; m++) ps.sv.roh[m] *= 1 - .5f * sev; for (int m = 0; m < ps.sv.prod.Length; m++) ps.sv.prod[m] *= 1 - .5f * sev; }
+            { for (int m = 0; m < ps.sv.roh.Length; m++) ps.sv.roh[m] *= 1 - .5f * sev; for (int m = 0; m < ps.sv.prod.Length; m++) ps.sv.prod[m] *= 1 - .5f * sev; }
             ps.sv.hitT = Mathf.Max(ps.sv.hitT, 600f * sev); ps.sv.energy = 0;
             int tl = 0; if (ps.sv.terra > 0) { tl = sev >= .95f ? Mathf.Min(2, ps.sv.terra) : 1; ps.sv.terra -= tl; ps.sv.terraHp = 1; }
             S.stats.meteors += hit.Count;

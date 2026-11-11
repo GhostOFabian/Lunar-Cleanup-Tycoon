@@ -212,8 +212,15 @@ namespace LunarCleanup.Gameplay
             trees.RemoveAll(t => !t.t); if (st <= 1 && trees.All(t => t.die >= 0)) { }
             if (st < 2) return;
             var rng = new System.Random(ps.pid.GetHashCode() & 0x7fffffff);
-            var cells = pd.cells.Where(c => !c.IsBase && !c.Wet && c.ring >= 1 && !ps.sv.rigs.Any(r => r.cell == c.id) && !ps.sv.outposts.Any(o => o.cell == c.id)).OrderBy(c => c.ring).ThenBy(c => c.id).Take(320).ToList();
+            /* Fabian 11.11.: der ganze Planet ergrünt, nicht nur der Ring um die Basis. Damit es nicht ruckelt, gilt ein festes Budget:
+               um die Basis (320 Parzellen) volle Dichte, weiter weg so dünn, dass Gras/Büsche/Moos zusammen höchstens etwa doppelt so viel wie früher sind.
+               Die Bodenfarbe (4 Ecken je Parzelle) liegt überall. */
+            var blocked = new HashSet<int>(ps.sv.rigs.Select(r => r.cell)); foreach (var o in ps.sv.outposts) blocked.Add(o.cell);
+            var cells = pd.cells.Where(c => !c.IsBase && !c.Wet && c.ring >= 1 && !blocked.Contains(c.id)).OrderBy(c => c.ring).ThenBy(c => c.id).ToList();
             if (cells.Count == 0) return;
+            const int NEAR = 320; float farK = cells.Count <= NEAR ? 1 : Mathf.Clamp01(NEAR * 1.2f / (cells.Count - NEAR)); /* weit weg: zusammen etwa 1,2× so viel wie nah */
+            var near = cells.Take(NEAR).ToList(); var nearSet = new HashSet<int>(near.Select(c => c.id));
+            int Cnt(Cell c, int full) { if (nearSet.Contains(c.id)) return full; float x = full * farK; int n = Mathf.FloorToInt(x); if (rng.NextDouble() < x - n) n++; return n; }
             float Rad(Cell c) { float m = 1; if (c.poly != null) foreach (var q in c.poly) m = Mathf.Max(m, q.magnitude); return m; }
             Vector3 Spot(Cell c, float k) { float r = Rad(c) * k; return pd.ToDir(c, ((float)rng.NextDouble() * 2 - 1) * r, ((float)rng.NextDouble() * 2 - 1) * r); }
             float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
@@ -237,23 +244,23 @@ namespace LunarCleanup.Gameplay
             // 2) Moos und Flechten: flache, weiche Polster
             {
                 var parts = new List<CombineInstance>(); var parts2 = new List<CombineInstance>();
-                foreach (var c in cells) for (int q = 0; q < 4; q++) { float s = R(.6f, 1.3f); var ci = new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .75f), -.04f, R(0, 360), new Vector3(s * 1.6f, s * .35f, s * 1.4f)) }; if (q % 3 != 2) parts.Add(ci); else parts2.Add(ci); }
+                foreach (var c in cells) { int nq = Cnt(c, 4); for (int q = 0; q < nq; q++) { float s = R(.6f, 1.3f); var ci = new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .75f), -.04f, R(0, 360), new Vector3(s * 1.6f, s * .35f, s * 1.4f)) }; if (q % 3 != 2) parts.Add(ci); else parts2.Add(ci); } }
                 Combine("Moos", parts, MeshKit.Mat(new Color(.17f, .36f, .13f), 0, .15f)); Combine("Flechten", parts2, MeshKit.Mat(new Color(.5f, .55f, .27f), 0, .15f));
             }
             if (st >= 3)
             {
                 // 3) Gras (Büschel aus schmalen Halmen) und Sträucher (runde Blattbälle)
                 var blade = MeshKit.CylMesh(0, .09f, 1f, 3); var grass = new List<CombineInstance>(); var bush = new List<CombineInstance>(); var bush2 = new List<CombineInstance>();
-                foreach (var c in cells)
+                foreach (var c in near)
                 {
                     for (int q = 0; q < 8; q++) { var d = Spot(c, .85f); float hgt = R(.8f, 1.5f); for (int b = 0; b < 3; b++) { var m0 = At(d, .45f * hgt, R(0, 360), new Vector3(1, hgt, 1)); grass.Add(new CombineInstance { mesh = blade, transform = m0 * Matrix4x4.Rotate(Quaternion.Euler(R(-22, 22), 0, R(-22, 22))) }); } }
                     for (int q = 0; q < 2; q++) if (rng.NextDouble() < .6) { float s = R(.7f, 1.3f); var ci = new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .6f), s * .5f, R(0, 360), new Vector3(s, s * .8f, s)) }; if (rng.NextDouble() < .5) bush.Add(ci); else bush2.Add(ci); }
                 }
-                var lawn = new List<CombineInstance>(); foreach (var c in cells) for (int q = 0; q < 2; q++) { float s = R(1.8f, 2.8f); lawn.Add(new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .6f), -.03f, R(0, 360), new Vector3(s * 1.2f, .09f, s)) }); }
+                var lawn = new List<CombineInstance>(); foreach (var c in near) for (int q = 0; q < 2; q++) { float s = R(1.8f, 2.8f); lawn.Add(new CombineInstance { mesh = RockKit.Mesh(rng.Next(RockKit.Variants), false), transform = At(Spot(c, .6f), -.03f, R(0, 360), new Vector3(s * 1.2f, .09f, s)) }); }
                 lawn.Clear(); Combine("Rasen", lawn, MeshKit.Mat(new Color(.3f, .52f, .2f), 0, .2f)); /* beleuchtete grüne Fläche am Boden */
                 /* Fabian 02.11.: Grasbüschel und Büsche aus dem Blender-Skript, sonst die einfachen Halme/Ballen */
                 var gx = new List<Matrix4x4>(); var bx1 = new List<Matrix4x4>(); var bx2 = new List<Matrix4x4>();
-                foreach (var c in cells) { for (int q = 0; q < 7; q++) { float hs = R(.9f, 1.5f); gx.Add(At(Spot(c, .85f), -.02f, R(0, 360), Vector3.one * hs)); } for (int q = 0; q < 2; q++) if (rng.NextDouble() < .55) { float bs = R(.8f, 1.4f); (q == 0 ? bx1 : bx2).Add(At(Spot(c, .7f), -.05f, R(0, 360), Vector3.one * bs)); } }
+                foreach (var c in cells) { int ng = Cnt(c, 7), nb = Cnt(c, 2); for (int q = 0; q < ng; q++) { float hs = R(.9f, 1.5f); gx.Add(At(Spot(c, .85f), -.02f, R(0, 360), Vector3.one * hs)); } for (int q = 0; q < nb; q++) if (rng.NextDouble() < .55) { float bs = R(.8f, 1.4f); (q == 0 ? bx1 : bx2).Add(At(Spot(c, .7f), -.05f, R(0, 360), Vector3.one * bs)); } }
                 if (CombineLc("Gras", "Natur/gras_1", gx) && CombineLc("Busch", "Natur/busch_1", bx1) && CombineLc("Busch", "Natur/busch_2", bx2)) { grass.Clear(); bush.Clear(); bush2.Clear(); }
                 Combine("Gras", grass, MeshKit.Mat(new Color(.42f, .68f, .24f), 0, .25f)); Combine("Sträucher", bush, MeshKit.Mat(new Color(.2f, .48f, .2f), 0, .2f)); Combine("Sträucher hell", bush2, MeshKit.Mat(new Color(.36f, .58f, .18f), 0, .2f));
             }
@@ -263,7 +270,7 @@ namespace LunarCleanup.Gameplay
                 var water = MeshKit.Mat(new Color(.16f, .42f, .7f), .1f, .93f); var shore = MeshKit.Mat(new Color(.5f, .45f, .33f), 0, .2f); int nw = 0;
                 foreach (var c in cells.Where(c => c.ring >= 3).OrderBy(_ => rng.Next()))
                 {
-                    if (nw >= 8) break; var n = c.c.normalized; float h0 = pd.Height(n), hmax = h0, hmin = h0; float r = Rad(c) * .45f;
+                    if (nw >= 14) break; var n = c.c.normalized; float h0 = pd.Height(n), hmax = h0, hmin = h0; float r = Rad(c) * .45f;
                     for (int k = 0; k < 8; k++) { float a = k * Mathf.PI / 4; float h = pd.Height(pd.ToDir(c, Mathf.Cos(a) * r, Mathf.Sin(a) * r)); hmax = Mathf.Max(hmax, h); hmin = Mathf.Min(hmin, h); }
                     if (hmax - hmin > .5f) continue; nw++;
                     var pond = new GameObject("Teich"); pond.transform.SetParent(terraRoot, false); pond.transform.position = n * (pd.R + hmin + .05f); pond.transform.rotation = Quaternion.FromToRotation(Vector3.up, n);
@@ -272,10 +279,10 @@ namespace LunarCleanup.Gameplay
                     pond.transform.localScale = new Vector3(1, 1, R(.7f, 1));
                 }
                 // Bäume: Stufe 4 junge Bäume, Stufe 5 Wald
-                int want = st >= 5 ? 170 : 55; int have = trees.Count(t => t.die < 0);
+                int want = st >= 5 ? 240 : 80; /* 11.11.: Haine über den ganzen Planeten verteilt */ int have = trees.Count(t => t.die < 0);
                 foreach (var tr in trees) if (tr.die < 0 && st >= 5 && tr.young) { tr.young = false; }
                 /* Haine: Bäume stehen in Gruppen, nicht gleichmäßig verstreut */
-                var groves = cells.Where(c => c.ring >= 2).OrderBy(c => (c.id * 7919) % 1009).Take(Mathf.Max(4, want / 6)).ToList(); if (groves.Count == 0) groves = cells;
+                var groves = cells.Where(c => c.ring >= 2).OrderBy(c => (c.id * 7919) % 1009).Take(Mathf.Max(4, want / 5)).ToList(); if (groves.Count == 0) groves = cells;
                 for (int i = have; i < want; i++) { var c = groves[i % groves.Count]; SpawnTree(treeRoot, Spot(c, .8f), rng, st < 5, grow); }
             }
             if (st >= 4) Sfx.Play("wind", 1, .25f);
@@ -333,9 +340,14 @@ namespace LunarCleanup.Gameplay
             }
             return true;
         }
+        /// <summary>Fabian 11.11.: Einstellung „Bewuchs anzeigen“ (nur Darstellung, Terraforming wirkt weiter).</summary>
+        public static bool VegOn { get => PlayerPrefs.GetInt("LunarCleanup.Veg", 1) == 1; set { PlayerPrefs.SetInt("LunarCleanup.Veg", value ? 1 : 0); PlayerPrefs.Save(); vegCache = value ? 1 : 0; } }
+        static int vegCache = -1; static bool VegFast { get { if (vegCache < 0) vegCache = VegOn ? 1 : 0; return vegCache == 1; } }
         void UpdateTerra()
         {
             if (ps == null) return;
+            if (terraRoot && terraRoot.gameObject.activeSelf != VegFast) terraRoot.gameObject.SetActive(VegFast);
+            if (!VegFast) return;
             if (terraFor != ps.pid || !terraRoot || (terraBuilt != ps.sv.terra && trees.All(t => t.die < 0))) { if (terraFor != ps.pid) { trees.Clear(); if (terraRoot) Destroy(terraRoot.gameObject); terraRoot = null; } BuildTerra(false); }
             if (greenMat) { float l = Mathf.Lerp(1f, .18f, NightF); greenMat.color = new Color(l, l, l, 1); } /* Grünflächen sind unbeleuchtet: nachts abdunkeln */
             if (trees.Count == 0) return; float tm = Time.time, wind = .9f + .6f * Mathf.Sin(tm * .13f) + (Game.StormOn(ps) ? 2.5f : 0);

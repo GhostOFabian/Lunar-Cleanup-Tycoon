@@ -9,7 +9,7 @@ namespace LunarCleanup.Core
     public static partial class Game
     {
         public const float XPORT_FROM = .9f, XPORT_RATE = .03f;
-        public static float XPORT_VALUE => S != null && S.owned.Contains("xlic") ? .6f : .4f; /* Shop: Export-Lizenz */
+        public static float XPORT_VALUE => Platform.Owned("xlic") ? .6f : .4f; /* Shop: Export-Lizenz */
         public static string XportPct => Mathf.RoundToInt(XPORT_VALUE * 100) + " %";
         public static bool XportOpen(PState ps) => Gs(ps) >= 3 && ps.bld.Contains("roh");
         public static double XportCost(PState ps) => Math.Round(250000 * Math.Pow(6, Math.Max(0, Gs(ps) - 3)));
@@ -25,7 +25,7 @@ namespace LunarCleanup.Core
             var sv = ps.sv; if (!sv.xport) return; double pay = 0;
             float rc = RohCap(ps), rs = RohSum(ps);
             if (rc > 0 && rs > rc * XPORT_FROM) { float take = Mathf.Min(rs - rc * (XPORT_FROM - .02f), rc * XPORT_RATE * dt), k = take / rs; for (int m = 0; m < sv.roh.Length; m++) { float t = sv.roh[m] * k; if (t <= 0) continue; sv.roh[m] -= t; pay += t * MatValue(m, ps) * XPORT_VALUE; } }
-            if (ps.bld.Contains("prod")) { float pc = ProdCap(ps), p0 = ProdSum(ps); if (pc > 0 && p0 > pc * XPORT_FROM) { float take = Mathf.Min(p0 - pc * (XPORT_FROM - .02f), pc * XPORT_RATE * dt), k = take / p0; for (int m = 0; m < sv.prod.Length; m++) { float t = sv.prod[m] * k; if (t <= 0) continue; sv.prod[m] -= t; pay += t * MatValue(m, ps) * XPORT_VALUE; } } }
+            if (ps.bld.Contains("prod")) { float pc = ProdCap(ps), p0 = ProdUsed(ps); if (pc > 0 && p0 > pc * XPORT_FROM) { float take = Mathf.Min(p0 - pc * (XPORT_FROM - .02f), pc * XPORT_RATE * dt), k = take / p0; for (int m = 0; m < sv.prod.Length; m++) { float t = Mathf.Max(0, sv.prod[m] - KeepProd(ps, m)) * k; /* 11.11.: Bestelltes bleibt liegen */ if (t <= 0) continue; sv.prod[m] -= t; pay += t * MatValue(m, ps) * XPORT_VALUE; } } }
             if (pay > 0) { Earn(pay); sv.xEarn += pay; }
         }
     }

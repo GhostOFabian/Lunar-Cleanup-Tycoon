@@ -9,7 +9,7 @@ using UnityEngine;
 namespace LunarCleanup.Core
 {
     [Serializable] public class OrderItem { public string src = ""; public int m = -1; public string g = ""; public float n, got; } // src = Herkunftsplanet; m = Ware oder g = Spezialgut
-    [Serializable] public class VisitOrder { public int id; public string who = "", pid = ""; public List<OrderItem> items = new List<OrderItem>(); public long until; public double reward; public int sd; public int ext; } // ext = 09.11.: schon einmal verlängert
+    [Serializable] public class VisitOrder { public int id; public string who = "", pid = ""; public List<OrderItem> items = new List<OrderItem>(); public long until; public double reward; public int sd; public int ext; [NonSerialized] public bool ready, go; } // ext = 09.11.: schon einmal verlängert
 
     public static partial class Game
     {
@@ -186,7 +186,9 @@ namespace LunarCleanup.Core
                     if (it.got < it.n - .01f) all = false;
                 }
                 if (now > o.until && o.ext == 0 && OrderProgress(o) >= .6f) { o.ext = 1; o.until = now + 2700; if (!Offline) Toast(o.who + " wartet noch 45 min – die Bestellung ist fast fertig", "good"); } /* 09.11.: knapp dran = Verlängerung */
-                if (all)
+                o.ready = all;
+                /* Fabian 11.11.: Fertige Bestellungen wartet, bis du sie freigibst – spätestens 10 min vor Ablauf gehen sie von selbst raus */
+                if (all && (o.go || now >= o.until - ORDER_AUTO))
                 {
                     foreach (var it in o.items)
                     {
@@ -199,6 +201,9 @@ namespace LunarCleanup.Core
             }
         }
         static double OrderRefund(VisitOrder o) { return 0; /* 10.11.: Ware lag nur reserviert im Lager – nichts zu erstatten */ double c = 0; foreach (var it in o.items) { if (it.got <= 0) continue; c += it.g != "" ? it.got * GoodValue(it.g) * .5 : it.got * MatValue(it.m, P.ContainsKey(it.src) ? P[it.src] : Cur); } if (c > 0) Earn(c); return c; }
+        public const long ORDER_AUTO = 600;
+        /// <summary>Fabian 11.11.: Fertige Bestellung freigeben – der Besucher holt sie beim nächsten Schritt ab.</summary>
+        public static void ReleaseOrder(int id) { var o = VO.Find(x => x.id == id); if (o == null || !o.ready) return; o.go = true; }
         public static void CancelOrder(int id) { int i = VO.FindIndex(x => x.id == id); if (i < 0) return; var o = VO[i]; double c = OrderRefund(o); VO.RemoveAt(i); Toast("Bestellung abgesagt" + (c > 0 ? " · Zurückgelegtes verkauft: +" + Fmt(c) + " Cr" : ""), ""); }
         public static bool BuyOrderLv() { if (S.voLv >= ORDER_MAXLV) return Fail("Höchste Stufe"); double c = OrderLvCost(); if (S.credits < c) return Fail(Lacks(c)); S.credits -= c; S.voLv++; Toast("Bestelllager ausgebaut · " + OrderMax() + " Bestellungen gleichzeitig", "good"); return true; }
         public static string OrderLvWhy() => S.voLv >= ORDER_MAXLV ? "Höchste Stufe" : S.credits < OrderLvCost() ? Lacks(OrderLvCost()) : "";

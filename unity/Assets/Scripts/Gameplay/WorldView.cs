@@ -930,8 +930,10 @@ namespace LunarCleanup.Gameplay
             }
         }
         static float VehRadius(string type) => type == "truck" || type == "kryokoloss" || type == "lavapanzer" ? 1.7f : type == "staubi" ? .9f : 1.25f;
+        int vehSkin = -1;
         void SyncVehicles()
         {
+            if (vehSkin != Platform.Version) { vehSkin = Platform.Version; foreach (var vp0 in vehs.Values) if (vp0?.root) Destroy(vp0.root); vehs.Clear(); vehOff.Clear(); } /* 11.11.: Goldene Flotte sofort nach dem Kauf */
             var alive = new HashSet<int>();
             Color acc = ps.P.col0; VehAvoid();
             foreach (var v in ps.sv.veh)

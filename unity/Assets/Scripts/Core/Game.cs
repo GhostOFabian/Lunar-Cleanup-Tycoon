@@ -332,10 +332,14 @@ namespace LunarCleanup.Core
         public static int Gs(PState ps) => Math.Max(ps.sv.stage, ps.sv.techF);
         public static float RohCap(PState ps) => Uv("rohcap", ps) * BlF(ps, "roh") * ExpF(ps) * SpecF(ps, "store");
         public static float ProdCap(PState ps) => Uv("prodcap", ps) * BlF(ps, "prod") * ExpF(ps) * SpecF(ps, "store");
-        public static float SellCap(PState ps) => Uv("sellcap", ps) * BlF(ps, "sell") * (S != null && S.owned.Contains("cargo2") ? 1.5f : 1);
+        public static float SellCap(PState ps) => Uv("sellcap", ps) * BlF(ps, "sell") * (Platform.Owned("cargo2") ? 1.5f : 1);
         public static float HandCap() => Uv("handcap") * HandF; /* 03.11.: Magnet-Behälter */
         public static float Sum(float[] a) { float s = 0; for (int i = 0; i < a.Length; i++) s += a[i]; return s; }
         public static float RohSum(PState ps) { float s = 0; foreach (int m in GameData.Raw) s += ps.sv.roh[m]; return s; }
+        /// <summary>Fabian 11.11.: Ware, die für Besucher-Bestellungen bereitliegt, steht im Bestellfach – sie zählt nicht gegen den Platz im Produktlager.
+        /// Sonst wird das Lager „rot“, obwohl die Rakete alles abholt, was sie darf.</summary>
+        public static float ProdKept(PState ps) { if (S == null || S.vorders == null || S.vorders.Count == 0) return 0; float k = 0; for (int m = 0; m < ps.sv.prod.Length; m++) if (ps.sv.prod[m] > 0) k += Mathf.Min(ps.sv.prod[m], KeepProd(ps, m)); return k; }
+        public static float ProdUsed(PState ps) => ProdSum(ps) - ProdKept(ps);
         public static float ProdSum(PState ps) { float s = 0; for (int m = 0; m < ps.sv.prod.Length; m++) s += ps.sv.prod[m]; return s; } /* zählt auch Rohstoffe, die auf dem Weg zur Rakete im Produktlager liegen */
         public static int DoneCount() => S.done.Count;
         public static bool IsDone(string pid) => S.done.Contains(pid);
@@ -703,7 +707,7 @@ namespace LunarCleanup.Core
         static float DestFree(PState ps, BeltDef b)
         {
             if (b.to == "roh") return RohCap(ps) - RohSum(ps);
-            if (b.to == "prod") return ProdCap(ps) - ProdSum(ps);
+            if (b.to == "prod") return ProdCap(ps) - ProdUsed(ps);
             if (b.to == "sell") return SellCap(ps) - Sum(ps.sv.sellBuf);
             if (ps.mach.ContainsKey(b.to)) return MachInCap(ps, b.to) - Sum(ps.mach[b.to].inp);
             return 0;
@@ -760,7 +764,7 @@ namespace LunarCleanup.Core
         {
             var sv = ps.sv;
             if (b.to == "roh") { if (RohSum(ps) + a > RohCap(ps) + 1e-6f) return false; { sv.roh[m] += a; RohIn(ps, m, a); } return true; }
-            if (b.to == "prod") { if (ProdSum(ps) + a > ProdCap(ps) + 1e-6f) return false; sv.prod[m] += a; ProdIn(ps, m, a); return true; }
+            if (b.to == "prod") { if (ProdUsed(ps) + a > ProdCap(ps) + 1e-6f) return false; sv.prod[m] += a; ProdIn(ps, m, a); return true; }
             if (b.to == "sell") { if (Sum(sv.sellBuf) + a > SellCap(ps) + 1e-6f) return false; sv.sellBuf[m] += a; return true; }
             if (ps.mach.ContainsKey(b.to))
             {
@@ -1873,6 +1877,6 @@ namespace LunarCleanup.Core
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
 
-        public static float OfflineCap => S != null && S.owned.Contains("offline24") ? 86400 : (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
+        public static float OfflineCap => Platform.Owned("offline24") ? 86400 : (ResDone("off24") ? 86400 : ResDone("off12") ? 43200 : 28800) + (Sd("offline") ? 14400 : 0);
     }
 }

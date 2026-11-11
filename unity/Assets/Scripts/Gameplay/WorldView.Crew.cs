@@ -9,19 +9,19 @@ namespace LunarCleanup.Gameplay
     public partial class WorldView
     {
         class Crew { public Transform t, legL, legR, box; public Vector2 a, b, cur, face; public float s, len, wait; public string job = ""; public int leg; public bool work; }
-        readonly List<Crew> crew = new List<Crew>(); string crewFor; int crewVer = -1;
+        readonly List<Crew> crew = new List<Crew>(); string crewFor; int crewVer = -1, crewSkin = -1;
         float carryUntil; Vector2 carryA, carryB;
 
         void BuildCrew()
         {
-            foreach (var c in crew) if (c.t) Destroy(c.t.gameObject); crew.Clear(); crewFor = ps.pid; crewVer = ps.baseVersion;
+            foreach (var c in crew) if (c.t) Destroy(c.t.gameObject); crew.Clear(); crewFor = ps.pid; crewVer = ps.baseVersion; crewSkin = Platform.Version; bool gold = Platform.Supporter;
             var ids = ps.bld.Where(id => ps.lay.pos.ContainsKey(id) && !(Game.IsUnit(id) && id != "u1")).ToList(); if (ids.Count < 2) return;
             int n = Mathf.Clamp(ids.Count / 3, 2, 6);
-            var suit = MeshKit.Mat(new Color(.93f, .94f, .96f), .1f, .4f); var visor = MeshKit.Mat(new Color(.95f, .7f, .25f), .8f, .9f, new Color(.4f, .25f, .05f)); var pack = MeshKit.Mat(new Color(.55f, .58f, .64f), .4f, .5f);
+            var suit = gold ? MeshKit.Mat(GameData.Hex("#e3b341"), .7f, .7f) : MeshKit.Mat(new Color(.93f, .94f, .96f), .1f, .4f); /* 11.11.: Unterstützer – goldene Anzüge */ var visor = MeshKit.Mat(new Color(.95f, .7f, .25f), .8f, .9f, new Color(.4f, .25f, .05f)); var pack = MeshKit.Mat(new Color(.55f, .58f, .64f), .4f, .5f);
             for (int i = 0; i < n; i++)
             {
                 var g = new GameObject("Astronaut"); g.transform.SetParent(baseRoot, false); var t = g.transform;
-                var lca = LcKit.Astronaut(t); if (lca) { lca.transform.localRotation = Quaternion.Euler(0, 180, 0) * lca.transform.localRotation; /* 10.11.: Modell schaut nach −Z – sonst läuft er rückwärts */ var c0 = new Crew { t = t, wait = Random.Range(0f, 3f), cur = Spawn(ids, i) }; AddBox(c0, suit); NewTrip(c0, ids); crew.Add(c0); continue; } /* eigenes Modell (Fabian) */
+                var lca = LcKit.Astronaut(t); if (lca) { lca.transform.localRotation = Quaternion.Euler(0, 180, 0) * lca.transform.localRotation; /* 10.11.: Modell schaut nach −Z – sonst läuft er rückwärts */ if (gold) GoldSuit(lca); var c0 = new Crew { t = t, wait = Random.Range(0f, 3f), cur = Spawn(ids, i) }; AddBox(c0, suit); NewTrip(c0, ids); crew.Add(c0); continue; } /* eigenes Modell (Fabian) */
                 MeshKit.Cyl(t, suit, new Vector3(0, .62f, 0), .16f, .18f, .5f, 10);          // Rumpf
                 MeshKit.Ball(t, suit, new Vector3(0, 1.02f, 0), .3f);                        // Helm
                 MeshKit.Box(t, visor, new Vector3(0, 1.03f, .11f), new Vector3(.2f, .12f, .08f)); // Visier
@@ -29,6 +29,12 @@ namespace LunarCleanup.Gameplay
                 var lL = MeshKit.Cyl(t, suit, new Vector3(-.07f, .2f, 0), .06f, .06f, .38f, 8).transform; var lR = MeshKit.Cyl(t, suit, new Vector3(.07f, .2f, 0), .06f, .06f, .38f, 8).transform;
                 var c = new Crew { t = t, legL = lL, legR = lR, wait = Random.Range(0f, 3f), cur = Spawn(ids, i) }; AddBox(c, suit); NewTrip(c, ids); crew.Add(c);
             }
+        }
+        /// <summary>Helle Anzugteile des eigenen Modells golden färben (Visier und dunkle Teile bleiben).</summary>
+        static void GoldSuit(GameObject m)
+        {
+            var gold = GameData.Hex("#e3b341");
+            foreach (var r in m.GetComponentsInChildren<Renderer>()) { var ms = r.materials; foreach (var mt in ms) if (mt.HasProperty("_BaseColor") || mt.HasProperty("_Color")) { var c = mt.color; if (c.r + c.g + c.b > 2.1f) mt.color = gold; } r.materials = ms; }
         }
         Vector2 Spawn(List<string> ids, int i) { var id = ids[i % ids.Count]; var d = Random.insideUnitCircle.normalized; return ps.lay.pos[id] + d * (FactoryPlanner.Half(id) + 1.6f); }
         /// <summary>Kiste vor der Brust – nur beim Verladen sichtbar.</summary>
@@ -72,7 +78,7 @@ namespace LunarCleanup.Gameplay
         void UpdateCrew()
         {
             if (ps == null || MapMode) { foreach (var c in crew) if (c.t) c.t.gameObject.SetActive(false); return; }
-            if (crewFor != ps.pid || crewVer != ps.baseVersion) BuildCrew();
+            if (crewFor != ps.pid || crewVer != ps.baseVersion || crewSkin != Platform.Version) BuildCrew();
             var ids = ps.bld.Where(id => ps.lay.pos.ContainsKey(id) && !(Game.IsUnit(id) && id != "u1")).ToList(); if (ids.Count < 2) return;
             // Aufgaben: Techniker an Störungen, Kristallsammler, Kisten tragen – sonst spazieren
             var jobs = new List<(string key, Vector2 at)>();
