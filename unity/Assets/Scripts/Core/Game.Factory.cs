@@ -15,17 +15,42 @@ namespace LunarCleanup.Core
         static LayoutDef PlannedLayout(PState ps)
         {
             string sk = GameData.SizeKey(ps.pid, ps.sv.freq); var T = OneStation(GameData.Layouts[sk]); string key = sk + MoveKey(ps);
-            if (planCache.TryGetValue(key, out var c)) { ps.plan = c.P; return c.L; }
+            if (planCache.TryGetValue(key, out var c)) { ps.plan = c.P; Grow(pd0(ps), c.P); return c.L; }
             var pd = ps.pd; var pinned = new Dictionary<string, Vector2>();
             if (ps.sv.bMove != null) foreach (var m in ps.sv.bMove) if (!FactoryPlanner.InModule(GroupId(m.id))) pinned[GroupId(m.id)] = new Vector2(m.x, m.y);
             bool InBase(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && pd.cells[cc].IsBase && !pd.cells[cc].Wet; }
-            var P = FactoryPlanner.Plan(sk, T, InBase, pinned);
+            int normal = GameData.Kinds.FindIndex(k => k.key == "normal");
+            bool CanGrow(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && !pd.cells[cc].Wet && pd.cells[cc].kind == normal; }
+            var P = FactoryPlanner.Plan(sk, T, InBase, pinned, CanGrow); Grow(pd, P);
             if (!P.ok) Debug.LogWarning("Lunar Cleanup: Fabrik-Planer " + sk + ": " + string.Join(" | ", P.errors));
             else Debug.Log("Lunar Cleanup: Fabrik-Planer " + sk + " ok in " + P.ms + " ms (Lage " + P.rot + "/" + P.mir + " " + P.shift + ")");
             var L = P.ok ? Build(T, P) : T; /* ohne gültigen Plan: Vorlage unverändert (Prüfung meldet den Fehler) */
             planCache[key] = (L, P); ps.plan = P; return L;
         }
 
+        static PlanetData pd0(PState ps) => ps.pd;
+        /// <summary>11.11.: Parzellen unter dem Landeplatz am Basisrand werden Basis (immer gleich für diesen Plan – auch nach dem Laden).</summary>
+        static void Grow(PlanetData pd, FactoryPlan P)
+        {
+            if (P == null || P.grow.Count == 0) return; int bk = GameData.Kinds.FindIndex(k => k.key == "base"); if (bk < 0) return;
+            foreach (var g in P.grow) { int cc = pd.CellOf(pd.PlanDir(g.x, g.y)); if (cc >= 0 && !pd.cells[cc].Wet && pd.cells[cc].kind != bk) { pd.cells[cc].kind = bk; pd.cells[cc].ring = 0; } }
+        }
+        /// <summary>Nach dem Wachsen: neue Basisparzellen sauber, Flaggen/Kristalle/Bohrtürme/Außenposten darauf zur nächsten freien Parzelle.</summary>
+        static void GrewBase(PState ps)
+        {
+            var pd = ps.pd; var sv = ps.sv;
+            for (int i = 0; i < pd.N; i++) if (pd.cells[i].IsBase && !ps.clean[i]) ps.clean[i] = true;
+            int Near(int c)
+            {
+                var seen = new HashSet<int> { c }; var q = new Queue<int>(); q.Enqueue(c);
+                while (q.Count > 0) { int x = q.Dequeue(); var cl = pd.cells[x]; if (!cl.IsBase && !cl.Wet) return x; foreach (int nb in cl.nb) if (seen.Add(nb)) q.Enqueue(nb); }
+                return c;
+            }
+            if (sv.flags != null) foreach (var f in sv.flags) if (f.cell >= 0 && f.cell < pd.N && pd.cells[f.cell].IsBase) { f.cell = Near(f.cell); f.x = f.y = 0; }
+            if (sv.crystals != null) foreach (var k in sv.crystals) if (k.cell >= 0 && k.cell < pd.N && pd.cells[k.cell].IsBase) { k.cell = Near(k.cell); k.x = k.y = 0; }
+            if (sv.rigs != null) foreach (var r in sv.rigs) if (r.cell >= 0 && r.cell < pd.N && pd.cells[r.cell].IsBase) r.cell = Near(r.cell);
+            if (sv.outposts != null) foreach (var o in sv.outposts) if (o.cell >= 0 && o.cell < pd.N && pd.cells[o.cell].IsBase) o.cell = Near(o.cell);
+        }
         /// <summary>Editor/Test: Ergebnis des Planers für den aktuellen Planeten.</summary>
         public static string DevPlanInfo()
         {
@@ -47,7 +72,8 @@ namespace LunarCleanup.Core
             {
                 string pid = k.Split('@')[0]; if (!GameData.Planets.ContainsKey(pid) || !GameData.Cells.ContainsKey(k)) continue; var pd = PlanetData.GetKey(pid, k); n++;
                 bool InBase(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && pd.cells[cc].IsBase && !pd.cells[cc].Wet; }
-                var P = FactoryPlanner.Plan(k, OneStation(GameData.Layouts[k]), InBase); ms += P.ms; mx = System.Math.Max(mx, P.ms);
+                int normal = GameData.Kinds.FindIndex(q => q.key == "normal"); bool CanGrow(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && !pd.cells[cc].Wet && pd.cells[cc].kind == normal; }
+                var P = FactoryPlanner.Plan(k, OneStation(GameData.Layouts[k]), InBase, null, CanGrow); ms += P.ms; if (!P.hasPad) bad.Add(k + ": kein Landeplatz"); mx = System.Math.Max(mx, P.ms);
                 if (P.ok) ok++; else bad.Add(k + ": " + string.Join("; ", P.errors.Take(3)));
             }
             return ok + "/" + n + " ok, im Mittel " + (ms / System.Math.Max(1, n)) + " ms, höchstens " + mx + " ms" + (bad.Count > 0 ? " | " + string.Join(" | ", bad.Take(8)) : "");

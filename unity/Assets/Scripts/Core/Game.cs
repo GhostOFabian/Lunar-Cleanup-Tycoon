@@ -125,6 +125,7 @@ namespace LunarCleanup.Core
             if (sv.clean.Length == N) { for (int i = 0; i < N; i++) ps.clean[i] = sv.clean[i] == '1'; }
             else for (int i = 0; i < N; i++) ps.clean[i] = ps.pd.cells[i].IsBase;
             if (sv.paid.Length == N) for (int i = 0; i < N; i++) ps.paid[i] = sv.paid[i] == '1';
+            if (ps.plan != null && ps.plan.grow.Count > 0) GrewBase(ps); /* 11.11.: Basis wuchs für den Landeplatz – dort ist alles sauber, Sachen darauf ziehen um */
             for (int i = 0; i < N; i++) if (ps.clean[i] && !ps.pd.cells[i].IsBase) ps.nClean++;
             foreach (var s in GameData.Stations) { var o = sv.st.Find(x => x.id == s); if (o == null) { o = new StSave { id = s }; sv.st.Add(o); } o.buf = Arr(o.buf); ps.st[s] = o; }
             foreach (var m in new[] { "presse", "schmelze", "raff" }) { var o = sv.mach.Find(x => x.id == m); if (o == null) { o = new MachSave { id = m }; sv.mach.Add(o); } o.inp = Arr(o.inp); o.outp = Arr(o.outp); if (o.cur >= ps.line.Of(m).Count) o.cur = -1; ps.mach[m] = o; }

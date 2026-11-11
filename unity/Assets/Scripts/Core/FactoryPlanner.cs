@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
         public readonly Dictionary<string, Vector2Int> start = new Dictionary<string, Vector2Int>();
         public readonly Dictionary<string, Vector2Int> goal = new Dictionary<string, Vector2Int>();   // Eingang je Zielgebäude
         public RectInt dock; public float unitYaw; public int rot, mir; public Vector2Int shift; public long ms;
-        public bool hasPad, padOutside; public Vector2Int pad; public int padH = PAD_H; public const int PAD_H = 4; // 11.11.: Landeplatz für alle Schiffe (9 × 9 m), immer vorhanden – notfalls etwas kleiner oder direkt am Basisrand
+        public bool hasPad, padOutside; public Vector2Int pad; public int padH = PAD_H; public readonly List<Vector2Int> grow = new List<Vector2Int>(); public const int PAD_H = 4; // 11.11.: Landeplatz für alle Schiffe (9 × 9 m), immer vorhanden – passt er nicht, wird die Basis dort größer (grow = Rasterpunkte, die zur Basis werden)
         public readonly HashSet<Vector2Int> reserved = new HashSet<Vector2Int>();   // Bänder + Abstand, Y-Stücke, Andockfläche + Zufahrt
         public bool[] mask;
         public bool InBase(Vector2 p) { int x = Mathf.RoundToInt(p.x), y = Mathf.RoundToInt(p.y); return x >= -FactoryPlanner.EXT && x <= FactoryPlanner.EXT && y >= -FactoryPlanner.EXT && y <= FactoryPlanner.EXT && mask != null && mask[(y + FactoryPlanner.EXT) * FactoryPlanner.N + x + FactoryPlanner.EXT]; }
@@ -72,8 +72,10 @@ namespace LunarCleanup.Core
         static bool Inside(int x, int y) => x >= -EXT && x <= EXT && y >= -EXT && y <= EXT;
 
         /// <summary>Plan für ein Layout. inBase(x, y): liegt der Meter-Punkt auf einer Basiszelle? pinned: vom Spieler verschobene Nebengebäude.</summary>
-        public static FactoryPlan Plan(string key, LayoutDef L, Func<int, int, bool> inBase, Dictionary<string, Vector2> pinned = null)
+        [ThreadStatic] static Func<int, int, bool> growF;
+        public static FactoryPlan Plan(string key, LayoutDef L, Func<int, int, bool> inBase, Dictionary<string, Vector2> pinned = null, Func<int, int, bool> canGrow = null)
         {
+            growF = canGrow;
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var mask = new bool[N * N]; for (int y = -EXT; y <= EXT; y++) for (int x = -EXT; x <= EXT; x++) mask[Idx(x, y)] = inBase(x, y);
             var ids = L.pos.Keys.Where(k => GameData.Bld.ContainsKey(k) && (!Game.IsUnit(k) || k == "u1")).ToList();
@@ -149,8 +151,9 @@ namespace LunarCleanup.Core
             /* Fabian 11.11.: Landeplatz für Lieferschiffe von anderen Planeten – zuletzt gepackt, gern nahe der Verkaufsrakete. Kein Platz = kein Fehler (dann landet die alte Lieferrakete). */
             {
                 var want = placed.TryGetValue("sell", out var sp) ? sp : new Vector2Int(dock.x + dock.width / 2, dock.y + dock.height / 2);
-                for (int ph = FactoryPlan.PAD_H; ph >= 3 && !P.hasPad; ph--) { var pp = pk.Best(ph, want); if (pp.HasValue) { P.hasPad = true; P.pad = pp.Value; P.padH = ph; pk.Add(pp.Value, ph, false); } }
-                if (!P.hasPad) { var po = pk.BestOutside(FactoryPlan.PAD_H, want); if (po.HasValue) { P.hasPad = true; P.padOutside = true; P.pad = po.Value; P.padH = FactoryPlan.PAD_H; } } /* Fabian 11.11.: Schiffe sollen nie schweben – notfalls direkt vor der Basis */
+                int ph = FactoryPlan.PAD_H; var pp = pk.Best(ph, want); if (pp.HasValue) { P.hasPad = true; P.pad = pp.Value; pk.Add(pp.Value, ph, false); }
+                /* Fabian 11.11.: Schiffe sollen nie schweben – passt der Landeplatz nicht, wird die Basis am Rand um ihn herum größer. Nichts anderes wird verschoben. */
+                if (!P.hasPad && growF != null) { var po = pk.BestGrow(ph, want, growF); if (po.HasValue) { P.hasPad = true; P.padOutside = true; P.pad = po.Value; for (int y = po.Value.y - ph - 1; y <= po.Value.y + ph + 1; y++) for (int x = po.Value.x - ph - 1; x <= po.Value.x + ph + 1; x++) if (Inside(x, y) && !mask[Idx(x, y)]) P.grow.Add(new Vector2Int(x, y)); pk.Add(po.Value, ph, false); } }
             }
             foreach (var kv in placed) { P.pos[kv.Key] = kv.Value; P.half[kv.Key] = hs[kv.Key]; }
             foreach (var q in res) P.reserved.Add(q); P.mask = mask;
@@ -205,16 +208,19 @@ namespace LunarCleanup.Core
                     }
                 return best;
             }
-            /// <summary>11.11.: Platz ganz außerhalb der Basis, aber direkt am Rand (höchstens 3 m Lücke), ohne Zufahrt/Bänder.</summary>
-            public Vector2Int? BestOutside(int h, Vector2Int want)
+            /// <summary>11.11.: Platz am Basisrand, der teils über die Basis hinausragt: innen frei wie sonst (keine Bänder, Zufahrt, Gebäude), außen nur normale Parzellen (canGrow). Nächster Platz zum Wunschort.</summary>
+            public Vector2Int? BestGrow(int h, Vector2Int want, Func<int, int, bool> canGrow)
             {
-                Vector2Int? best = null; int bd = int.MaxValue; int area = (2 * h + 1) * (2 * h + 1);
-                for (int y = -EXT + h; y <= EXT - h; y++) for (int x = -EXT + h; x <= EXT - h; x++)
+                Vector2Int? best = null; int bd = int.MaxValue; int area = (2 * h + 1) * (2 * h + 1), r = h + 1;
+                for (int y = -EXT + r; y <= EXT - r; y++) for (int x = -EXT + r; x <= EXT - r; x++)
                     {
-                        if (Q(sOut, x - h, y - h, x + h, y + h) < area) continue;                               // ganz außerhalb
-                        if (Q(sRes, x - h - 1, y - h - 1, x + h + 1, y + h + 1) > 0) continue;                  // keine Zufahrt
-                        int r = h + 3; int ringOut = Q(sOut, x - r, y - r, x + r, y + r); if (ringOut >= (2 * r + 1) * (2 * r + 1)) continue; // Basis in der Nähe
-                        int d = Mathf.Abs(x - want.x) + Mathf.Abs(y - want.y); if (d < bd) { bd = d; best = new Vector2Int(x, y); }
+                        int outN = Q(sOut, x - r, y - r, x + r, y + r); if (outN == 0) continue;                    // passt schon ganz rein (dann hätte Best ihn gefunden)
+                        if (outN >= (2 * r + 1) * (2 * r + 1)) continue;                                            // muss an die Basis grenzen
+                        if (Q(sRes, x - h - 1, y - h - 1, x + h + 1, y + h + 1) > 0) continue;                      // keine Bänder/Zufahrt
+                        if (Q(sOcc1, x - h, y - h, x + h, y + h) > 0 || Q(sOcc2, x - h, y - h, x + h, y + h) > 0) continue; // Abstand zu Gebäuden
+                        int d = Mathf.Abs(x - want.x) + Mathf.Abs(y - want.y); if (d >= bd) continue;
+                        bool ok = true; for (int yy = y - r; yy <= y + r && ok; yy++) for (int xx = x - r; xx <= x + r; xx++) if (!mask[Idx(xx, yy)] && !canGrow(xx, yy)) { ok = false; break; }
+                        if (ok) { bd = d; best = new Vector2Int(x, y); }
                     }
                 return best;
             }
