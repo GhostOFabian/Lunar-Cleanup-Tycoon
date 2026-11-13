@@ -4,7 +4,7 @@ EN = {
 "Lunar Cleanup Tycoon": "Lunar Cleanup Tycoon",
 "Mobiles Idle-Tycoon-Spiel: Planeten sauber wischen, Reinigungsindustrie automatisieren, 18 Welten vom Mond bis zum Pulsarplaneten Poltergeist.":
  "Mobile idle tycoon game: wipe planets clean, automate a cleaning industry, 18 worlds from the Moon to the pulsar planet Poltergeist.",
-"Mobile Idle-Tycoon · Version 0.5 (Beta) · Build 76": "Mobile idle tycoon · Version 0.5 (Beta) · Build 76",
+"Mobile Idle-Tycoon · Version 0.5 (Beta) · Build 77": "Mobile idle tycoon · Version 0.5 (Beta) · Build 77",
 "Ein ganzer Mond voller Schrott. Du wischst die ersten Parzellen selbst sauber, dann übernehmen Buggys, Förderbänder, Pressen und Drohnen. Und wenn du das Spiel schließt, putzt deine Flotte einfach weiter.":
  "A whole moon full of junk. You wipe the first plots clean yourself, then buggies, conveyor belts, presses and drones take over. And when you close the game, your fleet just keeps on cleaning.",
 "Im Browser spielen (Beta)": "Play in your browser (beta)",
@@ -246,6 +246,6 @@ EN = {
 "Ausgebaute Basis auf Ganymed": "Developed base on Ganymede",
 "Voll ausgebaute Basis auf Pluto": "Fully built base on Pluto",
 "Ausgebaute Basis auf Triton mit Bändern und Entladeanlage": "Developed base on Triton with belts and unloader",
-"Lunar Cleanup Tycoon · Version 0.5 (Beta) · Build 76 · November 2026": "Lunar Cleanup Tycoon · Version 0.5 (beta) · Build 76 · November 2026",
+"Lunar Cleanup Tycoon · Version 0.5 (Beta) · Build 77 · November 2026": "Lunar Cleanup Tycoon · Version 0.5 (beta) · Build 77 · November 2026",
 "Alle Rechte vorbehalten": "All rights reserved",
 }
