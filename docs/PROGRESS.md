@@ -314,3 +314,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - Build 75: Medaillen-Schritte statt Planetenziele, Erfolge im Medaillenbuch („Medaillen 72 / 144“), eine Auftragsliste, Planetenzeichen blendet nach dem Puzzle aus. Im Editor geprüft (DE + EN, Screenshots). iPhone-Projekt gebaut, Browser-Version online.
 - Build 76: Tutorial (Übungsbereich, 11 Schritte, Komet am Ende) und „Jetzt abholen“ ganz oben. Im Editor geprüft: Schritte, Karte, Komet, Rückkehr in den echten Stand, DE + EN. Auf dem Handy und als echter Neuspieler (leerer Speicher) noch nicht durchgespielt.
 - Build 77: U-Landebahn, Schiffe landen nose-first und starten mit Boost. Im Editor mit Einzelbildern geprüft (Anflug, Scheitel, Rollen, Abheben; Liefer- und Händlerschiff). Website-Screenshots zeigen noch die alte Plattform.
+- Build 78: größere U-Landebahn mit neuen Basisplatten; Basis-Prüfung 49/49, alle 49 Layouts mit 13-m-Bahn (Basis jeweils um 125–211 m² größer).

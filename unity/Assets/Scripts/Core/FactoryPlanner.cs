@@ -28,7 +28,7 @@ namespace LunarCleanup.Core
         public readonly Dictionary<string, Vector2Int> start = new Dictionary<string, Vector2Int>();
         public readonly Dictionary<string, Vector2Int> goal = new Dictionary<string, Vector2Int>();   // Eingang je Zielgebäude
         public RectInt dock; public float unitYaw; public int rot, mir; public Vector2Int shift; public long ms;
-        public bool hasPad, padOutside; public Vector2Int pad; public int padH = PAD_H; public readonly List<Vector2Int> grow = new List<Vector2Int>(); public const int PAD_H = 4; // 11.11.: Landeplatz für alle Schiffe (9 × 9 m), immer vorhanden – passt er nicht, wird die Basis dort größer (grow = Rasterpunkte, die zur Basis werden)
+        public bool hasPad, padOutside; public Vector2Int pad; public int padH = PAD_H; public readonly List<Vector2Int> grow = new List<Vector2Int>(); public const int PAD_H = 6; /* 13.11. (Fabian): größere U-Landebahn, 13 × 13 m – die Basis wächst am Rand um sie herum */ // 11.11.: Landeplatz für alle Schiffe (9 × 9 m), immer vorhanden – passt er nicht, wird die Basis dort größer (grow = Rasterpunkte, die zur Basis werden)
         public readonly HashSet<Vector2Int> reserved = new HashSet<Vector2Int>();   // Bänder + Abstand, Y-Stücke, Andockfläche + Zufahrt
         public bool[] mask;
         public bool InBase(Vector2 p) { int x = Mathf.RoundToInt(p.x), y = Mathf.RoundToInt(p.y); return x >= -FactoryPlanner.EXT && x <= FactoryPlanner.EXT && y >= -FactoryPlanner.EXT && y <= FactoryPlanner.EXT && mask != null && mask[(y + FactoryPlanner.EXT) * FactoryPlanner.N + x + FactoryPlanner.EXT]; }

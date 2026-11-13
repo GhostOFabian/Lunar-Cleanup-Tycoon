@@ -35,7 +35,8 @@ namespace LunarCleanup.Gameplay
             dir = new Vector2(0, 1); return new Vector2(RW_X, s - RW_L - arc);
         }
 
-        float PadK => ps?.plan == null ? 1 : (2 * ps.plan.padH + 1) / 9f; /* kleinerer Landeplatz → Platz und Schiffe etwas kleiner */
+        float PadK => ps?.plan == null ? 1 : (2 * ps.plan.padH + 1) / 9f; /* Bahn ist für 9 m gebaut und wird auf die Feldgröße skaliert */
+        float ShipK(Visit v) => v.scale * PadK * 1.2f * 9f / 13f; /* 13.11.: Schiffe 20 % größer als auf der 9-m-Bahn */
         bool PadOn => ps != null && ps.plan != null && ps.plan.hasPad; /* 11.11.: von Anfang an da – Schiffe kommen auch vor dem Terraforming */
 
         void UpdatePad()
@@ -69,7 +70,9 @@ namespace LunarCleanup.Gameplay
             if (padGo) Destroy(padGo); padGo = null; padLights = null; if (other) { if (ship != null && ship.go) Destroy(ship.go); ship = null; visits.Clear(); } /* nur beim Planetenwechsel: Schiff und Reihe weg */
             if (!on) return;
             var P = ps.plan; Vector2 c = P.pad;
-            Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var u = c - hq; if (u.sqrMagnitude < .01f) u = Vector2.up; u.Normalize();
+            Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var u = c - hq;
+            if (P.grow.Count > 0) { var m = Vector2.zero; foreach (var g in P.grow) m += (Vector2)g; u = m / P.grow.Count - c; } /* 13.11.: offenes Ende zur neuen Basisfläche – Schiffe starten von der Basis weg, nie über Gebäude */
+            if (u.sqrMagnitude < .01f) u = Vector2.up; u = Mathf.Abs(u.x) > Mathf.Abs(u.y) ? new Vector2(Mathf.Sign(u.x), 0) : new Vector2(0, Mathf.Sign(u.y)); /* am Raster ausrichten – passt so genau ins 13-m-Feld */
             float yaw = Mathf.Atan2(u.x, -u.y); /* PlanRot: vorne (+Z des Modells) = e1·sin − e2·cos → zeigt nach außen, zur Anflugseite */
             var d = pd.PlanDir(c); float hmax = pd.Height(d);
             for (int k = 0; k < 12; k++) { float a = k * Mathf.PI / 6; for (float r = 2f; r <= P.padH; r += 2f) hmax = Mathf.Max(hmax, pd.Height(pd.PlanDir(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r))); }
@@ -125,7 +128,7 @@ namespace LunarCleanup.Gameplay
         void StartShip(Visit v)
         {
             var go = new GameObject("Schiff " + v.kind); go.transform.SetParent(transform, false);
-            float sk = v.scale * PadK; GameObject m = LcKit.Spawn(v.model, go.transform, Vector3.zero, 0, v.col, null, sk);
+            float sk = ShipK(v); GameObject m = LcKit.Spawn(v.model, go.transform, Vector3.zero, 0, v.col, null, sk);
             if (!m) { Destroy(go); return; }
             var s = new Ship { go = go, v = v };
             /* OBJ hat keine Drehpunkte: bewegliche Teile unter einen Drehpunkt hängen (Werte aus lunar_models.py, in Unity-Achsen, Modellmaß) */
@@ -207,7 +210,7 @@ namespace LunarCleanup.Gameplay
             if (s.flame)
             {
                 float fl = boost * (.85f + .15f * Mathf.Sin(Time.time * 40f)); s.flame.gameObject.SetActive(fl > .02f);
-                float sk = v.scale * PadK; s.flame.localScale = Vector3.one * (1.2f + 3.4f * fl) * sk * 1.6f; s.flame.localPosition = new Vector3(0, (v.foot + 1f) * sk, -(v.len * .55f + 1.2f * fl) * sk);
+                float sk = ShipK(v); s.flame.localScale = Vector3.one * (1.2f + 3.4f * fl) * sk * 1.6f; s.flame.localPosition = new Vector3(0, (v.foot + 1f) * sk, -(v.len * .55f + 1.2f * fl) * sk);
                 if (boost > .5f && t < tRoll && Time.frameCount % 3 == 0) EmitDust(pos.normalized, new Color(.8f, .75f, .7f), 6); /* Staub auf der Bahn beim Start */
             }
             if (t > tEnd - 1f) { float f = 1 - S01(tEnd - 1f, tEnd, t); tr.localScale = Vector3.one * Mathf.Max(.01f, f); }
