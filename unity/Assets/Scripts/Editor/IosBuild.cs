@@ -49,6 +49,7 @@ namespace LunarCleanup.EditorTools
             {
                 scenes = new[] { "Assets/Scenes/LunarCleanup.unity" }, locationPathName = outDir, target = BuildTarget.iOS,
                 options = (dev ? BuildOptions.Development : BuildOptions.None) | (start ? BuildOptions.AutoRunPlayer : BuildOptions.None)
+                    | (System.IO.Directory.Exists(System.IO.Path.Combine(outDir, "Unity-iPhone.xcodeproj")) ? BuildOptions.AcceptExternalModificationsToPlayer : BuildOptions.None) /* Fabian 13.11.: Xcode-Ordner nur aktualisieren statt löschen – sonst verschwindet das Projekt aus „Zuletzt geöffnet“ und Einstellungen in Xcode gehen verloren */
             };
             var rep = BuildPipeline.BuildPlayer(opt);
             bool ok = rep.summary.result == BuildResult.Succeeded;
