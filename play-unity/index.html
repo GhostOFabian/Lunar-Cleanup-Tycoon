@@ -60,18 +60,18 @@ body.m header,body.m footer{display:none}body.m main{padding:0}body.m #frame{bor
   <div id="fbMsg"></div>
   <div class="row"><button type="button" id="fbClose"></button><button type="button" class="send" id="fbSend" disabled></button></div>
 </div></div>
-<footer>Beta · Version 0.5 · Build 78 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser</footer>
+<footer>Beta · Version 0.5 · Build 79 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser</footer>
 <script>
 /* Fabian 11.11.: Die ganze Seite folgt der Spielsprache. Bis das Spiel läuft gilt die Browsersprache (wie im Spiel selbst);
    danach meldet das Spiel seine Sprache über window.lcSetLang (Assets/Plugins/WebGL/LcPage.jslib), auch beim Umschalten im Spiel. */
 var LC_TX={
  de:{fs:'Vollbild',load:'Unity-Version wird geladen …',hint:'Einmalig rund 27 MB, danach aus dem Browser-Speicher. Eigener Spielstand in diesem Browser.',
-     foot:'Beta · Version 0.5 · Build 78 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser',
+     foot:'Beta · Version 0.5 · Build 79 · Maus = Finger, Mausrad = Zoom · Spielstand bleibt in diesem Browser',
      fail:'Konnte nicht starten: ',failEnd:' – bitte einen aktuellen Browser am PC verwenden.',files:'Spieldateien konnten nicht geladen werden.',
      t:'Wie gefällt dir das Spiel?',p:'Daumen hoch oder runter und gern ein paar Worte dazu. Jeder Kommentar hilft.',ph:'Was gefällt dir, was stört dich? (freiwillig)',
      send:'Senden',close:'Schließen',ok:'Danke! Dein Feedback ist angekommen.',err:'Senden hat nicht geklappt – bitte später noch einmal.',up:'Gefällt mir',down:'Gefällt mir nicht'},
  en:{fs:'Fullscreen',load:'Loading the Unity version …',hint:'About 27 MB once, then loaded from your browser. Your save stays in this browser.',
-     foot:'Beta · Version 0.5 · Build 78 · Mouse = finger, mouse wheel = zoom · Your save stays in this browser',
+     foot:'Beta · Version 0.5 · Build 79 · Mouse = finger, mouse wheel = zoom · Your save stays in this browser',
      fail:'Could not start: ',failEnd:' – please use an up-to-date browser on a computer.',files:'Game files could not be loaded.',
      t:'How do you like the game?',p:'Thumbs up or down, and a few words if you like. Every comment helps.',ph:'What do you like, what bugs you? (optional)',
      send:'Send',close:'Close',ok:'Thank you! Your feedback has arrived.',err:'Could not send – please try again later.',up:'I like it',down:'I don\'t like it'}};
@@ -90,7 +90,7 @@ window.lcSetLang(window.lcLang||LC_LANG);
   var c=document.getElementById('c'),bar=document.querySelector('#bar i'),load=document.getElementById('load'),err=document.getElementById('err');
   /* Fabian 11.11.: GitHub Pages lieferte die Spieldateien zeitweise mit ~30 KB/s. Darum zuerst vom kostenlosen jsDelivr-CDN laden (fest auf den Commit mit diesem Build),
      bei Fehler oder nach 5 s ohne Antwort wie bisher direkt von GitHub. Bei jedem neuen Build CDN_REV auf den Commit setzen, der die neuen Build-Dateien enthält. */
-  var CDN_REV='8fe9c62', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=78';
+  var CDN_REV='ee954bb', CDN='https://cdn.jsdelivr.net/gh/GhostOFabian/Lunar-Cleanup-Tycoon@'+CDN_REV+'/play-unity/Build/', V='?v=79';
   var cfg={dataUrl:'',frameworkUrl:'',codeUrl:'',streamingAssetsUrl:'StreamingAssets',
     companyName:'DefaultCompany',productName:'Lunar Cleanup Tycoon',productVersion:'0.5',
     showBanner:function(msg,type){ if(type==='error') err.textContent=msg; }};
@@ -101,7 +101,7 @@ window.lcSetLang(window.lcLang||LC_LANG);
   s.onload=function(){
     /* Daten (16 MB) sind für jsDelivr zu groß (Grenze pro Datei) – sie liegen in 3 Teilen, werden hier zusammengesetzt und als Blob an Unity gegeben.
        Fortschritt der Teile zählt als erste Hälfte des Balkens. */
-    var PARTS=3, got=0, TOTAL=16103943;
+    var PARTS=3, got=0, TOTAL=16104055;
     function parts(b,q){ var a=[],ok=0; return Promise.all(Array.from({length:PARTS},function(_,i){ return fetch(b+'WebGL-GitHub.data.part'+i+q).then(function(r){ if(!r.ok) throw r.status;
         var rd=r.body.getReader(), ch=[]; return (function pump(){ return rd.read().then(function(x){ if(x.done) return new Blob(ch); ch.push(x.value); got+=x.value.length; bar.style.width=Math.min(50,got/TOTAL*50)+'%'; return pump(); }); })(); }); })); }
     var done=false, go=function(cdn){ if(done) return; done=true; if(cdn){ cfg.frameworkUrl=CDN+'WebGL-GitHub.framework.js.unityweb'; cfg.codeUrl=CDN+'WebGL-GitHub.wasm.unityweb'; }
