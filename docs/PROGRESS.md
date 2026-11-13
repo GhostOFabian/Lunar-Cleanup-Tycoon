@@ -315,3 +315,4 @@ Plan für 02.11. (mit Fabian abgesprochen): (a) Grafik-Korrekturen + Riesenmeteo
 - Build 76: Tutorial (Übungsbereich, 11 Schritte, Komet am Ende) und „Jetzt abholen“ ganz oben. Im Editor geprüft: Schritte, Karte, Komet, Rückkehr in den echten Stand, DE + EN. Auf dem Handy und als echter Neuspieler (leerer Speicher) noch nicht durchgespielt.
 - Build 77: U-Landebahn, Schiffe landen nose-first und starten mit Boost. Im Editor mit Einzelbildern geprüft (Anflug, Scheitel, Rollen, Abheben; Liefer- und Händlerschiff). Website-Screenshots zeigen noch die alte Plattform.
 - Build 78: größere U-Landebahn mit neuen Basisplatten; Basis-Prüfung 49/49, alle 49 Layouts mit 13-m-Bahn (Basis jeweils um 125–211 m² größer).
+- Build 79: Landebahn-Prüfung (Bahn frei von Gebäuden/Bändern/Y-Stücken/Zufahrten, Schneise frei): 49/49. Vorher standen auf 4 Layouts Gebäude 2–4 m vor dem offenen Ende.

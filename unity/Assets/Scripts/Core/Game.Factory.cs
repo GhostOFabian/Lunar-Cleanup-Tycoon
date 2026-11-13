@@ -135,6 +135,53 @@ namespace LunarCleanup.Core
             }
             return ok + "/" + n + " ok, im Mittel " + (ms / System.Math.Max(1, n)) + " ms, höchstens " + mx + " ms" + (bad.Count > 0 ? " | " + string.Join(" | ", bad.Take(8)) : "");
         }
+        /// <summary>13.11. (Fabian): Richtung des offenen Endes der U-Landebahn (am Raster). Von den vier Richtungen gewinnt die mit der freiesten Schneise
+        /// (40 m lang, 4 m zu jeder Seite: keine Gebäude, keine Außenlager-Plätze); bei Gleichstand die zur neuen Basisfläche.</summary>
+        public static Vector2 RunwayDir(FactoryPlan P, string pid, PlanetData pd, bool outposts) { return RunwayDir(P, pid, pd, outposts, out _); }
+        public static Vector2 RunwayDir(FactoryPlan P, string pid, PlanetData pd, bool outposts, out float freeM)
+        {
+            var c = (Vector2)P.pad; float H = P.padH + .5f;
+            Vector2 hq = P.pos.ContainsKey("hq") ? P.pos["hq"] : Vector2.zero, pref = c - hq;
+            if (P.grow.Count > 0) { var m = Vector2.zero; foreach (var g in P.grow) m += (Vector2)g; pref = m / P.grow.Count - c; }
+            var sites = new List<Vector2>(); if (outposts) foreach (int oc in OutpostSites(pid)) if (oc >= 0 && oc < pd.N) sites.Add(pd.PlanLocal(pd.cells[oc].c.normalized));
+            Vector2 best = Vector2.up; float bestS = -1; freeM = 0;
+            foreach (var u in new[] { Vector2.right, Vector2.up, Vector2.left, Vector2.down })
+            {
+                var side = new Vector2(-u.y, u.x); float free = 40;
+                void Probe(Vector2 p, float r) { var d = p - c; float along = Vector2.Dot(d, u) - H, across = Mathf.Abs(Vector2.Dot(d, side)); if (along > -r && along < 40 && across < 4 + r) free = Mathf.Min(free, Mathf.Max(0, along - r)); }
+                foreach (var kv in P.pos) Probe(kv.Value, P.half.TryGetValue(kv.Key, out var hh) ? hh : 2);
+                foreach (var q in sites) Probe(q, 2.5f);
+                float sc = free + Vector2.Dot(u, pref.sqrMagnitude > .01f ? pref.normalized : Vector2.up) * 3f;
+                if (sc > bestS) { bestS = sc; best = u; freeM = free; }
+            }
+            return best;
+        }
+        /// <summary>13.11. (Fabian): steht etwas auf der Landebahn oder in der An-/Abflugschneise? Alle Layouts. Schneise: 40 m ab dem offenen Ende, 4 m links und rechts.</summary>
+        public static string DevRunwayCheck()
+        {
+            int n = 0, okN = 0; var bad = new List<string>(); float minFree = 999; string minK = "";
+            foreach (var k in GameData.Layouts.Keys)
+            {
+                string pid = k.Split('@')[0]; if (!GameData.Planets.ContainsKey(pid) || !GameData.Cells.ContainsKey(k)) continue; var pd = PlanetData.GetKey(pid, k); n++;
+                bool InBase(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && pd.cells[cc].IsBase && !pd.cells[cc].Wet; }
+                int normal = GameData.Kinds.FindIndex(q => q.key == "normal"); bool CanGrow(int x, int y) { int cc = pd.CellOf(pd.PlanDir(x, y)); return cc >= 0 && !pd.cells[cc].Wet && pd.cells[cc].kind == normal; }
+                var P = FactoryPlanner.Plan(k, OneStation(GameData.Layouts[k]), InBase, null, CanGrow); if (!P.hasPad) { bad.Add(k + ": kein Landeplatz"); continue; }
+                var c = (Vector2)P.pad; float H = P.padH + .5f; var issues = new List<string>();
+                bool InSq(Vector2 p, float m) => Mathf.Abs(p.x - c.x) < H + m && Mathf.Abs(p.y - c.y) < H + m;
+                foreach (var kv in P.pos) { float h = P.half.TryGetValue(kv.Key, out var hh) ? hh : 2; if (Mathf.Abs(kv.Value.x - c.x) < H + h && Mathf.Abs(kv.Value.y - c.y) < H + h) issues.Add("Gebäude " + kv.Key); }
+                foreach (var kv in P.cells) foreach (var q in kv.Value) if (InSq(q, .5f)) { issues.Add("Band " + kv.Key); break; }
+                foreach (var kv in P.merge) if (InSq(kv.Value.m, .5f)) issues.Add("Y-Stück");
+                foreach (var q in P.reserved) if (InSq(q, 0)) { issues.Add("Zufahrt/Band-Abstand"); break; }
+                var u = RunwayDir(P, pid, pd, k == pid); var side = new Vector2(-u.y, u.x);
+                float free = 40; /* erstes Hindernis in der Schneise (Meter ab dem offenen Ende) */
+                void Probe(Vector2 p, float r, string what) { var d = p - c; float along = Vector2.Dot(d, u) - H, across = Mathf.Abs(Vector2.Dot(d, side)); if (along > -r && along < 40 && across < 4 + r) { free = Mathf.Min(free, Mathf.Max(0, along - r)); if (along < 12) issues.Add(what + " in der Schneise (" + Mathf.Max(0, along - r).ToString("0") + " m)"); } }
+                foreach (var kv in P.pos) Probe(kv.Value, P.half.TryGetValue(kv.Key, out var hh) ? hh : 2, "Gebäude " + kv.Key);
+                if (k == pid) foreach (int oc in OutpostSites(pid)) if (oc >= 0 && oc < pd.N) Probe(pd.PlanLocal(pd.cells[oc].c.normalized), 2.5f, "Außenlager-Platz");
+                if (free < minFree) { minFree = free; minK = k; }
+                if (issues.Count == 0) okN++; else bad.Add(k + ": " + string.Join(", ", issues.Distinct().Take(4)));
+            }
+            return okN + "/" + n + " frei · engste Schneise " + minFree.ToString("0") + " m (" + minK + ")" + (bad.Count > 0 ? " | " + string.Join(" | ", bad.Take(10)) : "");
+        }
         static LayoutDef Build(LayoutDef T, FactoryPlan P)
         {
             var L = new LayoutDef { pos = new Dictionary<string, Vector2>(T.pos), yaw = new Dictionary<string, float>(T.yaw), shop = T.shop, start = T.start, park = T.park };

@@ -70,9 +70,7 @@ namespace LunarCleanup.Gameplay
             if (padGo) Destroy(padGo); padGo = null; padLights = null; if (other) { if (ship != null && ship.go) Destroy(ship.go); ship = null; visits.Clear(); } /* nur beim Planetenwechsel: Schiff und Reihe weg */
             if (!on) return;
             var P = ps.plan; Vector2 c = P.pad;
-            Vector2 hq = ps.lay.pos.ContainsKey("hq") ? ps.lay.pos["hq"] : Vector2.zero; var u = c - hq;
-            if (P.grow.Count > 0) { var m = Vector2.zero; foreach (var g in P.grow) m += (Vector2)g; u = m / P.grow.Count - c; } /* 13.11.: offenes Ende zur neuen Basisfläche – Schiffe starten von der Basis weg, nie über Gebäude */
-            if (u.sqrMagnitude < .01f) u = Vector2.up; u = Mathf.Abs(u.x) > Mathf.Abs(u.y) ? new Vector2(Mathf.Sign(u.x), 0) : new Vector2(0, Mathf.Sign(u.y)); /* am Raster ausrichten – passt so genau ins 13-m-Feld */
+            var u = Game.RunwayDir(P, ps.pid, pd, true); /* 13.11.: offenes Ende dorthin, wo die Schneise frei ist (keine Gebäude, keine Außenlager) */
             float yaw = Mathf.Atan2(u.x, -u.y); /* PlanRot: vorne (+Z des Modells) = e1·sin − e2·cos → zeigt nach außen, zur Anflugseite */
             var d = pd.PlanDir(c); float hmax = pd.Height(d);
             for (int k = 0; k < 12; k++) { float a = k * Mathf.PI / 6; for (float r = 2f; r <= P.padH; r += 2f) hmax = Mathf.Max(hmax, pd.Height(pd.PlanDir(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r))); }
@@ -168,7 +166,7 @@ namespace LunarCleanup.Gameplay
             float sTd = .5f; var tdP = RwAt(sTd, out var tdD); Vector3 td = RwWorld(tdP), tdF = RwDir(tdD);
             if (t < T_TD)
             {
-                float k = S01(0, T_TD, t); var ctl = td - tdF * pd.R * .35f + padUp * 3f; /* letzter Anflug genau in Bahnrichtung */
+                float k = S01(0, T_TD, t); var ctl = td - tdF * pd.R * .3f + padUp * 6f; /* letzter Anflug genau in Bahnrichtung */
                 pos = Bez(s.from, ctl, td, k); var ahead = Bez(s.from, ctl, td, Mathf.Min(1, k + .02f)) - pos; fwd = ahead.sqrMagnitude > 1e-6f ? ahead.normalized : tdF;
                 if (k > .97f) fwd = tdF; gearOut = S01(3, 5.5f, t); boost = .35f * (1 - S01(4, 6.5f, t));
             }
@@ -189,8 +187,8 @@ namespace LunarCleanup.Gameplay
             {
                 var endP = RwAt(RwLen, out var endD); Vector3 e0 = RwWorld(endP, 1f * PadK), eF = RwDir(endD);
                 float tau = t - tRoll, k = Mathf.Clamp01(tau / (T_DEP - 4.5f)), v0 = RwLen / 4.5f * 2 * PadK; /* Geschwindigkeit am Ende des Rollens */
-                pos = e0 + eF * (v0 * tau + pd.R * 1.1f * k * k) + padUp * (1.2f * tau + pd.R * .55f * k * k * k);
-                var vel = eF * (v0 + pd.R * 2.2f * k / (T_DEP - 4.5f)) + padUp * (1.2f + pd.R * 1.65f * k * k / (T_DEP - 4.5f)); fwd = vel.normalized; boost = 1; gearOut = 0;
+                pos = e0 + eF * (v0 * tau + pd.R * 1.1f * k * k) + padUp * (5f * tau + pd.R * .55f * k * k * k); /* 13.11.: steil steigen – nach 15 m schon gut 8 m hoch, über jedem Gebäude */
+                var vel = eF * (v0 + pd.R * 2.2f * k / (T_DEP - 4.5f)) + padUp * (5f + pd.R * 1.65f * k * k / (T_DEP - 4.5f)); fwd = vel.normalized; boost = 1; gearOut = 0;
             }
             up = pos.normalized; var f2 = fwd - up * Vector3.Dot(fwd, up); if (f2.sqrMagnitude < 1e-6f) f2 = padOut;
             var rot = Quaternion.LookRotation(f2.normalized, up); float pitch = Vector3.SignedAngle(f2.normalized, fwd, Vector3.Cross(up, f2.normalized)); /* Nase hebt sich beim Steigen */
