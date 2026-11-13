@@ -53,7 +53,7 @@ namespace LunarCleanup.UI
                 var bt = UiKit.Text(b.transform, "Text", label, 19, fg, true, FontStyles.Bold, TextAlignmentOptions.Center); bt.rectTransform.Anchor(0, .38f, 1, 1, 8, 0, 8, 2);
                 var st = UiKit.Text(b.transform, "Hinweis", sub, 11, new Color(fg.r, fg.g, fg.b, .7f), false, FontStyles.Normal, TextAlignmentOptions.Center); st.rectTransform.Anchor(0, 0, 1, .42f, 8, 6, 8, 0);
             }
-            Big("Spiel starten", "Weiter mit deiner Basis", new Color(.43f, .95f, .82f, .95f), new Color(.03f, .08f, .12f), () => { menuGo.SetActive(false); LunarCleanup.Gameplay.Sfx.Play("pop", 1.2f, .4f); });
+            Big("Spiel starten", Game.Tut ? "Tutorial: so funktioniert alles" : "Weiter mit deiner Basis", new Color(.43f, .95f, .82f, .95f), new Color(.03f, .08f, .12f), () => { menuGo.SetActive(false); LunarCleanup.Gameplay.Sfx.Play("pop", 1.2f, .4f); });
             /* Fabian 03.11.: Hard Mode von Anfang an sichtbar – gesperrt mit Hinweis, wie man ihn freischaltet */
             Big("Hard Mode", "", new Color(1, .75f, .3f, .14f), Pal.Credit, () => { if (Game.Hard || Game.HardOpen) { menuGo.SetActive(false); Game.SwitchHard(!Game.Hard); } else OpenSheet("hard"); });
             { var hb = box.Find("Hard Mode"); if (hb) { hardMenuTxt = hb.Find("Text")?.GetComponent<TextMeshProUGUI>(); hardMenuSub = hb.Find("Hinweis")?.GetComponent<TextMeshProUGUI>(); hardMenuImg = hb.GetComponent<Image>(); } }
@@ -132,7 +132,7 @@ namespace LunarCleanup.UI
         const int TutorialSteps = 10;
         void BuildGoal()
         {
-            var b = UiKit.Btn(root, "Ziel", () => { if (!Game.ClaimQuest()) OnFocusQuest?.Invoke(); }, Pal.Glass, 16); goalGo = b.gameObject;
+            var b = UiKit.Btn(root, "Ziel", () => { if (Game.Tut) { var tk = Game.TutSheet(); if (tk != null) OpenSheet(tk); else OnFocusQuest?.Invoke(); return; } if (!Game.ClaimQuest()) OnFocusQuest?.Invoke(); }, Pal.Glass, 16); goalGo = b.gameObject;
             ((RectTransform)b.transform).Anchor(0, 1, 1, 1, 12, -232, 12, 154); /* unter dem Warnhinweis */
             goalKick = UiKit.Text(b.transform, "Kopf", "", 10, Pal.Credit, true, FontStyles.Bold | FontStyles.UpperCase); goalKick.rectTransform.Anchor(0, 1, 1, 1, 14, -22, 14, 8); goalKick.characterSpacing = 8;
             goalText = UiKit.Text(b.transform, "Text", "", 14, Pal.Ink); goalText.rectTransform.Anchor(0, 0, 1, 1, 14, 14, 74, 24);
@@ -202,6 +202,7 @@ namespace LunarCleanup.UI
             if (Game.PuzzleQuiet) { } /* 10.11.: während der Puzzle-Animation keine Warnleiste */
             else if (Game.Icp != null) { var I = Game.Icp; t = "ABFANGEN · Brocken antippen, wenn ihr Ring GRÜN ist · Raketen " + I.rockets + " · abgefangen " + I.hits + " · durch " + I.through + " / " + I.total; warnTarget = "icp"; } /* Fabian 02.11.: Minispiel */
             else if (Game.DoomActive && Game.S.doomPid != Game.S.planet) { var dp = Game.P[Game.S.doomPid]; t = "RIESENMETEOR auf " + dp.P.name + " in " + Mathf.CeilToInt(Game.S.doomT) + " s · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" + (dp.sv.flakLv > 0 ? " · Tippen: hinfliegen und abfangen" : " · Tippen: hinfliegen"); warnTarget = "doomgo"; }
+            else if (Game.DoomActive && Game.Tut) { t = "KOMET im Anflug · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s · danach startet dein echtes Spiel"; warnTarget = ""; } /* 12.11.: Tutorial-Finale */
             else if (Game.DoomActive) { var dp = Game.Cur; t = "RIESENMETEOR auf " + dp.P.name + " · Einschlag in " + Mathf.CeilToInt(Game.S.doomT) + " s" + (dp.sv.msLv > 0 ? " · Schild " + Mathf.RoundToInt(Game.ShieldChance(dp) * 100) + " %" : "") + (dp.sv.flakLv > 0 ? " · " + Game.FlakRockets(dp) + " Raketen bereit – Brocken antippen, wenn der Ring GRÜN ist" : "") + (dp.sv.msLv == 0 && dp.sv.flakLv == 0 ? " · keine Abwehr! Tippen: Schild und Raketen kaufen" : ""); warnTarget = "doom"; } /* Fabian 01.11.: Countdown */
             else if (Game.EvOn(ps, "trader")) { t = "Händler kauft " + GameData.Mats[ps.sv.ev.mat].name + " ×3 · " + Game.Fmt(Game.TraderStock(ps)) + " E = " + Game.Fmt(Game.TraderValue(ps)) + " Cr · noch " + Mathf.CeilToInt(ps.sv.ev.t) + " s · antippen"; warnTarget = "trader"; }
             else if (Game.EvOn(ps, "pile")) { int crew = Game.PileCrew(ps); t = "Müllberg · " + Mathf.RoundToInt(Game.PileLeft(ps) * 100) + " % übrig · " + crew + " Fahrzeuge dran" + (crew < Game.PILE_TEAM ? " (mind. " + Game.PILE_TEAM + " nötig)" : "") + " · noch " + Mathf.CeilToInt(ps.sv.ev.t / 60f) + " min"; warnTarget = "focus"; }
@@ -394,7 +395,7 @@ namespace LunarCleanup.UI
         public void OpenSheet(string kind, string arg = null)
         {
             if (kind == "clean") { CloseSheet(); return; }
-            sheetKind = kind; sheetArg = arg; lastKind = null; sheetGo.SetActive(true); Rebuild();
+            sheetKind = kind; sheetArg = arg; lastKind = null; sheetGo.SetActive(true); Game.TutSaw(kind); Rebuild();
         }
         public void CloseSheet() { if (sheetKind == "class" && Game.NeedClass) { Game.Toast("Wähle erst deine Klasse", ""); return; } sheetGo.SetActive(false); sheetKind = null; lastKind = null; binders.Clear(); }
         string lastKind, lastArg;
@@ -594,6 +595,13 @@ namespace LunarCleanup.UI
             float hs = Game.HandSum(), hc = Game.HandCap(); handTxt.text = Game.Fmt(hs) + "/" + Game.Fmt(hc); UiKit.SetFill(handFill, hs / hc);
             handImg.color = hs >= hc * .99f ? new Color(.3f, .08f, .08f, .9f) : Pal.Glass;
             /* Fabian 01.11.: Einführung – die ersten 10 Ziele stehen als „Erste Schritte“ im Bild, danach nur noch im Ziele-Fenster */
+            if (Game.Tut) /* 12.11.: Tutorial – immer genau eine Aufgabe im Bild */
+            {
+                goalGo.SetActive(!SheetOpen && !MenuOpen && !Game.TutFinale); int ti = Game.TutIndex;
+                if (ti < Game.TutSteps.Length) { float pr = Game.TutProg(); goalKick.text = "Tutorial · Schritt " + (ti + 1) + "/" + Game.TutSteps.Length + (Game.TutSheet() != null ? " · antippen öffnet das Fenster" : ""); goalText.text = Game.TutSteps[ti].text; goalReward.text = ""; UiKit.SetFill(goalFill, pr);
+                  var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = Color.Lerp(Pal.Glass, new Color(.06f, .3f, .25f, .95f), .35f + .25f * Mathf.Sin(Time.time * 3)); }
+            }
+            else
             { int q = Game.S.quest; bool tut = !Game.Hard && q < TutorialSteps && q < Game.QuestsSupported && q < GameData.Quests.Count && Game.S.planets.Count <= 1 && ps.sv.stage < 3; /* 04.11.: im Hard Mode gibt es die Hard-Ziele */ /* nur für neue Spieler */ goalGo.SetActive(tut && !SheetOpen && !MenuOpen);
               if (tut) { float pr = Game.QuestProgress(q); goalKick.text = "Erste Schritte · " + (q + 1) + "/" + TutorialSteps + (pr >= 1 ? " · antippen zum Abholen" : ""); goalText.text = GameData.Quests[q].t; goalReward.text = "+" + Game.Fmt(System.Math.Round(GameData.Quests[q].r * Game.GoalF)); UiKit.SetFill(goalFill, pr);
                 var gi = goalGo.GetComponent<UnityEngine.UI.Image>(); if (gi) gi.color = pr >= 1 ? Color.Lerp(Pal.Glass, new Color(.35f, .27f, .06f, .95f), .5f + .5f * Mathf.Sin(Time.time * 5)) : Pal.Glass; } }

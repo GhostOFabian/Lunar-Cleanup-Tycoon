@@ -29,7 +29,7 @@ namespace LunarCleanup.Core
         /// <summary>Spielstand wechseln: der aktuelle wird gespeichert, der andere geladen (oder neu angelegt).</summary>
         public static void SwitchHard(bool on)
         {
-            if (on == Hard) return; if (on && !HardOpen) { Fail(HardWhy); return; }
+            if (on == Hard) return; if (Tut) { Fail("Erst das Tutorial beenden (oder in den Einstellungen überspringen)"); return; } if (on && !HardOpen) { Fail(HardWhy); return; }
             Save(); Hard = on; PlayerPrefs.SetInt(HardKey, on ? 1 : 0); PlayerPrefs.Save();
             Icp = null; Find = null; restN = -1; ResetStats();
             S = Load() ?? Fresh(); if (Hard) S.hard = true;

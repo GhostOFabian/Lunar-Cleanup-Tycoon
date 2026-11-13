@@ -526,9 +526,23 @@ namespace LunarCleanup.UI
             h.Row(n.name, () => { int l = Game.SdLv(nn.id); string w = Game.SdWhy(nn); return "Stufe " + l + "/" + nn.Max + (l > 0 ? " · jetzt: " + nn.lv(l) : "") + (l < nn.Max ? " · nächste: " + nn.lv(l + 1) : "") + (w != "" && w != "Max" ? " · " + w : ""); },
                 () => Game.SdLv(nn.id) >= nn.Max ? "Max" : Game.SdCost(nn) + " Staub", () => Game.SdWhy(nn) == "", () => Game.SdBuy(nn), true, null, false);
         }
+        /// <summary>Fabian 12.11.: „Jetzt abholen“ – Hauptziel, Aufträge, Hard-Ziele, Medaillen-Schritte und Erfolge, die fertig sind, ganz oben.</summary>
+        static void ClaimTop(Hud h)
+        {
+            var rows = new List<System.Action>(); int qn = Mathf.Min(Game.QuestsSupported, GameData.Quests.Count);
+            if (Game.S.quest < qn && Game.QuestProgress(Game.S.quest) >= 1) { int qi = Game.S.quest; var Q = GameData.Quests[qi]; rows.Add(() => h.Row(Q.t, () => "Hauptziel " + (qi + 1) + " · Belohnung " + Cr(System.Math.Round(Q.r * Game.GoalF)), () => Game.S.quest > qi ? "Abgeholt" : "Abholen", () => Game.S.quest == qi, () => Game.ClaimQuest())); }
+            Game.DailyContracts(); var cs = Game.S.contracts;
+            for (int k = 0; k < cs.list.Count; k++) { int kk = k; var it = cs.list[k]; if (!it.done && Game.ContractProg(it) >= it.target) rows.Add(() => h.Row(Game.ContractText(it), () => "Tagesauftrag · Belohnung " + Cr(it.reward), () => it.done ? "Abgeholt" : "Abholen", () => !it.done, () => Game.ClaimContract(kk))); }
+            if (Game.Hard) foreach (int g in Game.HardGoalsOpen()) if (Game.HardGoalProg(g) >= 1) { int gg = g; rows.Add(() => h.Row(Game.HardGoals[gg].t, () => "Hard-Ziel · " + Game.HardGoalXp(gg) + " Erfahrung", () => Game.HardGoalDone(gg) ? "Abgeholt" : "Abholen", () => !Game.HardGoalDone(gg), () => Game.ClaimHardGoal(gg))); }
+            for (int k = 0; k < Game.MedalSteps.Length; k++) if (Game.MStepOn(ps, k) && !Game.MStepClaimed(ps, k) && Game.MStepProg(ps, k) >= 1) { int kk = k; var st = Game.MedalSteps[k]; rows.Add(() => h.Row(Raw + MedalDot(st.tier) + " " + Loc.Tr(st.text), () => Game.MedalName[st.tier] + "-Schritt · Belohnung " + Cr(Game.MStepReward(ps, kk)), () => Game.MStepClaimed(ps, kk) ? "Abgeholt" : "Abholen", () => !Game.MStepClaimed(ps, kk), () => Game.ClaimMStep(kk))); }
+            int ap = Game.AchPending(); if (rows.Count == 0 && ap == 0) return;
+            h.Section("Jetzt abholen · " + (rows.Count + ap)); foreach (var r in rows) r();
+            if (ap > 0) h.Row(ap == 1 ? "1 Erfolg zum Abholen" : ap + " Erfolge zum Abholen", () => "Im Medaillenbuch", () => "Öffnen", () => true, () => h.OpenSheet("goals", "2"), false);
+        }
         /// <summary>Fabian 11.11.: Medaillenbuch – je Planet Bronze/Silber/Gold, Bestzeit und Durchläufe. Bleibt bei jedem Neustart.</summary>
         static void MedalBook(Hud h)
         {
+            AchPendingRows(h); /* 12.11.: Abholbares ganz oben */
             h.Section("Medaillen " + Game.MedalsGot() + " / " + Game.MedalsMax());
             h.Note("Medaillen gibt es für Planeten und für Erfolge – alle zählen zusammen und bleiben bei jedem Neustart. Planet: Bronze = sauber, Silber = alle Truhen und das Puzzle, Gold = 3 Sterne, alle Funde und Wald. Silber gibt +1 %, Gold +2 % Verkaufspreis überall.");
             h.Section("Gold " + Game.MedalCount(3) + " · Silber " + (Game.MedalCount(2) - Game.MedalCount(3)) + " · Bronze " + (Game.MedalCount(1) - Game.MedalCount(2)) + " · Bonus +" + Mathf.RoundToInt((float)(Game.MedalPriceF() - 1) * 100) + " %");
@@ -653,7 +667,7 @@ namespace LunarCleanup.UI
                 () => Game.S.voLv >= Game.ORDER_MAXLV ? "Max" : Cr(Game.OrderLvCost()), () => Game.OrderLvWhy() == "", () => Game.BuyOrderLv(), why: () => Game.Steps("", Game.OrderLvCost()));
             h.Section("Offene Bestellungen");
             if (Game.Orders.Count == 0) { h.Note("Gerade keine Bestellungen. Neue Besucher kommen alle 10–25 Minuten."); return; }
-            foreach (var o in Game.Orders.ToList())
+            foreach (var o in Game.Orders.OrderBy(x => x.ready ? 0 : 1).ToList()) /* 12.11.: fertige zuerst */
             {
                 var oo = o;
                 h.Row(o.who + " · " + GameData.Planets[o.pid].name, () =>
@@ -664,16 +678,19 @@ namespace LunarCleanup.UI
             }
             h.Note("Die am besten bezahlte Bestellung bekommt die Ware zuerst. Ist eine Bestellung kurz vor Ablauf zu 60 % bereit, wartet der Besucher 45 min länger. Spezialgüter kommen erst, wenn ihr Planet zu 100 % sauber ist.");
         }
+        static void AchPendingRows(Hud h)
+        {
+            var pend = new List<(Game.AchDef a, int t)>(); foreach (var a in Game.Achievements) for (int t = 0; t < Game.AchTier(a); t++) if (!Game.AchClaimed(a, t)) pend.Add((a, t));
+            if (pend.Count > 0)
+            {
+                h.Section("Jetzt abholen · " + pend.Count);
+                foreach (var (a, t) in pend) { var aa = a; int tt = t; h.Row(Game.TierName[t] + ": " + a.name, () => Game.Fmt(aa.tiers[tt]) + (aa.unit != "" ? " " + aa.unit : "") + " · " + Game.AchRewardText(aa, tt), () => Game.AchClaimed(aa, tt) ? "Abgeholt" : "Abholen", () => !Game.AchClaimed(aa, tt), () => Game.ClaimAch(aa, tt)); }
+            }
+        }
         static void Achievements(Hud h)
         {
             int got = Game.Achievements.Sum(a => Game.AchTier(a)), all = Game.Achievements.Count * 3;
             h.Note(got + " von " + all + " Stufen erreicht" + (Game.S.title != "" ? " · Dein Titel: " + Game.S.title : "") + ". Bronze bringt Credits, Silber zusätzlich Sternenstaub, Gold Sternenstaub und manchmal einen Titel.");
-            var pend = new List<(Game.AchDef a, int t)>(); foreach (var a in Game.Achievements) for (int t = 0; t < Game.AchTier(a); t++) if (!Game.AchClaimed(a, t)) pend.Add((a, t));
-            if (pend.Count > 0)
-            {
-                h.Section("Jetzt abholen");
-                foreach (var (a, t) in pend) { var aa = a; int tt = t; h.Row(Game.TierName[t] + ": " + a.name, () => Game.Fmt(aa.tiers[tt]) + (aa.unit != "" ? " " + aa.unit : "") + " · " + Game.AchRewardText(aa, tt), () => Game.AchClaimed(aa, tt) ? "Abgeholt" : "Abholen", () => !Game.AchClaimed(aa, tt), () => Game.ClaimAch(aa, tt)); }
-            }
             foreach (var cat in Game.AchCats)
             {
                 var list = Game.Achievements.Where(a => a.cat == cat).ToList(); if (list.Count == 0) continue;
@@ -742,27 +759,28 @@ namespace LunarCleanup.UI
             int ap = Game.AchPending(), gp = Mathf.Max(0, Game.ClaimableCount() - ap); h.Tabs("Ziele" + (gp > 0 ? " · " + gp : ""), "Besucher" + (Game.Orders.Count > 0 ? " · " + Game.Orders.Count : ""), "Medaillen" + (ap > 0 ? " · " + ap : ""), "Kodex"); int gtab = h.Tab; if (gtab == 3) gtab = 2; else if (gtab == 2) { MedalBook(h); return; } /* 11.11.: Medaillenbuch */
             if (gtab == 1) { OrdersSheet(h); return; }
             if (gtab == 2) { Completion(h); Stats(h); Codex(h); return; }
+            ClaimTop(h); /* 12.11. (Fabian): alles Abholbare steht ganz oben */
             if (Game.SecretKnown(Game.Cur)) { var sp = Game.Cur; h.Section("Geheimnis · " + sp.P.name); h.Row(Game.GlyphName(sp), () => (sp.sv.puzzleDone ? "Zusammengesetzt" : "Puzzleteile " + Game.PiecesFound(sp) + "/" + sp.pd.GlyphCells.Count) + " · Sterne " + Game.StarCount(sp) + "/3 · Logbuch " + sp.sv.secretBeat + "/" + Game.SecretLog(sp).Length, () => "Öffnen", () => true, () => h.OpenSheet("secret"), false); }
             if (Game.Hard) /* 03.11.: eigene Hard-Ziele, immer drei offen */
             {
                 h.Section("Hard-Ziele · " + (Game.S.hGoals?.Count ?? 0) + "/" + Game.HardGoals.Length);
-                foreach (int gi in Game.HardGoalsOpen()) { int g = gi; var G = Game.HardGoals[g]; h.Row(G.t, () => Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " % · Belohnung " + Game.HardGoalXp(g) + " Erfahrung" + (G.perk != "" ? " + " + G.n + "× " + Game.Perk(G.perk).name : ""), () => Game.HardGoalProg(g) >= 1 ? "Abholen" : Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " %", () => Game.HardGoalProg(g) >= 1, () => Game.ClaimHardGoal(g), true, null, true, () => "Noch nicht geschafft – " + G.t); }
+                foreach (int gi in Game.HardGoalsOpen().Where(x => Game.HardGoalProg(x) < 1)) { int g = gi; var G = Game.HardGoals[g]; h.Row(G.t, () => Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " % · Belohnung " + Game.HardGoalXp(g) + " Erfahrung" + (G.perk != "" ? " + " + G.n + "× " + Game.Perk(G.perk).name : ""), () => Game.HardGoalProg(g) >= 1 ? "Abholen" : Mathf.FloorToInt(Game.HardGoalProg(g) * 100) + " %", () => Game.HardGoalProg(g) >= 1, () => Game.ClaimHardGoal(g), true, null, true, () => "Noch nicht geschafft – " + G.t); }
                 if (Game.HardGoalsOpen().Count == 0) h.Note("Alle Hard-Ziele geschafft – Respekt!");
             }
             Game.DailyContracts(); var cs = Game.S.contracts;
             int qn = Mathf.Min(Game.QuestsSupported, GameData.Quests.Count);
-            if (Game.S.quest < qn)
+            if (Game.S.quest < qn && Game.QuestProgress(Game.S.quest) < 1)
             {
                 int qi = Game.S.quest; var Q = GameData.Quests[qi]; bool qr = Game.QuestProgress(qi) >= 1; h.Section("Hauptziel " + (qi + 1) + " von " + qn);
                 h.Row(Q.t, () => (qr ? "Geschafft" : Mathf.RoundToInt(Game.QuestProgress(qi) * 100) + " %") + " · Belohnung " + Cr(System.Math.Round(Q.r * Game.GoalF)), () => Game.QuestProgress(qi) >= 1 ? "Abholen" : "Zeigen", () => true, () => { if (Game.QuestProgress(qi) >= 1) Game.ClaimQuest(); else { h.CloseSheet(); h.OnFocusQuest?.Invoke(); } }, Game.QuestProgress(qi) >= 1);
             }
             h.Section("Aufträge" + (cs.bonus ? " · alle Tagesaufträge geschafft" : " · alle drei Tagesaufträge: +50 % Bonus"));
             /* fertige zuerst */
-            var order = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done).OrderBy(k => Game.ContractProg(cs.list[k]) >= cs.list[k].target ? 0 : 1).ToList();
+            var order = Enumerable.Range(0, cs.list.Count).Where(k => !cs.list[k].done && Game.ContractProg(cs.list[k]) < cs.list[k].target).ToList(); /* Fertige stehen oben unter „Jetzt abholen“ */
             foreach (int k0 in order) { int i = k0;
     int k = i; var it = cs.list[k]; h.Row(Game.ContractText(it), () => it.done ? "Erledigt" : Game.Fmt(Mathf.Min((float)Game.ContractProg(it), (float)it.target)) + " / " + Game.Fmt(it.target) + " · Belohnung " + Cr(it.reward), () => it.done ? "Erledigt" : Game.ContractProg(it) >= it.target ? "Abholen" : "Offen", () => !it.done && Game.ContractProg(it) >= it.target, () => Game.ClaimContract(k));
             }
-            if (cs.list.Count > 0 && order.Count == 0) h.Note("Neue Tagesaufträge morgen.");
+            if (cs.list.Count > 0 && cs.list.All(x => x.done)) h.Note("Neue Tagesaufträge morgen.");
             { Game.ChalRefresh(); var ch = Game.S.chal; /* 11.11.: ein Bonus-Auftrag mit Zeitlimit statt drei Herausforderungen zur Auswahl */
               if (ch.act != "") { var c = Game.Chal(ch.act); if (c != null) h.Row("Bonus-Auftrag läuft: " + c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(c.id))) + " · " + Mathf.Min(100, Mathf.FloorToInt((float)Game.ChalProgress() * 100)) + " % · noch " + Dur(Mathf.Max(0, Game.S.chal.left)), () => "+" + Cr(Game.ChalReward(c.id)), () => false, null, false); }
               else foreach (var id in ch.offer.Take(1)) { var c = Game.Chal(id); if (c == null) continue; var cid = id; h.Row("Bonus-Auftrag: " + c.name, () => string.Format(Loc.Tr(c.desc), Game.Fmt(Game.ChalTarget(cid))) + " in " + Mathf.RoundToInt(c.time / 60) + " min · Belohnung " + Cr(Game.ChalReward(cid)) + (c.sd > 0 ? " + " + c.sd + " Sternenstaub" : ""), () => "Starten", () => Game.S.chal.act == "", () => Game.ChalStart(cid), false); }
@@ -772,7 +790,7 @@ namespace LunarCleanup.UI
               var ms = Enumerable.Range(0, Game.MedalSteps.Length).Where(k => Game.MStepOn(ps, k) && !Game.MStepClaimed(ps, k)).OrderBy(k => Game.MStepProg(ps, k) >= 1 ? 0 : 1).ThenBy(k => k).ToList();
               int mt = Game.MedalTier(ps.pid);
               h.Section("Medaille " + ps.P.name + " · " + (mt > 0 ? Game.MedalName[mt] : "noch keine") + " · Schritte " + (ma - ms.Count) + "/" + ma);
-              var show = ms.Where(k => Game.MStepProg(ps, k) >= 1).ToList(); var nx = ms.FirstOrDefault(k => Game.MStepProg(ps, k) < 1); if (ms.Any(k => Game.MStepProg(ps, k) < 1)) show.Add(nx); /* alles Abholbare und der nächste Schritt */
+              var show = ms.Where(k => Game.MStepProg(ps, k) < 1).Take(2).ToList(); /* die nächsten Schritte – Abholbares steht oben */
               foreach (int k0 in show) { int k = k0; var st = Game.MedalSteps[k]; h.Row(Raw + MedalDot(st.tier) + " " + Loc.Tr(st.text), () => Game.MedalName[st.tier] + " · " + Mathf.RoundToInt(Game.MStepProg(ps, k) * 100) + " % · Belohnung " + Cr(Game.MStepReward(ps, k)), () => Game.MStepProg(ps, k) >= 1 ? "Abholen" : "Offen", () => Game.MStepProg(ps, k) >= 1, () => Game.ClaimMStep(k)); }
               if (ms.Count == 0) h.Note("Alle Schritte geschafft."); }
             var ev = ps.sv.ev;
@@ -914,6 +932,9 @@ namespace LunarCleanup.UI
             int stab = h.Tab; if (!Game.TestMode && stab == 3) stab = 4;
             if (stab == 0) {
             if (!h.MenuOpen) h.Row("Hauptmenü", () => "Zurück zum Startmenü (Spiel starten, Einstellungen, Beenden)", () => "Öffnen", () => true, () => h.ShowMenu(), false);
+            h.Section("Tutorial");
+            if (Game.Tut) { if (Game.TutDoneOnce) h.Row("Tutorial überspringen", () => "Du kennst das schon? Dann geht es direkt ins echte Spiel.", () => "Überspringen", () => true, () => { h.CloseSheet(); Game.TutFinish(true); }, false); else h.Note("Das Tutorial dauert ein paar Minuten. Ab dem zweiten Mal kannst du es hier überspringen."); }
+            else h.Row("Tutorial noch einmal spielen", () => "Eigener Übungsbereich mit 20 Parzellen. Dein Spielstand bleibt unverändert.", () => "Starten", () => true, () => { h.CloseSheet(); Game.TutStart(); }, false);
             h.Section("Darstellung");
             h.Row("Farbe der Parzellenränder", () => "Parzellen, die noch dreckig sind, bekommen einen leuchtenden Rand (saubere zeigen den Planeten ohne Rand) – jetzt: " + Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => Game.LineColors[Mathf.Clamp(Game.S.lineCol, 0, Game.LineColors.Length - 1)].name, () => true, () => Game.NextLineColor(), false);
             h.Row("Bewuchs anzeigen", () => "Moos, Gras, Büsche, Teiche und Bäume, wenn ein Planet ergrünt. Aus = der Planet bleibt im Bild kahl (spart Leistung, das Terraforming wirkt trotzdem).", () => LunarCleanup.Gameplay.WorldView.VegOn ? "An" : "Aus", () => true, () => LunarCleanup.Gameplay.WorldView.VegOn = !LunarCleanup.Gameplay.WorldView.VegOn, false);

@@ -114,7 +114,7 @@ namespace LunarCleanup.Gameplay
                 }
             };
             /* Fabian 02.11.: der erste Riesenmeteor wird erklärt – was passiert und was hilft */
-            Game.OnDoomStart += pid => { if (!hud || Game.S == null || Game.S.doomN > 0 || PlayerPrefs.GetInt("LunarCleanup.DoomHelp", 0) == 1) return; PlayerPrefs.SetInt("LunarCleanup.DoomHelp", 1);
+            Game.OnDoomStart += pid => { if (!hud || Game.S == null || Game.Tut || Game.S.doomN > 0 || PlayerPrefs.GetInt("LunarCleanup.DoomHelp", 0) == 1) return; PlayerPrefs.SetInt("LunarCleanup.DoomHelp", 1);
                 bool here = pid == Game.S.planet; hud.Explain("Riesenmeteor im Anflug!", "Ein Riesenmeteor fliegt auf " + GameData.Planets[pid].name + " zu. In 60 Sekunden schlägt er ein." + (here ? "" : "\n\nDu bist gerade nicht dort. Tippe auf das Warnband oben, um hinzufliegen – nur vor Ort kannst du Brocken abfangen.") +
                     "\n\nSo schützt du dich (Basis → Schutz):\n1. Meteorschild: lenkt den Meteor mit etwas Glück ab.\n2. Abwehrraketen: Der Meteor zerbricht in Brocken. Tippe jeden Brocken an, solange sein Ring GRÜN leuchtet.\n\nKommen zu viele Brocken durch, wird die Basis schwer verwüstet: ein großer Krater voller Schmutz, kaputte Fahrzeuge, 10 Minuten gedrosselte Produktion. Gebaut bleibt alles – räum auf, dann läuft es wieder."); };
             WorldView.OnFeedback += (wp, txt, kind) => { if (!cam || !hud) return; var sp = cam.WorldToScreenPoint(wp); if (sp.z > 0) hud.FloatText(sp, txt, kind); };
@@ -210,7 +210,7 @@ namespace LunarCleanup.Gameplay
             if (Game.PuzzleQuiet && Game.Cur.pd.BigGlyph != null) { cd = Game.Cur.pd.BigGlyph.d; altGoal = Game.Cur.pd.R * 3f; } /* 10.11.: Kamera steht senkrecht mittig über dem Zeichen, weit genug draußen */
             Game.ViewDir = cd.normalized; Game.ViewCos = Mathf.Cos(Mathf.Clamp(alt * .3f / VP.pd.R, .02f, .5f)); /* sichtbarer Bereich um die Bildmitte */
             alt = Mathf.Lerp(alt, altGoal, 1 - Mathf.Exp(-6 * dt)); ApplyCam(true); Sfx.CamAlt = alt; if (cam) Sfx.CamPos = cam.transform.position; PlanetView.GlowK = Mathf.Clamp01((alt - 35) / (VP.pd.R * 1.2f));
-            Game.CartGoal = cd; WorldView.MapMode = mapMode;
+            Game.CartGoal = cd; WorldView.MapMode = mapMode; if (mapMode) Game.TutSaw("map");
             saveT += dt; if (saveT > 10 && !Game.PuzzleQuiet) { saveT = 0; if (!offlineRunning) Game.Save(); }
         }
 
@@ -556,7 +556,7 @@ namespace LunarCleanup.Gameplay
         {
             if (pid != Game.S.planet || exploding) { Game.Devastate(pid, Game.DoomSev); yield break; }
             exploding = true; hud.CloseSheet(); altGoal = Mathf.Max(altGoal, Game.Cur.pd.R * 3.6f); yield return world.DoomDive(); yield return world.Implode(planet.transform); /* Fabian 02.11.: Implosion mit Explosion, ganzer Planet im Bild */
-            Game.Devastate(pid, Game.DoomSev); yield return new WaitForSeconds(.5f); yield return world.Reform(); exploding = false; /* … dann setzt er sich verwüstet wieder zusammen – nichts Gebautes geht verloren */
+            Game.Devastate(pid, Game.DoomSev); yield return new WaitForSeconds(.5f); yield return world.Reform(); exploding = false; if (Game.Tut) { yield return new WaitForSeconds(1.5f); Game.TutFinish(false); } /* 12.11.: Komet beendet das Tutorial */ /* … dann setzt er sich verwüstet wieder zusammen – nichts Gebautes geht verloren */
         }
         /// <summary>10.11.: liegt der Weltpunkt auf der zugewandten Seite des Planeten? (Rückseite wird sonst mitten in den Bildausschnitt projiziert)</summary>
         bool Front(Vector3 wp) => Vector3.Dot(wp.normalized, (cam.transform.position - wp).normalized) > .05f;

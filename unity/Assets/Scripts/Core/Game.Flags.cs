@@ -22,7 +22,7 @@ namespace LunarCleanup.Core
         public static FlagStories.Entry FlagStory(PState ps, FlagSave f) { EnsureSlots(ps); return FlagStories.Get(ps.pid, Math.Max(0, f.slot - 1), ps.sv.flags.Count); }
         static void InitFlags(PState ps)
         {
-            var sv = ps.sv; if (sv.flags == null) sv.flags = new List<FlagSave>(); if (sv.flagsInit) return; sv.flagsInit = true;
+            var sv = ps.sv; if (sv.flags == null) sv.flags = new List<FlagSave>(); if (sv.flagsInit || Tut) return; /* 12.11.: keine Truhen im Tutorial */ sv.flagsInit = true;
             var pd = ps.pd; int want = FlagCount(ps.pid); var rnd = new System.Random(ps.pid.GetHashCode() ^ 0x71a9); var sites = new HashSet<int>(OutpostSites(ps.pid));
             var cand = pd.cells.Where(c => !c.IsBase && !c.Wet && !sites.Contains(c.id) && c.ring >= 1).Select(c => c.id).ToList(); var used = new List<int>();
             for (int tries = 0; tries < want * 30 && sv.flags.Count < want && cand.Count > 0; tries++)

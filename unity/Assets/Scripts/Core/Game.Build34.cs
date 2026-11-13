@@ -121,7 +121,7 @@ namespace LunarCleanup.Core
                 Icp = new Intercept { pid = pid, total = n, rockets = FlakRockets(ps), diff = d };
                 Toast("Der Meteor zerbricht in " + n + " Brocken – tippe jeden an, wenn sein Ring GRÜN ist!", "bad"); OnIcpStart?.Invoke(pid); return;
             }
-            if (pid == S.planet) Toast("Keine Abwehr – Tipp für nächstes Mal: Basis → Schutz (Meteorschild und Abwehrraketen)", "bad");
+            if (pid == S.planet && !Tut) Toast("Keine Abwehr – Tipp für nächstes Mal: Basis → Schutz (Meteorschild und Abwehrraketen)", "bad");
             /* Fabian 02.11.: kein Totalverlust mehr – schwere Verwüstung, Stärke je nach Abwehr. Nicht vor Ort (kein Abfangen möglich) = milder */
             DoomSev = pid != S.planet ? .6f : ch > 0 ? .85f : 1f;
             if (pid == S.planet && !Offline && OnDoomImpact != null) OnDoomImpact(pid); /* Implosion, Explosion, Planet setzt sich wieder zusammen → Devastate */

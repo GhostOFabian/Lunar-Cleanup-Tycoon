@@ -102,7 +102,7 @@ namespace LunarCleanup.Core
         public double credits;
         public string planet = "moon";
         public List<KV> upg = new List<KV>();
-        public int quest;
+        public int quest; public int tutStep; public List<string> tutSeen = new List<string>(); /* 12.11.: Tutorial (nur im Übungsstand) */
         public Stats stats = new Stats();
         public List<PlanetSave> planets = new List<PlanetSave>();
         public long lastActive;

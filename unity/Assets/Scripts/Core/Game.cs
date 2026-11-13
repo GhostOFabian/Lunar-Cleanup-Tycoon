@@ -60,7 +60,7 @@ namespace LunarCleanup.Core
         const float VEH_BUFF = 2.6f, BSP = 1.25f;
         /// <summary>Im Editor kann ein getrennter Test-Spielstand benutzt werden (Menü Lunar Cleanup → Testmodus), damit Test-Tasten nie deinen echten Stand verändern.</summary>
         public static bool TestMode, AdminWeb; /* AdminWeb: Browser-Admin für Fabian (02.11.) */
-        static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "") + (Hard ? "-hard" : ""); /* 03.11.: Hard Mode eigener Spielstand */
+        static string Key => "lunar-cleanup-tycoon-unity-v1" + (TestMode ? "-test" : "") + (Tut ? "-tut" : Hard ? "-hard" : ""); /* 12.11.: Tutorial eigener Übungsstand */ /* 03.11.: Hard Mode eigener Spielstand */
 
         public static PState Cur => P[S.planet];
         public static PlanetDef CurP => GameData.Planets[S.planet];
@@ -68,7 +68,7 @@ namespace LunarCleanup.Core
         // ================= Start, Speichern, Laden =================
         public static void Init()
         {
-            Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades(); InitHard();
+            Loc.Init(); GameData.Load(); NM = GameData.Mats.Count; DampVehicleUpgrades(); InitHard(); InitTut();
             S = Load() ?? Fresh();
             GUpg.Clear(); foreach (var kv in S.upg) GUpg[kv.k] = kv.v;
             P.Clear(); foreach (var ps in S.planets) P[ps.pid] = Attach(ps); ProcessPrizes(); MigrateWallet(); MigrateSd();
@@ -183,7 +183,7 @@ namespace LunarCleanup.Core
             try { PlayerPrefs.SetString(Key, packed); }
             catch (Exception) { PlayerPrefs.DeleteKey(Key + "-bak"); PlayerPrefs.DeleteKey(Key + "-vorImport"); try { PlayerPrefs.SetString(Key, packed); } catch (Exception e2) { Debug.LogWarning("Lunar Cleanup: Speichern fehlgeschlagen: " + e2.Message); } }
             PlayerPrefs.Save();
-            if (!TestMode) Platform.MaybeUpload(json, S.lastActive); // Konto-Speicher (Google Play Spiele / Game Center), sobald verbunden
+            if (!TestMode && !Tut) Platform.MaybeUpload(json, S.lastActive); // Konto-Speicher (Google Play Spiele / Game Center), sobald verbunden
         }
 
         /// <summary>10.11.: Unberührter Staub (alle Werte fast gleich, nichts angewischt) wird als ein Wert "=v" gespeichert statt 1024 Zufallswerten – Spielstand war 68 MB.</summary>
@@ -419,7 +419,7 @@ namespace LunarCleanup.Core
         public static float CleanPct(PState ps) { int c = 0, t = 0; foreach (var cl in ps.pd.cells) { if (cl.IsBase) continue; t++; if (ps.clean[cl.id]) c++; } return t > 0 ? (float)c / t : 0; }
         static bool IsFront(PState ps, int id)
         {
-            var cl = ps.pd.cells[id]; if (cl.IsBase || ps.clean[id]) return false;
+            var cl = ps.pd.cells[id]; if (cl.IsBase || ps.clean[id]) return false; if (Tut && !TutCell(ps, id)) return false; /* 12.11.: Tutorial – nur die Übungsparzellen */
             bool nbc = false; foreach (int b in cl.nb) if (ps.clean[b]) { nbc = true; break; }
             if (!nbc) return false;
             if (GameData.Kinds[cl.kind].key == "anomaly" && !ps.bld.Contains("research")) return false;
@@ -855,7 +855,7 @@ namespace LunarCleanup.Core
             OnRocket?.Invoke(Cur.pid, c); Toast("Alles verkauft · +" + Fmt(c) + " Cr", "good");
         }
         /// <summary>Fabian 01.11.: Ab wann die Rakete startet – so viel, wie in etwa 4 Minuten nachkommt (höchstens der volle Frachtraum). Kleine Planeten warten so nicht ewig.</summary>
-        public static float SellTarget(PState ps) { float cap = SellCap(ps); return Mathf.Clamp(ps.sv.sellRate * 240f, Mathf.Min(cap * .98f, 60f), cap * .98f); }
+        public static float SellTarget(PState ps) { float cap = SellCap(ps); if (Tut) return Mathf.Min(cap * .98f, 25f); /* 12.11.: Tutorial – kleine erste Rakete */ return Mathf.Clamp(ps.sv.sellRate * 240f, Mathf.Min(cap * .98f, 60f), cap * .98f); }
         static void SellStep(PState ps, float dt)
         {
             var sv = ps.sv; if (!ps.bld.Contains("sell")) return;
@@ -1852,8 +1852,8 @@ namespace LunarCleanup.Core
         public static void Step(float dt)
         {
             foreach (var ps in P.Values) StepPlanet(ps, dt);
-            ResearchStep(dt); DoomStep(dt); ChalStep(dt); OrdersStep(dt); FindStep(dt);
-            AchievementStep(dt); SuitStep(dt); if (!Offline) { FloatFlush(); ToastFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
+            ResearchStep(dt); DoomStep(dt); if (!Tut) { ChalStep(dt); OrdersStep(dt); FindStep(dt); AchievementStep(dt); } else if (Time.frameCount % 30 == 0) TutTick(); /* 12.11.: im Tutorial ruhen Nebensysteme */
+            SuitStep(dt); if (!Offline) { FloatFlush(); ToastFlush(); StatTick(dt); if (Time.frameCount % 600 == 0 || S.contracts == null || S.contracts.list.Count == 0) DailyContracts(); }
         }
         static void StepPlanet(PState ps, float dt) { earnPid = ps.pid; try { StepPlanet0(ps, dt); CrewStep(ps, dt); MedalStep(ps, dt); } finally { earnPid = null; RohTrack(ps, dt); } }
         static void StepPlanet0(PState ps, float dt)
@@ -1862,8 +1862,8 @@ namespace LunarCleanup.Core
             if (ps.pid == S.planet) ps.sv.tPlay += dt;
             RateTrack(ps, dt);
             if (Hard) { HardCart(ps); CartStep(ps, dt); DepotStep(ps, dt); PerkStep(ps, dt); WaveStep(ps, dt); }
-            SecretStep(ps, dt); /* 08.11.: Mond-Geheimnis, beide Modi */ /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
-            ps.sv.careT += dt; if (ps.sv.boostT > 0) ps.sv.boostT -= dt; EnergyStep(ps, dt); PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps) * (ps.sv.boostT > 0 ? 1.5f : 1f); /* 04.11.: Kristall-Schub */ /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
+            if (!Tut) SecretStep(ps, dt); /* 08.11.: Mond-Geheimnis, beide Modi */ /* Hard Mode: Sammelwagen fährt, Buffs, Putzhelfer */
+            ps.sv.careT += dt; if (ps.sv.boostT > 0) ps.sv.boostT -= dt; EnergyStep(ps, dt); if (!Tut) PutziStep(ps, dt); Build34Step(ps, dt); float f = ps.ef * (ps.sv.hitT > 0 ? .5f : 1f) * CareF(ps) * (ps.sv.boostT > 0 ? 1.5f : 1f); /* 04.11.: Kristall-Schub */ /* 03.11.: Betreuung */ /* Einschlagschaden: Anlagen auf halber Kraft */
             foreach (var v in ps.sv.veh.ToArray()) { VehStep(ps, v, dt, f); StuckCheck(ps, v, dt); }
             if (ps.bld.Contains("hangar")) { DroneSanity(ps, dt); foreach (var dr in ps.sv.drones) DroneStep(ps, dr, dt, f); }
             if (ps.bld.Contains("lifter")) foreach (var L in ps.sv.lifters) LifterStep(ps, L, dt, f); else foreach (var v in ps.sv.veh) if (v.mode == "liftwait" || v.mode == "lifted") { v.lift = -1; v.mode = "drive"; }
@@ -1874,8 +1874,8 @@ namespace LunarCleanup.Core
             int sub = dt > .3f ? Mathf.CeilToInt(dt / .25f) : 1; float sdt = dt / sub;
             for (int s = 0; s < sub; s++) { foreach (var b in ps.lay.belts) BeltStep(ps, b, sdt, f); foreach (var m in new[] { "presse", "schmelze", "raff" }) MachStep(ps, m, sdt, f); }
             SellStep(ps, dt); AutoDumpStep(ps); FlowTick(ps, dt);
-            if (!Offline && ps.pid == S.planet) EventStep(ps, dt); TeamStep(ps, dt);
-            MeteorStep(ps, dt);
+            if (!Offline && ps.pid == S.planet) if (!Tut) EventStep(ps, dt); TeamStep(ps, dt);
+            if (!Tut) MeteorStep(ps, dt);
             List<int> done = null; foreach (var kv in ps.act) if (kv.Value.sum < kv.Value.cl.nIn * GameData.DONE) (done = done ?? new List<int>()).Add(kv.Key);
             if (done != null) foreach (int id in done) FinishCell(ps, id);
         }
