@@ -75,52 +75,64 @@ namespace LunarCleanup.Gameplay
             var d = pd.PlanDir(c); float hmax = pd.Height(d);
             for (int k = 0; k < 12; k++) { float a = k * Mathf.PI / 6; for (float r = 2f; r <= P.padH; r += 2f) hmax = Mathf.Max(hmax, pd.Height(pd.PlanDir(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r))); }
             Color acc = ps.P.col0; if (acc.grayscale > .8f) acc = GameData.Hex("#ffbf4d");
-            padGo = new GameObject("Landeplatz"); padGo.transform.SetParent(transform, false); BuildRunway(padGo.transform, acc); padGo.transform.localScale = Vector3.one * PadK;
+            padGo = new GameObject("Landeplatz"); padGo.transform.SetParent(transform, false); padGo.transform.localScale = Vector3.one * PadK;
+            padGo.transform.position = d * (pd.R + hmax); padGo.transform.rotation = PlanRot(d, yaw);
+            /* 13.11. (Fabian: „Landebahn schwebt“): der Planet ist rund und das Gelände uneben – unter der flachen Bahn fällt der Boden ab.
+               Gemessen wird, wie tief der Boden unter jedem Teil der Bahn liegt; so tief reicht der Unterbau hinunter. */
+            float depth = .3f;
+            for (float x = -4.2f; x <= 4.2f; x += .7f) for (float z = -4.2f; z <= 4.6f; z += .7f)
+            {
+                var wp = padGo.transform.TransformPoint(new Vector3(x, 0, z)); var dd = wp.normalized; var ground = dd * (pd.R + pd.Height(dd));
+                depth = Mathf.Max(depth, -padGo.transform.InverseTransformPoint(ground).y + .35f);
+            }
+            BuildRunway(padGo.transform, acc, depth);
             padGo.name = "Landeplatz";
             padLights = padGo.transform.Find("Lichter");
-            padGo.transform.position = d * (pd.R + hmax); padGo.transform.rotation = PlanRot(d, yaw);
             padUp = d; padTop = padGo.transform.position + d * PAD_TOP * PadK; padOut = padGo.transform.forward;
         }
 
-        /// <summary>13.11.: U-förmige Landebahn (lokal: +Z = offenes Ende, von der Basis weg). Landen links, Scheitel zum Be- und Entladen, Start rechts.</summary>
-        void BuildRunway(Transform t, Color acc)
+        /// <summary>13.11.: U-förmige Landebahn (lokal: +Z = offenes Ende, von der Basis weg). Landen links, Scheitel zum Be- und Entladen, Start rechts.
+        /// Fabian 13.11.: „schwebt in der Luft“ – jedes Stück liegt jetzt auf dem Boden (folgt der Rundung des Planeten), darunter ein kurzer Unterbau.</summary>
+        void BuildRunway(Transform t, Color acc, float depth)
         {
             Material asph = MeshKit.Mat(new Color(.2f, .21f, .25f), .1f, .55f), rim = MeshKit.Mat(new Color(.36f, .38f, .44f), .2f, .5f), hell = MeshKit.Mat(new Color(.92f, .93f, .95f), 0, .4f), ak = MeshKit.Mat(acc, .3f, .45f);
-            float h = PAD_TOP, y = h / 2;
+            float h = PAD_TOP;
+            /* Stück auf den Boden legen: Höhe und Neigung aus dem Gelände an (x, z) */
+            void Piece(Material m, float x, float y, float z, Vector3 size, float yaw)
+            {
+                var wp = t.TransformPoint(new Vector3(x, 0, z)); var dd = wp.normalized; var g = t.InverseTransformPoint(dd * (pd.R + pd.Height(dd)));
+                var n = t.InverseTransformDirection(dd).normalized; var rot = Quaternion.FromToRotation(Vector3.up, n) * Quaternion.Euler(0, yaw, 0);
+                var go = MeshKit.Part(t, MeshKit.Cube, m, new Vector3(x, g.y, z) + n * y, size); go.transform.localRotation = rot;
+            }
+            const float SKIRT = .6f; /* Unterbau ragt so weit in den Boden */
             for (int sx = -1; sx <= 1; sx += 2)
             {
-                MeshKit.Box(t, rim, new Vector3(sx * RW_X, y - .02f, RW_L / 2), new Vector3(RW_W + .3f, h - .04f, RW_L));
-                MeshKit.Box(t, asph, new Vector3(sx * RW_X, y, RW_L / 2), new Vector3(RW_W, h, RW_L));
-                for (float z = .5f; z < RW_L - .6f; z += 1f) MeshKit.Box(t, hell, new Vector3(sx * RW_X, h + .01f, z + .25f), new Vector3(.14f, .02f, .5f)); /* Mittellinie */
-                for (int k = -2; k <= 2; k++) MeshKit.Box(t, hell, new Vector3(sx * RW_X + k * .38f, h + .01f, RW_L - .35f), new Vector3(.22f, .02f, .5f)); /* Schwelle am offenen Ende */
-                foreach (float ex in new[] { -1f, 1f }) MeshKit.Box(t, ak, new Vector3(sx * RW_X + ex * (RW_W / 2 - .08f), h + .012f, RW_L / 2), new Vector3(.1f, .02f, RW_L)); /* Randlinien */
-                /* Pfeil: links nach innen (Landen), rechts nach außen (Start) */
-                float dz = sx < 0 ? -1 : 1, z0 = RW_L * .55f;
-                MeshKit.Box(t, ak, new Vector3(sx * RW_X - .2f, h + .013f, z0), new Vector3(.12f, .02f, .7f), new Vector3(0, 35f * dz, 0));
-                MeshKit.Box(t, ak, new Vector3(sx * RW_X + .2f, h + .013f, z0), new Vector3(.12f, .02f, .7f), new Vector3(0, -35f * dz, 0));
+                int segs = 8; float sl = RW_L / segs;
+                for (int i = 0; i < segs; i++) { float z = (i + .5f) * sl; Piece(rim, sx * RW_X, (h - SKIRT) / 2 - .02f, z, new Vector3(RW_W + .3f, h + SKIRT - .04f, sl + .04f), 0); Piece(asph, sx * RW_X, h / 2, z, new Vector3(RW_W, h, sl + .04f), 0); }
+                for (float z = .5f; z < RW_L - .6f; z += 1f) Piece(hell, sx * RW_X, h + .01f, z + .25f, new Vector3(.14f, .02f, .5f), 0); /* Mittellinie */
+                for (int k = -2; k <= 2; k++) Piece(hell, sx * RW_X + k * .38f, h + .01f, RW_L - .35f, new Vector3(.22f, .02f, .5f), 0); /* Schwelle am offenen Ende */
+                foreach (float ex in new[] { -1f, 1f }) for (int i = 0; i < segs; i++) Piece(ak, sx * RW_X + ex * (RW_W / 2 - .08f), h + .012f, (i + .5f) * sl, new Vector3(.1f, .02f, sl + .02f), 0); /* Randlinien */
+                float dz = sx < 0 ? -1 : 1, z0 = RW_L * .55f; /* Pfeil: links nach innen (Landen), rechts nach außen (Start) */
+                Piece(ak, sx * RW_X - .2f, h + .013f, z0, new Vector3(.12f, .02f, .7f), 35f * dz); Piece(ak, sx * RW_X + .2f, h + .013f, z0, new Vector3(.12f, .02f, .7f), -35f * dz);
             }
             const int N = 16; float arc = Mathf.PI / N;
             for (int i = 0; i < N; i++)
             {
-                float a = Mathf.PI + (i + .5f) * arc; var p = new Vector3(RW_X * Mathf.Cos(a), y, RW_X * Mathf.Sin(a)); var tg = new Vector3(-Mathf.Sin(a), 0, Mathf.Cos(a));
+                float a = Mathf.PI + (i + .5f) * arc; float px = RW_X * Mathf.Cos(a), pz = RW_X * Mathf.Sin(a); var tg = new Vector3(-Mathf.Sin(a), 0, Mathf.Cos(a));
                 float yaw = Mathf.Atan2(tg.x, tg.z) * Mathf.Rad2Deg, chord = 2 * (RW_X + RW_W / 2) * Mathf.Sin(arc / 2) * 1.05f;
-                MeshKit.Box(t, rim, p - Vector3.up * .02f, new Vector3(RW_W + .3f, h - .04f, chord), new Vector3(0, yaw, 0));
-                MeshKit.Box(t, asph, p, new Vector3(RW_W, h, chord), new Vector3(0, yaw, 0));
-                if (i % 2 == 0) MeshKit.Box(t, hell, new Vector3(p.x, h + .01f, p.z), new Vector3(.14f, .02f, .5f), new Vector3(0, yaw, 0));
+                Piece(rim, px, (h - SKIRT) / 2 - .02f, pz, new Vector3(RW_W + .3f, h + SKIRT - .04f, chord), yaw); Piece(asph, px, h / 2, pz, new Vector3(RW_W, h, chord), yaw);
+                if (i % 2 == 0) Piece(hell, px, h + .01f, pz, new Vector3(.14f, .02f, .5f), yaw);
             }
-            /* Haltepunkt am Scheitel */
-            MeshKit.Box(t, ak, new Vector3(-.5f, h + .013f, -RW_X), new Vector3(.12f, .02f, 1.3f)); MeshKit.Box(t, ak, new Vector3(.5f, h + .013f, -RW_X), new Vector3(.12f, .02f, 1.3f));
-            /* kleiner Tower in der Mitte des U */
-            MeshKit.Box(t, rim, new Vector3(0, .6f, 1.6f), new Vector3(.7f, 1.2f, .7f)); MeshKit.Box(t, MeshKit.Mat(new Color(.4f, .75f, .9f), .6f, .9f, new Color(.2f, .5f, .7f)), new Vector3(0, 1.4f, 1.6f), new Vector3(.9f, .4f, .9f)); MeshKit.Box(t, asph, new Vector3(0, 1.65f, 1.6f), new Vector3(1f, .1f, 1f));
-            /* Randlichter (blinken) */
+            Piece(ak, -.5f, h + .013f, -RW_X, new Vector3(.12f, .02f, 1.3f), 90); Piece(ak, .5f, h + .013f, -RW_X, new Vector3(.12f, .02f, 1.3f), 90); /* Haltepunkt am Scheitel */
+            Piece(rim, 0, .6f - SKIRT / 2, 1.6f, new Vector3(.7f, 1.2f + SKIRT, .7f), 0); Piece(MeshKit.Mat(new Color(.4f, .75f, .9f), .6f, .9f, new Color(.2f, .5f, .7f)), 0, 1.4f, 1.6f, new Vector3(.9f, .4f, .9f), 0); Piece(asph, 0, 1.65f, 1.6f, new Vector3(1f, .1f, 1f), 0); /* Tower */
             var L = new GameObject("Lichter").transform; L.SetParent(t, false); Material lm = MeshKit.Glow(new Color(1f, .78f, .35f), 3f), lm2 = MeshKit.Glow(new Color(.45f, 1f, .8f), 3f);
-            void Lamp(Vector3 p, Material m) { var g = MeshKit.Part(L, MeshKit.Sphere, m, p, Vector3.one * .14f); NoShadow(g); }
-            for (int sx = -1; sx <= 1; sx += 2) for (float z = .3f; z <= RW_L; z += 1.1f) foreach (float ex in new[] { -1f, 1f }) Lamp(new Vector3(sx * RW_X + ex * (RW_W / 2 + .1f), h + .06f, z), z > RW_L - .5f ? lm2 : lm);
-            for (int i = 0; i <= 8; i++) { float a = Mathf.PI + i * Mathf.PI / 8; foreach (float r in new[] { RW_X - RW_W / 2 - .1f, RW_X + RW_W / 2 + .1f }) Lamp(new Vector3(r * Mathf.Cos(a), h + .06f, r * Mathf.Sin(a)), lm); }
+            void Lamp(float x, float z, Material m) { var wp = t.TransformPoint(new Vector3(x, 0, z)); var dd = wp.normalized; var g = t.InverseTransformPoint(dd * (pd.R + pd.Height(dd))); var go = MeshKit.Part(L, MeshKit.Sphere, m, new Vector3(x, g.y, z) + t.InverseTransformDirection(dd).normalized * (h + .06f), Vector3.one * .14f); NoShadow(go); }
+            for (int sx = -1; sx <= 1; sx += 2) for (float z = .3f; z <= RW_L; z += 1.1f) foreach (float ex in new[] { -1f, 1f }) Lamp(sx * RW_X + ex * (RW_W / 2 + .1f), z, z > RW_L - .5f ? lm2 : lm);
+            for (int i = 0; i <= 8; i++) { float a = Mathf.PI + i * Mathf.PI / 8; foreach (float r in new[] { RW_X - RW_W / 2 - .1f, RW_X + RW_W / 2 + .1f }) Lamp(r * Mathf.Cos(a), r * Mathf.Sin(a), lm); }
             foreach (var r in t.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         /// <summary>Lokaler Punkt der Bahn (Oberfläche) in Weltkoordinaten.</summary>
-        Vector3 RwWorld(Vector2 p, float lift = 0) => padGo.transform.TransformPoint(new Vector3(p.x, PAD_TOP, p.y)) + padUp * lift;
+        Vector3 RwWorld(Vector2 p, float lift = 0) { var dd = padGo.transform.TransformPoint(new Vector3(p.x, 0, p.y)).normalized; return dd * (pd.R + pd.Height(dd) + PAD_TOP * PadK + lift); } /* auf dem gebogenen Belag */
         Vector3 RwDir(Vector2 d) => padGo.transform.TransformDirection(new Vector3(d.x, 0, d.y)).normalized;
 
         void StartShip(Visit v)

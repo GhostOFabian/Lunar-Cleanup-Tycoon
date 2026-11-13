@@ -307,8 +307,8 @@ namespace LunarCleanup.Gameplay
                         ea *= 1 - fa0; /* keine Parzellenfuge quer über Vulkan, Berg oder Becken */
                         /* Fabian 03.11.: umgedreht – saubere Parzellen ohne Rand (man sieht, wie schön der Planet ist), nur was noch dreckig ist, leuchtet umrandet */
                         bool lined = !(clean && act == null);
-                        if (ea > 0) col = !lined ? col : clean ? Color.Lerp(col, MeteorLine, .55f * ea) : CleanLine.a > 0 ? Color.Lerp(col, CleanLine, Mathf.Min(1, 1.1f * ea)) : front ? Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
-                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = !clean && CleanLine.a > 0 ? ea * .8f : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
+                        if (ea > 0) col = !lined ? col : clean ? Color.Lerp(col, MeteorLine, .55f * ea) : CleanLine.a > 0 && !(LunarCleanup.Core.Game.Tut && !LunarCleanup.Core.Game.TutCell(ps, id)) ? Color.Lerp(col, CleanLine, Mathf.Min(1, 1.1f * ea)) : front ? /* 13.11.: im Tutorial leuchten nur die Übungsparzellen */ Color.Lerp(col, FrontLine, .55f * ea) : col * (1 - .2f * ea);
+                        if ((py & 1) == 0 && (pxi & 1) == 0) { float gl = !clean && CleanLine.a > 0 && !(LunarCleanup.Core.Game.Tut && !LunarCleanup.Core.Game.TutCell(ps, id)) ? ea * .8f : 0; int gx = (ox + pxi) / 2, gy = (oy + py) / 2; if (gx < ch.gs && gy < ch.gs) ch.gpx[gy * ch.gs + gx] = new Color(Mathf.Min(1, CleanLine.r * gl + fGlow.r), Mathf.Min(1, CleanLine.g * gl + fGlow.g), Mathf.Min(1, CleanLine.b * gl + fGlow.b), 1); }
                     }
                     col.a = 1; ch.px[(oy + py) * ch.size + ox + pxi] = col;
                 }
